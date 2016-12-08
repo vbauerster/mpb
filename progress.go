@@ -10,7 +10,7 @@ import (
 )
 
 // Out is the default writer to render progress bars to
-var Out = os.Stdout
+// var Out = os.Stdout
 
 // RefreshInterval in the default time duration to wait for refreshing the output
 var RefreshInterval = time.Millisecond * 10
@@ -18,7 +18,7 @@ var RefreshInterval = time.Millisecond * 10
 // Progress represents the container that renders progress bars
 type Progress struct {
 	// Out is the writer to render progress bars to
-	Out io.Writer
+	out io.Writer
 
 	// Width is the width of the progress bars
 	// Width int
@@ -39,12 +39,18 @@ type Progress struct {
 // New returns a new progress bar with defaults
 func New() *Progress {
 	p := &Progress{
-		Out:    Out,
+		out:    os.Stdout,
 		lw:     uilive.New(),
 		bars:   make(chan *Bar),
 		ticker: time.NewTicker(RefreshInterval),
 	}
 	go p.server()
+	return p
+}
+
+// SetOut is the writer to render progress bars to
+func (p *Progress) SetOut(w io.Writer) *Progress {
+	p.out = w
 	return p
 }
 
@@ -59,7 +65,7 @@ func (p *Progress) AddBar(total int) *Bar {
 // Listen listens for updates and renders the progress bars
 func (p *Progress) server() {
 	bars := make([]*Bar, 0)
-	p.lw.Out = p.Out
+	p.lw.Out = p.out
 loop:
 	for {
 		select {
