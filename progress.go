@@ -21,7 +21,7 @@ type Progress struct {
 	Out io.Writer
 
 	// Width is the width of the progress bars
-	Width int
+	// Width int
 
 	// Bars is the collection of progress bars
 	// Bars []*Bar
@@ -32,29 +32,33 @@ type Progress struct {
 	lw *uilive.Writer
 	// stopChan chan struct{}
 	// mtx      *sync.RWMutex
-	bars   chan Bar
+	bars   chan *Bar
 	ticker *time.Ticker
 }
 
 // New returns a new progress bar with defaults
 func New() *Progress {
 	p := &Progress{
-		Width: Width,
-		Out:   Out,
-		// RefreshInterval: RefreshInterval,
-
-		lw: uilive.New(),
-		// stopChan: make(chan struct{}),
-		bars:   make(chan Bar),
+		Out:    Out,
+		lw:     uilive.New(),
+		bars:   make(chan *Bar),
 		ticker: time.NewTicker(RefreshInterval),
 	}
 	go p.server()
 	return p
 }
 
+// AddBar creates a new progress bar and adds to the container
+func (p *Progress) AddBar(total int) *Bar {
+	bar := NewBar(total)
+	// bar.Width = p.Width
+	p.bars <- bar
+	return bar
+}
+
 // Listen listens for updates and renders the progress bars
 func (p *Progress) server() {
-	bars := make([]Bar, 0)
+	bars := make([]*Bar, 0)
 	p.lw.Out = p.Out
 loop:
 	for {
