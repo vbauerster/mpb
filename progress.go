@@ -27,10 +27,10 @@ type Progress struct {
 	// Bars []*Bar
 
 	// RefreshInterval in the time duration to wait for refreshing the output
-	RefreshInterval time.Duration
+	// RefreshInterval time.Duration
 
-	lw       *uilive.Writer
-	stopChan chan struct{}
+	lw *uilive.Writer
+	// stopChan chan struct{}
 	// mtx      *sync.RWMutex
 	bars   chan Bar
 	ticker *time.Ticker
@@ -38,39 +38,37 @@ type Progress struct {
 
 // New returns a new progress bar with defaults
 func New() *Progress {
-	return &Progress{
-		Width:           Width,
-		Out:             Out,
-		RefreshInterval: RefreshInterval,
+	p := &Progress{
+		Width: Width,
+		Out:   Out,
+		// RefreshInterval: RefreshInterval,
 
-		lw:       uilive.New(),
-		stopChan: make(chan struct{}),
-		bars:     make(chan Bar),
+		lw: uilive.New(),
+		// stopChan: make(chan struct{}),
+		bars:   make(chan Bar),
+		ticker: time.NewTicker(RefreshInterval),
 	}
+	go p.server()
+	return p
 }
 
 // Listen listens for updates and renders the progress bars
-func (p *Progress) Listen() {
+func (p *Progress) server() {
 	bars := make([]Bar, 0)
 	p.lw.Out = p.Out
 loop:
 	for {
 		select {
-		case <-p.stopChan: // interrupt
-			return
 		case bar, ok := <-p.bars:
 			if !ok {
 				break loop
 			}
 			bars = append(bars, bar)
-		default:
-			time.Sleep(p.RefreshInterval)
-			p.mtx.RLock()
-			for _, bar := range p.Bars {
+		case <-p.ticker.C:
+			for _, bar := range bars {
 				fmt.Fprintln(p.lw, bar.String())
 			}
 			p.lw.Flush()
-			p.mtx.RUnlock()
 		}
 	}
 }
