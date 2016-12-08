@@ -1,0 +1,76 @@
+package uiprogress
+
+import (
+	"fmt"
+	"io"
+	"os"
+	"time"
+
+	"github.com/gosuri/uilive"
+)
+
+// Out is the default writer to render progress bars to
+var Out = os.Stdout
+
+// RefreshInterval in the default time duration to wait for refreshing the output
+var RefreshInterval = time.Millisecond * 10
+
+// Progress represents the container that renders progress bars
+type Progress struct {
+	// Out is the writer to render progress bars to
+	Out io.Writer
+
+	// Width is the width of the progress bars
+	Width int
+
+	// Bars is the collection of progress bars
+	// Bars []*Bar
+
+	// RefreshInterval in the time duration to wait for refreshing the output
+	RefreshInterval time.Duration
+
+	lw       *uilive.Writer
+	stopChan chan struct{}
+	// mtx      *sync.RWMutex
+	bars   chan Bar
+	ticker *time.Ticker
+}
+
+// New returns a new progress bar with defaults
+func New() *Progress {
+	return &Progress{
+		Width:           Width,
+		Out:             Out,
+		RefreshInterval: RefreshInterval,
+
+		lw:       uilive.New(),
+		stopChan: make(chan struct{}),
+		bars:     make(chan Bar),
+	}
+}
+
+// Listen listens for updates and renders the progress bars
+func (p *Progress) Listen() {
+	bars := make([]Bar, 0)
+	p.lw.Out = p.Out
+loop:
+	for {
+		select {
+		case <-p.stopChan: // interrupt
+			return
+		case bar, ok := <-p.bars:
+			if !ok {
+				break loop
+			}
+			bars = append(bars, bar)
+		default:
+			time.Sleep(p.RefreshInterval)
+			p.mtx.RLock()
+			for _, bar := range p.Bars {
+				fmt.Fprintln(p.lw, bar.String())
+			}
+			p.lw.Flush()
+			p.mtx.RUnlock()
+		}
+	}
+}
