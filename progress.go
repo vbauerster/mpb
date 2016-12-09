@@ -16,7 +16,7 @@ const (
 	remove
 )
 
-const refreshRate = 30
+const refreshRate = 100
 
 // progress represents the container that renders progress bars
 type progress struct {
