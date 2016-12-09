@@ -27,8 +27,8 @@ var (
 
 // Bar represents a progress bar
 type Bar struct {
-	// Total of the total  for the progress bar
-	Total int
+	// total of the total  for the progress bar
+	total int
 
 	// LeftEnd is character in the left most part of the progress indicator. Defaults to '['
 	LeftEnd byte
@@ -50,7 +50,7 @@ type Bar struct {
 
 	currentUpdateCh chan int
 
-	redrawRequestCh chan redrawRequest
+	redrawRequestCh chan *redrawRequest
 
 	// appendFuncs  []DecoratorFunc
 	// prependFuncs []DecoratorFunc
@@ -62,7 +62,7 @@ type DecoratorFunc func(b *Bar) string
 // NewBar returns a new progress bar
 func NewBar(total int) *Bar {
 	b := &Bar{
-		Total:           total,
+		total:           total,
 		Width:           Width,
 		LeftEnd:         LeftEnd,
 		RightEnd:        RightEnd,
@@ -70,7 +70,7 @@ func NewBar(total int) *Bar {
 		Fill:            Fill,
 		Empty:           Empty,
 		currentUpdateCh: make(chan int),
-		redrawRequestCh: make(chan redrawRequest),
+		redrawRequestCh: make(chan *redrawRequest),
 	}
 	go b.server()
 	return b
@@ -78,6 +78,17 @@ func NewBar(total int) *Bar {
 
 type redrawRequest struct {
 	bufch chan []byte
+}
+
+func (b *Bar) Update(n int) {
+	b.currentUpdateCh <- n
+}
+
+// String returns the string representation of the bar
+func (b *Bar) String() string {
+	bufch := make(chan []byte)
+	b.redrawRequestCh <- &redrawRequest{bufch}
+	return string(<-bufch)
 }
 
 func (b *Bar) server() {
@@ -88,24 +99,25 @@ func (b *Bar) server() {
 	for {
 		select {
 		case n := <-b.currentUpdateCh:
-			current += n
+			if n > b.total {
+				return
+			}
+			current = n
+			// fmt.Printf("current = %+v\n", current)
 			// blockStartTime = time.Now()
 		case r := <-b.redrawRequestCh:
-			r.bufch <- b.buffer(current)
+			r.bufch <- b.draw(current)
 		}
 	}
 }
 
-func (b *Bar) Update(n int) {
-	b.currentUpdateCh <- n
-}
-
-func (b *Bar) buffer(current int) []byte {
-	completedPercent := int(100 * float64(current) / float64(b.Total))
-	completedWidth := completedPercent * b.Width / 100
+func (b *Bar) draw(current int) []byte {
+	completedWidth := current * b.Width / b.total
 
 	// add fill and empty bits
 	var buf bytes.Buffer
+	// buf.WriteString(fmt.Sprintf("completedWidth = %+v ", completedWidth))
+	// buf.WriteString(fmt.Sprintf("current = %+v ", current))
 	for i := 0; i < completedWidth; i++ {
 		buf.WriteByte(b.Fill)
 	}
@@ -135,13 +147,6 @@ func (b *Bar) buffer(current int) []byte {
 	// 	pb = append(args, pb...)
 	// }
 	return pb
-}
-
-// String returns the string representation of the bar
-func (b *Bar) String() string {
-	bufch := make(chan []byte)
-	b.redrawRequestCh <- redrawRequest{bufch}
-	return string(<-bufch)
 }
 
 // CompletedPercent return the percent completed
