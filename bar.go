@@ -1,7 +1,5 @@
 package uiprogress
 
-import "bytes"
-
 var (
 	// Fill is the default character representing completed progress
 	Fill byte = '='
@@ -114,25 +112,20 @@ func (b *Bar) server() {
 func (b *Bar) draw(current int) []byte {
 	completedWidth := current * b.Width / b.total
 
-	// add fill and empty bits
-	var buf bytes.Buffer
-	// buf.WriteString(fmt.Sprintf("completedWidth = %+v ", completedWidth))
-	// buf.WriteString(fmt.Sprintf("current = %+v ", current))
+	buf := make([]byte, b.Width)
 	for i := 0; i < completedWidth; i++ {
-		buf.WriteByte(b.Fill)
+		buf[i] = b.Fill
 	}
-	for i := 0; i < b.Width-completedWidth; i++ {
-		buf.WriteByte(b.Empty)
+	for i := completedWidth; i < b.Width; i++ {
+		buf[i] = b.Empty
 	}
-
 	// set head bit
-	pb := buf.Bytes()
 	if completedWidth > 0 && completedWidth < b.Width {
-		pb[completedWidth-1] = b.Head
+		buf[completedWidth-1] = b.Head
 	}
 
 	// set left and right ends bits
-	pb[0], pb[len(pb)-1] = b.LeftEnd, b.RightEnd
+	buf[0], buf[len(buf)-1] = b.LeftEnd, b.RightEnd
 
 	// render append functions to the right of the bar
 	// for _, f := range b.appendFuncs {
@@ -146,7 +139,7 @@ func (b *Bar) draw(current int) []byte {
 	// 	args = append(args, ' ')
 	// 	pb = append(args, pb...)
 	// }
-	return pb
+	return buf
 }
 
 // CompletedPercent return the percent completed
