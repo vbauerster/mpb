@@ -25,6 +25,21 @@ var (
 	Width = 70
 )
 
+// DecoratorFunc is a function that can be prepended and appended to the progress bar
+type DecoratorFunc func(s *Statistics) string
+
+type decoratorFuncType uint
+
+const (
+	decoratorAppend decoratorFuncType = iota
+	decoratorPrepend
+)
+
+type decorator struct {
+	kind decoratorFuncType
+	f    DecoratorFunc
+}
+
 // Bar represents a progress bar
 type Bar struct {
 	// total of the total  for the progress bar
@@ -54,13 +69,10 @@ type Bar struct {
 
 	redrawRequestCh chan *redrawRequest
 
-	decoratorFuncCh chan DecoratorFunc
+	decoratorCh chan *decorator
 
 	timePerItemEstimate time.Duration
 }
-
-// DecoratorFunc is a function that can be prepended and appended to the progress bar
-type DecoratorFunc func(s *Statistics) string
 
 type Statistics struct {
 	Total, Completed    int
@@ -84,7 +96,7 @@ func NewBar(total int) *Bar {
 		Empty:           Empty,
 		currentIncrCh:   make(chan int),
 		redrawRequestCh: make(chan *redrawRequest),
-		decoratorFuncCh: make(chan DecoratorFunc),
+		decoratorCh:     make(chan *decorator),
 	}
 	go b.server()
 	return b
@@ -95,7 +107,7 @@ func (b *Bar) Incr(n int) {
 }
 
 func (b *Bar) AppendFunc(f DecoratorFunc) *Bar {
-	b.decoratorFuncCh <- f
+	b.decoratorCh <- &decorator{decoratorAppend, f}
 	return b
 }
 
@@ -117,9 +129,9 @@ func (b *Bar) String() string {
 func (b *Bar) server() {
 	var current int
 	blockStartTime := time.Now()
-	buf := make([]byte, b.Width)
+	buf := make([]byte, b.Width, b.Width+9)
 	var appendFuncs []DecoratorFunc
-	// var prependFuncs []DecoratorFunc
+	var prependFuncs []DecoratorFunc
 	for {
 		select {
 		case i := <-b.currentIncrCh:
@@ -130,8 +142,13 @@ func (b *Bar) server() {
 			b.updateTimePerItemEstimate(i, blockStartTime)
 			current = n
 			blockStartTime = time.Now()
-		case f := <-b.decoratorFuncCh:
-			appendFuncs = append(appendFuncs, f)
+		case d := <-b.decoratorCh:
+			switch d.kind {
+			case decoratorAppend:
+				appendFuncs = append(appendFuncs, d.f)
+			case decoratorPrepend:
+				prependFuncs = append(prependFuncs, d.f)
+			}
 		case r := <-b.redrawRequestCh:
 			r.bufch <- b.draw(buf, current, appendFuncs)
 		}
@@ -139,7 +156,6 @@ func (b *Bar) server() {
 }
 
 func (b *Bar) draw(buf []byte, current int, appendFuncs []DecoratorFunc) []byte {
-	// eta := time.Duration(b.total-current) * b.timePerItemEstimate
 	completedWidth := current * b.Width / b.total
 
 	for i := 0; i < completedWidth; i++ {
