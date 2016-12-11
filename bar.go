@@ -94,6 +94,7 @@ func (b *Bar) server() {
 	// blockStartTime := time.Now()
 	// timePerItemEstimate time.Duration
 	// remainingTime       time.Duration
+	buf := make([]byte, b.Width)
 	for {
 		select {
 		case n := <-b.currentUpdateCh:
@@ -104,15 +105,14 @@ func (b *Bar) server() {
 			// fmt.Printf("current = %+v\n", current)
 			// blockStartTime = time.Now()
 		case r := <-b.redrawRequestCh:
-			r.bufch <- b.draw(current)
+			r.bufch <- b.draw(buf, current)
 		}
 	}
 }
 
-func (b *Bar) draw(current int) []byte {
+func (b *Bar) draw(buf []byte, current int) []byte {
 	completedWidth := current * b.Width / b.total
 
-	buf := make([]byte, b.Width)
 	for i := 0; i < completedWidth; i++ {
 		buf[i] = b.Fill
 	}
