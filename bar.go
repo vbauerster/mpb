@@ -114,7 +114,7 @@ func (b *Bar) AppendFunc(f DecoratorFunc) *Bar {
 func (b *Bar) AppendETA() *Bar {
 	b.AppendFunc(func(s *Statistics) string {
 		eta := time.Duration(s.Total-s.Completed) * s.TimePerItemEstimate
-		return fmt.Sprint(time.Duration(eta.Seconds()) * time.Second)
+		return fmt.Sprintf("ETA %v", time.Duration(eta.Seconds())*time.Second)
 	})
 	return b
 }
@@ -129,7 +129,7 @@ func (b *Bar) String() string {
 func (b *Bar) server() {
 	var current int
 	blockStartTime := time.Now()
-	buf := make([]byte, b.Width, b.Width+9)
+	buf := make([]byte, b.Width, b.Width+24)
 	var appendFuncs []DecoratorFunc
 	var prependFuncs []DecoratorFunc
 	for {
@@ -150,12 +150,12 @@ func (b *Bar) server() {
 				prependFuncs = append(prependFuncs, d.f)
 			}
 		case r := <-b.redrawRequestCh:
-			r.bufch <- b.draw(buf, current, appendFuncs)
+			r.bufch <- b.draw(buf, current, appendFuncs, prependFuncs)
 		}
 	}
 }
 
-func (b *Bar) draw(buf []byte, current int, appendFuncs []DecoratorFunc) []byte {
+func (b *Bar) draw(buf []byte, current int, appendFuncs, prependFuncs []DecoratorFunc) []byte {
 	completedWidth := current * b.Width / b.total
 
 	for i := 0; i < completedWidth; i++ {
