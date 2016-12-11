@@ -1,5 +1,10 @@
 package uiprogress
 
+import (
+	"fmt"
+	"time"
+)
+
 var (
 	// Fill is the default character representing completed progress
 	Fill byte = '='
@@ -18,9 +23,6 @@ var (
 
 	// Width is the default width of the progress bar
 	Width = 70
-
-	// ErrMaxCurrentReached is error when trying to set current value that exceeds the total value
-	// ErrMaxCurrentReached = errors.New("errors: current value is greater total value")
 )
 
 // Bar represents a progress bar
@@ -46,20 +48,33 @@ type Bar struct {
 	// Width is the width of the progress bar
 	Width int
 
-	currentUpdateCh chan int
+	Alpha float64
+
+	currentIncrCh chan int
 
 	redrawRequestCh chan *redrawRequest
 
-	// appendFuncs  []DecoratorFunc
-	// prependFuncs []DecoratorFunc
+	decoratorFuncCh chan DecoratorFunc
+
+	timePerItemEstimate time.Duration
 }
 
 // DecoratorFunc is a function that can be prepended and appended to the progress bar
-type DecoratorFunc func(b *Bar) string
+type DecoratorFunc func(s *Statistics) string
+
+type Statistics struct {
+	Total, Completed    int
+	TimePerItemEstimate time.Duration
+}
+
+type redrawRequest struct {
+	bufch chan []byte
+}
 
 // NewBar returns a new progress bar
 func NewBar(total int) *Bar {
 	b := &Bar{
+		Alpha:           0.25,
 		total:           total,
 		Width:           Width,
 		LeftEnd:         LeftEnd,
@@ -67,19 +82,29 @@ func NewBar(total int) *Bar {
 		Head:            Head,
 		Fill:            Fill,
 		Empty:           Empty,
-		currentUpdateCh: make(chan int),
+		currentIncrCh:   make(chan int),
 		redrawRequestCh: make(chan *redrawRequest),
+		decoratorFuncCh: make(chan DecoratorFunc),
 	}
 	go b.server()
 	return b
 }
 
-type redrawRequest struct {
-	bufch chan []byte
+func (b *Bar) Incr(n int) {
+	b.currentIncrCh <- n
 }
 
-func (b *Bar) Update(n int) {
-	b.currentUpdateCh <- n
+func (b *Bar) AppendFunc(f DecoratorFunc) *Bar {
+	b.decoratorFuncCh <- f
+	return b
+}
+
+func (b *Bar) AppendETA() *Bar {
+	b.AppendFunc(func(s *Statistics) string {
+		eta := time.Duration(s.Total-s.Completed) * s.TimePerItemEstimate
+		return fmt.Sprint(time.Duration(eta.Seconds()) * time.Second)
+	})
+	return b
 }
 
 // String returns the string representation of the bar
@@ -91,26 +116,30 @@ func (b *Bar) String() string {
 
 func (b *Bar) server() {
 	var current int
-	// blockStartTime := time.Now()
-	// timePerItemEstimate time.Duration
-	// remainingTime       time.Duration
+	blockStartTime := time.Now()
 	buf := make([]byte, b.Width)
+	var appendFuncs []DecoratorFunc
+	// var prependFuncs []DecoratorFunc
 	for {
 		select {
-		case n := <-b.currentUpdateCh:
+		case i := <-b.currentIncrCh:
+			n := current + i
 			if n > b.total {
 				return
 			}
+			b.updateTimePerItemEstimate(i, blockStartTime)
 			current = n
-			// fmt.Printf("current = %+v\n", current)
-			// blockStartTime = time.Now()
+			blockStartTime = time.Now()
+		case f := <-b.decoratorFuncCh:
+			appendFuncs = append(appendFuncs, f)
 		case r := <-b.redrawRequestCh:
-			r.bufch <- b.draw(buf, current)
+			r.bufch <- b.draw(buf, current, appendFuncs)
 		}
 	}
 }
 
-func (b *Bar) draw(buf []byte, current int) []byte {
+func (b *Bar) draw(buf []byte, current int, appendFuncs []DecoratorFunc) []byte {
+	// eta := time.Duration(b.total-current) * b.timePerItemEstimate
 	completedWidth := current * b.Width / b.total
 
 	for i := 0; i < completedWidth; i++ {
@@ -127,11 +156,13 @@ func (b *Bar) draw(buf []byte, current int) []byte {
 	// set left and right ends bits
 	buf[0], buf[len(buf)-1] = b.LeftEnd, b.RightEnd
 
+	s := &Statistics{b.total, current, b.timePerItemEstimate}
+
 	// render append functions to the right of the bar
-	// for _, f := range b.appendFuncs {
-	// 	pb = append(pb, ' ')
-	// 	pb = append(pb, []byte(f(b))...)
-	// }
+	for _, f := range appendFuncs {
+		buf = append(buf, ' ')
+		buf = append(buf, []byte(f(s))...)
+	}
 
 	// render prepend functions to the left of the bar
 	// for _, f := range b.prependFuncs {
@@ -142,40 +173,14 @@ func (b *Bar) draw(buf []byte, current int) []byte {
 	return buf
 }
 
-// CompletedPercent return the percent completed
-// func (b *Bar) CompletedPercent() int {
-// 	return int(100 * float64(b.current) / float64(b.Total))
-// }
+func (b *Bar) updateTimePerItemEstimate(items int, blockStartTime time.Time) {
+	lastBlockTime := time.Since(blockStartTime)
+	lastItemEstimate := float64(lastBlockTime) / float64(items)
+	b.timePerItemEstimate = time.Duration((b.Alpha * lastItemEstimate) + (1-b.Alpha)*float64(b.timePerItemEstimate))
+}
 
-// AppendFunc runs the decorator function and renders the output on the right of the progress bar
-// func (b *Bar) AppendFunc(f DecoratorFunc) *Bar {
-// 	b.appendFuncs = append(b.appendFuncs, f)
-// 	return b
-// }
-
-// PrependFunc runs decorator function and render the output left the progress bar
-// func (b *Bar) PrependFunc(f DecoratorFunc) *Bar {
-// 	b.prependFuncs = append(b.prependFuncs, f)
-// 	return b
-// }
-
-// AppendCompleted appends the completion percent to the progress bar
-// func (b *Bar) AppendCompleted() *Bar {
-// 	b.AppendFunc(func(b *Bar) string {
-// 		return b.CompletedPercentString()
-// 	})
-// 	return b
-// }
-
-// CompletedPercentString returns the formatted string representation of the completed percent
-// func (b *Bar) CompletedPercentString() string {
-// 	return fmt.Sprintf("%3d%%", b.CompletedPercent())
-// }
-
-// PrependElapsed prepends the time elapsed to the begining of the bar
-// func (b *Bar) PrependElapsed() *Bar {
-// 	b.PrependFunc(func(b *Bar) string {
-// 		return strutil.PadLeft(b.TimeElapsedString(), 5, ' ')
-// 	})
-// 	return b
+// func nextTimePerItemEstimate(d time.Duration, blockStartTime time.Time, alpha float64, items int) time.Duration {
+// 	lastBlockTime := time.Since(blockStartTime)
+// 	lastItemEstimate := float64(lastBlockTime) / float64(items)
+// 	return time.Duration((alpha * lastItemEstimate) + (1-alpha)*float64(d))
 // }

@@ -18,13 +18,13 @@ func main() {
 	bar := p.AddBar(totalItem) // Add a new bar
 
 	// optionally, append and prepend completion and elapsed time
-	// bar.AppendCompleted()
+	bar.AppendETA()
 	// bar.PrependElapsed()
 
 	blockSize := rand.Intn(maxBlockSize) + 1
-	for i := 0; i < totalItem; i += blockSize {
+	for i := 1; i <= totalItem; i += blockSize {
 		time.Sleep(time.Duration(blockSize) * (50*time.Millisecond + time.Duration(rand.Intn(5*int(time.Millisecond)))))
-		bar.Update(i)
+		bar.Incr(blockSize)
 		blockSize = rand.Intn(maxBlockSize) + 1
 	}
 
