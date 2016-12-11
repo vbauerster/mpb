@@ -106,8 +106,21 @@ func (b *Bar) Incr(n int) {
 	b.currentIncrCh <- n
 }
 
+func (b *Bar) PrependFunc(f DecoratorFunc) *Bar {
+	b.decoratorCh <- &decorator{decoratorPrepend, f}
+	return b
+}
+
 func (b *Bar) AppendFunc(f DecoratorFunc) *Bar {
 	b.decoratorCh <- &decorator{decoratorAppend, f}
+	return b
+}
+
+func (b *Bar) PrependETA() *Bar {
+	b.PrependFunc(func(s *Statistics) string {
+		eta := time.Duration(s.Total-s.Completed) * s.TimePerItemEstimate
+		return fmt.Sprintf("ETA %-5v", time.Duration(eta.Seconds())*time.Second)
+	})
 	return b
 }
 
@@ -181,11 +194,11 @@ func (b *Bar) draw(buf []byte, current int, appendFuncs, prependFuncs []Decorato
 	}
 
 	// render prepend functions to the left of the bar
-	// for _, f := range b.prependFuncs {
-	// 	args := []byte(f(b))
-	// 	args = append(args, ' ')
-	// 	pb = append(args, pb...)
-	// }
+	for _, f := range prependFuncs {
+		args := []byte(f(s))
+		args = append(args, ' ')
+		buf = append(args, buf...)
+	}
 	return buf
 }
 
@@ -194,9 +207,3 @@ func (b *Bar) updateTimePerItemEstimate(items int, blockStartTime time.Time) {
 	lastItemEstimate := float64(lastBlockTime) / float64(items)
 	b.timePerItemEstimate = time.Duration((b.Alpha * lastItemEstimate) + (1-b.Alpha)*float64(b.timePerItemEstimate))
 }
-
-// func nextTimePerItemEstimate(d time.Duration, blockStartTime time.Time, alpha float64, items int) time.Duration {
-// 	lastBlockTime := time.Since(blockStartTime)
-// 	lastItemEstimate := float64(lastBlockTime) / float64(items)
-// 	return time.Duration((alpha * lastItemEstimate) + (1-alpha)*float64(d))
-// }
