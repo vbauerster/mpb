@@ -27,14 +27,14 @@ type progress struct {
 	// Width is the width of the progress bars
 	// Width int
 
-	// lw *uilive.Writer
-
 	op chan *operation
 
 	// new refresh interval to be send over this channel
 	interval chan time.Duration
 
 	wg *sync.WaitGroup
+
+	stopped bool
 }
 
 type operation struct {
@@ -46,8 +46,7 @@ type operation struct {
 // New returns a new progress bar with defaults
 func New() *progress {
 	p := &progress{
-		out: os.Stdout,
-		// lw:       uilive.New(),
+		out:      os.Stdout,
 		op:       make(chan *operation),
 		interval: make(chan time.Duration),
 		wg:       new(sync.WaitGroup),
@@ -89,11 +88,14 @@ func (p *progress) SetOut(w io.Writer) *progress {
 // 	return p.lw.Bypass()
 // }
 
-// Stop stops listening
-func (p *progress) Stop() {
-	fmt.Fprintln(os.Stderr, "p.Stop")
-	p.wg.Wait()
-	close(p.op)
+// WaitAndStop stops listening
+func (p *progress) WaitAndStop() {
+	if !p.stopped {
+		// fmt.Fprintln(os.Stderr, "p.WaitAndStop")
+		p.stopped = true
+		p.wg.Wait()
+		close(p.op)
+	}
 }
 
 // server monitors underlying channels and renders any progress bars
@@ -106,7 +108,7 @@ func (p *progress) server() {
 		select {
 		case op, ok := <-p.op:
 			if !ok {
-				fmt.Fprintln(os.Stderr, "Sopping bars")
+				// fmt.Fprintln(os.Stderr, "Sopping bars")
 				for _, b := range bars {
 					b.Stop()
 				}

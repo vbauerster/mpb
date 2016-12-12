@@ -2,7 +2,6 @@ package uiprogress
 
 import (
 	"fmt"
-	"os"
 	"sync"
 	"time"
 )
@@ -80,6 +79,8 @@ type Bar struct {
 
 	stopCh chan struct{}
 	done   chan struct{}
+
+	stopped bool
 }
 
 type Statistics struct {
@@ -168,9 +169,6 @@ func (b *Bar) flushed() {
 }
 
 func (b *Bar) Incr(n int) {
-	// result := make(chan bool)
-	// b.incrRequestCh <- &incrRequest{n, result}
-	// return <-result
 	if !b.IsCompleted() {
 		b.incrCh <- n
 	}
@@ -187,8 +185,10 @@ func (b *Bar) server(wg *sync.WaitGroup) {
 		select {
 		case i := <-b.incrCh:
 			n := completed + i
+			// fmt.Fprintf(os.Stderr, "n = %+v\n", n)
 			if n > b.total {
 				completed = b.total
+				done = true
 				break
 			}
 			b.updateTimePerItemEstimate(i, blockStartTime)
@@ -208,16 +208,15 @@ func (b *Bar) server(wg *sync.WaitGroup) {
 			r.bufCh <- b.draw(buf, completed, appendFuncs, prependFuncs)
 		case <-b.flushedCh:
 			if done && !b.IsCompleted() {
-				fmt.Fprintln(os.Stderr, "flushedCh: wg.Done")
+				// fmt.Fprintln(os.Stderr, "flushedCh: wg.Done")
 				close(b.done)
 				wg.Done()
 			}
 		case <-b.stopCh:
-			fmt.Fprintln(os.Stderr, "received stop signal")
+			// fmt.Fprintln(os.Stderr, "received stop signal")
 			if !done {
-				fmt.Fprintln(os.Stderr, "closing done chan: done = false")
+				// fmt.Fprintln(os.Stderr, "closing done chan: done = false")
 				close(b.done)
-				done = true
 				wg.Done()
 			}
 			return
@@ -226,12 +225,10 @@ func (b *Bar) server(wg *sync.WaitGroup) {
 }
 
 func (b *Bar) Stop() {
-	b.stopCh <- struct{}{}
-	// if !b.IsCompleted() {
-	// 	fmt.Fprintln(os.Stderr, "sending to stopCh")
-	// } else {
-	// 	fmt.Fprintln(os.Stderr, "Stop: already stopped")
-	// }
+	if !b.stopped {
+		b.stopCh <- struct{}{}
+		b.stopped = true
+	}
 }
 
 func (b *Bar) IsCompleted() bool {
