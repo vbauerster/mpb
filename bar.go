@@ -156,9 +156,6 @@ func (b *Bar) PrependPercentage() *Bar {
 
 // String returns the string representation of the bar
 func (b *Bar) String() string {
-	// if b.IsStopped() {
-	// 	return "bar stopped"
-	// }
 	bufCh := make(chan []byte)
 	b.redrawRequestCh <- &redrawRequest{bufCh}
 	return string(<-bufCh)

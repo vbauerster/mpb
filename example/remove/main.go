@@ -11,7 +11,7 @@ import (
 
 const (
 	totalItem    = 100
-	maxBlockSize = 12
+	maxBlockSize = 20
 )
 
 func main() {
@@ -25,9 +25,12 @@ func main() {
 	bar := p.AddBar(totalItem).AppendETA().PrependFunc(decor)
 
 	blockSize := rand.Intn(maxBlockSize) + 1
-	for i := 0; i < 100; i += 1 {
+	for i := 0; !bar.IsCompleted(); i += 1 {
 		time.Sleep(time.Duration(blockSize) * (50*time.Millisecond + time.Duration(rand.Intn(5*int(time.Millisecond)))))
 		bar.Incr(1)
+		if i == 42 {
+			p.RemoveBar(bar)
+		}
 		blockSize = rand.Intn(maxBlockSize) + 1
 	}
 

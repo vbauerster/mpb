@@ -56,7 +56,8 @@ func main() {
 	// time.Sleep(time.Second)
 	// p.RemoveBar(bar2)
 
-	p.Stop()
+	p.WaitAndStop()
+	bar2.Incr(2)
 	fmt.Println("stop")
 	// p.AddBar(1) // panic: send on closed channnel
 }
