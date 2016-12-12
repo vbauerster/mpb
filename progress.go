@@ -4,19 +4,20 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sync"
 	"time"
 
-	"github.com/gosuri/uilive"
+	"github.com/vbauerster/uilive"
 )
 
 type opType uint
 
 const (
-	add opType = iota
-	remove
+	barAdd opType = iota
+	barRemove
 )
 
-const refreshRate = 100
+const refreshRate = 50
 
 // progress represents the container that renders progress bars
 type progress struct {
@@ -32,12 +33,14 @@ type progress struct {
 
 	// new refresh interval to be send over this channel
 	interval chan time.Duration
+
+	wg *sync.WaitGroup
 }
 
 type operation struct {
-	kind opType
-	bar  *Bar
-	ok   chan bool
+	kind   opType
+	bar    *Bar
+	result chan bool
 }
 
 // New returns a new progress bar with defaults
@@ -47,9 +50,25 @@ func New() *progress {
 		lw:       uilive.New(),
 		op:       make(chan *operation),
 		interval: make(chan time.Duration),
+		wg:       new(sync.WaitGroup),
 	}
 	go p.server()
 	return p
+}
+
+// AddBar creates a new progress bar and adds to the container
+func (p *progress) AddBar(total int) *Bar {
+	p.wg.Add(1)
+	bar := newBar(total)
+	// bar.Width = p.Width
+	p.op <- &operation{barAdd, bar, nil}
+	return bar
+}
+
+func (p *progress) RemoveBar(b *Bar) bool {
+	result := make(chan bool)
+	p.op <- &operation{barRemove, b, result}
+	return <-result
 }
 
 // RefreshRate overrides default (30ms) refreshRate value
@@ -65,20 +84,6 @@ func (p *progress) SetOut(w io.Writer) *progress {
 	return p
 }
 
-// AddBar creates a new progress bar and adds to the container
-func (p *progress) AddBar(total int) *Bar {
-	bar := NewBar(total)
-	// bar.Width = p.Width
-	p.op <- &operation{add, bar, nil}
-	return bar
-}
-
-func (p *progress) RemoveBar(b *Bar) bool {
-	result := make(chan bool)
-	p.op <- &operation{remove, b, result}
-	return <-result
-}
-
 // Bypass returns a writer which allows non-buffered data to be written to the underlying output
 func (p *progress) Bypass() io.Writer {
 	return p.lw.Bypass()
@@ -86,6 +91,7 @@ func (p *progress) Bypass() io.Writer {
 
 // Stop stops listening
 func (p *progress) Stop() {
+	p.wg.Wait()
 	close(p.op)
 }
 
@@ -100,12 +106,13 @@ func (p *progress) server() {
 			if !ok {
 				t.Stop()
 				close(p.interval)
+				p.lw.Stop()
 				return
 			}
 			switch op.kind {
-			case add:
+			case barAdd:
 				bars = append(bars, op.bar)
-			case remove:
+			case barRemove:
 				var ok bool
 				for i, b := range bars {
 					if b == op.bar {
@@ -114,13 +121,16 @@ func (p *progress) server() {
 						break
 					}
 				}
-				op.ok <- ok
+				op.result <- ok
 			}
 		case <-t.C:
 			for _, b := range bars {
 				fmt.Fprintln(p.lw, b.String())
 			}
 			p.lw.Flush()
+			for _, b := range bars {
+				b.flushed(p.wg)
+			}
 		case d := <-p.interval:
 			t.Stop()
 			t = time.NewTicker(d)

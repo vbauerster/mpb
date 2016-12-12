@@ -2,6 +2,7 @@ package uiprogress
 
 import (
 	"fmt"
+	"sync"
 	"time"
 )
 
@@ -65,13 +66,15 @@ type Bar struct {
 
 	Alpha float64
 
-	currentIncrCh chan int
+	incrRequestCh chan *incrRequest
 
 	redrawRequestCh chan *redrawRequest
 
 	decoratorCh chan *decorator
 
 	timePerItemEstimate time.Duration
+
+	flushedCh chan *sync.WaitGroup
 }
 
 type Statistics struct {
@@ -80,11 +83,16 @@ type Statistics struct {
 }
 
 type redrawRequest struct {
-	bufch chan []byte
+	bufCh chan []byte
+}
+
+type incrRequest struct {
+	amount int
+	result chan bool
 }
 
 // NewBar returns a new progress bar
-func NewBar(total int) *Bar {
+func newBar(total int) *Bar {
 	b := &Bar{
 		Alpha:           0.25,
 		total:           total,
@@ -94,16 +102,13 @@ func NewBar(total int) *Bar {
 		Head:            Head,
 		Fill:            Fill,
 		Empty:           Empty,
-		currentIncrCh:   make(chan int),
+		incrRequestCh:   make(chan *incrRequest),
 		redrawRequestCh: make(chan *redrawRequest),
 		decoratorCh:     make(chan *decorator),
+		flushedCh:       make(chan *sync.WaitGroup),
 	}
 	go b.server()
 	return b
-}
-
-func (b *Bar) Incr(n int) {
-	b.currentIncrCh <- n
 }
 
 func (b *Bar) PrependFunc(f DecoratorFunc) *Bar {
@@ -132,29 +137,56 @@ func (b *Bar) AppendETA() *Bar {
 	return b
 }
 
+func (b *Bar) PrependPercentage() *Bar {
+	b.PrependFunc(func(s *Statistics) string {
+		completed := int(100 * float64(s.Completed) / float64(s.Total))
+		return fmt.Sprintf("%3d %%", completed)
+	})
+	return b
+}
+
 // String returns the string representation of the bar
 func (b *Bar) String() string {
-	bufch := make(chan []byte)
-	b.redrawRequestCh <- &redrawRequest{bufch}
-	return string(<-bufch)
+	bufCh := make(chan []byte)
+	b.redrawRequestCh <- &redrawRequest{bufCh}
+	return string(<-bufCh)
+}
+
+// func (b *Bar) bytes() []byte {
+// 	bufch := make(chan []byte)
+// 	b.redrawRequestCh <- &redrawRequest{bufch}
+// 	return <-bufch
+// }
+
+func (b *Bar) flushed(wg *sync.WaitGroup) {
+	b.flushedCh <- wg
+}
+
+func (b *Bar) Incr(n int) bool {
+	result := make(chan bool)
+	b.incrRequestCh <- &incrRequest{n, result}
+	return <-result
 }
 
 func (b *Bar) server() {
-	var current int
+	var completed int
 	blockStartTime := time.Now()
 	buf := make([]byte, b.Width, b.Width+24)
 	var appendFuncs []DecoratorFunc
 	var prependFuncs []DecoratorFunc
 	for {
 		select {
-		case i := <-b.currentIncrCh:
-			n := current + i
+		case r := <-b.incrRequestCh:
+			n := completed + r.amount
 			if n > b.total {
-				return
+				completed = b.total
+				r.result <- false
+				break // breaks out of select, not for
 			}
-			b.updateTimePerItemEstimate(i, blockStartTime)
-			current = n
+			b.updateTimePerItemEstimate(r.amount, blockStartTime)
+			completed = n
 			blockStartTime = time.Now()
+			r.result <- true
 		case d := <-b.decoratorCh:
 			switch d.kind {
 			case decoratorAppend:
@@ -163,7 +195,13 @@ func (b *Bar) server() {
 				prependFuncs = append(prependFuncs, d.f)
 			}
 		case r := <-b.redrawRequestCh:
-			r.bufch <- b.draw(buf, current, appendFuncs, prependFuncs)
+			r.bufCh <- b.draw(buf, completed, appendFuncs, prependFuncs)
+		case wg := <-b.flushedCh:
+			if completed == b.total {
+				close(b.incrRequestCh)
+				wg.Done()
+				return
+			}
 		}
 	}
 }
