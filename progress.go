@@ -17,7 +17,7 @@ const (
 	barRemove
 )
 
-const refreshRate = 50
+const refreshRate = 60
 
 // progress represents the container that renders progress bars
 type progress struct {
@@ -59,7 +59,7 @@ func New() *progress {
 // AddBar creates a new progress bar and adds to the container
 func (p *progress) AddBar(total int) *Bar {
 	p.wg.Add(1)
-	bar := newBar(total)
+	bar := newBar(total, p.wg)
 	// bar.Width = p.Width
 	p.op <- &operation{barAdd, bar, nil}
 	return bar
@@ -104,9 +104,12 @@ func (p *progress) server() {
 		select {
 		case op, ok := <-p.op:
 			if !ok {
+				for _, b := range bars {
+					b.Stop()
+				}
 				t.Stop()
-				close(p.interval)
 				p.lw.Stop()
+				// close(p.interval)
 				return
 			}
 			switch op.kind {
@@ -118,6 +121,7 @@ func (p *progress) server() {
 					if b == op.bar {
 						bars = append(bars[:i], bars[i+1:]...)
 						ok = true
+						b.Stop()
 						break
 					}
 				}
@@ -128,9 +132,9 @@ func (p *progress) server() {
 				fmt.Fprintln(p.lw, b.String())
 			}
 			p.lw.Flush()
-			for _, b := range bars {
-				b.flushed(p.wg)
-			}
+			// for _, b := range bars {
+			// 	b.flushed()
+			// }
 		case d := <-p.interval:
 			t.Stop()
 			t = time.NewTicker(d)
