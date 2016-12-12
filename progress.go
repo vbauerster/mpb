@@ -27,7 +27,7 @@ type progress struct {
 	// Width is the width of the progress bars
 	// Width int
 
-	lw *uilive.Writer
+	// lw *uilive.Writer
 
 	op chan *operation
 
@@ -46,8 +46,8 @@ type operation struct {
 // New returns a new progress bar with defaults
 func New() *progress {
 	p := &progress{
-		out:      os.Stdout,
-		lw:       uilive.New(),
+		out: os.Stdout,
+		// lw:       uilive.New(),
 		op:       make(chan *operation),
 		interval: make(chan time.Duration),
 		wg:       new(sync.WaitGroup),
@@ -85,12 +85,13 @@ func (p *progress) SetOut(w io.Writer) *progress {
 }
 
 // Bypass returns a writer which allows non-buffered data to be written to the underlying output
-func (p *progress) Bypass() io.Writer {
-	return p.lw.Bypass()
-}
+// func (p *progress) Bypass() io.Writer {
+// 	return p.lw.Bypass()
+// }
 
 // Stop stops listening
 func (p *progress) Stop() {
+	fmt.Fprintln(os.Stderr, "p.Stop")
 	p.wg.Wait()
 	close(p.op)
 }
@@ -98,18 +99,18 @@ func (p *progress) Stop() {
 // server monitors underlying channels and renders any progress bars
 func (p *progress) server() {
 	t := time.NewTicker(refreshRate * time.Millisecond)
-	bars := make([]*Bar, 0)
-	p.lw.Out = p.out
+	bars := make([]*Bar, 0, 4)
+	lw := uilive.New()
+	lw.Out = p.out
 	for {
 		select {
 		case op, ok := <-p.op:
 			if !ok {
+				fmt.Fprintln(os.Stderr, "Sopping bars")
 				for _, b := range bars {
 					b.Stop()
 				}
 				t.Stop()
-				p.lw.Stop()
-				// close(p.interval)
 				return
 			}
 			switch op.kind {
@@ -129,12 +130,12 @@ func (p *progress) server() {
 			}
 		case <-t.C:
 			for _, b := range bars {
-				fmt.Fprintln(p.lw, b.String())
+				fmt.Fprintln(lw, b.String())
 			}
-			p.lw.Flush()
-			// for _, b := range bars {
-			// 	b.flushed()
-			// }
+			lw.Flush()
+			for _, b := range bars {
+				b.flushed()
+			}
 		case d := <-p.interval:
 			t.Stop()
 			t = time.NewTicker(d)

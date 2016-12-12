@@ -1,47 +1,62 @@
 package main
 
 import (
-	"sync"
+	"fmt"
+	"math/rand"
+	"runtime"
 	"time"
 
 	"github.com/vbauerster/uiprogress"
 )
 
+const (
+	maxBlockSize = 14
+)
+
 func main() {
-	waitTime := time.Millisecond * 100
-	// p := uiprogress.New().RefreshInterval(100 * time.Millisecond)
+	runtime.GOMAXPROCS(runtime.NumCPU())
+
+	decor := func(s *uiprogress.Statistics) string {
+		str := fmt.Sprintf("%d/%d", s.Completed, s.Total)
+		return fmt.Sprintf("%-7s", str)
+	}
+
 	p := uiprogress.New()
 
-	var wg sync.WaitGroup
-	bar1 := p.AddBar(20).AppendCompleted().PrependElapsed()
-	wg.Add(1)
+	bar1 := p.AddBar(50).AppendETA().PrependFunc(decor)
 	go func() {
-		defer wg.Done()
-		for bar1.Incr() {
-			time.Sleep(waitTime)
+		blockSize := rand.Intn(maxBlockSize) + 1
+		for i := 0; i < 50; i++ {
+			time.Sleep(time.Duration(blockSize) * (50*time.Millisecond + time.Duration(rand.Intn(5*int(time.Millisecond)))))
+			bar1.Incr(1)
+			blockSize = rand.Intn(maxBlockSize) + 1
 		}
 	}()
 
-	bar2 := p.AddBar(40).AppendCompleted().PrependElapsed()
-	wg.Add(1)
+	bar2 := p.AddBar(100).AppendETA().PrependFunc(decor)
 	go func() {
-		defer wg.Done()
-		for bar2.Incr() {
-			time.Sleep(waitTime)
+		blockSize := rand.Intn(maxBlockSize) + 1
+		for i := 0; i < 100; i++ {
+			time.Sleep(time.Duration(blockSize) * (50*time.Millisecond + time.Duration(rand.Intn(5*int(time.Millisecond)))))
+			bar2.Incr(1)
+			blockSize = rand.Intn(maxBlockSize) + 1
 		}
 	}()
 
-	time.Sleep(time.Second)
-	bar3 := p.AddBar(80).PrependElapsed().AppendCompleted()
-	wg.Add(1)
+	bar3 := p.AddBar(80).AppendETA().PrependFunc(decor)
 	go func() {
-		defer wg.Done()
-		for bar3.Incr() {
-			time.Sleep(waitTime)
+		blockSize := rand.Intn(maxBlockSize) + 1
+		for i := 0; i < 80; i++ {
+			time.Sleep(time.Duration(blockSize) * (50*time.Millisecond + time.Duration(rand.Intn(5*int(time.Millisecond)))))
+			bar3.Incr(1)
+			blockSize = rand.Intn(maxBlockSize) + 1
 		}
 	}()
 
-	wg.Wait()
+	// time.Sleep(time.Second)
+	// p.RemoveBar(bar2)
+
 	p.Stop()
+	fmt.Println("stop")
 	// p.AddBar(1) // panic: send on closed channnel
 }

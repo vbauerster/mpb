@@ -68,6 +68,7 @@ type Bar struct {
 	Alpha float64
 
 	incrRequestCh chan *incrRequest
+	incrCh        chan int
 
 	redrawRequestCh chan *redrawRequest
 
@@ -79,8 +80,6 @@ type Bar struct {
 
 	stopCh chan struct{}
 	done   chan struct{}
-
-	// wg *sync.WaitGroup
 }
 
 type Statistics struct {
@@ -114,6 +113,7 @@ func newBar(total int, wg *sync.WaitGroup) *Bar {
 		flushedCh:       make(chan struct{}),
 		stopCh:          make(chan struct{}),
 		done:            make(chan struct{}),
+		incrCh:          make(chan int),
 	}
 	go b.server(wg)
 	return b
@@ -155,27 +155,25 @@ func (b *Bar) PrependPercentage() *Bar {
 
 // String returns the string representation of the bar
 func (b *Bar) String() string {
-	if b.IsStopped() {
-		return "bar stopped"
-	}
+	// if b.IsStopped() {
+	// 	return "bar stopped"
+	// }
 	bufCh := make(chan []byte)
 	b.redrawRequestCh <- &redrawRequest{bufCh}
 	return string(<-bufCh)
 }
 
 func (b *Bar) flushed() {
-	if !b.IsStopped() {
-		b.flushedCh <- struct{}{}
-	}
+	b.flushedCh <- struct{}{}
 }
 
-func (b *Bar) Incr(n int) bool {
-	if b.IsStopped() {
-		return false
+func (b *Bar) Incr(n int) {
+	// result := make(chan bool)
+	// b.incrRequestCh <- &incrRequest{n, result}
+	// return <-result
+	if !b.IsCompleted() {
+		b.incrCh <- n
 	}
-	result := make(chan bool)
-	b.incrRequestCh <- &incrRequest{n, result}
-	return <-result
 }
 
 func (b *Bar) server(wg *sync.WaitGroup) {
@@ -187,25 +185,18 @@ func (b *Bar) server(wg *sync.WaitGroup) {
 	var done bool
 	for {
 		select {
-		case r := <-b.incrRequestCh:
-			n := completed + r.amount
-			fmt.Fprintf(os.Stderr, "n = %+v\n", n)
+		case i := <-b.incrCh:
+			n := completed + i
 			if n > b.total {
-				r.result <- false
 				completed = b.total
-				fmt.Fprintln(os.Stderr, "n > b.total = return false")
-				break // breaks out of select
+				break
 			}
-			// r.result <- true
-			b.updateTimePerItemEstimate(r.amount, blockStartTime)
+			b.updateTimePerItemEstimate(i, blockStartTime)
 			completed = n
-			blockStartTime = time.Now()
 			if completed == b.total && !done {
-				fmt.Fprintln(os.Stderr, "completed == b.total")
 				done = true
-				wg.Done()
 			}
-			r.result <- true
+			blockStartTime = time.Now()
 		case d := <-b.decoratorCh:
 			switch d.kind {
 			case decoratorAppend:
@@ -214,41 +205,36 @@ func (b *Bar) server(wg *sync.WaitGroup) {
 				prependFuncs = append(prependFuncs, d.f)
 			}
 		case r := <-b.redrawRequestCh:
-			// fmt.Fprintln(os.Stderr, "redraw")
 			r.bufCh <- b.draw(buf, completed, appendFuncs, prependFuncs)
-		// case <-b.flushedCh:
-		// 	if completed == b.total && !done {
-		// 		fmt.Fprintln(os.Stderr, "wg.Done")
-		// 		done = true
-		// 		wg.Done()
-		// 	} else {
-		// 		fmt.Fprintln(os.Stderr, "wg.Done not done")
-		// 	}
+		case <-b.flushedCh:
+			if done && !b.IsCompleted() {
+				fmt.Fprintln(os.Stderr, "flushedCh: wg.Done")
+				close(b.done)
+				wg.Done()
+			}
 		case <-b.stopCh:
 			fmt.Fprintln(os.Stderr, "received stop signal")
-			// close(b.incrRequestCh)
-			close(b.done)
 			if !done {
+				fmt.Fprintln(os.Stderr, "closing done chan: done = false")
+				close(b.done)
 				done = true
 				wg.Done()
 			}
-			// close(b.redrawRequestCh)
-			// close(b.flushedCh)
 			return
 		}
 	}
 }
 
 func (b *Bar) Stop() {
-	if !b.IsStopped() {
-		fmt.Fprintln(os.Stderr, "sending to stopCh")
-		b.stopCh <- struct{}{}
-	} else {
-		fmt.Fprintln(os.Stderr, "Stop: already stopped")
-	}
+	b.stopCh <- struct{}{}
+	// if !b.IsCompleted() {
+	// 	fmt.Fprintln(os.Stderr, "sending to stopCh")
+	// } else {
+	// 	fmt.Fprintln(os.Stderr, "Stop: already stopped")
+	// }
 }
 
-func (b *Bar) IsStopped() bool {
+func (b *Bar) IsCompleted() bool {
 	select {
 	case <-b.done:
 		return true
