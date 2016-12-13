@@ -1,4 +1,4 @@
-package uiprogress
+package mpb
 
 import (
 	"fmt"

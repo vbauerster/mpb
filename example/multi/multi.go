@@ -5,7 +5,7 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/vbauerster/uiprogress"
+	"github.com/vbauerster/mpb"
 )
 
 const (
@@ -13,12 +13,12 @@ const (
 )
 
 func main() {
-	decor := func(s *uiprogress.Statistics) string {
+	decor := func(s *mpb.Statistics) string {
 		str := fmt.Sprintf("%d/%d", s.Completed, s.Total)
 		return fmt.Sprintf("%-7s", str)
 	}
 
-	p := uiprogress.New().RefreshRate(80 * time.Millisecond)
+	p := mpb.New().RefreshRate(80 * time.Millisecond)
 
 	bar1 := p.AddBar(50).AppendETA().PrependFunc(decor)
 	go func() {
