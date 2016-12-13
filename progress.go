@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sort"
 	"sync"
 	"time"
 
@@ -13,8 +14,16 @@ import (
 type opType uint
 
 const (
-	barAdd opType = iota
-	barRemove
+	opBarAdd opType = iota
+	opBarRemove
+)
+
+type SortType uint
+
+const (
+	SortNone SortType = iota
+	SortTop
+	SortBottom
 )
 
 const refreshRate = 60
@@ -23,6 +32,7 @@ const refreshRate = 60
 type Progress struct {
 	out     io.Writer
 	width   int
+	sort    SortType
 	stopped bool
 
 	op            chan *operation
@@ -74,17 +84,22 @@ func (p *Progress) RefreshRate(d time.Duration) *Progress {
 	return p
 }
 
+func (p *Progress) Sort(sort SortType) *Progress {
+	p.sort = sort
+	return p
+}
+
 // AddBar creates a new progress bar and adds to the container
 func (p *Progress) AddBar(total int) *Bar {
 	p.wg.Add(1)
 	bar := newBar(total, p.width, p.wg)
-	p.op <- &operation{barAdd, bar, nil}
+	p.op <- &operation{opBarAdd, bar, nil}
 	return bar
 }
 
 func (p *Progress) RemoveBar(b *Bar) bool {
 	result := make(chan bool)
-	p.op <- &operation{barRemove, b, result}
+	p.op <- &operation{opBarRemove, b, result}
 	return <-result
 }
 
@@ -115,9 +130,9 @@ func (p *Progress) server() {
 				return
 			}
 			switch op.kind {
-			case barAdd:
+			case opBarAdd:
 				bars = append(bars, op.bar)
-			case barRemove:
+			case opBarRemove:
 				var ok bool
 				for i, b := range bars {
 					if b == op.bar {
@@ -130,6 +145,12 @@ func (p *Progress) server() {
 				op.result <- ok
 			}
 		case <-t.C:
+			switch p.sort {
+			case SortTop:
+				sort.Sort(sort.Reverse(SortableBarSlice(bars)))
+			case SortBottom:
+				sort.Sort(SortableBarSlice(bars))
+			}
 			for _, b := range bars {
 				// cannot parallel this, because order matters
 				fmt.Fprintln(lw, b)

@@ -34,12 +34,13 @@ type Bar struct {
 	leftEnd  byte
 	rightEnd byte
 
-	incrCh          chan int
-	redrawRequestCh chan *redrawRequest
-	decoratorCh     chan *decorator
-	flushedCh       chan struct{}
-	stopCh          chan struct{}
-	done            chan struct{}
+	incrCh        chan int
+	redrawReqCh   chan chan []byte
+	progressReqCh chan chan int
+	decoratorCh   chan *decorator
+	flushedCh     chan struct{}
+	stopCh        chan struct{}
+	done          chan struct{}
 
 	timePerItemEstimate time.Duration
 }
@@ -49,26 +50,31 @@ type Statistics struct {
 	TimePerItemEstimate time.Duration
 }
 
-type redrawRequest struct {
-	bufCh chan []byte
-}
+// type redrawRequest struct {
+// 	respCh chan []byte
+// }
+
+// type progressRequest struct {
+// 	respCh chan int
+// }
 
 func newBar(total, width int, wg *sync.WaitGroup) *Bar {
 	b := &Bar{
-		fill:            '=',
-		empty:           '-',
-		tip:             '>',
-		leftEnd:         '[',
-		rightEnd:        ']',
-		alpha:           0.25,
-		total:           total,
-		width:           width,
-		incrCh:          make(chan int),
-		redrawRequestCh: make(chan *redrawRequest),
-		decoratorCh:     make(chan *decorator),
-		flushedCh:       make(chan struct{}),
-		stopCh:          make(chan struct{}),
-		done:            make(chan struct{}),
+		fill:          '=',
+		empty:         '-',
+		tip:           '>',
+		leftEnd:       '[',
+		rightEnd:      ']',
+		alpha:         0.25,
+		total:         total,
+		width:         width,
+		incrCh:        make(chan int),
+		redrawReqCh:   make(chan chan []byte),
+		progressReqCh: make(chan chan int),
+		decoratorCh:   make(chan *decorator),
+		flushedCh:     make(chan struct{}),
+		stopCh:        make(chan struct{}),
+		done:          make(chan struct{}),
 	}
 	go b.server(wg)
 	return b
@@ -128,9 +134,9 @@ func (b *Bar) SetEtaAlpha(a float64) *Bar {
 
 // String returns the string representation of the bar
 func (b *Bar) String() string {
-	bufCh := make(chan []byte)
-	b.redrawRequestCh <- &redrawRequest{bufCh}
-	return string(<-bufCh)
+	respCh := make(chan []byte)
+	b.redrawReqCh <- respCh
+	return string(<-respCh)
 }
 
 func (b *Bar) Incr(n int) {
@@ -228,8 +234,10 @@ func (b *Bar) server(wg *sync.WaitGroup) {
 			case decoratorPrepend:
 				prependFuncs = append(prependFuncs, d.f)
 			}
-		case r := <-b.redrawRequestCh:
-			r.bufCh <- b.draw(buf, completed, appendFuncs, prependFuncs)
+		case respCh := <-b.redrawReqCh:
+			respCh <- b.draw(buf, completed, appendFuncs, prependFuncs)
+		case respCh := <-b.progressReqCh:
+			respCh <- int(100 * float64(completed) / float64(b.total))
 		case <-b.flushedCh:
 			if done && !b.IsCompleted() {
 				// fmt.Fprintln(os.Stderr, "flushedCh: wg.Done")
@@ -287,3 +295,17 @@ func (b *Bar) updateTimePerItemEstimate(items int, blockStartTime time.Time) {
 	lastItemEstimate := float64(lastBlockTime) / float64(items)
 	b.timePerItemEstimate = time.Duration((b.alpha * lastItemEstimate) + (1-b.alpha)*float64(b.timePerItemEstimate))
 }
+
+func (b *Bar) progress() int {
+	respCh := make(chan int)
+	b.progressReqCh <- respCh
+	return <-respCh
+}
+
+type SortableBarSlice []*Bar
+
+func (p SortableBarSlice) Len() int { return len(p) }
+
+func (p SortableBarSlice) Less(i, j int) bool { return p[i].progress() < p[j].progress() }
+
+func (p SortableBarSlice) Swap(i, j int) { p[i], p[j] = p[j], p[i] }
