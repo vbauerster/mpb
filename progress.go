@@ -25,8 +25,7 @@ type Progress struct {
 	width   int
 	stopped bool
 
-	op chan *operation
-
+	op            chan *operation
 	rrChangeReqCh chan time.Duration
 
 	wg *sync.WaitGroup
@@ -138,7 +137,7 @@ func (p *Progress) server() {
 			lw.Flush()
 			for _, b := range bars {
 				go func(b *Bar) {
-					b.flushed()
+					b.flushedCh <- struct{}{}
 				}(b)
 			}
 		case d := <-p.rrChangeReqCh:

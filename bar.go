@@ -181,10 +181,19 @@ func (b *Bar) AppendETA() *Bar {
 	return b
 }
 
+func (b *Bar) AppendPercentage() *Bar {
+	b.AppendFunc(func(s *Statistics) string {
+		completed := int(100 * float64(s.Completed) / float64(s.Total))
+		return fmt.Sprintf("%3d %%", completed)
+	})
+	return b
+}
+
 func (b *Bar) PrependPercentage() *Bar {
 	b.PrependFunc(func(s *Statistics) string {
 		completed := int(100 * float64(s.Completed) / float64(s.Total))
-		return fmt.Sprintf("%3d %%", completed)
+		str := fmt.Sprintf("%3d %%", completed)
+		return fmt.Sprintf("%-5s", str)
 	})
 	return b
 }
@@ -271,10 +280,6 @@ func (b *Bar) draw(buf []byte, current int, appendFuncs, prependFuncs []Decorato
 		buf = append(args, buf...)
 	}
 	return buf
-}
-
-func (b *Bar) flushed() {
-	b.flushedCh <- struct{}{}
 }
 
 func (b *Bar) updateTimePerItemEstimate(items int, blockStartTime time.Time) {
