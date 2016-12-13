@@ -65,6 +65,12 @@ func (p *progress) SetOut(w io.Writer) *progress {
 	return p
 }
 
+// RefreshRate overrides default (30ms) refreshRate value
+func (p *progress) RefreshRate(d time.Duration) *progress {
+	p.interval <- d
+	return p
+}
+
 // AddBar creates a new progress bar and adds to the container
 func (p *progress) AddBar(total int) *Bar {
 	p.wg.Add(1)
@@ -78,12 +84,6 @@ func (p *progress) RemoveBar(b *Bar) bool {
 	result := make(chan bool)
 	p.op <- &operation{barRemove, b, result}
 	return <-result
-}
-
-// RefreshRate overrides default (30ms) refreshRate value
-func (p *progress) RefreshRate(d time.Duration) *progress {
-	p.interval <- d
-	return p
 }
 
 // WaitAndStop stops listening
