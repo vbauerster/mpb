@@ -3,25 +3,22 @@ package main
 import (
 	"fmt"
 	"math/rand"
-	"runtime"
 	"time"
 
 	"github.com/vbauerster/uiprogress"
 )
 
 const (
-	maxBlockSize = 14
+	maxBlockSize = 12
 )
 
 func main() {
-	runtime.GOMAXPROCS(runtime.NumCPU())
-
 	decor := func(s *uiprogress.Statistics) string {
 		str := fmt.Sprintf("%d/%d", s.Completed, s.Total)
 		return fmt.Sprintf("%-7s", str)
 	}
 
-	p := uiprogress.New()
+	p := uiprogress.New().RefreshRate(80 * time.Millisecond)
 
 	bar1 := p.AddBar(50).AppendETA().PrependFunc(decor)
 	go func() {

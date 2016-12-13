@@ -55,6 +55,16 @@ func New() *progress {
 	return p
 }
 
+// SetOut sets underlying writer of progress
+// default is os.Stdout
+func (p *progress) SetOut(w io.Writer) *progress {
+	if w == nil {
+		return p
+	}
+	p.out = w
+	return p
+}
+
 // AddBar creates a new progress bar and adds to the container
 func (p *progress) AddBar(total int) *Bar {
 	p.wg.Add(1)
@@ -75,18 +85,6 @@ func (p *progress) RefreshRate(d time.Duration) *progress {
 	p.interval <- d
 	return p
 }
-
-// SetOut sets underlying writer of progress
-// default is os.Stdout
-func (p *progress) SetOut(w io.Writer) *progress {
-	p.out = w
-	return p
-}
-
-// Bypass returns a writer which allows non-buffered data to be written to the underlying output
-// func (p *progress) Bypass() io.Writer {
-// 	return p.lw.Bypass()
-// }
 
 // WaitAndStop stops listening
 func (p *progress) WaitAndStop() {
