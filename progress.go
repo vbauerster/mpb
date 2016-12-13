@@ -102,8 +102,7 @@ func (p *progress) WaitAndStop() {
 func (p *progress) server() {
 	t := time.NewTicker(refreshRate * time.Millisecond)
 	bars := make([]*Bar, 0, 4)
-	lw := uilive.New()
-	lw.Out = p.out
+	lw := uilive.New(p.out)
 	for {
 		select {
 		case op, ok := <-p.op:
@@ -132,11 +131,14 @@ func (p *progress) server() {
 			}
 		case <-t.C:
 			for _, b := range bars {
-				fmt.Fprintln(lw, b.String())
+				// cannot parallel this, because order matters
+				fmt.Fprintln(lw, b)
 			}
 			lw.Flush()
 			for _, b := range bars {
-				b.flushed()
+				go func(b *Bar) {
+					b.flushed()
+				}(b)
 			}
 		case d := <-p.interval:
 			t.Stop()
