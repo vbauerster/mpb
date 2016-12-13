@@ -19,22 +19,17 @@ const (
 
 const refreshRate = 60
 
-// progress represents the container that renders progress bars
-type progress struct {
-	// out is the writer to render progress bars to
-	out io.Writer
-
-	// Width is the width of the progress bars
-	// Width int
+// Progress represents the container that renders Progress bars
+type Progress struct {
+	out     io.Writer
+	width   int
+	stopped bool
 
 	op chan *operation
 
-	// new refresh interval to be send over this channel
-	interval chan time.Duration
+	rrChangeReqCh chan time.Duration
 
 	wg *sync.WaitGroup
-
-	stopped bool
 }
 
 type operation struct {
@@ -44,20 +39,29 @@ type operation struct {
 }
 
 // New returns a new progress bar with defaults
-func New() *progress {
-	p := &progress{
-		out:      os.Stdout,
-		op:       make(chan *operation),
-		interval: make(chan time.Duration),
-		wg:       new(sync.WaitGroup),
+func New() *Progress {
+	p := &Progress{
+		out:           os.Stdout,
+		width:         70,
+		op:            make(chan *operation),
+		rrChangeReqCh: make(chan time.Duration),
+		wg:            new(sync.WaitGroup),
 	}
 	go p.server()
 	return p
 }
 
+func (p *Progress) SetWidth(n int) *Progress {
+	if n <= 0 {
+		return p
+	}
+	p.width = n
+	return p
+}
+
 // SetOut sets underlying writer of progress
 // default is os.Stdout
-func (p *progress) SetOut(w io.Writer) *progress {
+func (p *Progress) SetOut(w io.Writer) *Progress {
 	if w == nil {
 		return p
 	}
@@ -66,28 +70,27 @@ func (p *progress) SetOut(w io.Writer) *progress {
 }
 
 // RefreshRate overrides default (30ms) refreshRate value
-func (p *progress) RefreshRate(d time.Duration) *progress {
-	p.interval <- d
+func (p *Progress) RefreshRate(d time.Duration) *Progress {
+	p.rrChangeReqCh <- d
 	return p
 }
 
 // AddBar creates a new progress bar and adds to the container
-func (p *progress) AddBar(total int) *Bar {
+func (p *Progress) AddBar(total int) *Bar {
 	p.wg.Add(1)
-	bar := newBar(total, p.wg)
-	// bar.Width = p.Width
+	bar := newBar(total, p.width, p.wg)
 	p.op <- &operation{barAdd, bar, nil}
 	return bar
 }
 
-func (p *progress) RemoveBar(b *Bar) bool {
+func (p *Progress) RemoveBar(b *Bar) bool {
 	result := make(chan bool)
 	p.op <- &operation{barRemove, b, result}
 	return <-result
 }
 
 // WaitAndStop stops listening
-func (p *progress) WaitAndStop() {
+func (p *Progress) WaitAndStop() {
 	if !p.stopped {
 		// fmt.Fprintln(os.Stderr, "p.WaitAndStop")
 		p.stopped = true
@@ -97,7 +100,7 @@ func (p *progress) WaitAndStop() {
 }
 
 // server monitors underlying channels and renders any progress bars
-func (p *progress) server() {
+func (p *Progress) server() {
 	t := time.NewTicker(refreshRate * time.Millisecond)
 	bars := make([]*Bar, 0, 4)
 	lw := uilive.New(p.out)
@@ -138,7 +141,7 @@ func (p *progress) server() {
 					b.flushed()
 				}(b)
 			}
-		case d := <-p.interval:
+		case d := <-p.rrChangeReqCh:
 			t.Stop()
 			t = time.NewTicker(d)
 		}

@@ -6,29 +6,6 @@ import (
 	"time"
 )
 
-var (
-	// Fill is the default character representing completed progress
-	Fill byte = '='
-
-	// Head is the default character that moves when progress is updated
-	Head byte = '>'
-
-	// Empty is the default character that represents the empty progress
-	Empty byte = '-'
-
-	// LeftEnd is the default character in the left most part of the progress indicator
-	LeftEnd byte = '['
-
-	// RightEnd is the default character in the right most part of the progress indicator
-	RightEnd byte = ']'
-
-	// Width is the default width of the progress bar
-	Width = 70
-)
-
-// DecoratorFunc is a function that can be prepended and appended to the progress bar
-type DecoratorFunc func(s *Statistics) string
-
 type decoratorFuncType uint
 
 const (
@@ -36,51 +13,35 @@ const (
 	decoratorPrepend
 )
 
+// DecoratorFunc is a function that can be prepended and appended to the progress bar
+type DecoratorFunc func(s *Statistics) string
+
 type decorator struct {
 	kind decoratorFuncType
 	f    DecoratorFunc
 }
 
-// Bar represents a progress bar
+// Bar represents a progress Bar
 type Bar struct {
-	// total of the total  for the progress bar
-	total int
+	total   int
+	width   int
+	alpha   float64
+	stopped bool
 
-	// LeftEnd is character in the left most part of the progress indicator. Defaults to '['
-	LeftEnd byte
+	fill     byte
+	empty    byte
+	tip      byte
+	leftEnd  byte
+	rightEnd byte
 
-	// RightEnd is character in the right most part of the progress indicator. Defaults to ']'
-	RightEnd byte
-
-	// Fill is the character representing completed progress. Defaults to '='
-	Fill byte
-
-	// Head is the character that moves when progress is updated.  Defaults to '>'
-	Head byte
-
-	// Empty is the character that represents the empty progress. Default is '-'
-	Empty byte
-
-	// Width is the width of the progress bar
-	Width int
-
-	Alpha float64
-
-	incrRequestCh chan *incrRequest
-	incrCh        chan int
-
+	incrCh          chan int
 	redrawRequestCh chan *redrawRequest
-
-	decoratorCh chan *decorator
+	decoratorCh     chan *decorator
+	flushedCh       chan struct{}
+	stopCh          chan struct{}
+	done            chan struct{}
 
 	timePerItemEstimate time.Duration
-
-	flushedCh chan struct{}
-
-	stopCh chan struct{}
-	done   chan struct{}
-
-	stopped bool
 }
 
 type Statistics struct {
@@ -92,32 +53,106 @@ type redrawRequest struct {
 	bufCh chan []byte
 }
 
-type incrRequest struct {
-	amount int
-	result chan bool
-}
-
-// NewBar returns a new progress bar
-func newBar(total int, wg *sync.WaitGroup) *Bar {
+func newBar(total, width int, wg *sync.WaitGroup) *Bar {
 	b := &Bar{
-		Alpha:           0.25,
+		fill:            '=',
+		empty:           '-',
+		tip:             '>',
+		leftEnd:         '[',
+		rightEnd:        ']',
+		alpha:           0.25,
 		total:           total,
-		Width:           Width,
-		LeftEnd:         LeftEnd,
-		RightEnd:        RightEnd,
-		Head:            Head,
-		Fill:            Fill,
-		Empty:           Empty,
-		incrRequestCh:   make(chan *incrRequest),
+		width:           width,
+		incrCh:          make(chan int),
 		redrawRequestCh: make(chan *redrawRequest),
 		decoratorCh:     make(chan *decorator),
 		flushedCh:       make(chan struct{}),
 		stopCh:          make(chan struct{}),
 		done:            make(chan struct{}),
-		incrCh:          make(chan int),
 	}
 	go b.server(wg)
 	return b
+}
+
+// SetWidth sets width of the bar
+func (b *Bar) SetWidth(n int) *Bar {
+	if n <= 0 {
+		return b
+	}
+	b.width = n
+	return b
+}
+
+// SetFill sets character representing completed progress.
+// Defaults to '='
+func (b *Bar) SetFill(c byte) *Bar {
+	b.fill = c
+	return b
+}
+
+// SetTip sets character representing tip of progress.
+// Defaults to '>'
+func (b *Bar) SetTip(c byte) *Bar {
+	b.tip = c
+	return b
+}
+
+// SetEmpty sets character representing the empty progress
+// Defaults to '-'
+func (b *Bar) SetEmpty(c byte) *Bar {
+	b.empty = c
+	return b
+}
+
+// SetLeftEnd sets character representing the left most border
+// Defaults to '['
+func (b *Bar) SetLeftEnd(c byte) *Bar {
+	b.leftEnd = c
+	return b
+}
+
+// SetRightEnd sets character representing the right most border
+// Defaults to ']'
+func (b *Bar) SetRightEnd(c byte) *Bar {
+	b.rightEnd = c
+	return b
+}
+
+// SetEtaAlpha sets alfa for exponential-weighted-moving-average ETA estimator
+// Defaults to 0.25
+// Normally you shouldn't touch this
+func (b *Bar) SetEtaAlpha(a float64) *Bar {
+	b.alpha = a
+	return b
+}
+
+// String returns the string representation of the bar
+func (b *Bar) String() string {
+	bufCh := make(chan []byte)
+	b.redrawRequestCh <- &redrawRequest{bufCh}
+	return string(<-bufCh)
+}
+
+func (b *Bar) Incr(n int) {
+	if !b.IsCompleted() {
+		b.incrCh <- n
+	}
+}
+
+func (b *Bar) Stop() {
+	if !b.stopped {
+		b.stopCh <- struct{}{}
+		b.stopped = true
+	}
+}
+
+func (b *Bar) IsCompleted() bool {
+	select {
+	case <-b.done:
+		return true
+	default:
+		return false
+	}
 }
 
 func (b *Bar) PrependFunc(f DecoratorFunc) *Bar {
@@ -154,27 +189,10 @@ func (b *Bar) PrependPercentage() *Bar {
 	return b
 }
 
-// String returns the string representation of the bar
-func (b *Bar) String() string {
-	bufCh := make(chan []byte)
-	b.redrawRequestCh <- &redrawRequest{bufCh}
-	return string(<-bufCh)
-}
-
-func (b *Bar) flushed() {
-	b.flushedCh <- struct{}{}
-}
-
-func (b *Bar) Incr(n int) {
-	if !b.IsCompleted() {
-		b.incrCh <- n
-	}
-}
-
 func (b *Bar) server(wg *sync.WaitGroup) {
 	var completed int
 	blockStartTime := time.Now()
-	buf := make([]byte, b.Width, b.Width+24)
+	buf := make([]byte, b.width, b.width+24)
 	var appendFuncs []DecoratorFunc
 	var prependFuncs []DecoratorFunc
 	var done bool
@@ -221,38 +239,22 @@ func (b *Bar) server(wg *sync.WaitGroup) {
 	}
 }
 
-func (b *Bar) Stop() {
-	if !b.stopped {
-		b.stopCh <- struct{}{}
-		b.stopped = true
-	}
-}
-
-func (b *Bar) IsCompleted() bool {
-	select {
-	case <-b.done:
-		return true
-	default:
-		return false
-	}
-}
-
 func (b *Bar) draw(buf []byte, current int, appendFuncs, prependFuncs []DecoratorFunc) []byte {
-	completedWidth := current * b.Width / b.total
+	completedWidth := current * b.width / b.total
 
 	for i := 0; i < completedWidth; i++ {
-		buf[i] = b.Fill
+		buf[i] = b.fill
 	}
-	for i := completedWidth; i < b.Width; i++ {
-		buf[i] = b.Empty
+	for i := completedWidth; i < b.width; i++ {
+		buf[i] = b.empty
 	}
-	// set head bit
-	if completedWidth > 0 && completedWidth < b.Width {
-		buf[completedWidth-1] = b.Head
+	// set tip bit
+	if completedWidth > 0 && completedWidth < b.width {
+		buf[completedWidth-1] = b.tip
 	}
 
 	// set left and right ends bits
-	buf[0], buf[len(buf)-1] = b.LeftEnd, b.RightEnd
+	buf[0], buf[len(buf)-1] = b.leftEnd, b.rightEnd
 
 	s := &Statistics{b.total, current, b.timePerItemEstimate}
 
@@ -271,8 +273,12 @@ func (b *Bar) draw(buf []byte, current int, appendFuncs, prependFuncs []Decorato
 	return buf
 }
 
+func (b *Bar) flushed() {
+	b.flushedCh <- struct{}{}
+}
+
 func (b *Bar) updateTimePerItemEstimate(items int, blockStartTime time.Time) {
 	lastBlockTime := time.Since(blockStartTime)
 	lastItemEstimate := float64(lastBlockTime) / float64(items)
-	b.timePerItemEstimate = time.Duration((b.Alpha * lastItemEstimate) + (1-b.Alpha)*float64(b.timePerItemEstimate))
+	b.timePerItemEstimate = time.Duration((b.alpha * lastItemEstimate) + (1-b.alpha)*float64(b.timePerItemEstimate))
 }
