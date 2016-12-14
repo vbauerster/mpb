@@ -42,17 +42,15 @@ type Bar struct {
 	flushedCh     chan struct{}
 	stopCh        chan struct{}
 	done          chan struct{}
-
-	timePerItemEstimate time.Duration
 }
 
 type Statistics struct {
-	Total, Completed    int
-	TimePerItemEstimate time.Duration
+	Total, Current                   int
+	TimeElapsed, TimePerItemEstimate time.Duration
 }
 
 func (s *Statistics) eta() time.Duration {
-	return time.Duration(s.Total-s.Completed) * s.TimePerItemEstimate
+	return time.Duration(s.Total-s.Current) * s.TimePerItemEstimate
 }
 
 func newBar(total, width int, wg *sync.WaitGroup) *Bar {
@@ -191,9 +189,24 @@ func (b *Bar) AppendETA() *Bar {
 	return b
 }
 
+func (b *Bar) PrependElapsed(padding int) *Bar {
+	layout := "%" + strconv.Itoa(padding) + "s"
+	b.PrependFunc(func(s *Statistics) string {
+		return fmt.Sprintf(layout, time.Duration(s.TimeElapsed.Seconds())*time.Second)
+	})
+	return b
+}
+
+func (b *Bar) AppendElapsed() *Bar {
+	b.AppendFunc(func(s *Statistics) string {
+		return fmt.Sprint(time.Duration(s.TimeElapsed.Seconds()) * time.Second)
+	})
+	return b
+}
+
 func (b *Bar) AppendPercentage() *Bar {
 	b.AppendFunc(func(s *Statistics) string {
-		completed := int(100 * float64(s.Completed) / float64(s.Total))
+		completed := int(100 * float64(s.Current) / float64(s.Total))
 		return fmt.Sprintf("%3d %%", completed)
 	})
 	return b
@@ -202,35 +215,39 @@ func (b *Bar) AppendPercentage() *Bar {
 func (b *Bar) PrependPercentage(padding int) *Bar {
 	layout := "%" + strconv.Itoa(padding) + "d %%"
 	b.PrependFunc(func(s *Statistics) string {
-		completed := int(100 * float64(s.Completed) / float64(s.Total))
+		completed := int(100 * float64(s.Current) / float64(s.Total))
 		return fmt.Sprintf(layout, completed)
 	})
 	return b
 }
 
 func (b *Bar) server(wg *sync.WaitGroup) {
-	var completed int
-	blockStartTime := time.Now()
+	timeStarted := time.Now()
+	blockStartTime := timeStarted
 	buf := make([]byte, b.width, b.width+24)
+	var tpie time.Duration
+	var timeElapsed time.Duration
 	var appendFuncs []DecoratorFunc
 	var prependFuncs []DecoratorFunc
 	var done bool
+	var current int
 	for {
 		select {
 		case i := <-b.incrCh:
-			n := completed + i
+			n := current + i
 			// fmt.Fprintf(os.Stderr, "n = %+v\n", n)
 			if n > b.total {
-				completed = b.total
+				current = b.total
 				done = true
 				break
 			}
-			b.updateTimePerItemEstimate(i, blockStartTime)
-			completed = n
-			if completed == b.total && !done {
+			timeElapsed = time.Since(timeStarted)
+			tpie = calcTimePerItemEstimate(tpie, blockStartTime, b.alpha, i)
+			blockStartTime = time.Now()
+			current = n
+			if current == b.total && !done {
 				done = true
 			}
-			blockStartTime = time.Now()
 		case d := <-b.decoratorCh:
 			switch d.kind {
 			case decoratorAppend:
@@ -239,9 +256,10 @@ func (b *Bar) server(wg *sync.WaitGroup) {
 				prependFuncs = append(prependFuncs, d.f)
 			}
 		case respCh := <-b.redrawReqCh:
-			respCh <- b.draw(buf, completed, appendFuncs, prependFuncs)
+			stat := &Statistics{b.total, current, timeElapsed, tpie}
+			respCh <- b.draw(stat, buf, appendFuncs, prependFuncs)
 		case respCh := <-b.progressReqCh:
-			respCh <- int(100 * float64(completed) / float64(b.total))
+			respCh <- int(100 * float64(current) / float64(b.total))
 		case <-b.flushedCh:
 			if done && !b.IsCompleted() {
 				// fmt.Fprintln(os.Stderr, "flushedCh: wg.Done")
@@ -260,8 +278,8 @@ func (b *Bar) server(wg *sync.WaitGroup) {
 	}
 }
 
-func (b *Bar) draw(buf []byte, current int, appendFuncs, prependFuncs []DecoratorFunc) []byte {
-	completedWidth := current * b.width / b.total
+func (b *Bar) draw(stat *Statistics, buf []byte, appendFuncs, prependFuncs []DecoratorFunc) []byte {
+	completedWidth := stat.Current * b.width / b.total
 
 	for i := 0; i < completedWidth; i++ {
 		buf[i] = b.fill
@@ -277,27 +295,25 @@ func (b *Bar) draw(buf []byte, current int, appendFuncs, prependFuncs []Decorato
 	// set left and right ends bits
 	buf[0], buf[len(buf)-1] = b.leftEnd, b.rightEnd
 
-	s := &Statistics{b.total, current, b.timePerItemEstimate}
-
 	// render append functions to the right of the bar
 	for _, f := range appendFuncs {
 		buf = append(buf, ' ')
-		buf = append(buf, []byte(f(s))...)
+		buf = append(buf, []byte(f(stat))...)
 	}
 
 	// render prepend functions to the left of the bar
 	for _, f := range prependFuncs {
-		args := []byte(f(s))
+		args := []byte(f(stat))
 		args = append(args, ' ')
 		buf = append(args, buf...)
 	}
 	return buf
 }
 
-func (b *Bar) updateTimePerItemEstimate(items int, blockStartTime time.Time) {
+func calcTimePerItemEstimate(tpie time.Duration, blockStartTime time.Time, alpha float64, items int) time.Duration {
 	lastBlockTime := time.Since(blockStartTime)
 	lastItemEstimate := float64(lastBlockTime) / float64(items)
-	b.timePerItemEstimate = time.Duration((b.alpha * lastItemEstimate) + (1-b.alpha)*float64(b.timePerItemEstimate))
+	return time.Duration((alpha * lastItemEstimate) + (1-alpha)*float64(tpie))
 }
 
 func (b *Bar) progress() int {
