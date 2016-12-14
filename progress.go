@@ -84,7 +84,7 @@ func (p *Progress) RefreshRate(d time.Duration) *Progress {
 	return p
 }
 
-func (p *Progress) Sort(sort SortType) *Progress {
+func (p *Progress) WithSort(sort SortType) *Progress {
 	p.sort = sort
 	return p
 }

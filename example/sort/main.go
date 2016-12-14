@@ -14,7 +14,7 @@ const (
 
 func main() {
 
-	p := mpb.New().RefreshRate(80 * time.Millisecond).Sort(mpb.SortTop).SetWidth(60)
+	p := mpb.New().RefreshRate(80 * time.Millisecond).WithSort(mpb.SortTop).SetWidth(60)
 
 	bar1 := p.AddBar(100).AppendETA().PrependFunc(getDecor("Bar#1"))
 	go func() {
