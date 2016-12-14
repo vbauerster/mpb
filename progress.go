@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/vbauerster/uilive"
+	"github.com/vbauerster/mpb/cwriter"
 )
 
 type opType uint
@@ -117,7 +117,7 @@ func (p *Progress) WaitAndStop() {
 func (p *Progress) server() {
 	t := time.NewTicker(refreshRate * time.Millisecond)
 	bars := make([]*Bar, 0, 4)
-	lw := uilive.New(p.out)
+	lw := cwriter.New(p.out)
 	for {
 		select {
 		case op, ok := <-p.op:
