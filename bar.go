@@ -51,6 +51,10 @@ type Statistics struct {
 	TimePerItemEstimate time.Duration
 }
 
+func (s *Statistics) eta() time.Duration {
+	return time.Duration(s.Total-s.Completed) * s.TimePerItemEstimate
+}
+
 // type redrawRequest struct {
 // 	respCh chan []byte
 // }
@@ -183,16 +187,14 @@ func (b *Bar) PrependName(name string, padding int) *Bar {
 func (b *Bar) PrependETA(padding int) *Bar {
 	layout := "ETA%" + strconv.Itoa(padding) + "s"
 	b.PrependFunc(func(s *Statistics) string {
-		eta := time.Duration(s.Total-s.Completed) * s.TimePerItemEstimate
-		return fmt.Sprintf(layout, time.Duration(eta.Seconds())*time.Second)
+		return fmt.Sprintf(layout, time.Duration(s.eta().Seconds())*time.Second)
 	})
 	return b
 }
 
 func (b *Bar) AppendETA() *Bar {
 	b.AppendFunc(func(s *Statistics) string {
-		eta := time.Duration(s.Total-s.Completed) * s.TimePerItemEstimate
-		return fmt.Sprintf("ETA %v", time.Duration(eta.Seconds())*time.Second)
+		return fmt.Sprintf("ETA %s", time.Duration(s.eta().Seconds())*time.Second)
 	})
 	return b
 }
