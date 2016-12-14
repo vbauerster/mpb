@@ -26,7 +26,8 @@ const (
 	SortBottom
 )
 
-const refreshRate = 100
+// RefreshRate
+const rr = 100
 
 // Progress represents the container that renders Progress bars
 type Progress struct {
@@ -57,7 +58,7 @@ func New() *Progress {
 		outChangeReqCh: make(chan io.Writer),
 		wg:             new(sync.WaitGroup),
 	}
-	go p.server(cwriter.New(os.Stdout))
+	go p.server(cwriter.New(os.Stdout), time.NewTicker(rr*time.Millisecond))
 	return p
 }
 
@@ -115,8 +116,7 @@ func (p *Progress) WaitAndStop() {
 }
 
 // server monitors underlying channels and renders any progress bars
-func (p *Progress) server(cw *cwriter.Writer) {
-	t := time.NewTicker(refreshRate * time.Millisecond)
+func (p *Progress) server(cw *cwriter.Writer, t *time.Ticker) {
 	bars := make([]*Bar, 0, 4)
 	for {
 		select {
