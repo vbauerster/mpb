@@ -14,7 +14,8 @@ const (
 
 func main() {
 
-	p := mpb.New().RefreshRate(80 * time.Millisecond).SetWidth(64)
+	// p := mpb.New().RefreshRate(100 * time.Millisecond).SetWidth(64)
+	p := mpb.New().SetWidth(64)
 
 	name1 := "Bar#1:"
 	bar1 := p.AddBar(50).AppendETA().PrependPercentage(3).PrependName(name1, len(name1))
@@ -37,8 +38,7 @@ func main() {
 		}
 	}()
 
-	name3 := "Bar#3:"
-	bar3 := p.AddBar(80).AppendETA().PrependPercentage(3).PrependName(name3, len(name3))
+	bar3 := p.AddBar(80).AppendETA().PrependPercentage(3).PrependName("Bar#3:", 0)
 	go func() {
 		blockSize := rand.Intn(maxBlockSize) + 1
 		for i := 0; i < 80; i++ {
@@ -52,7 +52,6 @@ func main() {
 	// p.RemoveBar(bar2)
 
 	p.WaitAndStop()
-	bar2.Incr(2)
 	fmt.Println("stop")
 	// p.AddBar(1) // panic: send on closed channnel
 }
