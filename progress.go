@@ -26,7 +26,7 @@ const (
 	SortBottom
 )
 
-const refreshRate = 60
+const refreshRate = 100
 
 // Progress represents the container that renders Progress bars
 type Progress struct {
