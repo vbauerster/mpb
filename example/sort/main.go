@@ -14,9 +14,10 @@ const (
 
 func main() {
 
-	p := mpb.New().RefreshRate(80 * time.Millisecond).WithSort(mpb.SortTop).SetWidth(60)
+	p := mpb.New().WithSort(mpb.SortTop).SetWidth(60)
 
-	bar1 := p.AddBar(100).AppendETA().PrependFunc(getDecor("Bar#1"))
+	name1 := "Bar#1:"
+	bar1 := p.AddBar(100).AppendETA().PrependFunc(getDecor()).PrependName(name1, len(name1))
 	go func() {
 		blockSize := rand.Intn(maxBlockSize) + 1
 		for i := 0; i < 100; i++ {
@@ -26,7 +27,7 @@ func main() {
 		}
 	}()
 
-	bar2 := p.AddBar(60).AppendETA().PrependFunc(getDecor("Bar#2"))
+	bar2 := p.AddBar(60).AppendETA().PrependFunc(getDecor()).PrependName("", 0-len(name1))
 	go func() {
 		blockSize := rand.Intn(maxBlockSize) + 1
 		for i := 0; i < 60; i++ {
@@ -36,7 +37,7 @@ func main() {
 		}
 	}()
 
-	bar3 := p.AddBar(80).AppendETA().PrependFunc(getDecor("Bar#3"))
+	bar3 := p.AddBar(80).AppendETA().PrependFunc(getDecor()).PrependName("Bar#3:", 0)
 	go func() {
 		blockSize := rand.Intn(maxBlockSize) + 1
 		for i := 0; i < 80; i++ {
@@ -50,14 +51,13 @@ func main() {
 	// p.RemoveBar(bar2)
 
 	p.WaitAndStop()
-	bar2.Incr(2)
 	fmt.Println("stop")
 	// p.AddBar(1) // panic: send on closed channnel
 }
 
-func getDecor(name string) mpb.DecoratorFunc {
+func getDecor() mpb.DecoratorFunc {
 	return func(s *mpb.Statistics) string {
-		str := fmt.Sprintf("%d/%d", s.Completed, s.Total)
-		return fmt.Sprintf("%s %-7s", name, str)
+		str := fmt.Sprintf("%d/%d", s.Current, s.Total)
+		return fmt.Sprintf("%-7s", str)
 	}
 }
