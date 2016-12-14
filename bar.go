@@ -2,6 +2,7 @@ package mpb
 
 import (
 	"fmt"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -171,10 +172,19 @@ func (b *Bar) AppendFunc(f DecoratorFunc) *Bar {
 	return b
 }
 
-func (b *Bar) PrependETA() *Bar {
+func (b *Bar) PrependName(name string, padding int) *Bar {
+	layout := "%" + strconv.Itoa(padding) + "s"
+	b.PrependFunc(func(s *Statistics) string {
+		return fmt.Sprintf(layout, name)
+	})
+	return b
+}
+
+func (b *Bar) PrependETA(padding int) *Bar {
+	layout := "ETA%" + strconv.Itoa(padding) + "s"
 	b.PrependFunc(func(s *Statistics) string {
 		eta := time.Duration(s.Total-s.Completed) * s.TimePerItemEstimate
-		return fmt.Sprintf("ETA %-5v", time.Duration(eta.Seconds())*time.Second)
+		return fmt.Sprintf(layout, time.Duration(eta.Seconds())*time.Second)
 	})
 	return b
 }
@@ -195,11 +205,11 @@ func (b *Bar) AppendPercentage() *Bar {
 	return b
 }
 
-func (b *Bar) PrependPercentage() *Bar {
+func (b *Bar) PrependPercentage(padding int) *Bar {
+	layout := "%" + strconv.Itoa(padding) + "d %%"
 	b.PrependFunc(func(s *Statistics) string {
 		completed := int(100 * float64(s.Completed) / float64(s.Total))
-		str := fmt.Sprintf("%3d %%", completed)
-		return fmt.Sprintf("%-5s", str)
+		return fmt.Sprintf(layout, completed)
 	})
 	return b
 }
