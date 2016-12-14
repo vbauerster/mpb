@@ -35,8 +35,9 @@ type Progress struct {
 	sort    SortType
 	stopped bool
 
-	op            chan *operation
-	rrChangeReqCh chan time.Duration
+	op             chan *operation
+	rrChangeReqCh  chan time.Duration
+	outChangeReqCh chan io.Writer
 
 	wg *sync.WaitGroup
 }
@@ -50,13 +51,13 @@ type operation struct {
 // New returns a new progress bar with defaults
 func New() *Progress {
 	p := &Progress{
-		out:           os.Stdout,
-		width:         70,
-		op:            make(chan *operation),
-		rrChangeReqCh: make(chan time.Duration),
-		wg:            new(sync.WaitGroup),
+		width:          70,
+		op:             make(chan *operation),
+		rrChangeReqCh:  make(chan time.Duration),
+		outChangeReqCh: make(chan io.Writer),
+		wg:             new(sync.WaitGroup),
 	}
-	go p.server()
+	go p.server(cwriter.New(os.Stdout))
 	return p
 }
 
@@ -74,7 +75,7 @@ func (p *Progress) SetOut(w io.Writer) *Progress {
 	if w == nil {
 		return p
 	}
-	p.out = w
+	p.outChangeReqCh <- w
 	return p
 }
 
@@ -114,12 +115,14 @@ func (p *Progress) WaitAndStop() {
 }
 
 // server monitors underlying channels and renders any progress bars
-func (p *Progress) server() {
+func (p *Progress) server(cw *cwriter.Writer) {
 	t := time.NewTicker(refreshRate * time.Millisecond)
 	bars := make([]*Bar, 0, 4)
-	lw := cwriter.New(p.out)
 	for {
 		select {
+		case w := <-p.outChangeReqCh:
+			cw.Flush()
+			cw = cwriter.New(w)
 		case op, ok := <-p.op:
 			if !ok {
 				// fmt.Fprintln(os.Stderr, "Sopping bars")
@@ -153,9 +156,9 @@ func (p *Progress) server() {
 			}
 			for _, b := range bars {
 				// cannot parallel this, because order matters
-				fmt.Fprintln(lw, b)
+				fmt.Fprintln(cw, b)
 			}
-			lw.Flush()
+			cw.Flush()
 			for _, b := range bars {
 				go func(b *Bar) {
 					b.flushedCh <- struct{}{}
