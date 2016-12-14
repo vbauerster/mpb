@@ -2,6 +2,7 @@ package mpb
 
 import (
 	"fmt"
+	"io"
 	"strconv"
 	"sync"
 	"time"
@@ -125,6 +126,10 @@ func (b *Bar) SetRightEnd(c byte) *Bar {
 func (b *Bar) SetEtaAlpha(a float64) *Bar {
 	b.alpha = a
 	return b
+}
+
+func (b *Bar) ProxyReader(r io.Reader) *Reader {
+	return &Reader{r, b}
 }
 
 // String returns the string representation of the bar
