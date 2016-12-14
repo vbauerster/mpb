@@ -14,7 +14,7 @@ const (
 
 func main() {
 	decor := func(s *mpb.Statistics) string {
-		str := fmt.Sprintf("%d/%d", s.Completed, s.Total)
+		str := fmt.Sprintf("%d/%d", s.Current, s.Total)
 		return fmt.Sprintf("%-7s", str)
 	}
 

@@ -36,13 +36,13 @@ type Bar struct {
 	leftEnd  byte
 	rightEnd byte
 
-	incrCh        chan int
-	redrawReqCh   chan chan []byte
-	progressReqCh chan chan int
-	decoratorCh   chan *decorator
-	flushedCh     chan struct{}
-	stopCh        chan struct{}
-	done          chan struct{}
+	incrCh      chan int
+	redrawReqCh chan chan []byte
+	statusReqCh chan chan int
+	decoratorCh chan *decorator
+	flushedCh   chan struct{}
+	stopCh      chan struct{}
+	done        chan struct{}
 }
 
 type Statistics struct {
@@ -56,21 +56,21 @@ func (s *Statistics) eta() time.Duration {
 
 func newBar(total, width int, wg *sync.WaitGroup) *Bar {
 	b := &Bar{
-		fill:          '=',
-		empty:         '-',
-		tip:           '>',
-		leftEnd:       '[',
-		rightEnd:      ']',
-		alpha:         0.25,
-		total:         total,
-		width:         width,
-		incrCh:        make(chan int),
-		redrawReqCh:   make(chan chan []byte),
-		progressReqCh: make(chan chan int),
-		decoratorCh:   make(chan *decorator),
-		flushedCh:     make(chan struct{}),
-		stopCh:        make(chan struct{}),
-		done:          make(chan struct{}),
+		fill:        '=',
+		empty:       '-',
+		tip:         '>',
+		leftEnd:     '[',
+		rightEnd:    ']',
+		alpha:       0.25,
+		total:       total,
+		width:       width,
+		incrCh:      make(chan int),
+		redrawReqCh: make(chan chan []byte),
+		statusReqCh: make(chan chan int),
+		decoratorCh: make(chan *decorator),
+		flushedCh:   make(chan struct{}),
+		stopCh:      make(chan struct{}),
+		done:        make(chan struct{}),
 	}
 	go b.server(wg)
 	return b
@@ -140,7 +140,7 @@ func (b *Bar) String() string {
 }
 
 func (b *Bar) Incr(n int) {
-	if !b.IsCompleted() {
+	if !b.isDone() {
 		b.incrCh <- n
 	}
 }
@@ -152,13 +152,8 @@ func (b *Bar) Stop() {
 	}
 }
 
-func (b *Bar) IsCompleted() bool {
-	select {
-	case <-b.done:
-		return true
-	default:
-		return false
-	}
+func (b *Bar) InProgress() bool {
+	return !b.isDone()
 }
 
 func (b *Bar) PrependFunc(f DecoratorFunc) *Bar {
@@ -234,24 +229,23 @@ func (b *Bar) server(wg *sync.WaitGroup) {
 	var timeElapsed time.Duration
 	var appendFuncs []DecoratorFunc
 	var prependFuncs []DecoratorFunc
-	var done bool
+	var completed bool
 	var current int
 	for {
 		select {
 		case i := <-b.incrCh:
 			n := current + i
-			// fmt.Fprintf(os.Stderr, "n = %+v\n", n)
 			if n > b.total {
 				current = b.total
-				done = true
+				completed = true
 				break
 			}
 			timeElapsed = time.Since(timeStarted)
 			tpie = calcTimePerItemEstimate(tpie, blockStartTime, b.alpha, i)
 			blockStartTime = time.Now()
 			current = n
-			if current == b.total && !done {
-				done = true
+			if current == b.total && !completed {
+				completed = true
 			}
 		case d := <-b.decoratorCh:
 			switch d.kind {
@@ -263,18 +257,15 @@ func (b *Bar) server(wg *sync.WaitGroup) {
 		case respCh := <-b.redrawReqCh:
 			stat := &Statistics{b.total, current, timeElapsed, tpie}
 			respCh <- b.draw(stat, buf, appendFuncs, prependFuncs)
-		case respCh := <-b.progressReqCh:
+		case respCh := <-b.statusReqCh:
 			respCh <- int(100 * float64(current) / float64(b.total))
 		case <-b.flushedCh:
-			if done && !b.IsCompleted() {
-				// fmt.Fprintln(os.Stderr, "flushedCh: wg.Done")
+			if completed && !b.isDone() {
 				close(b.done)
 				wg.Done()
 			}
 		case <-b.stopCh:
-			// fmt.Fprintln(os.Stderr, "received stop signal")
-			if !done {
-				// fmt.Fprintln(os.Stderr, "closing done chan: done = false")
+			if !completed {
 				close(b.done)
 				wg.Done()
 			}
@@ -315,22 +306,32 @@ func (b *Bar) draw(stat *Statistics, buf []byte, appendFuncs, prependFuncs []Dec
 	return buf
 }
 
+func (b *Bar) isDone() bool {
+	select {
+	case <-b.done:
+		return true
+	default:
+		return false
+	}
+}
+
+func (b *Bar) status() int {
+	respCh := make(chan int)
+	b.statusReqCh <- respCh
+	return <-respCh
+}
+
+// SortableBarSlice satisfies sort interface
+type SortableBarSlice []*Bar
+
+func (p SortableBarSlice) Len() int { return len(p) }
+
+func (p SortableBarSlice) Less(i, j int) bool { return p[i].status() < p[j].status() }
+
+func (p SortableBarSlice) Swap(i, j int) { p[i], p[j] = p[j], p[i] }
+
 func calcTimePerItemEstimate(tpie time.Duration, blockStartTime time.Time, alpha float64, items int) time.Duration {
 	lastBlockTime := time.Since(blockStartTime)
 	lastItemEstimate := float64(lastBlockTime) / float64(items)
 	return time.Duration((alpha * lastItemEstimate) + (1-alpha)*float64(tpie))
 }
-
-func (b *Bar) progress() int {
-	respCh := make(chan int)
-	b.progressReqCh <- respCh
-	return <-respCh
-}
-
-type SortableBarSlice []*Bar
-
-func (p SortableBarSlice) Len() int { return len(p) }
-
-func (p SortableBarSlice) Less(i, j int) bool { return p[i].progress() < p[j].progress() }
-
-func (p SortableBarSlice) Swap(i, j int) { p[i], p[j] = p[j], p[i] }
