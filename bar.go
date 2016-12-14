@@ -55,14 +55,6 @@ func (s *Statistics) eta() time.Duration {
 	return time.Duration(s.Total-s.Completed) * s.TimePerItemEstimate
 }
 
-// type redrawRequest struct {
-// 	respCh chan []byte
-// }
-
-// type progressRequest struct {
-// 	respCh chan int
-// }
-
 func newBar(total, width int, wg *sync.WaitGroup) *Bar {
 	b := &Bar{
 		fill:          '=',
