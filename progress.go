@@ -39,6 +39,7 @@ type Progress struct {
 	op             chan *operation
 	rrChangeReqCh  chan time.Duration
 	outChangeReqCh chan io.Writer
+	countReqCh     chan chan int
 
 	wg *sync.WaitGroup
 }
@@ -56,6 +57,7 @@ func New() *Progress {
 		op:             make(chan *operation),
 		rrChangeReqCh:  make(chan time.Duration),
 		outChangeReqCh: make(chan io.Writer),
+		countReqCh:     make(chan chan int),
 		wg:             new(sync.WaitGroup),
 	}
 	go p.server(cwriter.New(os.Stdout), time.NewTicker(rr*time.Millisecond))
@@ -105,6 +107,12 @@ func (p *Progress) RemoveBar(b *Bar) bool {
 	return <-result
 }
 
+func (p *Progress) BarsCount() int {
+	respCh := make(chan int)
+	p.countReqCh <- respCh
+	return <-respCh
+}
+
 // WaitAndStop stops listening
 func (p *Progress) WaitAndStop() {
 	if !p.stopped {
@@ -147,6 +155,8 @@ func (p *Progress) server(cw *cwriter.Writer, t *time.Ticker) {
 				}
 				op.result <- ok
 			}
+		case respCh := <-p.countReqCh:
+			respCh <- len(bars)
 		case <-t.C:
 			switch p.sort {
 			case SortTop:
