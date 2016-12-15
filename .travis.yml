@@ -1,5 +1,6 @@
 language: go
-
+install:
+  - go get ./...
 go:
-    - 1.7.3
-    - tip
+  - 1.7.3
+  - tip
