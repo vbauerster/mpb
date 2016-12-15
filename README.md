@@ -48,19 +48,16 @@ The source code: [example/simple/main.go](example/simple/main.go)
 ### Removing bar
 
 ![example](example/gifs/remove.gif)
-
 The source code: [example/remove/main.go](example/remove/main.go)
 
 ### Sorting bars by progress
 
 ![example](example/gifs/sort.gif)
-
 The source code: [example/sort/main.go](example/sort/main.go)
 
 ### Multiple io
 
 ![example](example/gifs/io-multiple.gif)
-
 The source code: [example/io/multiple/main.go](example/io/multiple/main.go)
 
 ## Installation
