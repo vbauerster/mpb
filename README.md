@@ -1,5 +1,7 @@
 # Multi Progress Bar for Go
 
+[![Build Status](https://travis-ci.org/vbauerster/mpb.svg?branch=master)](https://travis-ci.org/vbauerster/mpb)
+
 Mutex free progress bar library, for console programs.
 
 It is inspired by [uiprogress](https://github.com/gosuri/uiprogress) library,
