@@ -36,7 +36,7 @@ func main() {
 	defer dest.Close()
 
 	p := mpb.New().SetWidth(64)
-	// if you omit following line, download will complete fine, but rendering bar
+	// if you omit the following line, download will complete fine, but rendering bar
 	// may not complete, thus better always use even in single thread.
 	p.Wg.Add(1)
 
