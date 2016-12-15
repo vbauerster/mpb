@@ -10,7 +10,7 @@ import (
 
 const (
 	totalItem    = 100
-	maxBlockSize = 10
+	maxBlockSize = 14
 )
 
 func main() {
@@ -21,14 +21,15 @@ func main() {
 
 	p := mpb.New()
 	bar := p.AddBar(totalItem).AppendETA().PrependFunc(decor)
-	// if you omit the following line, bar rendering goroutine may not have a
-	// chance to coplete, thus better always use.
 	p.Wg.Add(1)
 
 	blockSize := rand.Intn(maxBlockSize) + 1
-	for i := 0; i < 100; i++ {
+	for i := 0; bar.InProgress(); i++ {
 		time.Sleep(time.Duration(blockSize) * (50*time.Millisecond + time.Duration(rand.Intn(5*int(time.Millisecond)))))
-		bar.Incr(1)
+		bar.Incr(blockSize)
+		if bar.Current() > 42 {
+			p.RemoveBar(bar)
+		}
 		blockSize = rand.Intn(maxBlockSize) + 1
 	}
 
