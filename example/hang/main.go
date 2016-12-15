@@ -20,6 +20,7 @@ func main() {
 	}
 
 	p := mpb.New()
+	p.Wg.Add(1)
 	bar := p.AddBar(totalItem).AppendETA().PrependFunc(decor)
 
 	blockSize := rand.Intn(maxBlockSize) + 1

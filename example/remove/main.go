@@ -3,32 +3,31 @@ package main
 import (
 	"fmt"
 	"math/rand"
-	"runtime"
 	"time"
 
-	"github.com/vbauerster/uiprogress"
+	"github.com/vbauerster/mpb"
 )
 
 const (
 	totalItem    = 100
-	maxBlockSize = 20
+	maxBlockSize = 14
 )
 
 func main() {
-	runtime.GOMAXPROCS(runtime.NumCPU())
-	decor := func(s *uiprogress.Statistics) string {
-		str := fmt.Sprintf("%d/%d", s.Completed, s.Total)
+	decor := func(s *mpb.Statistics) string {
+		str := fmt.Sprintf("%d/%d", s.Current, s.Total)
 		return fmt.Sprintf("%-7s", str)
 	}
 
-	p := uiprogress.New()
+	p := mpb.New()
 	bar := p.AddBar(totalItem).AppendETA().PrependFunc(decor)
+	p.Wg.Add(1)
 
 	blockSize := rand.Intn(maxBlockSize) + 1
-	for i := 0; !bar.IsCompleted(); i += 1 {
+	for i := 0; bar.InProgress(); i++ {
 		time.Sleep(time.Duration(blockSize) * (50*time.Millisecond + time.Duration(rand.Intn(5*int(time.Millisecond)))))
-		bar.Incr(1)
-		if i == 42 {
+		bar.Incr(blockSize)
+		if bar.Current() > 42 {
 			p.RemoveBar(bar)
 		}
 		blockSize = rand.Intn(maxBlockSize) + 1

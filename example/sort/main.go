@@ -18,6 +18,7 @@ func main() {
 
 	name1 := "Bar#1:"
 	bar1 := p.AddBar(100).AppendETA().PrependFunc(getDecor()).PrependName(name1, len(name1))
+	p.Wg.Add(1)
 	go func() {
 		blockSize := rand.Intn(maxBlockSize) + 1
 		for i := 0; i < 100; i++ {
@@ -28,6 +29,7 @@ func main() {
 	}()
 
 	bar2 := p.AddBar(60).AppendETA().PrependFunc(getDecor()).PrependName("", 0-len(name1))
+	p.Wg.Add(1)
 	go func() {
 		blockSize := rand.Intn(maxBlockSize) + 1
 		for i := 0; i < 60; i++ {
@@ -38,6 +40,7 @@ func main() {
 	}()
 
 	bar3 := p.AddBar(80).AppendETA().PrependFunc(getDecor()).PrependName("Bar#3:", 0)
+	p.Wg.Add(1)
 	go func() {
 		blockSize := rand.Intn(maxBlockSize) + 1
 		for i := 0; i < 80; i++ {

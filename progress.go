@@ -31,17 +31,18 @@ const rr = 100
 
 // Progress represents the container that renders Progress bars
 type Progress struct {
-	out     io.Writer
-	width   int
-	sort    SortType
-	stopped bool
+	Wg *sync.WaitGroup
+
+	out   io.Writer
+	width int
+	sort  SortType
+	// stopped bool
 
 	op             chan *operation
 	rrChangeReqCh  chan time.Duration
 	outChangeReqCh chan io.Writer
 	countReqCh     chan chan int
-
-	wg *sync.WaitGroup
+	allDone        chan struct{}
 }
 
 type operation struct {
@@ -58,12 +59,14 @@ func New() *Progress {
 		rrChangeReqCh:  make(chan time.Duration),
 		outChangeReqCh: make(chan io.Writer),
 		countReqCh:     make(chan chan int),
-		wg:             new(sync.WaitGroup),
+		allDone:        make(chan struct{}),
+		Wg:             new(sync.WaitGroup),
 	}
 	go p.server(cwriter.New(os.Stdout), time.NewTicker(rr*time.Millisecond))
 	return p
 }
 
+// SetWidth sets the width for all underlying bars
 func (p *Progress) SetWidth(n int) *Progress {
 	if n <= 0 {
 		return p
@@ -88,6 +91,7 @@ func (p *Progress) RefreshRate(d time.Duration) *Progress {
 	return p
 }
 
+// WithSort sorts the bars, while redering
 func (p *Progress) WithSort(sort SortType) *Progress {
 	p.sort = sort
 	return p
@@ -95,18 +99,19 @@ func (p *Progress) WithSort(sort SortType) *Progress {
 
 // AddBar creates a new progress bar and adds to the container
 func (p *Progress) AddBar(total int) *Bar {
-	p.wg.Add(1)
-	bar := newBar(total, p.width, p.wg)
+	bar := newBar(total, p.width, p.Wg)
 	p.op <- &operation{opBarAdd, bar, nil}
 	return bar
 }
 
+// RemoveBar removes bar at any time
 func (p *Progress) RemoveBar(b *Bar) bool {
 	result := make(chan bool)
 	p.op <- &operation{opBarRemove, b, result}
 	return <-result
 }
 
+// BarsCount returns bars count in the container
 func (p *Progress) BarsCount() int {
 	respCh := make(chan int)
 	p.countReqCh <- respCh
@@ -115,10 +120,9 @@ func (p *Progress) BarsCount() int {
 
 // WaitAndStop stops listening
 func (p *Progress) WaitAndStop() {
-	if !p.stopped {
-		// fmt.Fprintln(os.Stderr, "p.WaitAndStop")
-		p.stopped = true
-		p.wg.Wait()
+	if !p.isAllDone() {
+		close(p.allDone)
+		p.Wg.Wait()
 		close(p.op)
 	}
 }
@@ -133,7 +137,6 @@ func (p *Progress) server(cw *cwriter.Writer, t *time.Ticker) {
 			cw = cwriter.New(w)
 		case op, ok := <-p.op:
 			if !ok {
-				// fmt.Fprintln(os.Stderr, "Sopping bars")
 				for _, b := range bars {
 					b.Stop()
 				}
@@ -178,5 +181,14 @@ func (p *Progress) server(cw *cwriter.Writer, t *time.Ticker) {
 			t.Stop()
 			t = time.NewTicker(d)
 		}
+	}
+}
+
+func (p *Progress) isAllDone() bool {
+	select {
+	case <-p.allDone:
+		return true
+	default:
+		return false
 	}
 }

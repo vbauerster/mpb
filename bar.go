@@ -1,34 +1,16 @@
 package mpb
 
 import (
-	"fmt"
 	"io"
-	"strconv"
 	"sync"
 	"time"
 )
 
-type decoratorFuncType uint
-
-const (
-	decoratorAppend decoratorFuncType = iota
-	decoratorPrepend
-)
-
-// DecoratorFunc is a function that can be prepended and appended to the progress bar
-type DecoratorFunc func(s *Statistics) string
-
-type decorator struct {
-	kind decoratorFuncType
-	f    DecoratorFunc
-}
-
 // Bar represents a progress Bar
 type Bar struct {
-	total   int
-	width   int
-	alpha   float64
-	stopped bool
+	total int
+	width int
+	alpha float64
 
 	fill     byte
 	empty    byte
@@ -36,13 +18,14 @@ type Bar struct {
 	leftEnd  byte
 	rightEnd byte
 
-	incrCh      chan int
-	redrawReqCh chan chan []byte
-	statusReqCh chan chan int
-	decoratorCh chan *decorator
-	flushedCh   chan struct{}
-	stopCh      chan struct{}
-	done        chan struct{}
+	incrCh       chan int
+	redrawReqCh  chan chan []byte
+	currentReqCh chan chan int
+	statusReqCh  chan chan int
+	decoratorCh  chan *decorator
+	flushedCh    chan struct{}
+	stopCh       chan struct{}
+	done         chan struct{}
 }
 
 type Statistics struct {
@@ -56,21 +39,22 @@ func (s *Statistics) eta() time.Duration {
 
 func newBar(total, width int, wg *sync.WaitGroup) *Bar {
 	b := &Bar{
-		fill:        '=',
-		empty:       '-',
-		tip:         '>',
-		leftEnd:     '[',
-		rightEnd:    ']',
-		alpha:       0.25,
-		total:       total,
-		width:       width,
-		incrCh:      make(chan int),
-		redrawReqCh: make(chan chan []byte),
-		statusReqCh: make(chan chan int),
-		decoratorCh: make(chan *decorator),
-		flushedCh:   make(chan struct{}),
-		stopCh:      make(chan struct{}),
-		done:        make(chan struct{}),
+		fill:         '=',
+		empty:        '-',
+		tip:          '>',
+		leftEnd:      '[',
+		rightEnd:     ']',
+		alpha:        0.25,
+		total:        total,
+		width:        width,
+		incrCh:       make(chan int),
+		redrawReqCh:  make(chan chan []byte),
+		currentReqCh: make(chan chan int),
+		statusReqCh:  make(chan chan int),
+		decoratorCh:  make(chan *decorator),
+		flushedCh:    make(chan struct{}),
+		stopCh:       make(chan struct{}),
+		done:         make(chan struct{}),
 	}
 	go b.server(wg)
 	return b
@@ -132,23 +116,28 @@ func (b *Bar) ProxyReader(r io.Reader) *Reader {
 	return &Reader{r, b}
 }
 
-// String returns the string representation of the bar
-func (b *Bar) String() string {
-	respCh := make(chan []byte)
-	b.redrawReqCh <- respCh
-	return string(<-respCh)
-}
-
+// Incr increments progress bar
 func (b *Bar) Incr(n int) {
 	if !b.isDone() {
 		b.incrCh <- n
 	}
 }
 
+// Current returns the actual current.
+// If bar was stopped by Stop(), subsequent calls to Current will return -1
+func (b *Bar) Current() int {
+	if !b.isDone() {
+		respCh := make(chan int)
+		b.currentReqCh <- respCh
+		return <-respCh
+	}
+	return -1
+}
+
+// Stop stops rendering the bar
 func (b *Bar) Stop() {
-	if !b.stopped {
+	if !b.isDone() {
 		b.stopCh <- struct{}{}
-		b.stopped = true
 	}
 }
 
@@ -166,59 +155,14 @@ func (b *Bar) AppendFunc(f DecoratorFunc) *Bar {
 	return b
 }
 
-func (b *Bar) PrependName(name string, padding int) *Bar {
-	layout := "%" + strconv.Itoa(padding) + "s"
-	b.PrependFunc(func(s *Statistics) string {
-		return fmt.Sprintf(layout, name)
-	})
-	return b
-}
-
-func (b *Bar) PrependETA(padding int) *Bar {
-	layout := "ETA%" + strconv.Itoa(padding) + "s"
-	b.PrependFunc(func(s *Statistics) string {
-		return fmt.Sprintf(layout, time.Duration(s.eta().Seconds())*time.Second)
-	})
-	return b
-}
-
-func (b *Bar) AppendETA() *Bar {
-	b.AppendFunc(func(s *Statistics) string {
-		return fmt.Sprintf("ETA %s", time.Duration(s.eta().Seconds())*time.Second)
-	})
-	return b
-}
-
-func (b *Bar) PrependElapsed(padding int) *Bar {
-	layout := "%" + strconv.Itoa(padding) + "s"
-	b.PrependFunc(func(s *Statistics) string {
-		return fmt.Sprintf(layout, time.Duration(s.TimeElapsed.Seconds())*time.Second)
-	})
-	return b
-}
-
-func (b *Bar) AppendElapsed() *Bar {
-	b.AppendFunc(func(s *Statistics) string {
-		return fmt.Sprint(time.Duration(s.TimeElapsed.Seconds()) * time.Second)
-	})
-	return b
-}
-
-func (b *Bar) AppendPercentage() *Bar {
-	b.AppendFunc(func(s *Statistics) string {
-		completed := int(100 * float64(s.Current) / float64(s.Total))
-		return fmt.Sprintf("%3d %%", completed)
-	})
-	return b
-}
-
-func (b *Bar) PrependPercentage(padding int) *Bar {
-	layout := "%" + strconv.Itoa(padding) + "d %%"
-	b.PrependFunc(func(s *Statistics) string {
-		completed := int(100 * float64(s.Current) / float64(s.Total))
-		return fmt.Sprintf(layout, completed)
-	})
-	return b
+// String returns the string representation of the bar
+func (b *Bar) String() string {
+	if !b.isDone() {
+		respCh := make(chan []byte)
+		b.redrawReqCh <- respCh
+		return string(<-respCh)
+	}
+	return ""
 }
 
 func (b *Bar) server(wg *sync.WaitGroup) {
@@ -254,6 +198,8 @@ func (b *Bar) server(wg *sync.WaitGroup) {
 			case decoratorPrepend:
 				prependFuncs = append(prependFuncs, d.f)
 			}
+		case respCh := <-b.currentReqCh:
+			respCh <- current
 		case respCh := <-b.redrawReqCh:
 			stat := &Statistics{b.total, current, timeElapsed, tpie}
 			respCh <- b.draw(stat, buf, appendFuncs, prependFuncs)
@@ -265,8 +211,8 @@ func (b *Bar) server(wg *sync.WaitGroup) {
 				wg.Done()
 			}
 		case <-b.stopCh:
+			close(b.done)
 			if !completed {
-				close(b.done)
 				wg.Done()
 			}
 			return
