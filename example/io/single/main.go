@@ -40,7 +40,7 @@ func main() {
 	// may not complete, thus better always use even in single thread.
 	p.Wg.Add(1)
 
-	bar := p.AddBar(int(size)).PrependCounters(mpb.UnitBytes, 19).AppendETA()
+	bar := p.AddBar(int(size)).PrependCounters(mpb.UnitBytes, 20).AppendETA()
 
 	// create proxy reader
 	reader := bar.ProxyReader(resp.Body)
