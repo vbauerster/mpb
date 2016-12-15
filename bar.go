@@ -144,15 +144,19 @@ func (b *Bar) Stop() {
 	}
 }
 
+// InProgress returns true, while progress is running
+// Can be used as condition in for loop
 func (b *Bar) InProgress() bool {
 	return !b.isDone()
 }
 
+// PrependFunc prepends DecoratorFunc
 func (b *Bar) PrependFunc(f DecoratorFunc) *Bar {
 	b.decoratorCh <- &decorator{decoratorPrepend, f}
 	return b
 }
 
+// AppendFunc appends DecoratorFunc
 func (b *Bar) AppendFunc(f DecoratorFunc) *Bar {
 	b.decoratorCh <- &decorator{decoratorAppend, f}
 	return b
