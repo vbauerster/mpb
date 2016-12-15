@@ -43,6 +43,7 @@ Following is the simplest use case:
 This will produce following:
 
 ![example](example/gifs/simple.gif)
+The source code: [example/simple/main.go](example/simple/main.go)
 
 ### Removing bar
 
