@@ -137,9 +137,6 @@ func (p *Progress) server(cw *cwriter.Writer, t *time.Ticker) {
 			cw = cwriter.New(w)
 		case op, ok := <-p.op:
 			if !ok {
-				for _, b := range bars {
-					b.Stop()
-				}
 				t.Stop()
 				return
 			}

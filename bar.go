@@ -18,6 +18,8 @@ type Bar struct {
 	leftEnd  byte
 	rightEnd byte
 
+	lastFrame []byte
+
 	incrCh       chan int
 	redrawReqCh  chan chan []byte
 	currentReqCh chan chan int
@@ -162,7 +164,7 @@ func (b *Bar) String() string {
 		b.redrawReqCh <- respCh
 		return string(<-respCh)
 	}
-	return ""
+	return string(b.lastFrame)
 }
 
 func (b *Bar) server(wg *sync.WaitGroup) {
@@ -207,8 +209,11 @@ func (b *Bar) server(wg *sync.WaitGroup) {
 			respCh <- int(100 * float64(current) / float64(b.total))
 		case <-b.flushedCh:
 			if completed && !b.isDone() {
+				stat := &Statistics{b.total, current, timeElapsed, tpie}
+				b.lastFrame = b.draw(stat, buf, appendFuncs, prependFuncs)
 				close(b.done)
 				wg.Done()
+				return
 			}
 		case <-b.stopCh:
 			close(b.done)
