@@ -51,8 +51,8 @@ func main() {
 		}
 	}()
 
-	// time.Sleep(time.Second)
-	// p.RemoveBar(bar2)
+	time.Sleep(3 * time.Second)
+	p.RemoveBar(bar2)
 
 	p.WaitAndStop()
 	fmt.Println("stop")
