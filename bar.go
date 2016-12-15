@@ -8,7 +8,7 @@ import (
 
 // Bar represents a progress Bar
 type Bar struct {
-	total int
+	// total int
 	width int
 	alpha float64
 
@@ -18,7 +18,8 @@ type Bar struct {
 	leftEnd  byte
 	rightEnd byte
 
-	lastFrame []byte
+	lastFrame  []byte
+	lastStatus int
 
 	incrCh       chan int
 	redrawReqCh  chan chan []byte
@@ -41,13 +42,13 @@ func (s *Statistics) eta() time.Duration {
 
 func newBar(total, width int, wg *sync.WaitGroup) *Bar {
 	b := &Bar{
-		fill:         '=',
-		empty:        '-',
-		tip:          '>',
-		leftEnd:      '[',
-		rightEnd:     ']',
-		alpha:        0.25,
-		total:        total,
+		fill:     '=',
+		empty:    '-',
+		tip:      '>',
+		leftEnd:  '[',
+		rightEnd: ']',
+		alpha:    0.25,
+		// total:        total,
 		width:        width,
 		incrCh:       make(chan int),
 		redrawReqCh:  make(chan chan []byte),
@@ -58,7 +59,7 @@ func newBar(total, width int, wg *sync.WaitGroup) *Bar {
 		stopCh:       make(chan struct{}),
 		done:         make(chan struct{}),
 	}
-	go b.server(wg)
+	go b.server(wg, total)
 	return b
 }
 
@@ -167,7 +168,7 @@ func (b *Bar) String() string {
 	return string(b.lastFrame)
 }
 
-func (b *Bar) server(wg *sync.WaitGroup) {
+func (b *Bar) server(wg *sync.WaitGroup, total int) {
 	timeStarted := time.Now()
 	blockStartTime := timeStarted
 	buf := make([]byte, b.width, b.width+24)
@@ -181,8 +182,8 @@ func (b *Bar) server(wg *sync.WaitGroup) {
 		select {
 		case i := <-b.incrCh:
 			n := current + i
-			if n > b.total {
-				current = b.total
+			if n > total {
+				current = total
 				completed = true
 				break
 			}
@@ -190,7 +191,7 @@ func (b *Bar) server(wg *sync.WaitGroup) {
 			tpie = calcTimePerItemEstimate(tpie, blockStartTime, b.alpha, i)
 			blockStartTime = time.Now()
 			current = n
-			if current == b.total && !completed {
+			if current == total && !completed {
 				completed = true
 			}
 		case d := <-b.decoratorCh:
@@ -203,14 +204,15 @@ func (b *Bar) server(wg *sync.WaitGroup) {
 		case respCh := <-b.currentReqCh:
 			respCh <- current
 		case respCh := <-b.redrawReqCh:
-			stat := &Statistics{b.total, current, timeElapsed, tpie}
+			stat := &Statistics{total, current, timeElapsed, tpie}
 			respCh <- b.draw(stat, buf, appendFuncs, prependFuncs)
 		case respCh := <-b.statusReqCh:
-			respCh <- int(100 * float64(current) / float64(b.total))
+			respCh <- percentage(total, current, 100)
 		case <-b.flushedCh:
 			if completed && !b.isDone() {
-				stat := &Statistics{b.total, current, timeElapsed, tpie}
+				stat := &Statistics{total, current, timeElapsed, tpie}
 				b.lastFrame = b.draw(stat, buf, appendFuncs, prependFuncs)
+				b.lastStatus = percentage(total, current, 100)
 				close(b.done)
 				wg.Done()
 				return
@@ -226,7 +228,7 @@ func (b *Bar) server(wg *sync.WaitGroup) {
 }
 
 func (b *Bar) draw(stat *Statistics, buf []byte, appendFuncs, prependFuncs []DecoratorFunc) []byte {
-	completedWidth := stat.Current * b.width / b.total
+	completedWidth := percentage(stat.Total, stat.Current, b.width)
 
 	for i := 0; i < completedWidth; i++ {
 		buf[i] = b.fill
@@ -267,9 +269,12 @@ func (b *Bar) isDone() bool {
 }
 
 func (b *Bar) status() int {
-	respCh := make(chan int)
-	b.statusReqCh <- respCh
-	return <-respCh
+	if !b.isDone() {
+		respCh := make(chan int)
+		b.statusReqCh <- respCh
+		return <-respCh
+	}
+	return b.lastStatus
 }
 
 // SortableBarSlice satisfies sort interface
@@ -285,4 +290,11 @@ func calcTimePerItemEstimate(tpie time.Duration, blockStartTime time.Time, alpha
 	lastBlockTime := time.Since(blockStartTime)
 	lastItemEstimate := float64(lastBlockTime) / float64(items)
 	return time.Duration((alpha * lastItemEstimate) + (1-alpha)*float64(tpie))
+}
+
+func percentage(total, current, ratio int) int {
+	if total == 0 {
+		return 0
+	}
+	return int(float64(ratio) * float64(current) / float64(total))
 }
