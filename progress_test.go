@@ -1,14 +1,17 @@
 package mpb
 
-import "testing"
+import (
+	"bytes"
+	"testing"
+)
 
 func TestAddBar(t *testing.T) {
-	p := New().SetWidth(60)
+	var buf bytes.Buffer
+	p := New().SetWidth(60).SetOut(&buf)
 	count := p.BarsCount()
 	if count != 0 {
 		t.Errorf("Count want: %q, got: %q\n", 0, count)
 	}
-	p.Wg.Add(1)
 	bar := p.AddBar(10)
 	count = p.BarsCount()
 	if count != 1 {
@@ -17,12 +20,11 @@ func TestAddBar(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		bar.Incr(1)
 	}
-	p.WaitAndStop()
+	p.Stop()
 }
 
 func TestRemoveBar(t *testing.T) {
 	p := New()
-	p.Wg.Add(1)
 	b := p.AddBar(10)
 
 	if !p.RemoveBar(b) {
@@ -33,5 +35,5 @@ func TestRemoveBar(t *testing.T) {
 	if count != 0 {
 		t.Errorf("Count want: %q, got: %q\n", 0, count)
 	}
-	p.WaitAndStop()
+	p.Stop()
 }
