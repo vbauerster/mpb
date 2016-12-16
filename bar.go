@@ -8,7 +8,6 @@ import (
 
 // Bar represents a progress Bar
 type Bar struct {
-	// total int
 	width int
 	alpha float64
 
