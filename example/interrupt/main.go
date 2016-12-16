@@ -21,7 +21,6 @@ func main() {
 
 	p := mpb.New()
 	bar := p.AddBar(totalItem).AppendETA().PrependFunc(decor)
-	p.Wg.Add(1)
 
 	blockSize := rand.Intn(maxBlockSize) + 1
 	for i := 0; bar.InProgress(); i++ {
@@ -33,6 +32,6 @@ func main() {
 		blockSize = rand.Intn(maxBlockSize) + 1
 	}
 
-	p.WaitAndStop()
+	p.Stop()
 	fmt.Println("stop")
 }

@@ -48,8 +48,8 @@ func newBar(total, width int, wg *sync.WaitGroup) *Bar {
 		leftEnd:  '[',
 		rightEnd: ']',
 		alpha:    0.25,
-		// total:        total,
-		width:        width,
+		width:    width,
+
 		incrCh:       make(chan int),
 		redrawReqCh:  make(chan chan []byte),
 		currentReqCh: make(chan chan int),
