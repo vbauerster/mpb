@@ -1,6 +1,7 @@
 package mpb
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -10,6 +11,8 @@ import (
 
 	"github.com/vbauerster/mpb/cwriter"
 )
+
+var ErrCallAfterStop = errors.New("method call on stopped Progress instance")
 
 type opType uint
 
@@ -75,9 +78,12 @@ func (p *Progress) SetWidth(n int) *Progress {
 	return p
 }
 
-// SetOut sets underlying writer of progress
-// default is os.Stdout
+// SetOut sets underlying writer of progress. Default is os.Stdout
+// pancis, if called on stopped Progress instance, i.e after Stop()
 func (p *Progress) SetOut(w io.Writer) *Progress {
+	if p.isAllDone() {
+		panic(ErrCallAfterStop)
+	}
 	if w == nil {
 		return p
 	}
@@ -86,7 +92,11 @@ func (p *Progress) SetOut(w io.Writer) *Progress {
 }
 
 // RefreshRate overrides default (30ms) refreshRate value
+// pancis, if called on stopped Progress instance, i.e after Stop()
 func (p *Progress) RefreshRate(d time.Duration) *Progress {
+	if p.isAllDone() {
+		panic(ErrCallAfterStop)
+	}
 	p.rrChangeReqCh <- d
 	return p
 }
@@ -98,7 +108,11 @@ func (p *Progress) WithSort(sort SortType) *Progress {
 }
 
 // AddBar creates a new progress bar and adds to the container
+// pancis, if called on stopped Progress instance, i.e after Stop()
 func (p *Progress) AddBar(total int) *Bar {
+	if p.isAllDone() {
+		panic(ErrCallAfterStop)
+	}
 	result := make(chan bool)
 	bar := newBar(total, p.width, p.wg)
 	p.op <- &operation{opBarAdd, bar, result}
@@ -109,14 +123,22 @@ func (p *Progress) AddBar(total int) *Bar {
 }
 
 // RemoveBar removes bar at any time
+// pancis, if called on stopped Progress instance, i.e after Stop()
 func (p *Progress) RemoveBar(b *Bar) bool {
+	if p.isAllDone() {
+		panic(ErrCallAfterStop)
+	}
 	result := make(chan bool)
 	p.op <- &operation{opBarRemove, b, result}
 	return <-result
 }
 
 // BarsCount returns bars count in the container
+// pancis, if called on stopped Progress instance, i.e after Stop()
 func (p *Progress) BarsCount() int {
+	if p.isAllDone() {
+		panic(ErrCallAfterStop)
+	}
 	respCh := make(chan int)
 	p.countReqCh <- respCh
 	return <-respCh
