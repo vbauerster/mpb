@@ -36,9 +36,6 @@ func main() {
 	defer dest.Close()
 
 	p := mpb.New().SetWidth(64)
-	// if you omit the following line, download will complete fine, but rendering bar
-	// may not complete, thus better always use even in single thread.
-	p.Wg.Add(1)
 
 	bar := p.AddBar(int(size)).PrependCounters(mpb.UnitBytes, 20).AppendETA()
 
@@ -48,6 +45,6 @@ func main() {
 	// and copy from reader, ignoring errors
 	io.Copy(dest, reader)
 
-	p.WaitAndStop()
+	p.Stop() // if you omit this line, rendering bars goroutine will quit early
 	fmt.Println("Finished")
 }

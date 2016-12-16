@@ -31,12 +31,12 @@ const rr = 100
 
 // Progress represents the container that renders Progress bars
 type Progress struct {
-	Wg *sync.WaitGroup
+	// WaitGroup for internal rendering sync
+	wg *sync.WaitGroup
 
 	out   io.Writer
 	width int
 	sort  SortType
-	// stopped bool
 
 	op             chan *operation
 	rrChangeReqCh  chan time.Duration
@@ -60,7 +60,7 @@ func New() *Progress {
 		outChangeReqCh: make(chan io.Writer),
 		countReqCh:     make(chan chan int),
 		allDone:        make(chan struct{}),
-		Wg:             new(sync.WaitGroup),
+		wg:             new(sync.WaitGroup),
 	}
 	go p.server(cwriter.New(os.Stdout), time.NewTicker(rr*time.Millisecond))
 	return p
@@ -99,8 +99,12 @@ func (p *Progress) WithSort(sort SortType) *Progress {
 
 // AddBar creates a new progress bar and adds to the container
 func (p *Progress) AddBar(total int) *Bar {
-	bar := newBar(total, p.width, p.Wg)
-	p.op <- &operation{opBarAdd, bar, nil}
+	result := make(chan bool)
+	bar := newBar(total, p.width, p.wg)
+	p.op <- &operation{opBarAdd, bar, result}
+	if <-result {
+		p.wg.Add(1)
+	}
 	return bar
 }
 
@@ -118,11 +122,11 @@ func (p *Progress) BarsCount() int {
 	return <-respCh
 }
 
-// WaitAndStop stops listening
-func (p *Progress) WaitAndStop() {
+// Stop waits for bars to finish rendering and stops the rendering goroutine
+func (p *Progress) Stop() {
 	if !p.isAllDone() {
 		close(p.allDone)
-		p.Wg.Wait()
+		p.wg.Wait()
 		close(p.op)
 	}
 }
@@ -143,6 +147,7 @@ func (p *Progress) server(cw *cwriter.Writer, t *time.Ticker) {
 			switch op.kind {
 			case opBarAdd:
 				bars = append(bars, op.bar)
+				op.result <- true
 			case opBarRemove:
 				var ok bool
 				for i, b := range bars {
@@ -165,7 +170,6 @@ func (p *Progress) server(cw *cwriter.Writer, t *time.Ticker) {
 				sort.Sort(SortableBarSlice(bars))
 			}
 			for _, b := range bars {
-				// cannot parallel this, because order matters
 				fmt.Fprintln(cw, b)
 			}
 			cw.Flush()

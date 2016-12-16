@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/vbauerster/mpb"
 )
@@ -17,19 +18,22 @@ func main() {
 	url1 := "https://homebrew.bintray.com/bottles/youtube-dl-2016.12.12.sierra.bottle.tar.gz"
 	url2 := "https://homebrew.bintray.com/bottles/libtiff-4.0.7.sierra.bottle.tar.gz"
 
+	var wg sync.WaitGroup
 	p := mpb.New().SetWidth(60)
 
 	for i, url := range [...]string{url1, url2} {
-		p.Wg.Add(1) // if you omit this line, main will return without waiting for download goroutines
+		wg.Add(1)
 		name := fmt.Sprintf("url%d:", i+1)
-		go download(p, name, url)
+		go download(&wg, p, name, url)
 	}
 
-	p.WaitAndStop()
+	wg.Wait()
+	p.Stop()
 	fmt.Println("Finished")
 }
 
-func download(p *mpb.Progress, name, url string) {
+func download(wg *sync.WaitGroup, p *mpb.Progress, name, url string) {
+	defer wg.Done()
 	resp, err := http.Get(url)
 	if err != nil {
 		log.Printf("%s: %v", name, err)
