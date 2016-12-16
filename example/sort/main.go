@@ -57,8 +57,8 @@ func main() {
 
 	wg.Wait()
 	p.Stop()
+	// p.AddBar(1) // panic: you cannot reuse p, create new one!
 	fmt.Println("stop")
-	// p.AddBar(1) // panic: send on closed channnel
 }
 
 func getDecor() mpb.DecoratorFunc {
