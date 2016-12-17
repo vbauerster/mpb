@@ -128,12 +128,12 @@ func (b *Bar) Incr(n int) {
 // Current returns the actual current.
 // If bar was stopped by Stop(), subsequent calls to Current will return -1
 func (b *Bar) Current() int {
-	if !b.isDone() {
-		respCh := make(chan int)
-		b.currentReqCh <- respCh
-		return <-respCh
+	if b.isDone() {
+		return -1
 	}
-	return -1
+	respCh := make(chan int)
+	b.currentReqCh <- respCh
+	return <-respCh
 }
 
 // Stop stops rendering the bar
@@ -163,12 +163,12 @@ func (b *Bar) AppendFunc(f DecoratorFunc) *Bar {
 
 // String returns the string representation of the bar
 func (b *Bar) String() string {
-	if !b.isDone() {
-		respCh := make(chan []byte)
-		b.redrawReqCh <- respCh
-		return string(<-respCh)
+	if b.isDone() {
+		return string(b.lastFrame)
 	}
-	return string(b.lastFrame)
+	respCh := make(chan []byte)
+	b.redrawReqCh <- respCh
+	return string(<-respCh)
 }
 
 func (b *Bar) server(wg *sync.WaitGroup, total int) {
@@ -272,12 +272,12 @@ func (b *Bar) isDone() bool {
 }
 
 func (b *Bar) status() int {
-	if !b.isDone() {
-		respCh := make(chan int)
-		b.statusReqCh <- respCh
-		return <-respCh
+	if b.isDone() {
+		return b.lastStatus
 	}
-	return b.lastStatus
+	respCh := make(chan int)
+	b.statusReqCh <- respCh
+	return <-respCh
 }
 
 // SortableBarSlice satisfies sort interface
