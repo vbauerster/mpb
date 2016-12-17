@@ -30,6 +30,8 @@ type Bar struct {
 	done         chan struct{}
 }
 
+// Statistics represents statistics of the progress bar
+// instance of this, sent to DecoratorFunc, as param
 type Statistics struct {
 	Total, Current                   int
 	TimeElapsed, TimePerItemEstimate time.Duration
