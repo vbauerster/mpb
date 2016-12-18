@@ -163,6 +163,9 @@ func (p *Progress) server(cw *cwriter.Writer, t *time.Ticker) {
 		case op, ok := <-p.op:
 			if !ok {
 				t.Stop()
+				for _, b := range bars {
+					b.Stop()
+				}
 				return
 			}
 			switch op.kind {

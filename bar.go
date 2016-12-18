@@ -30,6 +30,11 @@ type Bar struct {
 	done         chan struct{}
 }
 
+type redrawRequest struct {
+	width  int
+	respCh chan []byte
+}
+
 // Statistics represents statistics of the progress bar
 // instance of this, sent to DecoratorFunc, as param
 type Statistics struct {
@@ -73,11 +78,13 @@ func (b *Bar) SetWidth(n int) *Bar {
 	return b
 }
 
+// TrimLeftSpace removes space befor LeftEnd charater
 func (b *Bar) TrimLeftSpace() *Bar {
 	b.trimLeftSpace = true
 	return b
 }
 
+// TrimRightSpace removes space after RightEnd charater
 func (b *Bar) TrimRightSpace() *Bar {
 	b.trimRightSpace = true
 	return b
@@ -138,7 +145,11 @@ func (b *Bar) Incr(n int) {
 }
 
 // Current returns the actual current.
+// returns 0 after bar was stopped
 func (b *Bar) Current() int {
+	if b.isDone() {
+		return 0
+	}
 	respCh := make(chan int)
 	b.currentReqCh <- respCh
 	return <-respCh
@@ -169,11 +180,6 @@ func (b *Bar) AppendFunc(f DecoratorFunc) *Bar {
 	return b
 }
 
-type redrawRequest struct {
-	width  int
-	respCh chan []byte
-}
-
 func (b *Bar) Bytes(width int) []byte {
 	if width <= 0 {
 		width = b.width
@@ -186,13 +192,10 @@ func (b *Bar) Bytes(width int) []byte {
 func (b *Bar) server(wg *sync.WaitGroup, total int) {
 	timeStarted := time.Now()
 	blockStartTime := timeStarted
-	var tpie time.Duration
-	var timeElapsed time.Duration
-	var appendFuncs []DecoratorFunc
-	var prependFuncs []DecoratorFunc
-	var completed bool
+	var timePerItem, timeElapsed time.Duration
+	var appendFuncs, prependFuncs []DecoratorFunc
+	var completed, wgDoneReported bool
 	var current int
-	var termWidth int
 	for {
 		select {
 		case i := <-b.incrCh:
@@ -200,13 +203,13 @@ func (b *Bar) server(wg *sync.WaitGroup, total int) {
 			if n > total {
 				current = total
 				completed = true
-				break
+				break // break out of select
 			}
 			timeElapsed = time.Since(timeStarted)
-			tpie = calcTimePerItemEstimate(tpie, blockStartTime, b.alpha, i)
+			timePerItem = calcTimePerItemEstimate(timePerItem, blockStartTime, b.alpha, i)
 			blockStartTime = time.Now()
 			current = n
-			if current == total && !completed {
+			if current == total {
 				completed = true
 			}
 		case d := <-b.decoratorCh:
@@ -219,21 +222,21 @@ func (b *Bar) server(wg *sync.WaitGroup, total int) {
 		case respCh := <-b.currentReqCh:
 			respCh <- current
 		case r := <-b.redrawReqCh:
-			termWidth = r.width
-			stat := &Statistics{total, current, termWidth, timeElapsed, tpie}
+			stat := &Statistics{total, current, r.width, timeElapsed, timePerItem}
 			r.respCh <- b.draw(stat, appendFuncs, prependFuncs)
 		case respCh := <-b.statusReqCh:
 			respCh <- percentage(total, current, 100)
 		case <-b.flushedCh:
-			if completed && !b.isDone() {
-				close(b.done)
+			if completed && !wgDoneReported {
+				wgDoneReported = true
 				wg.Done()
 			}
 		case <-b.stopCh:
-			close(b.done)
-			if !completed {
+			if !wgDoneReported {
 				wg.Done()
 			}
+			close(b.done)
+			return
 		}
 	}
 }
