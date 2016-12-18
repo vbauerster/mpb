@@ -11,6 +11,8 @@ import (
 	"github.com/vbauerster/mpb/cwriter"
 )
 
+// ErrCallAfterStop thrown by panic, if Progress methods like AddBar() are called
+// after Stop() has been called
 var ErrCallAfterStop = errors.New("method call on stopped Progress instance")
 
 type opType uint
@@ -28,7 +30,7 @@ const (
 	SortBottom
 )
 
-// RefreshRate
+// default RefreshRate
 const rr = 100
 
 // Progress represents the container that renders Progress bars
