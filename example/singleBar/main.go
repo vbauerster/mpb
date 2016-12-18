@@ -10,25 +10,22 @@ import (
 
 const (
 	totalItem    = 100
-	maxBlockSize = 14
+	maxBlockSize = 10
 )
 
 func main() {
-	decor := func(s *mpb.Statistics) string {
-		str := fmt.Sprintf("%d/%d", s.Current, s.Total)
-		return fmt.Sprintf("%-7s", str)
-	}
 
+	name := "Single:"
 	p := mpb.New()
-	bar := p.AddBar(totalItem).AppendETA().PrependFunc(decor)
+	bar := p.AddBar(totalItem).
+		PrependName(name, 0).
+		AppendPercentage().
+		TrimRightSpace()
 
 	blockSize := rand.Intn(maxBlockSize) + 1
-	for i := 0; bar.InProgress(); i++ {
+	for i := 0; i < totalItem; i++ {
 		time.Sleep(time.Duration(blockSize) * (50*time.Millisecond + time.Duration(rand.Intn(5*int(time.Millisecond)))))
-		bar.Incr(blockSize)
-		if bar.Current() > 42 && p.RemoveBar(bar) {
-			break
-		}
+		bar.Incr(1)
 		blockSize = rand.Intn(maxBlockSize) + 1
 	}
 
