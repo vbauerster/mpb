@@ -18,9 +18,9 @@ type Bar struct {
 	leftEnd  byte
 	rightEnd byte
 
-	trimLeftSpace, trimRightSpace bool
-
 	incrCh       chan int
+	trimLeftCh   chan bool
+	trimRightCh  chan bool
 	redrawReqCh  chan *redrawRequest
 	currentReqCh chan chan int
 	statusReqCh  chan chan int
@@ -57,6 +57,8 @@ func newBar(total, width int, wg *sync.WaitGroup) *Bar {
 		width:    width,
 
 		incrCh:       make(chan int),
+		trimLeftCh:   make(chan bool),
+		trimRightCh:  make(chan bool),
 		redrawReqCh:  make(chan *redrawRequest),
 		currentReqCh: make(chan chan int),
 		statusReqCh:  make(chan chan int),
@@ -80,13 +82,17 @@ func (b *Bar) SetWidth(n int) *Bar {
 
 // TrimLeftSpace removes space befor LeftEnd charater
 func (b *Bar) TrimLeftSpace() *Bar {
-	b.trimLeftSpace = true
+	if !b.isDone() {
+		b.trimLeftCh <- true
+	}
 	return b
 }
 
 // TrimRightSpace removes space after RightEnd charater
 func (b *Bar) TrimRightSpace() *Bar {
-	b.trimRightSpace = true
+	if !b.isDone() {
+		b.trimRightCh <- true
+	}
 	return b
 }
 
@@ -170,13 +176,17 @@ func (b *Bar) InProgress() bool {
 
 // PrependFunc prepends DecoratorFunc
 func (b *Bar) PrependFunc(f DecoratorFunc) *Bar {
-	b.decoratorCh <- &decorator{decoratorPrepend, f}
+	if !b.isDone() {
+		b.decoratorCh <- &decorator{decoratorPrepend, f}
+	}
 	return b
 }
 
 // AppendFunc appends DecoratorFunc
 func (b *Bar) AppendFunc(f DecoratorFunc) *Bar {
-	b.decoratorCh <- &decorator{decoratorAppend, f}
+	if !b.isDone() {
+		b.decoratorCh <- &decorator{decoratorAppend, f}
+	}
 	return b
 }
 
@@ -194,7 +204,7 @@ func (b *Bar) server(wg *sync.WaitGroup, total int) {
 	blockStartTime := timeStarted
 	var timePerItem, timeElapsed time.Duration
 	var appendFuncs, prependFuncs []DecoratorFunc
-	var completed, wgDoneReported bool
+	var completed, wgDoneReported, trimLeftSpace, trimRightSpace bool
 	var current int
 	for {
 		select {
@@ -223,9 +233,13 @@ func (b *Bar) server(wg *sync.WaitGroup, total int) {
 			respCh <- current
 		case r := <-b.redrawReqCh:
 			stat := &Statistics{total, current, r.width, timeElapsed, timePerItem}
-			r.respCh <- b.draw(stat, appendFuncs, prependFuncs)
+			r.respCh <- b.draw(stat, appendFuncs, prependFuncs, trimLeftSpace, trimRightSpace)
 		case respCh := <-b.statusReqCh:
 			respCh <- percentage(total, current, 100)
+		case result := <-b.trimLeftCh:
+			trimLeftSpace = result
+		case result := <-b.trimRightCh:
+			trimRightSpace = result
 		case <-b.flushedCh:
 			if completed && !wgDoneReported {
 				wgDoneReported = true
@@ -241,7 +255,7 @@ func (b *Bar) server(wg *sync.WaitGroup, total int) {
 	}
 }
 
-func (b *Bar) draw(stat *Statistics, appendFuncs, prependFuncs []DecoratorFunc) []byte {
+func (b *Bar) draw(stat *Statistics, appendFuncs, prependFuncs []DecoratorFunc, trimLeftSpace, trimRightSpace bool) []byte {
 
 	buf := make([]byte, 0, stat.TermWidth)
 
@@ -265,11 +279,12 @@ func (b *Bar) draw(stat *Statistics, appendFuncs, prependFuncs []DecoratorFunc) 
 
 	var leftSpace, rightSpace []byte
 	space := []byte{' '}
-	if !b.trimLeftSpace {
+
+	if !trimLeftSpace {
 		prependCount++
 		leftSpace = space
 	}
-	if !b.trimRightSpace {
+	if !trimRightSpace {
 		appendCount++
 		rightSpace = space
 	}
