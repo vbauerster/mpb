@@ -16,10 +16,12 @@ const (
 func main() {
 
 	var wg sync.WaitGroup
-	p := mpb.New().WithSort(mpb.SortTop).SetWidth(60)
+	p := mpb.New().SetWidth(60).WithSort(mpb.SortTop)
 
-	name1 := "Bar#1:"
-	bar1 := p.AddBar(100).AppendETA().PrependFunc(getDecor()).PrependName(name1, len(name1))
+	name1 := "Bar#1: "
+	bar1 := p.AddBar(100).
+		PrependName(name1, len(name1)).PrependFunc(getDecor()).
+		AppendETA()
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -31,7 +33,9 @@ func main() {
 		}
 	}()
 
-	bar2 := p.AddBar(60).AppendETA().PrependFunc(getDecor()).PrependName("", 0-len(name1))
+	bar2 := p.AddBar(60).
+		PrependName("", 0-len(name1)).PrependFunc(getDecor()).
+		AppendETA()
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -43,7 +47,9 @@ func main() {
 		}
 	}()
 
-	bar3 := p.AddBar(80).AppendETA().PrependFunc(getDecor()).PrependName("Bar#3:", 0)
+	bar3 := p.AddBar(80).
+		PrependName("Bar#3: ", 0).PrependFunc(getDecor()).
+		AppendETA()
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
