@@ -40,6 +40,9 @@ func main() {
 		for i := 0; i < 100; i++ {
 			time.Sleep(time.Duration(blockSize) * (50*time.Millisecond + time.Duration(rand.Intn(5*int(time.Millisecond)))))
 			bar2.Incr(1)
+			if bar2.Current() > 42 && p.RemoveBar(bar2) {
+				break
+			}
 			blockSize = rand.Intn(maxBlockSize) + 1
 		}
 	}()

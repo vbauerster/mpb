@@ -18,8 +18,7 @@ type Bar struct {
 	leftEnd  byte
 	rightEnd byte
 
-	lastFrame  []byte
-	lastStatus int
+	trimLeftSpace, trimRightSpace bool
 
 	incrCh       chan int
 	redrawReqCh  chan *redrawRequest
@@ -38,7 +37,7 @@ type Statistics struct {
 	TimeElapsed, TimePerItemEstimate time.Duration
 }
 
-func (s *Statistics) eta() time.Duration {
+func (s *Statistics) Eta() time.Duration {
 	return time.Duration(s.Total-s.Current) * s.TimePerItemEstimate
 }
 
@@ -67,10 +66,20 @@ func newBar(total, width int, wg *sync.WaitGroup) *Bar {
 
 // SetWidth sets width of the bar
 func (b *Bar) SetWidth(n int) *Bar {
-	if n <= 0 {
+	if n < 2 {
 		return b
 	}
 	b.width = n
+	return b
+}
+
+func (b *Bar) TrimLeftSpace() *Bar {
+	b.trimLeftSpace = true
+	return b
+}
+
+func (b *Bar) TrimRightSpace() *Bar {
+	b.trimRightSpace = true
 	return b
 }
 
@@ -129,11 +138,7 @@ func (b *Bar) Incr(n int) {
 }
 
 // Current returns the actual current.
-// If bar was stopped by Stop(), subsequent calls to Current will return -1
 func (b *Bar) Current() int {
-	if b.isDone() {
-		return -1
-	}
 	respCh := make(chan int)
 	b.currentReqCh <- respCh
 	return <-respCh
@@ -164,24 +169,14 @@ func (b *Bar) AppendFunc(f DecoratorFunc) *Bar {
 	return b
 }
 
-// String returns the string representation of the bar
-// func (b *Bar) String() string {
-// 	if b.isDone() {
-// 		return string(b.lastFrame)
-// 	}
-// 	respCh := make(chan []byte)
-// 	b.redrawReqCh <- respCh
-// 	return string(<-respCh)
-// }
-
 type redrawRequest struct {
 	width  int
 	respCh chan []byte
 }
 
 func (b *Bar) Bytes(width int) []byte {
-	if b.isDone() {
-		return b.lastFrame
+	if width <= 0 {
+		width = b.width
 	}
 	respCh := make(chan []byte)
 	b.redrawReqCh <- &redrawRequest{width, respCh}
@@ -191,7 +186,6 @@ func (b *Bar) Bytes(width int) []byte {
 func (b *Bar) server(wg *sync.WaitGroup, total int) {
 	timeStarted := time.Now()
 	blockStartTime := timeStarted
-	// buf := make([]byte, 0, b.width+32)
 	var tpie time.Duration
 	var timeElapsed time.Duration
 	var appendFuncs []DecoratorFunc
@@ -232,19 +226,14 @@ func (b *Bar) server(wg *sync.WaitGroup, total int) {
 			respCh <- percentage(total, current, 100)
 		case <-b.flushedCh:
 			if completed && !b.isDone() {
-				stat := &Statistics{total, current, termWidth, timeElapsed, tpie}
-				b.lastFrame = b.draw(stat, appendFuncs, prependFuncs)
-				b.lastStatus = percentage(total, current, 100)
 				close(b.done)
 				wg.Done()
-				return
 			}
 		case <-b.stopCh:
 			close(b.done)
 			if !completed {
 				wg.Done()
 			}
-			return
 		}
 	}
 }
@@ -270,14 +259,25 @@ func (b *Bar) draw(stat *Statistics, appendFuncs, prependFuncs []DecoratorFunc) 
 	prependCount := utf8.RuneCount(prependBlock)
 	barCount := utf8.RuneCount(barBlock)
 	appendCount := utf8.RuneCount(appendBlock)
-	totalCount := prependCount + barCount + appendCount
 
+	var leftSpace, rightSpace []byte
+	space := []byte{' '}
+	if !b.trimLeftSpace {
+		prependCount++
+		leftSpace = space
+	}
+	if !b.trimRightSpace {
+		appendCount++
+		rightSpace = space
+	}
+
+	totalCount := prependCount + barCount + appendCount
 	if totalCount >= stat.TermWidth {
 		newWidth := stat.TermWidth - prependCount - appendCount
 		barBlock = b.fillBar(stat.Total, stat.Current, newWidth-1)
 	}
 
-	for _, block := range [...][]byte{prependBlock, barBlock, appendBlock} {
+	for _, block := range [...][]byte{prependBlock, leftSpace, barBlock, rightSpace, appendBlock} {
 		buf = append(buf, block...)
 	}
 
@@ -288,6 +288,7 @@ func (b *Bar) fillBar(total, current, width int) []byte {
 	if width < 2 {
 		return []byte{b.leftEnd, b.rightEnd}
 	}
+
 	buf := make([]byte, width)
 	completedWidth := percentage(total, current, width)
 
@@ -303,6 +304,7 @@ func (b *Bar) fillBar(total, current, width int) []byte {
 	}
 	// set left and right ends bits
 	buf[0], buf[width-1] = b.leftEnd, b.rightEnd
+
 	return buf
 }
 
@@ -316,9 +318,6 @@ func (b *Bar) isDone() bool {
 }
 
 func (b *Bar) status() int {
-	if b.isDone() {
-		return b.lastStatus
-	}
 	respCh := make(chan int)
 	b.statusReqCh <- respCh
 	return <-respCh

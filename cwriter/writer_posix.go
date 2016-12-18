@@ -30,13 +30,13 @@ func (w *Writer) clearLines() {
 func TerminalWidth() (int, error) {
 	w := new(window)
 	tio := syscall.TIOCGWINSZ
-	res, _, err := syscall.Syscall(syscall.SYS_IOCTL,
+	_, _, errno := syscall.Syscall(syscall.SYS_IOCTL,
 		tty.Fd(),
 		uintptr(tio),
 		uintptr(unsafe.Pointer(w)),
 	)
-	if int(res) == -1 {
-		return 0, err
+	if errno != 0 {
+		return 0, errno
 	}
 	return int(w.Col), nil
 }
