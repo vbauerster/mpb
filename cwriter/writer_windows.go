@@ -4,6 +4,7 @@ package cwriter
 
 import (
 	"fmt"
+	"io"
 	"syscall"
 	"unsafe"
 
@@ -43,15 +44,21 @@ type consoleScreenBufferInfo struct {
 	maximumWindowSize coord
 }
 
+// FdWriter is a writer with a file descriptor.
+type FdWriter interface {
+	io.Writer
+	Fd() uintptr
+}
+
 func (w *Writer) clearLines() {
-	f, ok := w.Out.(FdWriter)
+	f, ok := w.out.(FdWriter)
 	if ok && !isatty.IsTerminal(f.Fd()) {
 		ok = false
 	}
 	if !ok {
 		for i := 0; i < w.lineCount; i++ {
-			fmt.Fprintf(w.Out, "%c[%dA", ESC, 0) // move the cursor up
-			fmt.Fprintf(w.Out, "%c[2K\r", ESC)   // clear the line
+			fmt.Fprintf(w.out, "%c[%dA", ESC, 0) // move the cursor up
+			fmt.Fprintf(w.out, "%c[2K\r", ESC)   // clear the line
 		}
 		return
 	}
@@ -72,4 +79,14 @@ func (w *Writer) clearLines() {
 		count = dword(csbi.size.x)
 		procFillConsoleOutputCharacter.Call(fd, uintptr(' '), uintptr(count), *(*uintptr)(unsafe.Pointer(&cursor)), uintptr(unsafe.Pointer(&w)))
 	}
+}
+
+// TerminalWidth returns width of the terminal.
+func TerminalWidth() (int, error) {
+	var info consoleScreenBufferInfo
+	_, _, errno := syscall.Syscall(procGetConsoleScreenBufferInfo.Addr(), 2, uintptr(syscall.Stdout), uintptr(unsafe.Pointer(&info)), 0)
+	if errno != 0 {
+		return 0, errno
+	}
+	return int(info.size.x) - 1, nil
 }
