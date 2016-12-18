@@ -4,6 +4,7 @@ import (
 	"io"
 	"sync"
 	"time"
+	"unicode/utf8"
 )
 
 // Bar represents a progress Bar
@@ -21,7 +22,7 @@ type Bar struct {
 	lastStatus int
 
 	incrCh       chan int
-	redrawReqCh  chan chan []byte
+	redrawReqCh  chan *redrawRequest
 	currentReqCh chan chan int
 	statusReqCh  chan chan int
 	decoratorCh  chan *decorator
@@ -33,7 +34,7 @@ type Bar struct {
 // Statistics represents statistics of the progress bar
 // instance of this, sent to DecoratorFunc, as param
 type Statistics struct {
-	Total, Current                   int
+	Total, Current, TermWidth        int
 	TimeElapsed, TimePerItemEstimate time.Duration
 }
 
@@ -52,7 +53,7 @@ func newBar(total, width int, wg *sync.WaitGroup) *Bar {
 		width:    width,
 
 		incrCh:       make(chan int),
-		redrawReqCh:  make(chan chan []byte),
+		redrawReqCh:  make(chan *redrawRequest),
 		currentReqCh: make(chan chan int),
 		statusReqCh:  make(chan chan int),
 		decoratorCh:  make(chan *decorator),
@@ -164,25 +165,40 @@ func (b *Bar) AppendFunc(f DecoratorFunc) *Bar {
 }
 
 // String returns the string representation of the bar
-func (b *Bar) String() string {
+// func (b *Bar) String() string {
+// 	if b.isDone() {
+// 		return string(b.lastFrame)
+// 	}
+// 	respCh := make(chan []byte)
+// 	b.redrawReqCh <- respCh
+// 	return string(<-respCh)
+// }
+
+type redrawRequest struct {
+	width  int
+	respCh chan []byte
+}
+
+func (b *Bar) Bytes(width int) []byte {
 	if b.isDone() {
-		return string(b.lastFrame)
+		return b.lastFrame
 	}
 	respCh := make(chan []byte)
-	b.redrawReqCh <- respCh
-	return string(<-respCh)
+	b.redrawReqCh <- &redrawRequest{width, respCh}
+	return <-respCh
 }
 
 func (b *Bar) server(wg *sync.WaitGroup, total int) {
 	timeStarted := time.Now()
 	blockStartTime := timeStarted
-	buf := make([]byte, b.width, b.width+24)
+	// buf := make([]byte, 0, b.width+32)
 	var tpie time.Duration
 	var timeElapsed time.Duration
 	var appendFuncs []DecoratorFunc
 	var prependFuncs []DecoratorFunc
 	var completed bool
 	var current int
+	var termWidth int
 	for {
 		select {
 		case i := <-b.incrCh:
@@ -208,15 +224,16 @@ func (b *Bar) server(wg *sync.WaitGroup, total int) {
 			}
 		case respCh := <-b.currentReqCh:
 			respCh <- current
-		case respCh := <-b.redrawReqCh:
-			stat := &Statistics{total, current, timeElapsed, tpie}
-			respCh <- b.draw(stat, buf, appendFuncs, prependFuncs)
+		case r := <-b.redrawReqCh:
+			termWidth = r.width
+			stat := &Statistics{total, current, termWidth, timeElapsed, tpie}
+			r.respCh <- b.draw(stat, appendFuncs, prependFuncs)
 		case respCh := <-b.statusReqCh:
 			respCh <- percentage(total, current, 100)
 		case <-b.flushedCh:
 			if completed && !b.isDone() {
-				stat := &Statistics{total, current, timeElapsed, tpie}
-				b.lastFrame = b.draw(stat, buf, appendFuncs, prependFuncs)
+				stat := &Statistics{total, current, termWidth, timeElapsed, tpie}
+				b.lastFrame = b.draw(stat, appendFuncs, prependFuncs)
 				b.lastStatus = percentage(total, current, 100)
 				close(b.done)
 				wg.Done()
@@ -232,35 +249,60 @@ func (b *Bar) server(wg *sync.WaitGroup, total int) {
 	}
 }
 
-func (b *Bar) draw(stat *Statistics, buf []byte, appendFuncs, prependFuncs []DecoratorFunc) []byte {
-	completedWidth := percentage(stat.Total, stat.Current, b.width)
+func (b *Bar) draw(stat *Statistics, appendFuncs, prependFuncs []DecoratorFunc) []byte {
 
-	for i := 0; i < completedWidth; i++ {
-		buf[i] = b.fill
-	}
-	for i := completedWidth; i < b.width; i++ {
-		buf[i] = b.empty
-	}
-	// set tip bit
-	if completedWidth > 0 && completedWidth < b.width {
-		buf[completedWidth-1] = b.tip
-	}
+	buf := make([]byte, 0, stat.TermWidth)
 
-	// set left and right ends bits
-	buf[0], buf[len(buf)-1] = b.leftEnd, b.rightEnd
+	barBlock := b.fillBar(stat.Total, stat.Current, b.width)
 
 	// render append functions to the right of the bar
+	var appendBlock []byte
 	for _, f := range appendFuncs {
-		buf = append(buf, ' ')
-		buf = append(buf, []byte(f(stat))...)
+		appendBlock = append(appendBlock, []byte(f(stat))...)
 	}
 
 	// render prepend functions to the left of the bar
+	var prependBlock []byte
 	for _, f := range prependFuncs {
-		args := []byte(f(stat))
-		args = append(args, ' ')
-		buf = append(args, buf...)
+		prependBlock = append(prependBlock, []byte(f(stat))...)
 	}
+
+	prependCount := utf8.RuneCount(prependBlock)
+	barCount := utf8.RuneCount(barBlock)
+	appendCount := utf8.RuneCount(appendBlock)
+	totalCount := prependCount + barCount + appendCount
+
+	if totalCount >= stat.TermWidth {
+		newWidth := stat.TermWidth - prependCount - appendCount
+		barBlock = b.fillBar(stat.Total, stat.Current, newWidth-1)
+	}
+
+	for _, block := range [...][]byte{prependBlock, barBlock, appendBlock} {
+		buf = append(buf, block...)
+	}
+
+	return buf
+}
+
+func (b *Bar) fillBar(total, current, width int) []byte {
+	if width < 2 {
+		return []byte{b.leftEnd, b.rightEnd}
+	}
+	buf := make([]byte, width)
+	completedWidth := percentage(total, current, width)
+
+	for i := 1; i < completedWidth; i++ {
+		buf[i] = b.fill
+	}
+	for i := completedWidth; i < width-1; i++ {
+		buf[i] = b.empty
+	}
+	// set tip bit
+	if completedWidth > 0 && completedWidth < width {
+		buf[completedWidth-1] = b.tip
+	}
+	// set left and right ends bits
+	buf[0], buf[width-1] = b.leftEnd, b.rightEnd
 	return buf
 }
 

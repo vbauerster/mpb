@@ -2,7 +2,6 @@ package mpb
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"os"
 	"sort"
@@ -185,6 +184,8 @@ func (p *Progress) server(cw *cwriter.Writer, t *time.Ticker) {
 		case respCh := <-p.countReqCh:
 			respCh <- len(bars)
 		case <-t.C:
+			width, _ := cwriter.TerminalWidth()
+			// fmt.Fprintf(os.Stderr, "twidth: %d\n", width)
 			switch p.sort {
 			case SortTop:
 				sort.Sort(sort.Reverse(SortableBarSlice(bars)))
@@ -192,7 +193,10 @@ func (p *Progress) server(cw *cwriter.Writer, t *time.Ticker) {
 				sort.Sort(SortableBarSlice(bars))
 			}
 			for _, b := range bars {
-				fmt.Fprintln(cw, b)
+				// fmt.Fprintln(cw, b)
+				buf := b.Bytes(width)
+				buf = append(buf, '\n')
+				cw.Write(buf)
 			}
 			cw.Flush()
 			for _, b := range bars {
