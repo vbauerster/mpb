@@ -11,7 +11,6 @@ const ESC = 27
 // Writer is a buffered the writer that updates the terminal.
 // The contents of writer will be flushed when Flush is called.
 type Writer struct {
-	// Out is the writer to write to
 	out io.Writer
 
 	buf       bytes.Buffer
@@ -25,6 +24,7 @@ func New(w io.Writer) *Writer {
 	}
 }
 
+// Flush flushes the underlying buffer
 func (w *Writer) Flush() error {
 	// do nothing if buffer is empty
 	if len(w.buf.Bytes()) == 0 {
