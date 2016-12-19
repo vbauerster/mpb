@@ -13,7 +13,7 @@ but unlike the last one, implementation is mutex free, following Go's idiom:
 * __Dynamic Addition__:  Add additional progress bar at any time
 * __Dynamic Removal__:  Remove rendering progress bar at any time
 * __Dynamic Sorting__:  Sort bars by progression
-* __Dynamic Resize:  Resize bars on terminal width change
+* __Dynamic Resize__:  Resize bars on terminal width change
 * __Custom Decorator Functions__: Add custom functions around the bar along with helper functions
 * __Predefined Decoratros__: Elapsed time, [Ewmaest](https://github.com/dgryski/trifles/tree/master/ewmaest) based ETA, Percentage, Bytes counter
 
