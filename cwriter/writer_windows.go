@@ -53,9 +53,6 @@ type FdWriter interface {
 func (w *Writer) clearLines() {
 	f, ok := w.out.(FdWriter)
 	if ok && !isatty.IsTerminal(f.Fd()) {
-		ok = false
-	}
-	if !ok {
 		for i := 0; i < w.lineCount; i++ {
 			fmt.Fprintf(w.out, "%c[%dA", ESC, 0) // move the cursor up
 			fmt.Fprintf(w.out, "%c[2K\r", ESC)   // clear the line
