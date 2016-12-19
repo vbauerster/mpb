@@ -13,12 +13,30 @@ but unlike the last one, implementation is mutex free, following Go's idiom:
 * __Dynamic Addition__:  Add additional progress bar at any time
 * __Dynamic Removal__:  Remove rendering progress bar at any time
 * __Dynamic Sorting__:  Sort bars by progression
+* __Dynamic Resize:  Resize bars on terminal width change
 * __Custom Decorator Functions__: Add custom functions around the bar along with helper functions
 * __Predefined Decoratros__: Elapsed time, [Ewmaest](https://github.com/dgryski/trifles/tree/master/ewmaest) based ETA, Percentage, Bytes counter
 
 ## Usage
 
 Following is the simplest use case:
+
+```go
+	name := "Single bar:"
+	p := mpb.New()
+	bar := p.AddBar(100).PrependName(name, 0).AppendPercentage()
+
+	for i := 0; i < 100; i++ {
+		time.Sleep(time.Duration(rand.Intn(100)) * time.Millisecond)
+		bar.Incr(1)
+	}
+
+	p.Stop()
+```
+The source code: [example/singleBar/main.go](example/singleBar/main.go)
+
+However **mpb** was designed with concurrency in mind, each new bar renders in its
+own goroutine. Therefore adding multiple bars is easy and safe:
 
 ```go
 	var wg sync.WaitGroup
@@ -59,6 +77,12 @@ The source code: [example/remove/main.go](example/remove/main.go)
 ![example](example/gifs/sort.gif)
 
 The source code: [example/sort/main.go](example/sort/main.go)
+
+### Resizing bars on terminal width change
+
+![example](example/gifs/resize.gif)
+
+The source code: [example/prependETA/main.go](example/prependETA/main.go)
 
 ### Multiple io
 

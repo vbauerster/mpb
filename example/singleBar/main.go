@@ -8,25 +8,15 @@ import (
 	"github.com/vbauerster/mpb"
 )
 
-const (
-	totalItem    = 100
-	maxBlockSize = 10
-)
-
 func main() {
 
-	name := "Single:"
+	name := "Single bar:"
 	p := mpb.New()
-	bar := p.AddBar(totalItem).
-		PrependName(name, 0).
-		AppendPercentage().
-		TrimRightSpace()
+	bar := p.AddBar(100).PrependName(name, 0).AppendPercentage()
 
-	blockSize := rand.Intn(maxBlockSize) + 1
-	for i := 0; i < totalItem; i++ {
-		time.Sleep(time.Duration(blockSize) * (50*time.Millisecond + time.Duration(rand.Intn(5*int(time.Millisecond)))))
+	for i := 0; i < 100; i++ {
+		time.Sleep(time.Duration(rand.Intn(100)) * time.Millisecond)
 		bar.Incr(1)
-		blockSize = rand.Intn(maxBlockSize) + 1
 	}
 
 	p.Stop()
