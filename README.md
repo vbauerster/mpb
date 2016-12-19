@@ -95,3 +95,7 @@ The source code: [example/io/multiple/main.go](example/io/multiple/main.go)
 ```sh
 $ go get -u github.com/vbauerster/mpb
 ```
+
+## License
+
+This lib is under [WTFPL license](http://www.wtfpl.net)
