@@ -20,7 +20,10 @@ func main() {
 	// p := mpb.New().RefreshRate(80 * time.Millisecond).SetWidth(64)
 
 	name1 := "Bar#1: "
-	bar1 := p.AddBar(50).AppendPercentage().PrependName(name1, len(name1)).PrependETA(4)
+	bar1 := p.AddBar(50).
+		PrependName(name1, len(name1)).PrependETA(4).
+		AppendPercentage().TrimRightSpace()
+
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -32,7 +35,10 @@ func main() {
 		}
 	}()
 
-	bar2 := p.AddBar(100).AppendPercentage().PrependName("", 0-len(name1)).PrependETA(4)
+	bar2 := p.AddBar(100).
+		PrependName("", 0-len(name1)).PrependETA(4).
+		AppendPercentage().TrimRightSpace()
+
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -40,14 +46,14 @@ func main() {
 		for i := 0; i < 100; i++ {
 			time.Sleep(time.Duration(blockSize) * (50*time.Millisecond + time.Duration(rand.Intn(5*int(time.Millisecond)))))
 			bar2.Incr(1)
-			if bar2.Current() > 42 && p.RemoveBar(bar2) {
-				break
-			}
 			blockSize = rand.Intn(maxBlockSize) + 1
 		}
 	}()
 
-	bar3 := p.AddBar(80).AppendPercentage().PrependName("Bar#3: ", 0).PrependETA(4)
+	bar3 := p.AddBar(80).
+		PrependName("Bar#3: ", 0).PrependETA(4).
+		AppendPercentage().TrimRightSpace()
+
 	wg.Add(1)
 	go func() {
 		defer wg.Done()

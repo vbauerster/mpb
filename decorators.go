@@ -41,16 +41,17 @@ func (b *Bar) PrependCounters(unit Units, padding int) *Bar {
 }
 
 func (b *Bar) PrependETA(padding int) *Bar {
-	layout := "ETA%" + strconv.Itoa(padding) + "s"
+	layout := "ETA% " + strconv.Itoa(padding) + "s"
 	b.PrependFunc(func(s *Statistics) string {
 		return fmt.Sprintf(layout, time.Duration(s.Eta().Seconds())*time.Second)
 	})
 	return b
 }
 
-func (b *Bar) AppendETA() *Bar {
+func (b *Bar) AppendETA(padding int) *Bar {
+	layout := "ETA% " + strconv.Itoa(padding) + "s"
 	b.AppendFunc(func(s *Statistics) string {
-		return fmt.Sprintf("ETA %s", time.Duration(s.Eta().Seconds())*time.Second)
+		return fmt.Sprintf(layout, time.Duration(s.Eta().Seconds())*time.Second)
 	})
 	return b
 }

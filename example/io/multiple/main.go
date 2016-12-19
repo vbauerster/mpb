@@ -60,9 +60,9 @@ func download(wg *sync.WaitGroup, p *mpb.Progress, name, url string) {
 
 	// create bar with appropriate decorators
 	bar := p.AddBar(int(size)).
-		PrependCounters(mpb.UnitBytes, 20).
 		PrependName(name, len(name)).
-		AppendETA()
+		PrependCounters(mpb.UnitBytes, 20).
+		AppendETA(-6)
 	// create proxy reader
 	reader := bar.ProxyReader(resp.Body)
 	// and copy from reader
