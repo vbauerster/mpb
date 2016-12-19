@@ -20,7 +20,7 @@ func main() {
 	}
 
 	p := mpb.New()
-	bar := p.AddBar(totalItem).AppendETA().PrependFunc(decor)
+	bar := p.AddBar(totalItem).PrependFunc(decor).AppendETA(-6)
 
 	blockSize := rand.Intn(maxBlockSize) + 1
 	// Fallowing will hang, to prevent

@@ -21,7 +21,7 @@ func main() {
 	name1 := "Bar#1: "
 	bar1 := p.AddBar(100).
 		PrependName(name1, len(name1)).PrependFunc(getDecor()).
-		AppendETA()
+		AppendETA(-6)
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -35,7 +35,7 @@ func main() {
 
 	bar2 := p.AddBar(60).
 		PrependName("", 0-len(name1)).PrependFunc(getDecor()).
-		AppendETA()
+		AppendETA(-6)
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -49,7 +49,7 @@ func main() {
 
 	bar3 := p.AddBar(80).
 		PrependName("Bar#3: ", 0).PrependFunc(getDecor()).
-		AppendETA()
+		AppendETA(-6)
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
