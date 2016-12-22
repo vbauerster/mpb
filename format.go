@@ -52,13 +52,13 @@ func (f *formatter) String() string {
 func formatBytes(i int) (result string) {
 	switch {
 	case i > bytesInTiB:
-		result = fmt.Sprintf("%.02fTiB", float64(i)/bytesInTiB)
+		result = fmt.Sprintf("%.1fTiB", float64(i)/bytesInTiB)
 	case i > bytesInGiB:
-		result = fmt.Sprintf("%.02fGiB", float64(i)/bytesInGiB)
+		result = fmt.Sprintf("%.1fGiB", float64(i)/bytesInGiB)
 	case i > bytesInMiB:
-		result = fmt.Sprintf("%.02fMiB", float64(i)/bytesInMiB)
+		result = fmt.Sprintf("%.1fMiB", float64(i)/bytesInMiB)
 	case i > bytesInKiB:
-		result = fmt.Sprintf("%.02fKiB", float64(i)/bytesInKiB)
+		result = fmt.Sprintf("%.1fKiB", float64(i)/bytesInKiB)
 	default:
 		result = fmt.Sprintf("%db", i)
 	}
