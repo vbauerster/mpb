@@ -8,12 +8,12 @@ import (
 func TestAddBar(t *testing.T) {
 	var buf bytes.Buffer
 	p := New(nil).SetWidth(60).SetOut(&buf)
-	count := p.BarsCount()
+	count := p.BarCount()
 	if count != 0 {
 		t.Errorf("Count want: %q, got: %q\n", 0, count)
 	}
 	bar := p.AddBar(10)
-	count = p.BarsCount()
+	count = p.BarCount()
 	if count != 1 {
 		t.Errorf("Count want: %q, got: %q\n", 0, count)
 	}
@@ -31,7 +31,7 @@ func TestRemoveBar(t *testing.T) {
 		t.Error("RemoveBar failure")
 	}
 
-	count := p.BarsCount()
+	count := p.BarCount()
 	if count != 0 {
 		t.Errorf("Count want: %q, got: %q\n", 0, count)
 	}
