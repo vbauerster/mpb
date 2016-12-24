@@ -213,6 +213,7 @@ func (p *Progress) server(cw *cwriter.Writer, t *time.Ticker) {
 			case SortBottom:
 				sort.Sort(SortableBarSlice(bars))
 			}
+			// TODO: pipelines?
 			for _, b := range bars {
 				buf := b.Bytes(width)
 				buf = append(buf, '\n')
