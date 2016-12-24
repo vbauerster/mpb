@@ -11,6 +11,9 @@ import (
 func main() {
 
 	name := "Single bar:"
+	// Star mpb's rendering goroutine.
+	// If you don't plan to cancel, feed with nil
+	// otherwise provide context.Context, see cancel example
 	p := mpb.New(nil)
 	bar := p.AddBar(100).PrependName(name, 0).AppendPercentage()
 

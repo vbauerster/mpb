@@ -11,7 +11,7 @@ import (
 
 func main() {
 	var wg sync.WaitGroup
-	p := mpb.New(nil) // Star mpb's rendering goroutine
+	p := mpb.New(nil)
 	for i := 0; i < 3; i++ {
 		wg.Add(1) // add wg delta
 		name := fmt.Sprintf("Bar#%d:", i)

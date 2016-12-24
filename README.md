@@ -10,6 +10,7 @@ but unlike the last one, implementation is mutex free, following Go's idiom:
 ## Features
 
 * __Multiple Bars__: mpb can render multiple progress bars that can be tracked concurrently
+* __Cancellable__: cancel rendering goroutine at any time
 * __Dynamic Addition__:  Add additional progress bar at any time
 * __Dynamic Removal__:  Remove rendering progress bar at any time
 * __Dynamic Sorting__:  Sort bars by progression
@@ -23,7 +24,10 @@ Following is the simplest use case:
 
 ```go
 	name := "Single bar:"
-	p := mpb.New()
+	// Star mpb's rendering goroutine.
+	// If you don't plan to cancel, feed with nil
+	// otherwise provide context.Context, see cancel example
+	p := mpb.New(nil)
 	bar := p.AddBar(100).PrependName(name, 0).AppendPercentage()
 
 	for i := 0; i < 100; i++ {
@@ -40,7 +44,7 @@ own goroutine. Therefore adding multiple bars is easy and safe:
 
 ```go
 	var wg sync.WaitGroup
-	p := mpb.New() // Star mpb's rendering goroutine
+	p := mpb.New(nil)
 	for i := 0; i < 3; i++ {
 		wg.Add(1) // add wg delta
 		name := fmt.Sprintf("Bar#%d:", i)
@@ -65,6 +69,12 @@ This will produce following:
 ![example](example/gifs/simple.gif)
 
 The source code: [example/simple/main.go](example/simple/main.go)
+
+### Cancel
+
+![example](example/gifs/cancel.gif)
+
+The source code: [example/cancel/main.go](example/cancel/main.go)
 
 ### Removing bar
 
