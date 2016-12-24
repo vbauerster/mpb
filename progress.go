@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"os"
+	"sort"
 	"sync"
 	"time"
 
@@ -206,6 +207,13 @@ func (p *Progress) server(cw *cwriter.Writer, t *time.Ticker) {
 		case respCh := <-p.barCountReqCh:
 			respCh <- len(bars)
 		case <-t.C:
+			switch p.sort {
+			case SortTop:
+				sort.Sort(sort.Reverse(SortableBarSlice(bars)))
+			case SortBottom:
+				sort.Sort(SortableBarSlice(bars))
+			}
+
 			width, _ := cwriter.TerminalWidth()
 			ibars := iBarsGen(p.ctx.Done(), bars, width)
 			c := make(chan *indexedBarBuffer)
