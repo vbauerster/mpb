@@ -28,7 +28,7 @@ func main() {
 		defer wg.Done()
 		blockSize := rand.Intn(maxBlockSize) + 1
 		for i := 0; i < 50; i++ {
-			time.Sleep(time.Duration(blockSize) * (50*time.Millisecond + time.Duration(rand.Intn(5*int(time.Millisecond)))))
+			sleep(blockSize)
 			bar1.Incr(1)
 			blockSize = rand.Intn(maxBlockSize) + 1
 		}
@@ -42,7 +42,7 @@ func main() {
 		defer wg.Done()
 		blockSize := rand.Intn(maxBlockSize) + 1
 		for i := 0; i < 100; i++ {
-			time.Sleep(time.Duration(blockSize) * (50*time.Millisecond + time.Duration(rand.Intn(5*int(time.Millisecond)))))
+			sleep(blockSize)
 			bar2.Incr(1)
 			if bar2.Current() > 42 && p.RemoveBar(bar2) {
 				break
@@ -59,7 +59,7 @@ func main() {
 		defer wg.Done()
 		blockSize := rand.Intn(maxBlockSize) + 1
 		for i := 0; i < 80; i++ {
-			time.Sleep(time.Duration(blockSize) * (50*time.Millisecond + time.Duration(rand.Intn(5*int(time.Millisecond)))))
+			sleep(blockSize)
 			bar3.Incr(1)
 			blockSize = rand.Intn(maxBlockSize) + 1
 		}
@@ -69,4 +69,8 @@ func main() {
 	p.Stop()
 	// p.AddBar(2) // panic: you cannot reuse p, create new one!
 	fmt.Println("stop")
+}
+
+func sleep(blockSize int) {
+	time.Sleep(time.Duration(blockSize) * (50*time.Millisecond + time.Duration(rand.Intn(5*int(time.Millisecond)))))
 }
