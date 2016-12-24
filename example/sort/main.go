@@ -16,7 +16,7 @@ const (
 func main() {
 
 	var wg sync.WaitGroup
-	p := mpb.New().SetWidth(60).WithSort(mpb.SortTop)
+	p := mpb.New(nil).SetWidth(60).WithSort(mpb.SortTop)
 
 	name1 := "Bar#1: "
 	bar1 := p.AddBar(100).

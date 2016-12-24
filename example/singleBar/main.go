@@ -11,7 +11,7 @@ import (
 func main() {
 
 	name := "Single bar:"
-	p := mpb.New()
+	p := mpb.New(nil)
 	bar := p.AddBar(100).PrependName(name, 0).AppendPercentage()
 
 	for i := 0; i < 100; i++ {

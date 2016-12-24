@@ -20,12 +20,12 @@ const (
 	UnitBytes
 )
 
-func Format(i int) *formatter {
+func Format(i int64) *formatter {
 	return &formatter{n: i}
 }
 
 type formatter struct {
-	n     int
+	n     int64
 	unit  Units
 	width int
 }
@@ -49,7 +49,7 @@ func (f *formatter) String() string {
 	}
 }
 
-func formatBytes(i int) (result string) {
+func formatBytes(i int64) (result string) {
 	switch {
 	case i > bytesInTiB:
 		result = fmt.Sprintf("%.1fTiB", float64(i)/bytesInTiB)

@@ -35,9 +35,9 @@ func main() {
 	}
 	defer dest.Close()
 
-	p := mpb.New().SetWidth(64)
+	p := mpb.New(nil).SetWidth(64)
 
-	bar := p.AddBar(int(size)).PrependCounters(mpb.UnitBytes, 20).AppendETA(-6)
+	bar := p.AddBar(size).PrependCounters(mpb.UnitBytes, 20).AppendETA(-6)
 
 	// create proxy reader
 	reader := bar.ProxyReader(resp.Body)
