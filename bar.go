@@ -199,11 +199,14 @@ func (b *Bar) Bytes(width int) []byte {
 }
 
 func (b *Bar) server(ctx context.Context, wg *sync.WaitGroup, total int64) {
-	defer wg.Done()
 	var completed bool
-	state := state{total: total}
 	timeStarted := time.Now()
 	blockStartTime := timeStarted
+	state := state{total: total}
+	defer func() {
+		b.stop(&state)
+		wg.Done()
+	}()
 	for {
 		select {
 		case i := <-b.incrCh:
@@ -234,14 +237,11 @@ func (b *Bar) server(ctx context.Context, wg *sync.WaitGroup, total int64) {
 		case state.trimRightSpace = <-b.trimRightCh:
 		case <-b.flushedCh:
 			if completed {
-				b.stop(&state)
 				return
 			}
 		case <-b.removeReqCh:
-			b.stop(&state)
 			return
 		case <-ctx.Done():
-			b.stop(&state)
 			return
 		}
 	}
@@ -253,8 +253,8 @@ func (b *Bar) stop(s *state) {
 }
 
 func (b *Bar) draw(s state, termWidth int) []byte {
-
 	buf := make([]byte, 0, termWidth)
+
 	stat := &Statistics{
 		Total:               s.total,
 		Current:             s.current,
@@ -329,12 +329,6 @@ func (b *Bar) fillBar(total, current int64, width int) []byte {
 
 	return buf
 }
-
-// func (b *Bar) closeDone() {
-// 	if !b.isDone() {
-// 		close(b.done)
-// 	}
-// }
 
 func (b *Bar) isDone() bool {
 	select {
