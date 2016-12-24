@@ -26,6 +26,7 @@ type Bar struct {
 	stateReqCh  chan chan state
 	decoratorCh chan *decorator
 	flushedCh   chan struct{}
+	removeReqCh chan struct{}
 	done        chan struct{}
 
 	lastState state
@@ -66,6 +67,7 @@ func newBar(ctx context.Context, wg *sync.WaitGroup, total int64, width int) *Ba
 		stateReqCh:  make(chan chan state),
 		decoratorCh: make(chan *decorator),
 		flushedCh:   make(chan struct{}),
+		removeReqCh: make(chan struct{}),
 		done:        make(chan struct{}),
 	}
 	go b.server(ctx, wg, total)
@@ -162,12 +164,6 @@ func (b *Bar) Current() int64 {
 	return state.current
 }
 
-func (b *Bar) stop() {
-	if !b.isDone() {
-		close(b.done)
-	}
-}
-
 // InProgress returns true, while progress is running
 // Can be used as condition in for loop
 func (b *Bar) InProgress() bool {
@@ -238,16 +234,22 @@ func (b *Bar) server(ctx context.Context, wg *sync.WaitGroup, total int64) {
 		case state.trimRightSpace = <-b.trimRightCh:
 		case <-b.flushedCh:
 			if completed {
-				b.lastState = state
-				b.stop()
+				b.stop(&state)
 				return
 			}
+		case <-b.removeReqCh:
+			b.stop(&state)
+			return
 		case <-ctx.Done():
-			b.lastState = state
-			b.stop()
+			b.stop(&state)
 			return
 		}
 	}
+}
+
+func (b *Bar) stop(s *state) {
+	b.lastState = *s
+	close(b.done)
 }
 
 func (b *Bar) draw(s state, termWidth int) []byte {
@@ -327,6 +329,12 @@ func (b *Bar) fillBar(total, current int64, width int) []byte {
 
 	return buf
 }
+
+// func (b *Bar) closeDone() {
+// 	if !b.isDone() {
+// 		close(b.done)
+// 	}
+// }
 
 func (b *Bar) isDone() bool {
 	select {
