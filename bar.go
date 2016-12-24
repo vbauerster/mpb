@@ -186,7 +186,7 @@ func (b *Bar) AppendFunc(f DecoratorFunc) *Bar {
 	return b
 }
 
-func (b *Bar) Bytes(width int) []byte {
+func (b *Bar) bytes(width int) []byte {
 	if width <= 0 {
 		width = b.width
 	}
@@ -250,6 +250,18 @@ func (b *Bar) server(ctx context.Context, wg *sync.WaitGroup, total int64) {
 func (b *Bar) stop(s *state) {
 	b.lastState = *s
 	close(b.done)
+}
+
+func (b *Bar) flushDone() {
+	if !b.isDone() {
+		b.flushedCh <- struct{}{}
+	}
+}
+
+func (b *Bar) remove() {
+	if !b.isDone() {
+		b.removeReqCh <- struct{}{}
+	}
 }
 
 func (b *Bar) draw(s state, termWidth int) []byte {

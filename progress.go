@@ -5,7 +5,6 @@ import (
 	"errors"
 	"io"
 	"os"
-	"sort"
 	"sync"
 	"time"
 
@@ -176,6 +175,7 @@ func (p *Progress) Stop() {
 
 // server monitors underlying channels and renders any progress bars
 func (p *Progress) server(cw *cwriter.Writer, t *time.Ticker) {
+	const numDigesters = 4
 	bars := make([]*Bar, 0, 4)
 	for {
 		select {
@@ -197,7 +197,7 @@ func (p *Progress) server(cw *cwriter.Writer, t *time.Ticker) {
 					if b == op.bar {
 						bars = append(bars[:i], bars[i+1:]...)
 						ok = true
-						b.removeReqCh <- struct{}{}
+						b.remove()
 						break
 					}
 				}
@@ -207,24 +207,32 @@ func (p *Progress) server(cw *cwriter.Writer, t *time.Ticker) {
 			respCh <- len(bars)
 		case <-t.C:
 			width, _ := cwriter.TerminalWidth()
-			switch p.sort {
-			case SortTop:
-				sort.Sort(sort.Reverse(SortableBarSlice(bars)))
-			case SortBottom:
-				sort.Sort(SortableBarSlice(bars))
+			ibars := iBarsGen(p.ctx.Done(), bars, width)
+			c := make(chan *indexedBarBuffer)
+			var wg sync.WaitGroup
+			wg.Add(numDigesters)
+			for i := 0; i < numDigesters; i++ {
+				go func() {
+					drawer(p.ctx.Done(), ibars, c)
+					wg.Done()
+				}()
 			}
-			// TODO: pipelines?
-			for _, b := range bars {
-				buf := b.Bytes(width)
-				buf = append(buf, '\n')
-				cw.Write(buf)
+			go func() {
+				wg.Wait()
+				close(c)
+			}()
+
+			m := make(map[int][]byte, len(bars))
+			for r := range c {
+				m[r.index] = r.buff
+			}
+			for i := 0; i < len(bars); i++ {
+				m[i] = append(m[i], '\n')
+				cw.Write(m[i])
 			}
 			cw.Flush()
-			for _, b := range bars {
-				go func(b *Bar) {
-					b.flushedCh <- struct{}{}
-				}(b)
-			}
+			go flushed(p.ctx.Done(), bars)
+
 		case d := <-p.rrChangeReqCh:
 			t.Stop()
 			t = time.NewTicker(d)
@@ -232,6 +240,53 @@ func (p *Progress) server(cw *cwriter.Writer, t *time.Ticker) {
 			t.Stop()
 			close(p.done)
 			return
+		}
+	}
+}
+
+type indexedBarBuffer struct {
+	index int
+	buff  []byte
+}
+
+type indexedBar struct {
+	index int
+	width int
+	bar   *Bar
+}
+
+func drawer(done <-chan struct{}, ibars <-chan *indexedBar, c chan<- *indexedBarBuffer) {
+	for b := range ibars {
+		select {
+		case c <- &indexedBarBuffer{b.index, b.bar.bytes(b.width)}:
+		case <-done:
+			return
+		}
+	}
+}
+
+func iBarsGen(done <-chan struct{}, bars []*Bar, width int) <-chan *indexedBar {
+	ibars := make(chan *indexedBar)
+	go func() {
+		defer close(ibars)
+		for i, b := range bars {
+			select {
+			case ibars <- &indexedBar{i, width, b}:
+			case <-done:
+				return
+			}
+		}
+	}()
+	return ibars
+}
+
+func flushed(done <-chan struct{}, bars []*Bar) {
+	for _, b := range bars {
+		select {
+		case <-done:
+			return
+		default:
+			b.flushDone()
 		}
 	}
 }
