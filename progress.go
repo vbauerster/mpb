@@ -29,7 +29,7 @@ type (
 
 	indexedBarBuffer struct {
 		index int
-		buff  []byte
+		buf   []byte
 	}
 
 	indexedBar struct {
@@ -243,10 +243,9 @@ func (p *Progress) server(cw *cwriter.Writer, t *time.Ticker) {
 
 			m := make(map[int][]byte, len(bars))
 			for r := range c {
-				m[r.index] = r.buff
+				m[r.index] = r.buf
 			}
 			for i := 0; i < len(bars); i++ {
-				m[i] = append(m[i], '\n')
 				cw.Write(m[i])
 			}
 
@@ -268,7 +267,9 @@ func (p *Progress) server(cw *cwriter.Writer, t *time.Ticker) {
 
 func drawer(ibars <-chan indexedBar, c chan<- indexedBarBuffer) {
 	for b := range ibars {
-		c <- indexedBarBuffer{b.index, b.bar.bytes(b.width)}
+		buf := b.bar.bytes(b.width)
+		buf = append(buf, '\n')
+		c <- indexedBarBuffer{b.index, buf}
 	}
 }
 
