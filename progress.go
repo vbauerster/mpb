@@ -16,14 +16,33 @@ import (
 // after Stop() has been called
 var ErrCallAfterStop = errors.New("method call on stopped Progress instance")
 
-type opType uint
+type (
+	// SortType defines sort direction of bar
+	SortType uint
+	opType   uint
+
+	operation struct {
+		kind   opType
+		bar    *Bar
+		result chan bool
+	}
+
+	indexedBarBuffer struct {
+		index int
+		buff  []byte
+	}
+
+	indexedBar struct {
+		index int
+		width int
+		bar   *Bar
+	}
+)
 
 const (
 	opBarAdd opType = iota
 	opBarRemove
 )
-
-type SortType uint
 
 const (
 	SortNone SortType = iota
@@ -50,12 +69,6 @@ type Progress struct {
 	outChangeReqCh chan io.Writer
 	barCountReqCh  chan chan int
 	done           chan struct{}
-}
-
-type operation struct {
-	kind   opType
-	bar    *Bar
-	result chan bool
 }
 
 // New creates new Progress instance, which will orchestrate bars rendering
@@ -111,17 +124,6 @@ func (p *Progress) RefreshRate(d time.Duration) *Progress {
 	return p
 }
 
-// func (p *Progress) WithContext(ctx context.Context) *Progress {
-// 	if p.BarCount() > 0 {
-// 		panic("cannot apply ctx after AddBar has been called")
-// 	}
-// 	if ctx == nil {
-// 		panic("nil context")
-// 	}
-// 	p.ctx = ctx
-// 	return p
-// }
-
 // WithSort sorts the bars, while redering
 func (p *Progress) WithSort(sort SortType) *Progress {
 	p.sort = sort
@@ -174,9 +176,18 @@ func (p *Progress) Stop() {
 	}
 }
 
+func (p *Progress) isDone() bool {
+	select {
+	case <-p.done:
+		return true
+	default:
+		return false
+	}
+}
+
 // server monitors underlying channels and renders any progress bars
 func (p *Progress) server(cw *cwriter.Writer, t *time.Ticker) {
-	const numDigesters = 4
+	const numDrawers = 4
 	bars := make([]*Bar, 0, 4)
 	for {
 		select {
@@ -215,13 +226,13 @@ func (p *Progress) server(cw *cwriter.Writer, t *time.Ticker) {
 			}
 
 			width, _ := cwriter.TerminalWidth()
-			ibars := iBarsGen(p.ctx.Done(), bars, width)
-			c := make(chan *indexedBarBuffer)
+			ibars := iBarsGen(bars, width)
+			c := make(chan indexedBarBuffer)
 			var wg sync.WaitGroup
-			wg.Add(numDigesters)
-			for i := 0; i < numDigesters; i++ {
+			wg.Add(numDrawers)
+			for i := 0; i < numDrawers; i++ {
 				go func() {
-					drawer(p.ctx.Done(), ibars, c)
+					drawer(ibars, c)
 					wg.Done()
 				}()
 			}
@@ -238,9 +249,14 @@ func (p *Progress) server(cw *cwriter.Writer, t *time.Ticker) {
 				m[i] = append(m[i], '\n')
 				cw.Write(m[i])
 			}
-			cw.Flush()
-			go flushed(p.ctx.Done(), bars)
 
+			cw.Flush()
+
+			go func() {
+				for _, b := range bars {
+					b.flushDone()
+				}
+			}()
 		case d := <-p.rrChangeReqCh:
 			t.Stop()
 			t = time.NewTicker(d)
@@ -252,58 +268,19 @@ func (p *Progress) server(cw *cwriter.Writer, t *time.Ticker) {
 	}
 }
 
-type indexedBarBuffer struct {
-	index int
-	buff  []byte
-}
-
-type indexedBar struct {
-	index int
-	width int
-	bar   *Bar
-}
-
-func drawer(done <-chan struct{}, ibars <-chan *indexedBar, c chan<- *indexedBarBuffer) {
+func drawer(ibars <-chan indexedBar, c chan<- indexedBarBuffer) {
 	for b := range ibars {
-		select {
-		case c <- &indexedBarBuffer{b.index, b.bar.bytes(b.width)}:
-		case <-done:
-			return
-		}
+		c <- indexedBarBuffer{b.index, b.bar.bytes(b.width)}
 	}
 }
 
-func iBarsGen(done <-chan struct{}, bars []*Bar, width int) <-chan *indexedBar {
-	ibars := make(chan *indexedBar)
+func iBarsGen(bars []*Bar, width int) <-chan indexedBar {
+	ibars := make(chan indexedBar)
 	go func() {
 		defer close(ibars)
 		for i, b := range bars {
-			select {
-			case ibars <- &indexedBar{i, width, b}:
-			case <-done:
-				return
-			}
+			ibars <- indexedBar{i, width, b}
 		}
 	}()
 	return ibars
-}
-
-func flushed(done <-chan struct{}, bars []*Bar) {
-	for _, b := range bars {
-		select {
-		case <-done:
-			return
-		default:
-			b.flushDone()
-		}
-	}
-}
-
-func (p *Progress) isDone() bool {
-	select {
-	case <-p.done:
-		return true
-	default:
-		return false
-	}
 }
