@@ -252,11 +252,9 @@ func (p *Progress) server(cw *cwriter.Writer, t *time.Ticker) {
 
 			cw.Flush()
 
-			go func() {
-				for _, b := range bars {
-					b.flushDone()
-				}
-			}()
+			for _, b := range bars {
+				b.flushDone()
+			}
 		case d := <-p.rrChangeReqCh:
 			t.Stop()
 			t = time.NewTicker(d)
