@@ -171,7 +171,6 @@ func (p *Progress) BarCount() int {
 func (p *Progress) Stop() {
 	p.wg.Wait()
 	if !p.isDone() {
-		close(p.done)
 		close(p.operationCh)
 	}
 }
@@ -187,6 +186,10 @@ func (p *Progress) isDone() bool {
 
 // server monitors underlying channels and renders any progress bars
 func (p *Progress) server(cw *cwriter.Writer, t *time.Ticker) {
+	defer func() {
+		t.Stop()
+		close(p.done)
+	}()
 	const numDrawers = 4
 	bars := make([]*Bar, 0, 4)
 	for {
@@ -196,7 +199,6 @@ func (p *Progress) server(cw *cwriter.Writer, t *time.Ticker) {
 			cw = cwriter.New(w)
 		case op, ok := <-p.operationCh:
 			if !ok {
-				t.Stop()
 				return
 			}
 			switch op.kind {
@@ -258,8 +260,6 @@ func (p *Progress) server(cw *cwriter.Writer, t *time.Ticker) {
 			t.Stop()
 			t = time.NewTicker(d)
 		case <-p.ctx.Done():
-			t.Stop()
-			close(p.done)
 			return
 		}
 	}
