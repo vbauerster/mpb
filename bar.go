@@ -210,6 +210,9 @@ func (b *Bar) server(ctx context.Context, wg *sync.WaitGroup, total int64) {
 	for {
 		select {
 		case i := <-b.incrCh:
+			if i <= 0 {
+				break
+			}
 			n := state.current + i
 			if n > total {
 				state.current = total
