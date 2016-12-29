@@ -73,7 +73,7 @@ func (b *Bar) AppendElapsed() *Bar {
 
 func (b *Bar) AppendPercentage() *Bar {
 	b.AppendFunc(func(s *Statistics) string {
-		completed := int(100 * float64(s.Current) / float64(s.Total))
+		completed := percentage(s.Total, s.Current, 100)
 		return fmt.Sprintf("%3d %%", completed)
 	})
 	return b
@@ -82,7 +82,7 @@ func (b *Bar) AppendPercentage() *Bar {
 func (b *Bar) PrependPercentage(padding int) *Bar {
 	layout := "%" + strconv.Itoa(padding) + "d %%"
 	b.PrependFunc(func(s *Statistics) string {
-		completed := int(100 * float64(s.Current) / float64(s.Total))
+		completed := percentage(s.Total, s.Current, 100)
 		return fmt.Sprintf(layout, completed)
 	})
 	return b
