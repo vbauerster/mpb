@@ -29,6 +29,7 @@ type Bar struct {
 	removeReqCh chan struct{}
 	done        chan struct{}
 
+	refill    *reFill
 	lastState state
 }
 
@@ -44,12 +45,18 @@ func (s *Statistics) Eta() time.Duration {
 	return time.Duration(s.Total-s.Current) * s.TimePerItemEstimate
 }
 
-type state struct {
-	total, current                int64
-	timeElapsed, timePerItem      time.Duration
-	appendFuncs, prependFuncs     []DecoratorFunc
-	trimLeftSpace, trimRightSpace bool
-}
+type (
+	state struct {
+		total, current                int64
+		timeElapsed, timePerItem      time.Duration
+		appendFuncs, prependFuncs     []DecoratorFunc
+		trimLeftSpace, trimRightSpace bool
+	}
+	reFill struct {
+		c    byte
+		till int64
+	}
+)
 
 func newBar(ctx context.Context, wg *sync.WaitGroup, total int64, width int) *Bar {
 	b := &Bar{
@@ -148,8 +155,16 @@ func (b *Bar) ProxyReader(r io.Reader) *Reader {
 
 // Incr increments progress bar
 func (b *Bar) Incr(n int) {
-	if !b.isDone() {
+	if n > 0 && !b.isDone() {
 		b.incrCh <- int64(n)
+	}
+}
+
+// IncrWithReFill increments pb with different fill character
+func (b *Bar) IncrWithReFill(n int, c byte) {
+	if n > 0 {
+		b.Incr(n)
+		b.refill = &reFill{c, int64(n)}
 	}
 }
 
@@ -210,9 +225,6 @@ func (b *Bar) server(ctx context.Context, wg *sync.WaitGroup, total int64) {
 	for {
 		select {
 		case i := <-b.incrCh:
-			if i <= 0 {
-				break
-			}
 			n := state.current + i
 			if n > total {
 				state.current = total
@@ -329,9 +341,20 @@ func (b *Bar) fillBar(total, current int64, width int) []byte {
 	buf := make([]byte, width)
 	completedWidth := percentage(total, current, width)
 
-	for i := 1; i < completedWidth; i++ {
-		buf[i] = b.fill
+	if b.refill != nil {
+		till := percentage(total, b.refill.till, width)
+		for i := 1; i < till; i++ {
+			buf[i] = b.refill.c
+		}
+		for i := till; i < completedWidth; i++ {
+			buf[i] = b.fill
+		}
+	} else {
+		for i := 1; i < completedWidth; i++ {
+			buf[i] = b.fill
+		}
 	}
+
 	for i := completedWidth; i < width-1; i++ {
 		buf[i] = b.empty
 	}
