@@ -100,6 +100,10 @@ The source code: [example/prependETA/main.go](example/prependETA/main.go)
 
 The source code: [example/io/multiple/main.go](example/io/multiple/main.go)
 
+### Custom Decorators
+
+[Here](https://github.com/vbauerster/getparty/blob/master/cmd/getparty/decorator.go) is example from [getparty](https://github.com/vbauerster/getparty) src code.
+
 ## Installation
 
 ```sh
