@@ -68,10 +68,10 @@ func newBar(ctx context.Context, wg *sync.WaitGroup, total int64, width int) *Ba
 		alpha:    0.25,
 		width:    width,
 
-		incrCh:      make(chan int64),
+		incrCh:      make(chan int64, 1),
 		trimLeftCh:  make(chan bool),
 		trimRightCh: make(chan bool),
-		stateReqCh:  make(chan chan state),
+		stateReqCh:  make(chan chan state, 1),
 		decoratorCh: make(chan *decorator),
 		flushedCh:   make(chan struct{}),
 		removeReqCh: make(chan struct{}),
@@ -149,6 +149,7 @@ func (b *Bar) SetEtaAlpha(a float64) *Bar {
 	return b
 }
 
+// ProxyReader wrapper for io operations, like io.Copy
 func (b *Bar) ProxyReader(r io.Reader) *Reader {
 	return &Reader{r, b}
 }
@@ -173,7 +174,7 @@ func (b *Bar) Current() int64 {
 	if b.isDone() {
 		return b.lastState.current
 	}
-	ch := make(chan state)
+	ch := make(chan state, 1)
 	b.stateReqCh <- ch
 	state := <-ch
 	return state.current
@@ -208,7 +209,7 @@ func (b *Bar) bytes(width int) []byte {
 	if b.isDone() {
 		return b.draw(b.lastState, width)
 	}
-	ch := make(chan state)
+	ch := make(chan state, 1)
 	b.stateReqCh <- ch
 	return b.draw(<-ch, width)
 }
