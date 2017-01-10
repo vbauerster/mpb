@@ -9,8 +9,10 @@ import (
 type decoratorFuncType uint
 
 const (
-	decoratorAppend decoratorFuncType = iota
-	decoratorPrepend
+	decAppend decoratorFuncType = iota
+	decPrepend
+	decAppendZero
+	decPrependZero
 )
 
 // DecoratorFunc is a function that can be prepended and appended to the progress bar

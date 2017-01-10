@@ -189,17 +189,29 @@ func (b *Bar) InProgress() bool {
 // PrependFunc prepends DecoratorFunc
 func (b *Bar) PrependFunc(f DecoratorFunc) *Bar {
 	if !b.isDone() {
-		b.decoratorCh <- &decorator{decoratorPrepend, f}
+		b.decoratorCh <- &decorator{decPrepend, f}
 	}
 	return b
+}
+
+func (b *Bar) RemoveAllPrependers() {
+	if !b.isDone() {
+		b.decoratorCh <- &decorator{decPrependZero, nil}
+	}
 }
 
 // AppendFunc appends DecoratorFunc
 func (b *Bar) AppendFunc(f DecoratorFunc) *Bar {
 	if !b.isDone() {
-		b.decoratorCh <- &decorator{decoratorAppend, f}
+		b.decoratorCh <- &decorator{decAppend, f}
 	}
 	return b
+}
+
+func (b *Bar) RemoveAllAppenders() {
+	if !b.isDone() {
+		b.decoratorCh <- &decorator{decAppendZero, nil}
+	}
 }
 
 func (b *Bar) bytes(width int) []byte {
@@ -242,10 +254,14 @@ func (b *Bar) server(ctx context.Context, wg *sync.WaitGroup, total int64) {
 			blockStartTime = time.Now()
 		case d := <-b.decoratorCh:
 			switch d.kind {
-			case decoratorAppend:
+			case decAppend:
 				state.appendFuncs = append(state.appendFuncs, d.f)
-			case decoratorPrepend:
+			case decAppendZero:
+				state.appendFuncs = nil
+			case decPrepend:
 				state.prependFuncs = append(state.prependFuncs, d.f)
+			case decPrependZero:
+				state.prependFuncs = nil
 			}
 		case ch := <-b.stateReqCh:
 			ch <- state
@@ -336,7 +352,7 @@ func (b *Bar) draw(s state, termWidth int) []byte {
 
 func (b *Bar) fillBar(total, current int64, width int) []byte {
 	if width < 2 {
-		return []byte{b.leftEnd, b.rightEnd}
+		return []byte{}
 	}
 
 	buf := make([]byte, width)
