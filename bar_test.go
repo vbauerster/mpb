@@ -13,7 +13,7 @@ func TestFillBar(t *testing.T) {
 	}{
 		{
 			width: 1,
-			want:  []byte{'[', ']'},
+			want:  []byte{},
 		},
 		{
 			width: 2,
