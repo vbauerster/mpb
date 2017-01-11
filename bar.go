@@ -73,7 +73,7 @@ func newBar(ctx context.Context, wg *sync.WaitGroup, total int64, width int) *Ba
 		trimRightCh: make(chan bool),
 		stateReqCh:  make(chan chan state, 1),
 		decoratorCh: make(chan *decorator),
-		flushedCh:   make(chan struct{}),
+		flushedCh:   make(chan struct{}, 1),
 		removeReqCh: make(chan struct{}),
 		done:        make(chan struct{}),
 	}
@@ -92,17 +92,19 @@ func (b *Bar) SetWidth(n int) *Bar {
 
 // TrimLeftSpace removes space befor LeftEnd charater
 func (b *Bar) TrimLeftSpace() *Bar {
-	if !b.isDone() {
-		b.trimLeftCh <- true
+	if IsClosed(b.done) {
+		return b
 	}
+	b.trimLeftCh <- true
 	return b
 }
 
 // TrimRightSpace removes space after RightEnd charater
 func (b *Bar) TrimRightSpace() *Bar {
-	if !b.isDone() {
-		b.trimRightCh <- true
+	if IsClosed(b.done) {
+		return b
 	}
+	b.trimRightCh <- true
 	return b
 }
 
@@ -156,7 +158,10 @@ func (b *Bar) ProxyReader(r io.Reader) *Reader {
 
 // Incr increments progress bar
 func (b *Bar) Incr(n int) {
-	if n > 0 && !b.isDone() {
+	if IsClosed(b.done) {
+		return
+	}
+	if n > 0 {
 		b.incrCh <- int64(n)
 	}
 }
@@ -171,7 +176,7 @@ func (b *Bar) IncrWithReFill(n int, c byte) {
 
 // Current returns the actual current.
 func (b *Bar) Current() int64 {
-	if b.isDone() {
+	if IsClosed(b.done) {
 		return b.lastState.current
 	}
 	ch := make(chan state, 1)
@@ -183,42 +188,48 @@ func (b *Bar) Current() int64 {
 // InProgress returns true, while progress is running
 // Can be used as condition in for loop
 func (b *Bar) InProgress() bool {
-	return !b.isDone()
+	return !IsClosed(b.done)
 }
 
 // PrependFunc prepends DecoratorFunc
 func (b *Bar) PrependFunc(f DecoratorFunc) *Bar {
-	if !b.isDone() {
-		b.decoratorCh <- &decorator{decPrepend, f}
+	if IsClosed(b.done) {
+		return b
 	}
+	b.decoratorCh <- &decorator{decPrepend, f}
 	return b
 }
 
+// RemoveAllPrependers removes all prepend functions
 func (b *Bar) RemoveAllPrependers() {
-	if !b.isDone() {
-		b.decoratorCh <- &decorator{decPrependZero, nil}
+	if IsClosed(b.done) {
+		return
 	}
+	b.decoratorCh <- &decorator{decPrependZero, nil}
 }
 
 // AppendFunc appends DecoratorFunc
 func (b *Bar) AppendFunc(f DecoratorFunc) *Bar {
-	if !b.isDone() {
-		b.decoratorCh <- &decorator{decAppend, f}
+	if IsClosed(b.done) {
+		return b
 	}
+	b.decoratorCh <- &decorator{decAppend, f}
 	return b
 }
 
+// RemoveAllAppenders removes all append functions
 func (b *Bar) RemoveAllAppenders() {
-	if !b.isDone() {
-		b.decoratorCh <- &decorator{decAppendZero, nil}
+	if IsClosed(b.done) {
+		return
 	}
+	b.decoratorCh <- &decorator{decAppendZero, nil}
 }
 
 func (b *Bar) bytes(width int) []byte {
 	if width <= 0 {
 		width = b.width
 	}
-	if b.isDone() {
+	if IsClosed(b.done) {
 		return b.draw(b.lastState, width)
 	}
 	ch := make(chan state, 1)
@@ -284,16 +295,18 @@ func (b *Bar) stop(s *state) {
 	close(b.done)
 }
 
-func (b *Bar) flushDone() {
-	if !b.isDone() {
-		b.flushedCh <- struct{}{}
+func (b *Bar) flushed() {
+	if IsClosed(b.done) {
+		return
 	}
+	b.flushedCh <- struct{}{}
 }
 
 func (b *Bar) remove() {
-	if !b.isDone() {
-		b.removeReqCh <- struct{}{}
+	if IsClosed(b.done) {
+		return
 	}
+	b.removeReqCh <- struct{}{}
 }
 
 func (b *Bar) draw(s state, termWidth int) []byte {
@@ -385,18 +398,9 @@ func (b *Bar) fillBar(total, current int64, width int) []byte {
 	return buf
 }
 
-func (b *Bar) isDone() bool {
-	select {
-	case <-b.done:
-		return true
-	default:
-		return false
-	}
-}
-
 func (b *Bar) status() int {
 	var total, current int64
-	if b.isDone() {
+	if IsClosed(b.done) {
 		total = b.lastState.total
 		current = b.lastState.current
 	} else {
