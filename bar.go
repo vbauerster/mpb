@@ -12,7 +12,7 @@ import (
 type Bar struct {
 	width     int
 	termWidth int
-	alpha     float64
+	etaAlpha  float64
 
 	fill     byte
 	empty    byte
@@ -65,7 +65,7 @@ func newBar(ctx context.Context, wg *sync.WaitGroup, total int64, width int) *Ba
 		tip:      '>',
 		leftEnd:  '[',
 		rightEnd: ']',
-		alpha:    0.25,
+		etaAlpha: 0.25,
 		width:    width,
 
 		incrCh:      make(chan int64, 1),
@@ -147,7 +147,7 @@ func (b *Bar) SetRightEnd(c byte) *Bar {
 // Defaults to 0.25
 // Normally you shouldn't touch this
 func (b *Bar) SetEtaAlpha(a float64) *Bar {
-	b.alpha = a
+	b.etaAlpha = a
 	return b
 }
 
@@ -257,7 +257,7 @@ func (b *Bar) server(ctx context.Context, wg *sync.WaitGroup, total int64) {
 				break // break out of select
 			}
 			state.timeElapsed = time.Since(timeStarted)
-			state.timePerItem = calcTimePerItemEstimate(state.timePerItem, blockStartTime, b.alpha, i)
+			state.timePerItem = calcTimePerItemEstimate(state.timePerItem, blockStartTime, b.etaAlpha, i)
 			if n == total {
 				completed = true
 			}
