@@ -465,7 +465,7 @@ func (b *Bar) status() int {
 		total = b.lastState.total
 		current = b.lastState.current
 	} else {
-		ch := make(chan state)
+		ch := make(chan state, 1)
 		b.stateReqCh <- ch
 		state := <-ch
 		total = state.total
