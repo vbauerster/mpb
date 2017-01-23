@@ -6,40 +6,59 @@ import (
 )
 
 func TestFillBar(t *testing.T) {
-	b := newTestBar(80).SetEmpty('-').SetFill('=').SetTip('>').SetLeftEnd('[').SetRightEnd(']')
+	s := newTestState(80, 60)
 	tests := []struct {
-		width int
-		want  []byte
+		termWidth int
+		barWidth  int
+		want      []byte
 	}{
 		{
-			width: 1,
-			want:  []byte{},
+			termWidth: 2,
+			barWidth:  60,
+			want:      []byte{},
 		},
 		{
-			width: 2,
-			want:  []byte{'[', ']'},
+			termWidth: 3,
+			barWidth:  60,
+			want:      []byte{'[', ']'},
 		},
 		{
-			width: 3,
-			want:  []byte{'[', '>', ']'},
+			termWidth: 4,
+			barWidth:  60,
+			want:      []byte{'[', '>', ']'},
 		},
 		{
-			width: 4,
-			want:  []byte{'[', '=', '>', ']'},
+			termWidth: 5,
+			barWidth:  60,
+			want:      []byte{'[', '=', '>', ']'},
+		},
+		{
+			termWidth: 6,
+			barWidth:  60,
+			want:      []byte{'[', '=', '>', '-', ']'},
 		},
 	}
 
 	for _, test := range tests {
-		got := b.fillBar(80, 60, test.width)
+		s.barWidth = test.barWidth
+		got := s.draw(test.termWidth)
 		if !reflect.DeepEqual(test.want, got) {
 			t.Errorf("Want: %q, Got: %q\n", test.want, got)
 		}
 	}
 }
 
-func newTestBar(width int) *Bar {
-	b := &Bar{
-		width: width,
+func newTestState(total, current int64) *state {
+	return &state{
+		fill:           '=',
+		empty:          '-',
+		tip:            '>',
+		leftEnd:        '[',
+		rightEnd:       ']',
+		etaAlpha:       0.25,
+		total:          total,
+		current:        current,
+		trimLeftSpace:  true,
+		trimRightSpace: true,
 	}
-	return b
 }

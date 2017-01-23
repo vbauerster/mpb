@@ -10,15 +10,10 @@ import (
 
 // Bar represents a progress Bar
 type Bar struct {
-	width     int
-	termWidth int
-	etaAlpha  float64
+	fillCh, emptyCh, tipCh, leftEndCh, rightEndCh chan byte
 
-	fill     byte
-	empty    byte
-	tip      byte
-	leftEnd  byte
-	rightEnd byte
+	widthCh    chan int
+	etaAlphaCh chan float64
 
 	incrCh        chan int64
 	trimLeftCh    chan bool
@@ -52,32 +47,36 @@ type (
 		till int64
 	}
 	state struct {
-		total, current                int64
-		timeElapsed, timePerItem      time.Duration
-		trimLeftSpace, trimRightSpace bool
-		appendFuncs, prependFuncs     []DecoratorFunc
-		fill                          byte
-		empty                         byte
-		tip                           byte
-		leftEnd                       byte
-		rightEnd                      byte
-		etaAlpha                      float64
-		width                         int
-		refill                        *refill
+		fill           byte
+		empty          byte
+		tip            byte
+		leftEnd        byte
+		rightEnd       byte
+		etaAlpha       float64
+		barWidth       int
+		total          int64
+		current        int64
+		trimLeftSpace  bool
+		trimRightSpace bool
+		timeElapsed    time.Duration
+		timePerItem    time.Duration
+		appendFuncs    []DecoratorFunc
+		prependFuncs   []DecoratorFunc
+		simpleSpinner  func() byte
+		refill         *refill
 	}
 )
 
-func newBar(ctx context.Context, wg *sync.WaitGroup, total int64, width int) *Bar {
+func newBar(ctx context.Context, wg *sync.WaitGroup, total int64, barWidth int) *Bar {
 	b := &Bar{
-		fill:     '=',
-		empty:    '-',
-		tip:      '>',
-		leftEnd:  '[',
-		rightEnd: ']',
-		etaAlpha: 0.25,
-		width:    width,
-
+		fillCh:        make(chan byte),
+		emptyCh:       make(chan byte),
+		tipCh:         make(chan byte),
+		leftEndCh:     make(chan byte),
+		rightEndCh:    make(chan byte),
+		etaAlphaCh:    make(chan float64),
 		incrCh:        make(chan int64, 1),
+		widthCh:       make(chan int),
 		trimLeftCh:    make(chan bool),
 		trimRightCh:   make(chan bool),
 		refillCh:      make(chan *refill),
@@ -88,16 +87,16 @@ func newBar(ctx context.Context, wg *sync.WaitGroup, total int64, width int) *Ba
 		completeReqCh: make(chan struct{}),
 		done:          make(chan struct{}),
 	}
-	go b.server(ctx, wg, total)
+	go b.server(ctx, wg, total, barWidth)
 	return b
 }
 
 // SetWidth sets width of the bar
 func (b *Bar) SetWidth(n int) *Bar {
-	if n < 2 {
+	if n < 2 || IsClosed(b.done) {
 		return b
 	}
-	b.width = n
+	b.widthCh <- n
 	return b
 }
 
@@ -122,35 +121,50 @@ func (b *Bar) TrimRightSpace() *Bar {
 // SetFill sets character representing completed progress.
 // Defaults to '='
 func (b *Bar) SetFill(c byte) *Bar {
-	b.fill = c
+	if IsClosed(b.done) {
+		return b
+	}
+	b.fillCh <- c
 	return b
 }
 
 // SetTip sets character representing tip of progress.
 // Defaults to '>'
 func (b *Bar) SetTip(c byte) *Bar {
-	b.tip = c
+	if IsClosed(b.done) {
+		return b
+	}
+	b.tipCh <- c
 	return b
 }
 
 // SetEmpty sets character representing the empty progress
 // Defaults to '-'
 func (b *Bar) SetEmpty(c byte) *Bar {
-	b.empty = c
+	if IsClosed(b.done) {
+		return b
+	}
+	b.emptyCh <- c
 	return b
 }
 
 // SetLeftEnd sets character representing the left most border
 // Defaults to '['
 func (b *Bar) SetLeftEnd(c byte) *Bar {
-	b.leftEnd = c
+	if IsClosed(b.done) {
+		return b
+	}
+	b.leftEndCh <- c
 	return b
 }
 
 // SetRightEnd sets character representing the right most border
 // Defaults to ']'
 func (b *Bar) SetRightEnd(c byte) *Bar {
-	b.rightEnd = c
+	if IsClosed(b.done) {
+		return b
+	}
+	b.rightEndCh <- c
 	return b
 }
 
@@ -158,7 +172,10 @@ func (b *Bar) SetRightEnd(c byte) *Bar {
 // Defaults to 0.25
 // Normally you shouldn't touch this
 func (b *Bar) SetEtaAlpha(a float64) *Bar {
-	b.etaAlpha = a
+	if IsClosed(b.done) {
+		return b
+	}
+	b.etaAlphaCh <- a
 	return b
 }
 
@@ -236,7 +253,7 @@ func (b *Bar) RemoveAllAppenders() {
 }
 
 // Completed signals to the bar, that process has been completed.
-// You should call this method when total is unknown and you reached the point
+// You should call this method when total is unknown and you've reached the point
 // of process completion.
 func (b *Bar) Completed() {
 	if IsClosed(b.done) {
@@ -245,24 +262,33 @@ func (b *Bar) Completed() {
 	b.completeReqCh <- struct{}{}
 }
 
-func (b *Bar) bytes(width int) []byte {
-	if width <= 0 {
-		width = b.width
-	}
+func (b *Bar) bytes(termWidth int) []byte {
 	if IsClosed(b.done) {
-		return b.lastState.draw(width)
+		return b.lastState.draw(termWidth)
 	}
 	ch := make(chan state, 1)
 	b.stateReqCh <- ch
 	s := <-ch
-	return s.draw(width)
+	return s.draw(termWidth)
 }
 
-func (b *Bar) server(ctx context.Context, wg *sync.WaitGroup, total int64) {
+func (b *Bar) server(ctx context.Context, wg *sync.WaitGroup, total int64, barWidth int) {
 	var completed bool
 	timeStarted := time.Now()
 	blockStartTime := timeStarted
-	state := state{total: total}
+	state := state{
+		fill:     '=',
+		empty:    '-',
+		tip:      '>',
+		leftEnd:  '[',
+		rightEnd: ']',
+		etaAlpha: 0.25,
+		barWidth: barWidth,
+		total:    total,
+	}
+	if total <= 0 {
+		state.simpleSpinner = getSpinner()
+	}
 	defer func() {
 		b.stop(&state)
 		wg.Done()
@@ -278,7 +304,7 @@ func (b *Bar) server(ctx context.Context, wg *sync.WaitGroup, total int64) {
 				break // break out of select
 			}
 			state.timeElapsed = time.Since(timeStarted)
-			state.timePerItem = calcTimePerItemEstimate(state.timePerItem, blockStartTime, b.etaAlpha, i)
+			state.timePerItem = calcTimePerItemEstimate(state.timePerItem, blockStartTime, state.etaAlpha, i)
 			if n == total {
 				completed = true
 			}
@@ -296,14 +322,13 @@ func (b *Bar) server(ctx context.Context, wg *sync.WaitGroup, total int64) {
 				state.prependFuncs = nil
 			}
 		case ch := <-b.stateReqCh:
-			state.fill = b.fill
-			state.empty = b.empty
-			state.tip = b.tip
-			state.leftEnd = b.leftEnd
-			state.rightEnd = b.rightEnd
-			state.etaAlpha = b.etaAlpha
-			state.width = b.width
 			ch <- state
+		case state.fill = <-b.fillCh:
+		case state.empty = <-b.emptyCh:
+		case state.tip = <-b.tipCh:
+		case state.leftEnd = <-b.leftEndCh:
+		case state.rightEnd = <-b.rightEndCh:
+		case state.barWidth = <-b.widthCh:
 		case state.refill = <-b.refillCh:
 		case state.trimLeftSpace = <-b.trimLeftCh:
 		case state.trimRightSpace = <-b.trimRightCh:
@@ -340,7 +365,10 @@ func (b *Bar) remove() {
 	b.removeReqCh <- struct{}{}
 }
 
-func (s *state) draw(termWidth int) []byte {
+func (s state) draw(termWidth int) []byte {
+	if termWidth <= 0 {
+		termWidth = s.barWidth
+	}
 	stat := &Statistics{
 		Total:               s.total,
 		Current:             s.current,
@@ -361,7 +389,7 @@ func (s *state) draw(termWidth int) []byte {
 		prependBlock = append(prependBlock, []byte(f(stat))...)
 	}
 
-	barBlock := s.fillBar()
+	barBlock := s.fillBar(s.barWidth)
 	prependCount := utf8.RuneCount(prependBlock)
 	barCount := utf8.RuneCount(barBlock)
 	appendCount := utf8.RuneCount(appendBlock)
@@ -380,8 +408,8 @@ func (s *state) draw(termWidth int) []byte {
 
 	totalCount := prependCount + barCount + appendCount
 	if totalCount >= termWidth {
-		s.width = termWidth - prependCount - appendCount - 1
-		barBlock = s.fillBar()
+		newWidth := termWidth - prependCount - appendCount - 1
+		barBlock = s.fillBar(newWidth)
 	}
 
 	buf := make([]byte, 0, termWidth)
@@ -392,16 +420,20 @@ func (s *state) draw(termWidth int) []byte {
 	return buf
 }
 
-func (s *state) fillBar() []byte {
-	if s.width < 2 {
+func (s state) fillBar(width int) []byte {
+	if width < 2 {
 		return []byte{}
 	}
 
-	buf := make([]byte, s.width)
-	completedWidth := percentage(s.total, s.current, s.width)
+	if s.simpleSpinner != nil {
+		return []byte{s.leftEnd, s.simpleSpinner(), s.rightEnd}
+	}
+
+	buf := make([]byte, width)
+	completedWidth := percentage(s.total, s.current, width)
 
 	if s.refill != nil {
-		till := percentage(s.total, s.refill.till, s.width)
+		till := percentage(s.total, s.refill.till, width)
 		for i := 1; i < till; i++ {
 			buf[i] = s.refill.char
 		}
@@ -414,15 +446,15 @@ func (s *state) fillBar() []byte {
 		}
 	}
 
-	for i := completedWidth; i < s.width-1; i++ {
+	for i := completedWidth; i < width-1; i++ {
 		buf[i] = s.empty
 	}
 	// set tip bit
-	if completedWidth > 0 && completedWidth < s.width {
+	if completedWidth > 0 && completedWidth < s.barWidth {
 		buf[completedWidth-1] = s.tip
 	}
 	// set left and right ends bits
-	buf[0], buf[s.width-1] = s.leftEnd, s.rightEnd
+	buf[0], buf[width-1] = s.leftEnd, s.rightEnd
 
 	return buf
 }

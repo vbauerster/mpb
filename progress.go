@@ -33,9 +33,9 @@ type (
 	}
 
 	indexedBar struct {
-		index int
-		width int
-		bar   *Bar
+		index     int
+		termWidth int
+		bar       *Bar
 	}
 )
 
@@ -259,7 +259,7 @@ func (p *Progress) server(cw *cwriter.Writer, t *time.Ticker) {
 
 func drawer(ibars <-chan indexedBar, c chan<- indexedBarBuffer) {
 	for b := range ibars {
-		buf := b.bar.bytes(b.width)
+		buf := b.bar.bytes(b.termWidth)
 		buf = append(buf, '\n')
 		c <- indexedBarBuffer{b.index, buf}
 	}
