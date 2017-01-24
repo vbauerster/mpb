@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"log"
 	"os"
 	"sort"
 	"sync"
@@ -11,6 +12,8 @@ import (
 
 	"github.com/vbauerster/mpb/cwriter"
 )
+
+var logger = log.New(os.Stderr, "mpb: ", log.LstdFlags|log.Lshortfile)
 
 // ErrCallAfterStop thrown by panic, if Progress methods like AddBar() are called
 // after Stop() has been called
@@ -182,8 +185,15 @@ func (p *Progress) server(cw *cwriter.Writer, t *time.Ticker) {
 		t.Stop()
 		close(p.done)
 	}()
-	const numDrawers = 4
+	const numDrawers = 3
 	bars := make([]*Bar, 0, 4)
+	var wg sync.WaitGroup
+	recoverIfPanic := func() {
+		if e := recover(); e != nil {
+			logger.Printf("unexpected panic: %+v\n", e)
+		}
+		wg.Done()
+	}
 	for {
 		select {
 		case w := <-p.outChangeReqCh:
@@ -222,12 +232,11 @@ func (p *Progress) server(cw *cwriter.Writer, t *time.Ticker) {
 			width, _ := cwriter.TerminalWidth()
 			ibars := iBarsGen(bars, width)
 			c := make(chan indexedBarBuffer)
-			var wg sync.WaitGroup
 			wg.Add(numDrawers)
 			for i := 0; i < numDrawers; i++ {
 				go func() {
+					defer recoverIfPanic()
 					drawer(ibars, c)
-					wg.Done()
 				}()
 			}
 			go func() {
