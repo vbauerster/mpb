@@ -4,20 +4,9 @@ package cwriter
 
 import (
 	"fmt"
-	"os"
 	"syscall"
 	"unsafe"
 )
-
-var tty *os.File
-
-func init() {
-	var err error
-	tty, err = os.Open("/dev/tty")
-	if err != nil {
-		tty = os.Stdin
-	}
-}
 
 func (w *Writer) clearLines() {
 	for i := 0; i < w.lineCount; i++ {
@@ -26,24 +15,13 @@ func (w *Writer) clearLines() {
 	}
 }
 
-// TerminalWidth returns width of the terminal.
-func TerminalWidth() (int, error) {
-	w := new(window)
-	tio := syscall.TIOCGWINSZ
-	_, _, errno := syscall.Syscall(syscall.SYS_IOCTL,
-		tty.Fd(),
-		uintptr(tio),
-		uintptr(unsafe.Pointer(w)),
-	)
-	if errno != 0 {
-		return 0, errno
-	}
-	return int(w.Col), nil
-}
+// GetTermSize returns the dimensions of the given terminal.
+// the code is stolen from "golang.org/x/crypto/ssh/terminal"
+func GetTermSize() (width, height int, err error) {
+	var dimensions [4]uint16
 
-type window struct {
-	Row    uint16
-	Col    uint16
-	Xpixel uint16
-	Ypixel uint16
+	if _, _, err := syscall.Syscall6(syscall.SYS_IOCTL, uintptr(syscall.Stdout), uintptr(syscall.TIOCGWINSZ), uintptr(unsafe.Pointer(&dimensions)), 0, 0, 0); err != 0 {
+		return -1, -1, err
+	}
+	return int(dimensions[1]), int(dimensions[0]), nil
 }

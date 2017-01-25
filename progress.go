@@ -229,7 +229,7 @@ func (p *Progress) server(cw *cwriter.Writer, t *time.Ticker) {
 				sort.Sort(SortableBarSlice(bars))
 			}
 
-			width, _ := cwriter.TerminalWidth()
+			width, _, _ := cwriter.GetTermSize()
 			ibars := iBarsGen(bars, width)
 			c := make(chan indexedBarBuffer)
 			wg.Add(numDrawers)
