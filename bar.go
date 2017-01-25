@@ -365,7 +365,7 @@ func (b *Bar) remove() {
 	b.removeReqCh <- struct{}{}
 }
 
-func (s state) draw(termWidth int) []byte {
+func (s *state) draw(termWidth int) []byte {
 	if termWidth <= 0 {
 		termWidth = s.barWidth
 	}
@@ -420,7 +420,7 @@ func (s state) draw(termWidth int) []byte {
 	return buf
 }
 
-func (s state) fillBar(width int) []byte {
+func (s *state) fillBar(width int) []byte {
 	if width < 2 {
 		return []byte{}
 	}
