@@ -6,7 +6,6 @@ import (
 	"io"
 	"log"
 	"os"
-	"sort"
 	"sync"
 	"time"
 
@@ -20,12 +19,12 @@ var logger = log.New(os.Stderr, "mpb: ", log.LstdFlags|log.Lshortfile)
 var ErrCallAfterStop = errors.New("method call on stopped Progress instance")
 
 type (
-	// SortType defines sort direction of bar
-	SortType uint
-	opType   uint
+	// BeforeRender is a func, which gets called before render process
+	BeforeRender func([]*Bar)
+	barOpType    uint
 
 	operation struct {
-		kind   opType
+		kind   barOpType
 		bar    *Bar
 		result chan bool
 	}
@@ -43,14 +42,8 @@ type (
 )
 
 const (
-	opBarAdd opType = iota
-	opBarRemove
-)
-
-const (
-	SortNone SortType = iota
-	SortTop
-	SortBottom
+	barAdd barOpType = iota
+	barRemove
 )
 
 // default RefreshRate
@@ -65,12 +58,12 @@ type Progress struct {
 
 	out   io.Writer
 	width int
-	sort  SortType
 
 	operationCh    chan *operation
 	rrChangeReqCh  chan time.Duration
 	outChangeReqCh chan io.Writer
 	barCountReqCh  chan chan int
+	brCh           chan BeforeRender
 	done           chan struct{}
 }
 
@@ -87,6 +80,7 @@ func New(ctx context.Context) *Progress {
 		rrChangeReqCh:  make(chan time.Duration),
 		outChangeReqCh: make(chan io.Writer),
 		barCountReqCh:  make(chan chan int),
+		brCh:           make(chan BeforeRender),
 		done:           make(chan struct{}),
 		wg:             new(sync.WaitGroup),
 		ctx:            ctx,
@@ -127,9 +121,11 @@ func (p *Progress) RefreshRate(d time.Duration) *Progress {
 	return p
 }
 
-// WithSort sorts the bars, while redering
-func (p *Progress) WithSort(sort SortType) *Progress {
-	p.sort = sort
+func (p *Progress) BeforeRenderFunc(f BeforeRender) *Progress {
+	if IsClosed(p.done) {
+		panic(ErrCallAfterStop)
+	}
+	p.brCh <- f
 	return p
 }
 
@@ -141,7 +137,7 @@ func (p *Progress) AddBar(total int64) *Bar {
 	}
 	result := make(chan bool)
 	bar := newBar(p.ctx, p.wg, total, p.width)
-	p.operationCh <- &operation{opBarAdd, bar, result}
+	p.operationCh <- &operation{barAdd, bar, result}
 	if <-result {
 		p.wg.Add(1)
 	}
@@ -155,7 +151,7 @@ func (p *Progress) RemoveBar(b *Bar) bool {
 		panic(ErrCallAfterStop)
 	}
 	result := make(chan bool)
-	p.operationCh <- &operation{opBarRemove, b, result}
+	p.operationCh <- &operation{barRemove, b, result}
 	return <-result
 }
 
@@ -187,6 +183,7 @@ func (p *Progress) server(cw *cwriter.Writer, t *time.Ticker) {
 	}()
 	const numDrawers = 3
 	bars := make([]*Bar, 0, 4)
+	var beforeRender BeforeRender
 	var wg sync.WaitGroup
 	recoverIfPanic := func() {
 		if e := recover(); e != nil {
@@ -204,10 +201,10 @@ func (p *Progress) server(cw *cwriter.Writer, t *time.Ticker) {
 				return
 			}
 			switch op.kind {
-			case opBarAdd:
+			case barAdd:
 				bars = append(bars, op.bar)
 				op.result <- true
-			case opBarRemove:
+			case barRemove:
 				var ok bool
 				for i, b := range bars {
 					if b == op.bar {
@@ -221,12 +218,10 @@ func (p *Progress) server(cw *cwriter.Writer, t *time.Ticker) {
 			}
 		case respCh := <-p.barCountReqCh:
 			respCh <- len(bars)
+		case beforeRender = <-p.brCh:
 		case <-t.C:
-			switch p.sort {
-			case SortTop:
-				sort.Sort(sort.Reverse(SortableBarSlice(bars)))
-			case SortBottom:
-				sort.Sort(SortableBarSlice(bars))
+			if beforeRender != nil {
+				beforeRender(bars)
 			}
 
 			width, _, _ := cwriter.GetTermSize()

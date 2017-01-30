@@ -29,14 +29,14 @@ type Bar struct {
 	lastState state
 }
 
-// Statistics represents statistics of the progress bar
-// instance of this, sent to DecoratorFunc, as param
+// Statistics represents statistics of the progress bar.
+// Cantains: Total, Current, TimeElapsed, TimePerItemEstimate
 type Statistics struct {
 	Total, Current                   int64
-	TermWidth                        int
 	TimeElapsed, TimePerItemEstimate time.Duration
 }
 
+// Eta returns exponential-weighted-moving-average ETA estimator
 func (s *Statistics) Eta() time.Duration {
 	return time.Duration(s.Total-s.Current) * s.TimePerItemEstimate
 }
@@ -201,15 +201,23 @@ func (b *Bar) IncrWithReFill(n int, c byte) {
 	b.refillCh <- &refill{c, int64(n)}
 }
 
-// Current returns the actual current.
-func (b *Bar) Current() int64 {
-	if IsClosed(b.done) {
-		return b.lastState.current
-	}
-	ch := make(chan state, 1)
-	b.stateReqCh <- ch
-	state := <-ch
-	return state.current
+// GetAppenders returns slice of appender DecoratorFunc
+func (b *Bar) GetAppenders() []DecoratorFunc {
+	s := b.getState()
+	return s.appendFuncs
+}
+
+// GetAppenders returns slice of prepender DecoratorFunc
+func (b *Bar) GetPrependers() []DecoratorFunc {
+	s := b.getState()
+	return s.prependFuncs
+}
+
+// GetStatistics returs *Statistics, which contains information like Tottal,
+// Current, TimeElapsed and TimePerItemEstimate
+func (b *Bar) GetStatistics() *Statistics {
+	state := b.getState()
+	return state.newStat()
 }
 
 // InProgress returns true, while progress is running
@@ -262,14 +270,18 @@ func (b *Bar) Completed() {
 	b.completeReqCh <- struct{}{}
 }
 
-func (b *Bar) bytes(termWidth int) []byte {
+func (b *Bar) getState() state {
 	if IsClosed(b.done) {
-		return b.lastState.draw(termWidth)
+		return b.lastState
 	}
 	ch := make(chan state, 1)
 	b.stateReqCh <- ch
-	s := <-ch
-	return s.draw(termWidth)
+	return <-ch
+}
+
+func (b *Bar) bytes(termWidth int) []byte {
+	state := b.getState()
+	return state.draw(termWidth)
 }
 
 func (b *Bar) server(ctx context.Context, wg *sync.WaitGroup, total int64, barWidth int) {
@@ -365,17 +377,21 @@ func (b *Bar) remove() {
 	b.removeReqCh <- struct{}{}
 }
 
+func (s *state) newStat() *Statistics {
+	return &Statistics{
+		Total:               s.total,
+		Current:             s.current,
+		TimeElapsed:         s.timeElapsed,
+		TimePerItemEstimate: s.timePerItem,
+	}
+}
+
 func (s *state) draw(termWidth int) []byte {
 	if termWidth <= 0 {
 		termWidth = s.barWidth
 	}
-	stat := &Statistics{
-		Total:               s.total,
-		Current:             s.current,
-		TermWidth:           termWidth,
-		TimeElapsed:         s.timeElapsed,
-		TimePerItemEstimate: s.timePerItem,
-	}
+
+	stat := s.newStat()
 
 	// render append functions to the right of the bar
 	var appendBlock []byte
@@ -458,30 +474,6 @@ func (s *state) fillBar(width int) []byte {
 
 	return buf
 }
-
-func (b *Bar) status() int {
-	var total, current int64
-	if IsClosed(b.done) {
-		total = b.lastState.total
-		current = b.lastState.current
-	} else {
-		ch := make(chan state, 1)
-		b.stateReqCh <- ch
-		state := <-ch
-		total = state.total
-		current = state.current
-	}
-	return percentage(total, current, 100)
-}
-
-// SortableBarSlice satisfies sort interface
-type SortableBarSlice []*Bar
-
-func (p SortableBarSlice) Len() int { return len(p) }
-
-func (p SortableBarSlice) Less(i, j int) bool { return p[i].status() < p[j].status() }
-
-func (p SortableBarSlice) Swap(i, j int) { p[i], p[j] = p[j], p[i] }
 
 func calcTimePerItemEstimate(tpie time.Duration, blockStartTime time.Time, alpha float64, items int64) time.Duration {
 	lastBlockTime := time.Since(blockStartTime)
