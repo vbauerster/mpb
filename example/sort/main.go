@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"math/rand"
+	"sort"
 	"sync"
 	"time"
 
@@ -13,10 +14,37 @@ const (
 	maxBlockSize = 12
 )
 
+type barSlice []*mpb.Bar
+
+func (bs barSlice) Len() int { return len(bs) }
+
+func (bs barSlice) Less(i, j int) bool {
+	is := bs[i].GetStatistics()
+	js := bs[j].GetStatistics()
+	ip := percentage(is.Total, is.Current, 100)
+	jp := percentage(js.Total, js.Current, 100)
+	return ip < jp
+}
+
+func (bs barSlice) Swap(i, j int) { bs[i], bs[j] = bs[j], bs[i] }
+
+func sortByProgressFunc() mpb.BeforeRender {
+	return func(bars []*mpb.Bar) {
+		sort.Sort(sort.Reverse(barSlice(bars)))
+	}
+}
+
+func percentage(total, current int64, ratio int) int {
+	if total <= 0 {
+		return 0
+	}
+	return int(float64(ratio) * float64(current) / float64(total))
+}
+
 func main() {
 
 	var wg sync.WaitGroup
-	p := mpb.New(nil).SetWidth(60).WithSort(mpb.SortTop)
+	p := mpb.New(nil).SetWidth(60).BeforeRenderFunc(sortByProgressFunc())
 
 	name1 := "Bar#1: "
 	bar1 := p.AddBar(100).
