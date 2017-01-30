@@ -44,7 +44,8 @@ func main() {
 		for i := 0; i < 100; i++ {
 			sleep(blockSize)
 			bar2.Incr(1)
-			if bar2.Current() > 42 && p.RemoveBar(bar2) {
+			stat := bar2.GetStatistics()
+			if stat.Current > 42 && p.RemoveBar(bar2) {
 				break
 			}
 			blockSize = rand.Intn(maxBlockSize) + 1
