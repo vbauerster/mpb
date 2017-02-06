@@ -47,6 +47,7 @@ type (
 		till int64
 	}
 	state struct {
+		id             int
 		fill           byte
 		empty          byte
 		tip            byte
@@ -67,7 +68,7 @@ type (
 	}
 )
 
-func newBar(ctx context.Context, wg *sync.WaitGroup, total int64, barWidth int) *Bar {
+func newBar(ctx context.Context, wg *sync.WaitGroup, total int64, width, id int) *Bar {
 	b := &Bar{
 		fillCh:        make(chan byte),
 		emptyCh:       make(chan byte),
@@ -87,7 +88,7 @@ func newBar(ctx context.Context, wg *sync.WaitGroup, total int64, barWidth int) 
 		completeReqCh: make(chan struct{}),
 		done:          make(chan struct{}),
 	}
-	go b.server(ctx, wg, total, barWidth)
+	go b.server(ctx, wg, total, width, id)
 	return b
 }
 
@@ -207,7 +208,7 @@ func (b *Bar) GetAppenders() []DecoratorFunc {
 	return s.appendFuncs
 }
 
-// GetAppenders returns slice of prepender DecoratorFunc
+// GetPrependers returns slice of prepender DecoratorFunc
 func (b *Bar) GetPrependers() []DecoratorFunc {
 	s := b.getState()
 	return s.prependFuncs
@@ -218,6 +219,12 @@ func (b *Bar) GetPrependers() []DecoratorFunc {
 func (b *Bar) GetStatistics() *Statistics {
 	state := b.getState()
 	return state.newStat()
+}
+
+// GetID returs id of the bar
+func (b *Bar) GetID() int {
+	state := b.getState()
+	return state.id
 }
 
 // InProgress returns true, while progress is running
@@ -284,18 +291,19 @@ func (b *Bar) bytes(termWidth int) []byte {
 	return state.draw(termWidth)
 }
 
-func (b *Bar) server(ctx context.Context, wg *sync.WaitGroup, total int64, barWidth int) {
+func (b *Bar) server(ctx context.Context, wg *sync.WaitGroup, total int64, width, id int) {
 	var completed bool
 	timeStarted := time.Now()
 	blockStartTime := timeStarted
 	state := state{
+		id:       id,
 		fill:     '=',
 		empty:    '-',
 		tip:      '>',
 		leftEnd:  '[',
 		rightEnd: ']',
 		etaAlpha: 0.25,
-		barWidth: barWidth,
+		barWidth: width,
 		total:    total,
 	}
 	if total <= 0 {

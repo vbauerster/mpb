@@ -132,11 +132,17 @@ func (p *Progress) BeforeRenderFunc(f BeforeRender) *Progress {
 // AddBar creates a new progress bar and adds to the container
 // pancis, if called on stopped Progress instance, i.e after Stop()
 func (p *Progress) AddBar(total int64) *Bar {
+	return p.AddBarWithID(total, 0)
+}
+
+// AddBarWithID creates a new progress bar and adds to the container
+// pancis, if called on stopped Progress instance, i.e after Stop()
+func (p *Progress) AddBarWithID(total int64, id int) *Bar {
 	if IsClosed(p.done) {
 		panic(ErrCallAfterStop)
 	}
 	result := make(chan bool)
-	bar := newBar(p.ctx, p.wg, total, p.width)
+	bar := newBar(p.ctx, p.wg, total, p.width, id)
 	p.operationCh <- &operation{barAdd, bar, result}
 	if <-result {
 		p.wg.Add(1)
