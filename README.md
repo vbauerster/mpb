@@ -112,6 +112,6 @@ $ go get -u github.com/vbauerster/mpb
 
 ## License
 
-This lib is under [WTFPL license](http://www.wtfpl.net)
+[MIT](https://github.com/vbauerster/mpb/blob/master/LICENSE)
 
 The typeface used in screen shots: [Iosevka](https://be5invis.github.io/Iosevka)
