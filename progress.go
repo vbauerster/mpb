@@ -175,7 +175,6 @@ func (p *Progress) BarCount() int {
 }
 
 // Format sets custom format for underlying bar(s).
-// The format string, must consist of ASCII characters only.
 // The default one is "[=>-]"
 func (p *Progress) Format(format string) *Progress {
 	if utf8.RuneCountInString(format) != 5 {
