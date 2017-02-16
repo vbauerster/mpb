@@ -57,8 +57,8 @@ func TestFillBar(t *testing.T) {
 	}
 }
 
-func newTestState(total, current int64) state {
-	return state{
+func newTestState(total, current int64) *state {
+	return &state{
 		format:         formatRunes{'[', '=', '>', '-', ']'},
 		total:          total,
 		current:        current,
