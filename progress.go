@@ -47,8 +47,12 @@ const (
 	barRemove
 )
 
-// default RefreshRate
-const rr = 100
+const (
+	// default RefreshRate
+	rr = 100
+	// number of format runes for bar
+	numFmtRunes = 5
+)
 
 // Progress represents the container that renders Progress bars
 type Progress struct {
@@ -177,7 +181,7 @@ func (p *Progress) BarCount() int {
 // Format sets custom format for underlying bar(s).
 // The default one is "[=>-]"
 func (p *Progress) Format(format string) *Progress {
-	if utf8.RuneCountInString(format) != 5 {
+	if utf8.RuneCountInString(format) != numFmtRunes {
 		return p
 	}
 	p.format = format

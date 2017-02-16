@@ -50,16 +50,15 @@ func TestFillBar(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		s.barWidth = test.barWidth
-		got := s.draw(test.termWidth)
+		got := draw(s, test.barWidth, test.termWidth)
 		if !reflect.DeepEqual(test.want, got) {
 			t.Errorf("Want: %q, Got: %q\n", test.want, got)
 		}
 	}
 }
 
-func newTestState(total, current int64) *state {
-	return &state{
+func newTestState(total, current int64) state {
+	return state{
 		format:         formatRunes{'[', '=', '>', '-', ']'},
 		total:          total,
 		current:        current,
