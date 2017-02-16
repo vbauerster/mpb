@@ -53,7 +53,7 @@ type (
 		till int64
 	}
 	state struct {
-		id             int64
+		id             int
 		format         formatRunes
 		etaAlpha       float64
 		barWidth       int
@@ -70,7 +70,7 @@ type (
 	}
 )
 
-func newBar(ctx context.Context, wg *sync.WaitGroup, id, total int64, width int, format string) *Bar {
+func newBar(ctx context.Context, wg *sync.WaitGroup, id int, total int64, width int, format string) *Bar {
 	b := &Bar{
 		formatElementCh: make(chan runeFormatElement),
 		etaAlphaCh:      make(chan float64),
@@ -220,7 +220,7 @@ func (b *Bar) GetStatistics() *Statistics {
 }
 
 // GetID returs id of the bar
-func (b *Bar) GetID() int64 {
+func (b *Bar) GetID() int {
 	state := b.getState()
 	return state.id
 }
@@ -289,7 +289,7 @@ func (b *Bar) bytes(termWidth int) []byte {
 	return state.draw(termWidth)
 }
 
-func (b *Bar) server(ctx context.Context, wg *sync.WaitGroup, id, total int64, width int, format string) {
+func (b *Bar) server(ctx context.Context, wg *sync.WaitGroup, id int, total int64, width int, format string) {
 	var completed bool
 	timeStarted := time.Now()
 	blockStartTime := timeStarted

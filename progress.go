@@ -139,7 +139,7 @@ func (p *Progress) AddBar(total int64) *Bar {
 
 // AddBarWithID creates a new progress bar and adds to the container
 // pancis, if called on stopped Progress instance, i.e after Stop()
-func (p *Progress) AddBarWithID(id, total int64) *Bar {
+func (p *Progress) AddBarWithID(id int, total int64) *Bar {
 	if IsClosed(p.done) {
 		panic(ErrCallAfterStop)
 	}
