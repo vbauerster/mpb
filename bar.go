@@ -427,8 +427,8 @@ func (s *state) draw(termWidth int) []byte {
 	}
 
 	totalCount := prependCount + barCount + appendCount
-	if totalCount >= termWidth {
-		newWidth := termWidth - prependCount - appendCount - 1
+	if totalCount > termWidth {
+		newWidth := termWidth - prependCount - appendCount
 		barBlock = s.fillBar(newWidth)
 	}
 
@@ -446,7 +446,7 @@ func (s *state) fillBar(width int) []byte {
 	}
 
 	// bar width without leftEnd and rightEnd characters
-	barWidth := width - 2
+	barWidth := width - 1
 	formatBytes := s.convertFormatRunesToBytes()
 
 	if s.simpleSpinner != nil {
@@ -482,7 +482,6 @@ func (s *state) fillBar(width int) []byte {
 	}
 	// set tip bit
 	if completedWidth > 0 && completedWidth < barWidth {
-		// buf[completedWidth-1] = s.tip
 		buf = append(buf, formatBytes[2]...)
 	}
 
