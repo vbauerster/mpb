@@ -28,6 +28,9 @@ Following is the simplest use case:
 	// If you don't plan to cancel, feed with nil
 	// otherwise provide context.Context, see cancel example
 	p := mpb.New(nil)
+	// Set custom format, the default one is "[=>-]"
+	p.Format("╢▌▌░╟")
+
 	bar := p.AddBar(100).PrependName(name, 0).AppendPercentage()
 
 	for i := 0; i < 100; i++ {
@@ -37,10 +40,13 @@ Following is the simplest use case:
 
 	p.Stop()
 ```
-The source code: [example/singleBar/main.go](example/singleBar/main.go)
 
-However **mpb** was designed with concurrency in mind, each new bar renders in its
-own goroutine. Therefore adding multiple bars is easy and safe:
+Running [this](example/singleBar/main.go), will produce:
+
+![gif](example/gifs/single.gif)
+
+However **mpb** was designed with concurrency in mind. Each new bar renders in its
+own goroutine, therefore adding multiple bars is easy and safe:
 
 ```go
 	var wg sync.WaitGroup
@@ -52,6 +58,8 @@ own goroutine. Therefore adding multiple bars is easy and safe:
 		go func() {
 			defer wg.Done()
 			// you can p.AddBar() here, but ordering will be non deterministic
+			// if you still need p.AddBar() here and maintain ordering, use
+			// (*mpb.Progress).BeforeRenderFunc(f mpb.BeforeRender)
 			for i := 0; i < 100; i++ {
 				time.Sleep(time.Duration(rand.Intn(100)) * time.Millisecond)
 				bar.Incr(1)
@@ -64,39 +72,37 @@ own goroutine. Therefore adding multiple bars is easy and safe:
 	fmt.Println("finish")
 ```
 
-This will produce following:
-
-![example](example/gifs/simple.gif)
+![simple.gif](example/gifs/simple.gif)
 
 The source code: [example/simple/main.go](example/simple/main.go)
 
 ### Cancel
 
-![example](example/gifs/cancel.gif)
+![cancel.gif](example/gifs/cancel.gif)
 
 The source code: [example/cancel/main.go](example/cancel/main.go)
 
 ### Removing bar
 
-![example](example/gifs/remove.gif)
+![remove.gif](example/gifs/remove.gif)
 
 The source code: [example/remove/main.go](example/remove/main.go)
 
 ### Sorting bars by progress
 
-![example](example/gifs/sort.gif)
+![sort.gif](example/gifs/sort.gif)
 
 The source code: [example/sort/main.go](example/sort/main.go)
 
 ### Resizing bars on terminal width change
 
-![example](example/gifs/resize.gif)
+![resize.gif](example/gifs/resize.gif)
 
 The source code: [example/prependETA/main.go](example/prependETA/main.go)
 
 ### Multiple io
 
-![example](example/gifs/io-multiple.gif)
+![io-multiple.gif](example/gifs/io-multiple.gif)
 
 The source code: [example/io/multiple/main.go](example/io/multiple/main.go)
 
