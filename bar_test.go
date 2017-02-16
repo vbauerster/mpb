@@ -13,29 +13,39 @@ func TestFillBar(t *testing.T) {
 		want      []byte
 	}{
 		{
-			termWidth: 2,
+			termWidth: 1,
 			barWidth:  60,
 			want:      []byte{},
 		},
 		{
-			termWidth: 3,
+			termWidth: 2,
 			barWidth:  60,
 			want:      []byte("[]"),
 		},
 		{
 			termWidth: 4,
 			barWidth:  60,
-			want:      []byte("[>]"),
-		},
-		{
-			termWidth: 5,
-			barWidth:  60,
 			want:      []byte("[=>]"),
 		},
 		{
 			termWidth: 6,
 			barWidth:  60,
-			want:      []byte("[=>-]"),
+			want:      []byte("[==>-]"),
+		},
+		{
+			termWidth: 8,
+			barWidth:  60,
+			want:      []byte("[====>-]"),
+		},
+		{
+			termWidth: 80,
+			barWidth:  60,
+			want:      []byte("[===========================================>--------------]"),
+		},
+		{
+			termWidth: 80,
+			barWidth:  62,
+			want:      []byte("[============================================>---------------]"),
 		},
 	}
 
@@ -50,11 +60,7 @@ func TestFillBar(t *testing.T) {
 
 func newTestState(total, current int64) *state {
 	return &state{
-		fill:           '=',
-		empty:          '-',
-		tip:            '>',
-		leftEnd:        '[',
-		rightEnd:       ']',
+		format:         formatRunes{'[', '=', '>', '-', ']'},
 		total:          total,
 		current:        current,
 		trimLeftSpace:  true,
