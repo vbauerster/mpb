@@ -8,9 +8,11 @@ import (
 	"unicode/utf8"
 )
 
+type formatRunes [5]rune
+
 // Bar represents a progress Bar
 type Bar struct {
-	fillCh, emptyCh, tipCh, leftEndCh, rightEndCh chan byte
+	formatElementCh chan runeFormatElement
 
 	widthCh    chan int
 	etaAlphaCh chan float64
@@ -42,17 +44,17 @@ func (s *Statistics) Eta() time.Duration {
 }
 
 type (
+	runeFormatElement struct {
+		char  rune
+		index uint8
+	}
 	refill struct {
-		char byte
+		char rune
 		till int64
 	}
 	state struct {
-		id             int
-		fill           byte
-		empty          byte
-		tip            byte
-		leftEnd        byte
-		rightEnd       byte
+		id             int64
+		format         formatRunes
 		etaAlpha       float64
 		barWidth       int
 		total          int64
@@ -68,27 +70,23 @@ type (
 	}
 )
 
-func newBar(ctx context.Context, wg *sync.WaitGroup, total int64, width, id int) *Bar {
+func newBar(ctx context.Context, wg *sync.WaitGroup, id, total int64, width int, format string) *Bar {
 	b := &Bar{
-		fillCh:        make(chan byte),
-		emptyCh:       make(chan byte),
-		tipCh:         make(chan byte),
-		leftEndCh:     make(chan byte),
-		rightEndCh:    make(chan byte),
-		etaAlphaCh:    make(chan float64),
-		incrCh:        make(chan int64, 1),
-		widthCh:       make(chan int),
-		trimLeftCh:    make(chan bool),
-		trimRightCh:   make(chan bool),
-		refillCh:      make(chan *refill),
-		stateReqCh:    make(chan chan state, 1),
-		decoratorCh:   make(chan *decorator),
-		flushedCh:     make(chan struct{}, 1),
-		removeReqCh:   make(chan struct{}),
-		completeReqCh: make(chan struct{}),
-		done:          make(chan struct{}),
+		formatElementCh: make(chan runeFormatElement),
+		etaAlphaCh:      make(chan float64),
+		incrCh:          make(chan int64, 1),
+		widthCh:         make(chan int),
+		trimLeftCh:      make(chan bool),
+		trimRightCh:     make(chan bool),
+		refillCh:        make(chan *refill),
+		stateReqCh:      make(chan chan state, 1),
+		decoratorCh:     make(chan *decorator),
+		flushedCh:       make(chan struct{}, 1),
+		removeReqCh:     make(chan struct{}),
+		completeReqCh:   make(chan struct{}),
+		done:            make(chan struct{}),
 	}
-	go b.server(ctx, wg, total, width, id)
+	go b.server(ctx, wg, id, total, width, format)
 	return b
 }
 
@@ -121,51 +119,51 @@ func (b *Bar) TrimRightSpace() *Bar {
 
 // SetFill sets character representing completed progress.
 // Defaults to '='
-func (b *Bar) SetFill(c byte) *Bar {
+func (b *Bar) SetFill(r rune) *Bar {
 	if IsClosed(b.done) {
 		return b
 	}
-	b.fillCh <- c
+	b.formatElementCh <- runeFormatElement{r, 1}
 	return b
 }
 
 // SetTip sets character representing tip of progress.
 // Defaults to '>'
-func (b *Bar) SetTip(c byte) *Bar {
+func (b *Bar) SetTip(r rune) *Bar {
 	if IsClosed(b.done) {
 		return b
 	}
-	b.tipCh <- c
+	b.formatElementCh <- runeFormatElement{r, 2}
 	return b
 }
 
 // SetEmpty sets character representing the empty progress
 // Defaults to '-'
-func (b *Bar) SetEmpty(c byte) *Bar {
+func (b *Bar) SetEmpty(r rune) *Bar {
 	if IsClosed(b.done) {
 		return b
 	}
-	b.emptyCh <- c
+	b.formatElementCh <- runeFormatElement{r, 3}
 	return b
 }
 
 // SetLeftEnd sets character representing the left most border
 // Defaults to '['
-func (b *Bar) SetLeftEnd(c byte) *Bar {
+func (b *Bar) SetLeftEnd(r rune) *Bar {
 	if IsClosed(b.done) {
 		return b
 	}
-	b.leftEndCh <- c
+	b.formatElementCh <- runeFormatElement{r, 0}
 	return b
 }
 
 // SetRightEnd sets character representing the right most border
 // Defaults to ']'
-func (b *Bar) SetRightEnd(c byte) *Bar {
+func (b *Bar) SetRightEnd(r rune) *Bar {
 	if IsClosed(b.done) {
 		return b
 	}
-	b.rightEndCh <- c
+	b.formatElementCh <- runeFormatElement{r, 4}
 	return b
 }
 
@@ -194,12 +192,12 @@ func (b *Bar) Incr(n int) {
 }
 
 // IncrWithReFill increments pb with different fill character
-func (b *Bar) IncrWithReFill(n int, c byte) {
+func (b *Bar) IncrWithReFill(n int, r rune) {
 	if IsClosed(b.done) {
 		return
 	}
 	b.Incr(n)
-	b.refillCh <- &refill{c, int64(n)}
+	b.refillCh <- &refill{r, int64(n)}
 }
 
 // GetAppenders returns slice of appender DecoratorFunc
@@ -222,7 +220,7 @@ func (b *Bar) GetStatistics() *Statistics {
 }
 
 // GetID returs id of the bar
-func (b *Bar) GetID() int {
+func (b *Bar) GetID() int64 {
 	state := b.getState()
 	return state.id
 }
@@ -291,23 +289,24 @@ func (b *Bar) bytes(termWidth int) []byte {
 	return state.draw(termWidth)
 }
 
-func (b *Bar) server(ctx context.Context, wg *sync.WaitGroup, total int64, width, id int) {
+func (b *Bar) server(ctx context.Context, wg *sync.WaitGroup, id, total int64, width int, format string) {
 	var completed bool
 	timeStarted := time.Now()
 	blockStartTime := timeStarted
 	state := state{
 		id:       id,
-		fill:     '=',
-		empty:    '-',
-		tip:      '>',
-		leftEnd:  '[',
-		rightEnd: ']',
+		format:   formatRunes{'[', '=', '>', '-', ']'},
 		etaAlpha: 0.25,
 		barWidth: width,
 		total:    total,
 	}
 	if total <= 0 {
 		state.simpleSpinner = getSpinner()
+	} else if format != "" {
+		for i, n := 0, 0; len(format) > 0; i++ {
+			state.format[i], n = utf8.DecodeRuneInString(format)
+			format = format[n:]
+		}
 	}
 	defer func() {
 		b.stop(&state)
@@ -343,11 +342,8 @@ func (b *Bar) server(ctx context.Context, wg *sync.WaitGroup, total int64, width
 			}
 		case ch := <-b.stateReqCh:
 			ch <- state
-		case state.fill = <-b.fillCh:
-		case state.empty = <-b.emptyCh:
-		case state.tip = <-b.tipCh:
-		case state.leftEnd = <-b.leftEndCh:
-		case state.rightEnd = <-b.rightEndCh:
+		case e := <-b.formatElementCh:
+			state.format[e.index] = e.char
 		case state.barWidth = <-b.widthCh:
 		case state.refill = <-b.refillCh:
 		case state.trimLeftSpace = <-b.trimLeftCh:
@@ -449,38 +445,64 @@ func (s *state) fillBar(width int) []byte {
 		return []byte{}
 	}
 
+	// bar width without leftEnd and rightEnd characters
+	barWidth := width - 2
+	formatBytes := s.convertFormatRunesToBytes()
+
 	if s.simpleSpinner != nil {
-		return []byte{s.leftEnd, s.simpleSpinner(), s.rightEnd}
+		var buf []byte
+		for _, block := range [...][]byte{formatBytes[0], []byte{s.simpleSpinner()}, formatBytes[4]} {
+			buf = append(buf, block...)
+		}
+		return buf
 	}
 
-	buf := make([]byte, width)
-	completedWidth := percentage(s.total, s.current, width)
+	completedWidth := percentage(s.total, s.current, barWidth)
+
+	buf := make([]byte, 0, width)
+	// append leftEnd rune
+	buf = append(buf, formatBytes[0]...)
 
 	if s.refill != nil {
-		till := percentage(s.total, s.refill.till, width)
-		for i := 1; i < till; i++ {
-			buf[i] = s.refill.char
+		till := percentage(s.total, s.refill.till, barWidth)
+		rbytes := make([]byte, utf8.RuneLen(s.refill.char))
+		utf8.EncodeRune(rbytes, s.refill.char)
+		for i := 0; i < till; i++ {
+			buf = append(buf, rbytes...)
 		}
-		for i := till; i < completedWidth; i++ {
-			buf[i] = s.fill
+		for i := till; i < completedWidth-1; i++ {
+			// append fill rune
+			buf = append(buf, formatBytes[1]...)
 		}
 	} else {
-		for i := 1; i < completedWidth; i++ {
-			buf[i] = s.fill
+		for i := 0; i < completedWidth-1; i++ {
+			// append fill rune
+			buf = append(buf, formatBytes[1]...)
 		}
 	}
-
-	for i := completedWidth; i < width-1; i++ {
-		buf[i] = s.empty
-	}
 	// set tip bit
-	if completedWidth > 0 && completedWidth < s.barWidth {
-		buf[completedWidth-1] = s.tip
+	if completedWidth > 0 && completedWidth < barWidth {
+		// buf[completedWidth-1] = s.tip
+		buf = append(buf, formatBytes[2]...)
 	}
-	// set left and right ends bits
-	buf[0], buf[width-1] = s.leftEnd, s.rightEnd
 
+	for i := completedWidth + 1; i < barWidth; i++ {
+		// append empty rune
+		buf = append(buf, formatBytes[3]...)
+	}
+	// append rightEnd rune
+	buf = append(buf, formatBytes[4]...)
 	return buf
+}
+
+func (s *state) convertFormatRunesToBytes() [5][]byte {
+	var formatBytes [5][]byte
+	for i, r := range s.format {
+		buf := make([]byte, utf8.RuneLen(r))
+		utf8.EncodeRune(buf, r)
+		formatBytes[i] = buf
+	}
+	return formatBytes
 }
 
 func calcTimePerItemEstimate(tpie time.Duration, blockStartTime time.Time, alpha float64, items int64) time.Duration {

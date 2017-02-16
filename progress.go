@@ -8,6 +8,7 @@ import (
 	"os"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"github.com/vbauerster/mpb/cwriter"
 )
@@ -56,8 +57,9 @@ type Progress struct {
 	// WaitGroup for internal rendering sync
 	wg *sync.WaitGroup
 
-	out   io.Writer
-	width int
+	out    io.Writer
+	width  int
+	format string
 
 	operationCh    chan *operation
 	rrChangeReqCh  chan time.Duration
@@ -132,17 +134,17 @@ func (p *Progress) BeforeRenderFunc(f BeforeRender) *Progress {
 // AddBar creates a new progress bar and adds to the container
 // pancis, if called on stopped Progress instance, i.e after Stop()
 func (p *Progress) AddBar(total int64) *Bar {
-	return p.AddBarWithID(total, 0)
+	return p.AddBarWithID(0, total)
 }
 
 // AddBarWithID creates a new progress bar and adds to the container
 // pancis, if called on stopped Progress instance, i.e after Stop()
-func (p *Progress) AddBarWithID(total int64, id int) *Bar {
+func (p *Progress) AddBarWithID(id, total int64) *Bar {
 	if IsClosed(p.done) {
 		panic(ErrCallAfterStop)
 	}
 	result := make(chan bool)
-	bar := newBar(p.ctx, p.wg, total, p.width, id)
+	bar := newBar(p.ctx, p.wg, id, total, p.width, p.format)
 	p.operationCh <- &operation{barAdd, bar, result}
 	if <-result {
 		p.wg.Add(1)
@@ -170,6 +172,17 @@ func (p *Progress) BarCount() int {
 	respCh := make(chan int)
 	p.barCountReqCh <- respCh
 	return <-respCh
+}
+
+// Format sets custom format for underlying bar(s).
+// The format string, must consist of ASCII characters only.
+// The default one is "[=>-]"
+func (p *Progress) Format(format string) *Progress {
+	if utf8.RuneCountInString(format) != 5 {
+		return p
+	}
+	p.format = format
+	return p
 }
 
 // Stop waits for bars to finish rendering and stops the rendering goroutine
