@@ -95,7 +95,7 @@ func New(ctx context.Context) *Progress {
 	return p
 }
 
-// SetWidth sets the width for all underlying bars
+// SetWidth overrides default (70) width of bar(s)
 func (p *Progress) SetWidth(n int) *Progress {
 	if n <= 0 {
 		return p
@@ -117,7 +117,7 @@ func (p *Progress) SetOut(w io.Writer) *Progress {
 	return p
 }
 
-// RefreshRate overrides default (30ms) refreshRate value
+// RefreshRate overrides default (100ms) refresh rate value
 // pancis, if called on stopped Progress instance, i.e after Stop()
 func (p *Progress) RefreshRate(d time.Duration) *Progress {
 	if IsClosed(p.done) {
