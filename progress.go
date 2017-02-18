@@ -50,6 +50,8 @@ const (
 const (
 	// default RefreshRate
 	rr = 100
+	// default width
+	pwidth = 70
 	// number of format runes for bar
 	numFmtRunes = 5
 )
@@ -81,7 +83,7 @@ func New(ctx context.Context) *Progress {
 		ctx = context.Background()
 	}
 	p := &Progress{
-		width:          70,
+		width:          pwidth,
 		operationCh:    make(chan *operation),
 		rrChangeReqCh:  make(chan time.Duration),
 		outChangeReqCh: make(chan io.Writer),
