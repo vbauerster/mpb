@@ -8,13 +8,21 @@ import (
 	"unicode/utf8"
 )
 
-type formatRunes [numFmtRunes]rune
+const (
+	rLeft = iota
+	rFill
+	rTip
+	rEmpty
+	rRight
+)
+
+type barFmtRunes [numFmtRunes]rune
+type barFmtBytes [numFmtRunes][]byte
 
 // Bar represents a progress Bar
 type Bar struct {
-	widthSetCh    chan int
-	widthReqCh    chan chan int
 	stateReqCh    chan chan state
+	widthCh       chan int
 	formatCh      chan string
 	etaAlphaCh    chan float64
 	incrCh        chan int64
@@ -55,7 +63,8 @@ type (
 	}
 	state struct {
 		id             int
-		format         formatRunes
+		width          int
+		format         barFmtRunes
 		etaAlpha       float64
 		total          int64
 		current        int64
@@ -72,15 +81,14 @@ type (
 
 func newBar(ctx context.Context, wg *sync.WaitGroup, id int, total int64, width int, format string) *Bar {
 	b := &Bar{
+		stateReqCh:    make(chan chan state, 1),
+		widthCh:       make(chan int),
 		formatCh:      make(chan string),
 		etaAlphaCh:    make(chan float64),
 		incrCh:        make(chan int64, 1),
-		widthSetCh:    make(chan int),
-		widthReqCh:    make(chan chan int),
 		trimLeftCh:    make(chan bool),
 		trimRightCh:   make(chan bool),
 		refillCh:      make(chan *refill),
-		stateReqCh:    make(chan chan state, 1),
 		decoratorCh:   make(chan *decorator),
 		flushedCh:     make(chan struct{}, 1),
 		removeReqCh:   make(chan struct{}),
@@ -96,17 +104,8 @@ func (b *Bar) SetWidth(n int) *Bar {
 	if n < 2 || IsClosed(b.done) {
 		return b
 	}
-	b.widthSetCh <- n
+	b.widthCh <- n
 	return b
-}
-
-func (b *Bar) GetWidth() int {
-	if IsClosed(b.done) {
-		return b.width
-	}
-	ch := make(chan int, 1)
-	b.widthReqCh <- ch
-	return <-ch
 }
 
 // TrimLeftSpace removes space befor LeftEnd charater
@@ -255,66 +254,65 @@ func (b *Bar) getState() state {
 
 func (b *Bar) bytes(termWidth int) []byte {
 	s := b.getState()
-	return draw(&s, b.GetWidth(), termWidth)
+	return draw(&s, termWidth)
 }
 
 func (b *Bar) server(ctx context.Context, wg *sync.WaitGroup, id int, total int64, width int, format string) {
 	var completed bool
 	timeStarted := time.Now()
 	blockStartTime := timeStarted
-	state := state{
+	barState := state{
 		id:       id,
-		format:   formatRunes{'[', '=', '>', '-', ']'},
+		width:    width,
+		format:   barFmtRunes{'[', '=', '>', '-', ']'},
 		etaAlpha: 0.25,
 		total:    total,
 	}
 	if total <= 0 {
-		state.simpleSpinner = getSpinner()
+		barState.simpleSpinner = getSpinner()
 	} else {
-		state.updateFormat(format)
+		barState.updateFormat(format)
 	}
 	defer func() {
-		b.stop(&state, width)
+		b.stop(&barState, width)
 		wg.Done()
 	}()
 	for {
 		select {
 		case i := <-b.incrCh:
-			n := state.current + i
+			n := barState.current + i
 			if total > 0 && n > total {
-				state.current = total
+				barState.current = total
 				completed = true
 				blockStartTime = time.Now()
 				break // break out of select
 			}
-			state.timeElapsed = time.Since(timeStarted)
-			state.timePerItem = calcTimePerItemEstimate(state.timePerItem, blockStartTime, state.etaAlpha, i)
+			barState.timeElapsed = time.Since(timeStarted)
+			barState.timePerItem = calcTimePerItemEstimate(barState.timePerItem, blockStartTime, barState.etaAlpha, i)
 			if n == total {
 				completed = true
 			}
-			state.current = n
+			barState.current = n
 			blockStartTime = time.Now()
 		case d := <-b.decoratorCh:
 			switch d.kind {
 			case decAppend:
-				state.appendFuncs = append(state.appendFuncs, d.f)
+				barState.appendFuncs = append(barState.appendFuncs, d.f)
 			case decAppendZero:
-				state.appendFuncs = nil
+				barState.appendFuncs = nil
 			case decPrepend:
-				state.prependFuncs = append(state.prependFuncs, d.f)
+				barState.prependFuncs = append(barState.prependFuncs, d.f)
 			case decPrependZero:
-				state.prependFuncs = nil
+				barState.prependFuncs = nil
 			}
 		case ch := <-b.stateReqCh:
-			ch <- state
-		case ch := <-b.widthReqCh:
-			ch <- width
-		case width = <-b.widthSetCh:
+			ch <- barState
 		case format := <-b.formatCh:
-			state.updateFormat(format)
-		case state.refill = <-b.refillCh:
-		case state.trimLeftSpace = <-b.trimLeftCh:
-		case state.trimRightSpace = <-b.trimRightCh:
+			barState.updateFormat(format)
+		case barState.width = <-b.widthCh:
+		case barState.refill = <-b.refillCh:
+		case barState.trimLeftSpace = <-b.trimLeftCh:
+		case barState.trimRightSpace = <-b.trimRightCh:
 		case <-b.flushedCh:
 			if completed {
 				return
@@ -359,9 +357,9 @@ func (s *state) updateFormat(format string) {
 	}
 }
 
-func draw(s *state, barWidth, termWidth int) []byte {
+func draw(s *state, termWidth int) []byte {
 	if termWidth <= 0 {
-		termWidth = barWidth
+		termWidth = s.width
 	}
 
 	stat := newStatistics(s)
@@ -378,9 +376,7 @@ func draw(s *state, barWidth, termWidth int) []byte {
 		prependBlock = append(prependBlock, []byte(f(stat))...)
 	}
 
-	barBlock := fillBar(s, barWidth)
 	prependCount := utf8.RuneCount(prependBlock)
-	barCount := utf8.RuneCount(barBlock)
 	appendCount := utf8.RuneCount(appendBlock)
 
 	var leftSpace, rightSpace []byte
@@ -395,74 +391,74 @@ func draw(s *state, barWidth, termWidth int) []byte {
 		rightSpace = space
 	}
 
+	var barBlock []byte
+	buf := make([]byte, 0, termWidth)
+	fmtBytes := convertFmtRunesToBytes(s.format)
+
+	if s.simpleSpinner != nil {
+		for _, block := range [...][]byte{fmtBytes[rLeft], []byte{s.simpleSpinner()}, fmtBytes[rRight]} {
+			barBlock = append(barBlock, block...)
+		}
+		return concatenateBlocks(buf, prependBlock, leftSpace, barBlock, rightSpace, appendBlock)
+	}
+
+	barBlock = fillBar(s.total, s.current, s.width, fmtBytes, s.refill)
+	barCount := utf8.RuneCount(barBlock)
 	totalCount := prependCount + barCount + appendCount
 	if totalCount > termWidth {
 		newWidth := termWidth - prependCount - appendCount
-		barBlock = fillBar(s, newWidth)
+		barBlock = fillBar(s.total, s.current, newWidth, fmtBytes, s.refill)
 	}
 
-	buf := make([]byte, 0, termWidth)
-	for _, block := range [...][]byte{prependBlock, leftSpace, barBlock, rightSpace, appendBlock} {
+	return concatenateBlocks(buf, prependBlock, leftSpace, barBlock, rightSpace, appendBlock)
+}
+
+func concatenateBlocks(buf []byte, blocks ...[]byte) []byte {
+	for _, block := range blocks {
 		buf = append(buf, block...)
 	}
-
 	return buf
 }
 
-func fillBar(s *state, width int) []byte {
+func fillBar(total, current int64, width int, fmtBytes barFmtBytes, rf *refill) []byte {
 	if width < 2 {
 		return []byte{}
 	}
 
 	// bar width without leftEnd and rightEnd runes
 	barWidth := width - 1
-	formatBytes := convertFmtRunesToBytes(s.format)
 
-	if s.simpleSpinner != nil {
-		var buf []byte
-		for _, block := range [...][]byte{formatBytes[0], []byte{s.simpleSpinner()}, formatBytes[4]} {
-			buf = append(buf, block...)
-		}
-		return buf
-	}
-
-	completedWidth := percentage(s.total, s.current, barWidth)
+	completedWidth := percentage(total, current, barWidth)
 
 	buf := make([]byte, 0, width)
-	// append leftEnd rune
-	buf = append(buf, formatBytes[0]...)
+	buf = append(buf, fmtBytes[rLeft]...)
 
-	if s.refill != nil {
-		till := percentage(s.total, s.refill.till, barWidth)
-		rbytes := make([]byte, utf8.RuneLen(s.refill.char))
-		utf8.EncodeRune(rbytes, s.refill.char)
+	if rf != nil {
+		till := percentage(total, rf.till, barWidth)
+		rbytes := make([]byte, utf8.RuneLen(rf.char))
+		utf8.EncodeRune(rbytes, rf.char)
 		// append refill rune
 		for i := 0; i < till; i++ {
 			buf = append(buf, rbytes...)
 		}
-		// append fill rune
 		for i := till; i < completedWidth-1; i++ {
-			buf = append(buf, formatBytes[1]...)
+			buf = append(buf, fmtBytes[rFill]...)
 		}
 	} else {
-		// append fill rune
 		for i := 0; i < completedWidth-1; i++ {
-			buf = append(buf, formatBytes[1]...)
+			buf = append(buf, fmtBytes[rFill]...)
 		}
 	}
 
-	// set tip bit
 	if completedWidth > 0 && completedWidth < barWidth {
-		buf = append(buf, formatBytes[2]...)
+		buf = append(buf, fmtBytes[rTip]...)
 	}
 
-	// append empty rune
 	for i := completedWidth + 1; i < barWidth; i++ {
-		buf = append(buf, formatBytes[3]...)
+		buf = append(buf, fmtBytes[rEmpty]...)
 	}
 
-	// append rightEnd rune
-	buf = append(buf, formatBytes[4]...)
+	buf = append(buf, fmtBytes[rRight]...)
 
 	return buf
 }
@@ -476,14 +472,14 @@ func newStatistics(s *state) *Statistics {
 	}
 }
 
-func convertFmtRunesToBytes(format formatRunes) [numFmtRunes][]byte {
-	var formatBytes [numFmtRunes][]byte
+func convertFmtRunesToBytes(format barFmtRunes) barFmtBytes {
+	var fmtBytes barFmtBytes
 	for i, r := range format {
 		buf := make([]byte, utf8.RuneLen(r))
 		utf8.EncodeRune(buf, r)
-		formatBytes[i] = buf
+		fmtBytes[i] = buf
 	}
-	return formatBytes
+	return fmtBytes
 }
 
 func calcTimePerItemEstimate(tpie time.Duration, blockStartTime time.Time, alpha float64, items int64) time.Duration {
