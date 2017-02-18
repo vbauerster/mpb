@@ -129,6 +129,7 @@ func (p *Progress) RefreshRate(d time.Duration) *Progress {
 	return p
 }
 
+// BeforeRenderFunc accepts a func, which gets called before render process.
 func (p *Progress) BeforeRenderFunc(f BeforeRender) *Progress {
 	if IsClosed(p.done) {
 		panic(ErrCallAfterStop)
