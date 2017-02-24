@@ -24,8 +24,8 @@ func Example() {
 	bar := p.AddBar(100).PrependName("Single Bar:", 0).AppendPercentage()
 
 	for i := 0; i < 100; i++ {
+		bar.Incr(1) // increment progress bar
 		time.Sleep(time.Duration(rand.Intn(100)) * time.Millisecond)
-		bar.Incr(1)
 	}
 
 	// Don't forget to stop mpb's rendering goroutine
@@ -33,4 +33,14 @@ func Example() {
 
 	// You cannot add bars after p.Stop() has been called
 	// p.AddBar(100) // will panic
+}
+
+func ExampleBar_InProgress() {
+	p := mpb.New(nil)
+	bar := p.AddBar(100).AppendPercentage()
+
+	for bar.InProgress() {
+		bar.Incr(1)
+		time.Sleep(time.Millisecond * 20)
+	}
 }
