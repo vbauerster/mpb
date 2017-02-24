@@ -1,6 +1,7 @@
 package mpb_test
 
 import (
+	"fmt"
 	"math/rand"
 	"time"
 
@@ -42,5 +43,37 @@ func ExampleBar_InProgress() {
 	for bar.InProgress() {
 		bar.Incr(1)
 		time.Sleep(time.Millisecond * 20)
+	}
+}
+
+func ExampleBar_PrependFunc() {
+	decor := func(s *mpb.Statistics) string {
+		str := fmt.Sprintf("%d/%d", s.Current, s.Total)
+		return fmt.Sprintf("%8s", str)
+	}
+
+	totalItem := 100
+	p := mpb.New(nil)
+	bar := p.AddBar(int64(totalItem)).PrependFunc(decor)
+
+	for i := 0; i < totalItem; i++ {
+		bar.Incr(1) // increment progress bar
+		time.Sleep(time.Duration(rand.Intn(100)) * time.Millisecond)
+	}
+}
+
+func ExampleBar_AppendFunc() {
+	decor := func(s *mpb.Statistics) string {
+		str := fmt.Sprintf("%d/%d", s.Current, s.Total)
+		return fmt.Sprintf("%8s", str)
+	}
+
+	totalItem := 100
+	p := mpb.New(nil)
+	bar := p.AddBar(int64(totalItem)).AppendFunc(decor)
+
+	for i := 0; i < totalItem; i++ {
+		bar.Incr(1) // increment progress bar
+		time.Sleep(time.Duration(rand.Intn(100)) * time.Millisecond)
 	}
 }
