@@ -1,6 +1,6 @@
-# Multi Progress Bar for Go [![Build Status](https://travis-ci.org/vbauerster/mpb.svg?branch=master)](https://travis-ci.org/vbauerster/mpb)
+# Multi Progress Bar [![GoDoc](https://godoc.org/github.com/vbauerster/mpb?status.svg)](https://godoc.org/github.com/vbauerster/mpb) [![Build Status](https://travis-ci.org/vbauerster/mpb.svg?branch=master)](https://travis-ci.org/vbauerster/mpb)
 
-Mutex free progress bar library, for console programs.
+**mpb** is a Go lib for rendering progress bars in terminal applications.
 
 It is inspired by [uiprogress](https://github.com/gosuri/uiprogress) library,
 but unlike the last one, implementation is mutex free, following Go's idiom:
