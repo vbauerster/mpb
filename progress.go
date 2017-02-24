@@ -15,8 +15,8 @@ import (
 
 var logger = log.New(os.Stderr, "mpb: ", log.LstdFlags|log.Lshortfile)
 
-// ErrCallAfterStop thrown by panic, if Progress methods like AddBar() are called
-// after Stop() has been called
+// ErrCallAfterStop thrown by panic, if Progress methods like (*Progress).AddBar()
+// are called after (*Progress).Stop() has been called
 var ErrCallAfterStop = errors.New("method call on stopped Progress instance")
 
 type (
@@ -107,7 +107,7 @@ func (p *Progress) SetWidth(n int) *Progress {
 }
 
 // SetOut sets underlying writer of progress. Default is os.Stdout
-// pancis, if called on stopped Progress instance, i.e after Stop()
+// pancis, if called on stopped Progress instance, i.e after (*Progress).Stop()
 func (p *Progress) SetOut(w io.Writer) *Progress {
 	if isClosed(p.done) {
 		panic(ErrCallAfterStop)
@@ -120,7 +120,7 @@ func (p *Progress) SetOut(w io.Writer) *Progress {
 }
 
 // RefreshRate overrides default (100ms) refresh rate value
-// pancis, if called on stopped Progress instance, i.e after Stop()
+// pancis, if called on stopped Progress instance, i.e after (*Progress).Stop()
 func (p *Progress) RefreshRate(d time.Duration) *Progress {
 	if isClosed(p.done) {
 		panic(ErrCallAfterStop)
@@ -139,13 +139,13 @@ func (p *Progress) BeforeRenderFunc(f BeforeRender) *Progress {
 }
 
 // AddBar creates a new progress bar and adds to the container
-// pancis, if called on stopped Progress instance, i.e after Stop()
+// pancis, if called on stopped Progress instance, i.e after (*Progress).Stop()
 func (p *Progress) AddBar(total int64) *Bar {
 	return p.AddBarWithID(0, total)
 }
 
 // AddBarWithID creates a new progress bar and adds to the container
-// pancis, if called on stopped Progress instance, i.e after Stop()
+// pancis, if called on stopped Progress instance, i.e after (*Progress).Stop()
 func (p *Progress) AddBarWithID(id int, total int64) *Bar {
 	if isClosed(p.done) {
 		panic(ErrCallAfterStop)
@@ -159,8 +159,8 @@ func (p *Progress) AddBarWithID(id int, total int64) *Bar {
 	return bar
 }
 
-// RemoveBar removes bar at any time
-// pancis, if called on stopped Progress instance, i.e after Stop()
+// RemoveBar removes bar at any time.
+// Pancis, if called on stopped Progress instance, i.e after (*Progress).Stop()
 func (p *Progress) RemoveBar(b *Bar) bool {
 	if isClosed(p.done) {
 		panic(ErrCallAfterStop)
@@ -171,7 +171,7 @@ func (p *Progress) RemoveBar(b *Bar) bool {
 }
 
 // BarCount returns bars count in the container.
-// Pancis if called on stopped Progress instance, i.e after Stop()
+// Pancis if called on stopped Progress instance, i.e after (*Progress).Stop()
 func (p *Progress) BarCount() int {
 	if isClosed(p.done) {
 		panic(ErrCallAfterStop)
