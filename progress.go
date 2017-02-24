@@ -109,7 +109,7 @@ func (p *Progress) SetWidth(n int) *Progress {
 // SetOut sets underlying writer of progress. Default is os.Stdout
 // pancis, if called on stopped Progress instance, i.e after Stop()
 func (p *Progress) SetOut(w io.Writer) *Progress {
-	if IsClosed(p.done) {
+	if isClosed(p.done) {
 		panic(ErrCallAfterStop)
 	}
 	if w == nil {
@@ -122,7 +122,7 @@ func (p *Progress) SetOut(w io.Writer) *Progress {
 // RefreshRate overrides default (100ms) refresh rate value
 // pancis, if called on stopped Progress instance, i.e after Stop()
 func (p *Progress) RefreshRate(d time.Duration) *Progress {
-	if IsClosed(p.done) {
+	if isClosed(p.done) {
 		panic(ErrCallAfterStop)
 	}
 	p.rrChangeReqCh <- d
@@ -131,7 +131,7 @@ func (p *Progress) RefreshRate(d time.Duration) *Progress {
 
 // BeforeRenderFunc accepts a func, which gets called before render process.
 func (p *Progress) BeforeRenderFunc(f BeforeRender) *Progress {
-	if IsClosed(p.done) {
+	if isClosed(p.done) {
 		panic(ErrCallAfterStop)
 	}
 	p.brCh <- f
@@ -147,7 +147,7 @@ func (p *Progress) AddBar(total int64) *Bar {
 // AddBarWithID creates a new progress bar and adds to the container
 // pancis, if called on stopped Progress instance, i.e after Stop()
 func (p *Progress) AddBarWithID(id int, total int64) *Bar {
-	if IsClosed(p.done) {
+	if isClosed(p.done) {
 		panic(ErrCallAfterStop)
 	}
 	result := make(chan bool)
@@ -162,7 +162,7 @@ func (p *Progress) AddBarWithID(id int, total int64) *Bar {
 // RemoveBar removes bar at any time
 // pancis, if called on stopped Progress instance, i.e after Stop()
 func (p *Progress) RemoveBar(b *Bar) bool {
-	if IsClosed(p.done) {
+	if isClosed(p.done) {
 		panic(ErrCallAfterStop)
 	}
 	result := make(chan bool)
@@ -173,7 +173,7 @@ func (p *Progress) RemoveBar(b *Bar) bool {
 // BarCount returns bars count in the container.
 // Pancis if called on stopped Progress instance, i.e after Stop()
 func (p *Progress) BarCount() int {
-	if IsClosed(p.done) {
+	if isClosed(p.done) {
 		panic(ErrCallAfterStop)
 	}
 	respCh := make(chan int)
@@ -194,7 +194,7 @@ func (p *Progress) Format(format string) *Progress {
 // Stop waits for bars to finish rendering and stops the rendering goroutine
 func (p *Progress) Stop() {
 	p.wg.Wait()
-	if IsClosed(p.done) {
+	if isClosed(p.done) {
 		return
 	}
 	close(p.operationCh)
@@ -305,9 +305,9 @@ func iBarsGen(bars []*Bar, width int) <-chan indexedBar {
 	return ibars
 }
 
-// IsClosed check if ch closed
+// isClosed check if ch closed
 // caution see: http://www.tapirgames.com/blog/golang-channel-closing
-func IsClosed(ch <-chan struct{}) bool {
+func isClosed(ch <-chan struct{}) bool {
 	select {
 	case <-ch:
 		return true

@@ -101,7 +101,7 @@ func newBar(ctx context.Context, wg *sync.WaitGroup, id int, total int64, width 
 
 // SetWidth overrides width of individual bar
 func (b *Bar) SetWidth(n int) *Bar {
-	if n < 2 || IsClosed(b.done) {
+	if n < 2 || isClosed(b.done) {
 		return b
 	}
 	b.widthCh <- n
@@ -110,7 +110,7 @@ func (b *Bar) SetWidth(n int) *Bar {
 
 // TrimLeftSpace removes space befor LeftEnd charater
 func (b *Bar) TrimLeftSpace() *Bar {
-	if IsClosed(b.done) {
+	if isClosed(b.done) {
 		return b
 	}
 	b.trimLeftCh <- true
@@ -119,7 +119,7 @@ func (b *Bar) TrimLeftSpace() *Bar {
 
 // TrimRightSpace removes space after RightEnd charater
 func (b *Bar) TrimRightSpace() *Bar {
-	if IsClosed(b.done) {
+	if isClosed(b.done) {
 		return b
 	}
 	b.trimRightCh <- true
@@ -128,7 +128,7 @@ func (b *Bar) TrimRightSpace() *Bar {
 
 // Format overrides format of individual bar
 func (b *Bar) Format(format string) *Bar {
-	if utf8.RuneCountInString(format) != numFmtRunes || IsClosed(b.done) {
+	if utf8.RuneCountInString(format) != numFmtRunes || isClosed(b.done) {
 		return b
 	}
 	b.formatCh <- format
@@ -139,7 +139,7 @@ func (b *Bar) Format(format string) *Bar {
 // Defaults to 0.25
 // Normally you shouldn't touch this
 func (b *Bar) SetEtaAlpha(a float64) *Bar {
-	if IsClosed(b.done) {
+	if isClosed(b.done) {
 		return b
 	}
 	b.etaAlphaCh <- a
@@ -153,7 +153,7 @@ func (b *Bar) ProxyReader(r io.Reader) *Reader {
 
 // Incr increments progress bar
 func (b *Bar) Incr(n int) {
-	if n < 1 || IsClosed(b.done) {
+	if n < 1 || isClosed(b.done) {
 		return
 	}
 	b.incrCh <- int64(n)
@@ -161,7 +161,7 @@ func (b *Bar) Incr(n int) {
 
 // IncrWithReFill increments pb with different fill character
 func (b *Bar) IncrWithReFill(n int, r rune) {
-	if IsClosed(b.done) {
+	if isClosed(b.done) {
 		return
 	}
 	b.Incr(n)
@@ -196,12 +196,12 @@ func (b *Bar) GetID() int {
 // InProgress returns true, while progress is running
 // Can be used as condition in for loop
 func (b *Bar) InProgress() bool {
-	return !IsClosed(b.done)
+	return !isClosed(b.done)
 }
 
 // PrependFunc prepends DecoratorFunc
 func (b *Bar) PrependFunc(f DecoratorFunc) *Bar {
-	if IsClosed(b.done) {
+	if isClosed(b.done) {
 		return b
 	}
 	b.decoratorCh <- &decorator{decPrepend, f}
@@ -210,7 +210,7 @@ func (b *Bar) PrependFunc(f DecoratorFunc) *Bar {
 
 // RemoveAllPrependers removes all prepend functions
 func (b *Bar) RemoveAllPrependers() {
-	if IsClosed(b.done) {
+	if isClosed(b.done) {
 		return
 	}
 	b.decoratorCh <- &decorator{decPrependZero, nil}
@@ -218,7 +218,7 @@ func (b *Bar) RemoveAllPrependers() {
 
 // AppendFunc appends DecoratorFunc
 func (b *Bar) AppendFunc(f DecoratorFunc) *Bar {
-	if IsClosed(b.done) {
+	if isClosed(b.done) {
 		return b
 	}
 	b.decoratorCh <- &decorator{decAppend, f}
@@ -227,7 +227,7 @@ func (b *Bar) AppendFunc(f DecoratorFunc) *Bar {
 
 // RemoveAllAppenders removes all append functions
 func (b *Bar) RemoveAllAppenders() {
-	if IsClosed(b.done) {
+	if isClosed(b.done) {
 		return
 	}
 	b.decoratorCh <- &decorator{decAppendZero, nil}
@@ -237,14 +237,14 @@ func (b *Bar) RemoveAllAppenders() {
 // You should call this method when total is unknown and you've reached the point
 // of process completion.
 func (b *Bar) Completed() {
-	if IsClosed(b.done) {
+	if isClosed(b.done) {
 		return
 	}
 	b.completeReqCh <- struct{}{}
 }
 
 func (b *Bar) getState() state {
-	if IsClosed(b.done) {
+	if isClosed(b.done) {
 		return b.state
 	}
 	ch := make(chan state, 1)
@@ -334,14 +334,14 @@ func (b *Bar) stop(s *state, width int) {
 }
 
 func (b *Bar) flushed() {
-	if IsClosed(b.done) {
+	if isClosed(b.done) {
 		return
 	}
 	b.flushedCh <- struct{}{}
 }
 
 func (b *Bar) remove() {
-	if IsClosed(b.done) {
+	if isClosed(b.done) {
 		return
 	}
 	b.removeReqCh <- struct{}{}
