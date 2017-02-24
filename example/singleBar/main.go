@@ -24,8 +24,8 @@ func main() {
 	bar := p.AddBar(100).PrependName("Single Bar:", 0).AppendPercentage()
 
 	for i := 0; i < 100; i++ {
+		bar.Incr(1) // increment progress bar
 		time.Sleep(time.Duration(rand.Intn(100)) * time.Millisecond)
-		bar.Incr(1)
 	}
 
 	// Don't forget to stop mpb's rendering goroutine

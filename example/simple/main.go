@@ -22,8 +22,8 @@ func main() {
 			// if you still need p.AddBar() here and maintain ordering, use
 			// (*mpb.Progress).BeforeRenderFunc(f mpb.BeforeRender)
 			for i := 0; i < 100; i++ {
-				time.Sleep(time.Duration(rand.Intn(100)) * time.Millisecond)
 				bar.Incr(1)
+				time.Sleep(time.Duration(rand.Intn(100)) * time.Millisecond)
 			}
 		}()
 	}

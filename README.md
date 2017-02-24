@@ -39,8 +39,8 @@ Following is the simplest use case:
 	bar := p.AddBar(100).PrependName("Single Bar:", 0).AppendPercentage()
 
 	for i := 0; i < 100; i++ {
+		bar.Incr(1) // increment progress bar
 		time.Sleep(time.Duration(rand.Intn(100)) * time.Millisecond)
-		bar.Incr(1)
 	}
 
 	// Don't forget to stop mpb's rendering goroutine
@@ -70,8 +70,8 @@ own goroutine, therefore adding multiple bars is easy and safe:
 			// if you still need p.AddBar() here and maintain ordering, use
 			// (*mpb.Progress).BeforeRenderFunc(f mpb.BeforeRender)
 			for i := 0; i < 100; i++ {
-				time.Sleep(time.Duration(rand.Intn(100)) * time.Millisecond)
 				bar.Incr(1)
+				time.Sleep(time.Duration(rand.Intn(100)) * time.Millisecond)
 			}
 		}()
 	}

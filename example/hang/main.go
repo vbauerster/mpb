@@ -16,7 +16,7 @@ const (
 func main() {
 	decor := func(s *mpb.Statistics) string {
 		str := fmt.Sprintf("%d/%d", s.Current, s.Total)
-		return fmt.Sprintf("%-7s", str)
+		return fmt.Sprintf("%8s", str)
 	}
 
 	p := mpb.New(nil)
@@ -27,9 +27,9 @@ func main() {
 	// use bar.InProgress() bool method
 	// for i := 0; bar.InProgress(); i += blockSize {
 	for i := 0; i < totalItem; i += blockSize {
-		time.Sleep(time.Duration(blockSize) * (50*time.Millisecond + time.Duration(rand.Intn(5*int(time.Millisecond)))))
 		bar.Incr(blockSize)
 		blockSize = rand.Intn(maxBlockSize) + 1
+		time.Sleep(time.Duration(blockSize) * (50*time.Millisecond + time.Duration(rand.Intn(5*int(time.Millisecond)))))
 	}
 
 	p.Stop()
