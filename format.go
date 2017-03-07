@@ -1,9 +1,6 @@
 package mpb
 
-import (
-	"fmt"
-	"strings"
-)
+import "fmt"
 
 const (
 	_          = iota
@@ -16,7 +13,7 @@ const (
 type Units uint
 
 const (
-	UnitNone Units = iota
+	_ = iota
 	UnitBytes
 )
 
@@ -51,17 +48,16 @@ func (f *formatter) String() string {
 
 func formatBytes(i int64) (result string) {
 	switch {
-	case i > bytesInTiB:
+	case i >= bytesInTiB:
 		result = fmt.Sprintf("%.1fTiB", float64(i)/bytesInTiB)
-	case i > bytesInGiB:
+	case i >= bytesInGiB:
 		result = fmt.Sprintf("%.1fGiB", float64(i)/bytesInGiB)
-	case i > bytesInMiB:
+	case i >= bytesInMiB:
 		result = fmt.Sprintf("%.1fMiB", float64(i)/bytesInMiB)
-	case i > bytesInKiB:
+	case i >= bytesInKiB:
 		result = fmt.Sprintf("%.1fKiB", float64(i)/bytesInKiB)
 	default:
 		result = fmt.Sprintf("%db", i)
 	}
-	result = strings.Trim(result, " ")
 	return
 }
