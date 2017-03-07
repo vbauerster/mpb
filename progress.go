@@ -177,7 +177,7 @@ func (p *Progress) BarCount() int {
 	if isClosed(p.done) {
 		panic(ErrCallAfterStop)
 	}
-	respCh := make(chan int)
+	respCh := make(chan int, 1)
 	p.barCountReqCh <- respCh
 	return <-respCh
 }
@@ -201,6 +201,11 @@ func (p *Progress) Stop() {
 	close(p.operationCh)
 }
 
+type widthSync struct {
+	listen []chan int
+	result []chan int
+}
+
 // server monitors underlying channels and renders any progress bars
 func (p *Progress) server(cw *cwriter.Writer, t *time.Ticker) {
 	defer func() {
@@ -219,6 +224,8 @@ func (p *Progress) server(cw *cwriter.Writer, t *time.Ticker) {
 		}
 		wg.Done()
 	}
+	var numPrependers int
+	// var numAppenders int
 	for {
 		select {
 		case w := <-p.outChangeReqCh:
@@ -244,6 +251,10 @@ func (p *Progress) server(cw *cwriter.Writer, t *time.Ticker) {
 				}
 				op.result <- ok
 			}
+			if len(bars) > 0 {
+				numPrependers = len(bars[0].GetPrependers())
+				// numAppenders = len(bars[0].GetAppenders())
+			}
 		case respCh := <-p.barCountReqCh:
 			respCh <- len(bars)
 		case beforeRender = <-p.brCh:
@@ -258,6 +269,38 @@ func (p *Progress) server(cw *cwriter.Writer, t *time.Ticker) {
 				beforeRender(bars)
 			}
 
+			prepWidthSync := &widthSync{
+				listen: make([]chan int, numPrependers),
+				result: make([]chan int, numPrependers),
+			}
+			for i := 0; i < numPrependers; i++ {
+				prepWidthSync.listen[i] = make(chan int, numBars)
+				prepWidthSync.result[i] = make(chan int, numBars)
+			}
+			stopWidthListen := make(chan struct{})
+			for i, listenCh := range prepWidthSync.listen {
+				go func(listenCh <-chan int, resultCh chan<- int) {
+					widths := make([]int, 0, numBars)
+				loop:
+					for {
+						select {
+						case w := <-listenCh:
+							widths = append(widths, w)
+							if len(widths) == numBars {
+								break loop
+							}
+						case <-stopWidthListen:
+							return
+						}
+					}
+					result := max(widths)
+					for i := 0; i < numBars; i++ {
+						resultCh <- result
+					}
+					// close(resultCh)
+				}(listenCh, prepWidthSync.result[i])
+			}
+
 			width, _, _ := cwriter.GetTermSize()
 			ibars := iBarsGen(bars, width)
 			ibbCh := make(chan indexedBarBuffer)
@@ -265,17 +308,24 @@ func (p *Progress) server(cw *cwriter.Writer, t *time.Ticker) {
 			for i := 0; i < numBars; i++ {
 				go func() {
 					defer recoverIfPanic()
-					drawer(ibars, ibbCh)
+					drawer(ibars, ibbCh, prepWidthSync)
 				}()
 			}
 			go func() {
 				wg.Wait()
 				close(ibbCh)
+				close(stopWidthListen)
+				for _, ch := range prepWidthSync.result {
+					close(ch)
+				}
+				for _, ch := range prepWidthSync.listen {
+					close(ch)
+				}
 			}()
 
 			m := make(map[int][]byte, len(bars))
-			for r := range ibbCh {
-				m[r.index] = r.buf
+			for ibb := range ibbCh {
+				m[ibb.index] = ibb.buf
 			}
 			for i := 0; i < len(bars); i++ {
 				cw.Write(m[i])
@@ -297,7 +347,7 @@ func (p *Progress) server(cw *cwriter.Writer, t *time.Ticker) {
 
 func drawer(ibars <-chan indexedBar, ibbCh chan<- indexedBarBuffer) {
 	for b := range ibars {
-		buf := b.bar.bytes(b.termWidth)
+		buf := b.bar.bytes(b.termWidth, ws)
 		buf = append(buf, '\n')
 		ibbCh <- indexedBarBuffer{b.index, buf}
 	}
@@ -323,4 +373,16 @@ func isClosed(ch <-chan struct{}) bool {
 	default:
 		return false
 	}
+}
+
+func max(slice []int) int {
+	max := slice[0]
+
+	for i := 1; i < len(slice); i++ {
+		if slice[i] > max {
+			max = slice[i]
+		}
+	}
+
+	return max
 }

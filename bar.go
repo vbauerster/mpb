@@ -252,11 +252,6 @@ func (b *Bar) getState() state {
 	return <-ch
 }
 
-func (b *Bar) bytes(termWidth int) []byte {
-	s := b.getState()
-	return draw(&s, termWidth)
-}
-
 func (b *Bar) server(ctx context.Context, wg *sync.WaitGroup, id int, total int64, width int, format string) {
 	var completed bool
 	timeStarted := time.Now()
@@ -357,7 +352,12 @@ func (s *state) updateFormat(format string) {
 	}
 }
 
-func draw(s *state, termWidth int) []byte {
+func (b *Bar) bytes(termWidth int, ws *widthSync) []byte {
+	s := b.getState()
+	return draw(&s, termWidth, ws)
+}
+
+func draw(s *state, termWidth int, ws *widthSync) []byte {
 	if termWidth <= 0 {
 		termWidth = s.width
 	}
@@ -367,13 +367,13 @@ func draw(s *state, termWidth int) []byte {
 	// render append functions to the right of the bar
 	var appendBlock []byte
 	for _, f := range s.appendFuncs {
-		appendBlock = append(appendBlock, []byte(f(stat))...)
+		appendBlock = append(appendBlock, []byte(f(stat, nil, nil))...)
 	}
 
 	// render prepend functions to the left of the bar
 	var prependBlock []byte
-	for _, f := range s.prependFuncs {
-		prependBlock = append(prependBlock, []byte(f(stat))...)
+	for i, f := range s.prependFuncs {
+		prependBlock = append(prependBlock, []byte(f(stat, ws.listen[i], ws.result[i]))...)
 	}
 
 	prependCount := utf8.RuneCount(prependBlock)
