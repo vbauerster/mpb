@@ -247,7 +247,8 @@ func (b *Bar) getState() state {
 	if isClosed(b.done) {
 		return b.state
 	}
-	ch := make(chan state, 1)
+	// ch := make(chan state, 1)
+	ch := make(chan state)
 	b.stateReqCh <- ch
 	return <-ch
 }
@@ -358,6 +359,9 @@ func (b *Bar) bytes(termWidth int, ws *widthSync) []byte {
 }
 
 func draw(s *state, termWidth int, ws *widthSync) []byte {
+	if len(s.prependFuncs) != len(ws.listen) {
+		return []byte{}
+	}
 	if termWidth <= 0 {
 		termWidth = s.width
 	}

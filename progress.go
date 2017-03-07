@@ -297,7 +297,7 @@ func (p *Progress) server(cw *cwriter.Writer, t *time.Ticker) {
 					for i := 0; i < numBars; i++ {
 						resultCh <- result
 					}
-					// close(resultCh)
+					close(resultCh)
 				}(listenCh, prepWidthSync.result[i])
 			}
 
@@ -307,7 +307,10 @@ func (p *Progress) server(cw *cwriter.Writer, t *time.Ticker) {
 			wg.Add(numBars)
 			for i := 0; i < numBars; i++ {
 				go func() {
-					defer recoverIfPanic()
+					// defer recoverIfPanic()
+					defer func() {
+						wg.Done()
+					}()
 					drawer(ibars, ibbCh, prepWidthSync)
 				}()
 			}
@@ -315,9 +318,6 @@ func (p *Progress) server(cw *cwriter.Writer, t *time.Ticker) {
 				wg.Wait()
 				close(ibbCh)
 				close(stopWidthListen)
-				for _, ch := range prepWidthSync.result {
-					close(ch)
-				}
 				for _, ch := range prepWidthSync.listen {
 					close(ch)
 				}
