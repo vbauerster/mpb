@@ -19,10 +19,12 @@ func main() {
 	p := mpb.New(nil).SetWidth(64)
 	// p := mpb.New(nil).RefreshRate(80 * time.Millisecond).SetWidth(64)
 
-	name1 := "Bar#1: "
+	name1 := "Bar#1:"
 	bar1 := p.AddBar(50).
-		PrependName(name1, len(name1)).PrependElapsed(3).
-		AppendPercentage().TrimRightSpace()
+		PrependName(name1, 0, mpb.DwidthSync|mpb.DidentRight).
+		PrependElapsed(3, mpb.DwidthSync|mpb.DextraSpace).
+		AppendPercentage(5, 0)
+
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -35,8 +37,10 @@ func main() {
 	}()
 
 	bar2 := p.AddBar(100).
-		PrependName("", 0-len(name1)).PrependElapsed(3).
-		AppendPercentage().TrimRightSpace()
+		PrependName("", 0, mpb.DwidthSync).
+		PrependElapsed(3, mpb.DwidthSync|mpb.DextraSpace).
+		AppendPercentage(5, 0)
+
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -49,8 +53,10 @@ func main() {
 	}()
 
 	bar3 := p.AddBar(80).
-		PrependName("Bar#3: ", 0).PrependElapsed(3).
-		AppendPercentage().TrimRightSpace()
+		PrependName("Bar#3:", 0, mpb.DwidthSync|mpb.DidentRight).
+		PrependElapsed(3, mpb.DwidthSync|mpb.DextraSpace).
+		AppendPercentage(5, 0)
+
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
