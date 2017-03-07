@@ -21,7 +21,7 @@ func main() {
 	p.RefreshRate(120 * time.Millisecond)
 
 	// Add a bar. You're not limited to just one bar, add many if you need.
-	bar := p.AddBar(100).PrependName("Single Bar:", 0).AppendPercentage()
+	bar := p.AddBar(100).PrependName("Single Bar:", 0, 0).AppendPercentage(5, 0)
 
 	for i := 0; i < 100; i++ {
 		bar.Incr(1) // increment progress bar
