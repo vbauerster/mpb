@@ -60,7 +60,7 @@ func (b *Bar) PrependName(name string, minWidth int, conf byte) *Bar {
 	return b
 }
 
-func (b *Bar) PrependCounters(unit Units, minWidth int, conf byte) *Bar {
+func (b *Bar) PrependCounters(pairFormat string, unit Units, minWidth int, conf byte) *Bar {
 	format := "%%"
 	if (conf & DidentRight) != 0 {
 		format += "-"
@@ -69,7 +69,7 @@ func (b *Bar) PrependCounters(unit Units, minWidth int, conf byte) *Bar {
 	b.PrependFunc(func(s *Statistics, myWidth chan<- int, maxWidth <-chan int) string {
 		current := Format(s.Current).To(unit)
 		total := Format(s.Total).To(unit)
-		str := fmt.Sprintf("%s / %s", current, total)
+		str := fmt.Sprintf(pairFormat, current, total)
 		if (conf & DwidthSync) != 0 {
 			myWidth <- utf8.RuneCountInString(str)
 			max := <-maxWidth

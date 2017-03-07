@@ -46,10 +46,11 @@ func main() {
 	var wg sync.WaitGroup
 	p := mpb.New(nil).SetWidth(60).BeforeRenderFunc(sortByProgressFunc())
 
-	name1 := "Bar#1: "
+	name1 := "Bar#1:"
 	bar1 := p.AddBar(100).
-		PrependName(name1, len(name1)).PrependFunc(getDecor()).
-		AppendETA(-6)
+		PrependName(name1, 0, mpb.DwidthSync).
+		PrependCounters("%3s/%3s", 0, 10, mpb.DwidthSync|mpb.DextraSpace).
+		AppendETA(3, 0)
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -62,8 +63,9 @@ func main() {
 	}()
 
 	bar2 := p.AddBar(60).
-		PrependName("", 0-len(name1)).PrependFunc(getDecor()).
-		AppendETA(-6)
+		PrependName("", 0, mpb.DwidthSync).
+		PrependCounters("%3s/%3s", 0, 10, mpb.DwidthSync|mpb.DextraSpace).
+		AppendETA(3, 0)
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -76,8 +78,9 @@ func main() {
 	}()
 
 	bar3 := p.AddBar(80).
-		PrependName("Bar#3: ", 0).PrependFunc(getDecor()).
-		AppendETA(-6)
+		PrependName("Bar#3:", 0, mpb.DwidthSync).
+		PrependCounters("%3s/%3s", 0, 10, mpb.DwidthSync|mpb.DextraSpace).
+		AppendETA(3, 0)
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -93,13 +96,6 @@ func main() {
 	p.Stop()
 	// p.AddBar(1) // panic: you cannot reuse p, create new one!
 	fmt.Println("stop")
-}
-
-func getDecor() mpb.DecoratorFunc {
-	return func(s *mpb.Statistics, myWidth chan<- int, maxWidth <-chan int) string {
-		str := fmt.Sprintf("%d/%d", s.Current, s.Total)
-		return fmt.Sprintf("%-7s", str)
-	}
 }
 
 func sleep(blockSize int) {
