@@ -224,8 +224,6 @@ func (p *Progress) server(cw *cwriter.Writer, t *time.Ticker) {
 		}
 		wg.Done()
 	}
-	var numPrependers int
-	// var numAppenders int
 	for {
 		select {
 		case w := <-p.outChangeReqCh:
