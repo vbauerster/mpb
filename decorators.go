@@ -6,10 +6,10 @@ import (
 	"time"
 )
 
-type decoratorFuncType uint
+type decoratorOperation uint
 
 const (
-	decAppend decoratorFuncType = iota
+	decAppend decoratorOperation = iota
 	decPrepend
 	decAppendZero
 	decPrependZero
@@ -19,7 +19,7 @@ const (
 type DecoratorFunc func(s *Statistics, myWidth chan<- int, maxWidth <-chan int) string
 
 type decorator struct {
-	kind decoratorFuncType
+	kind decoratorOperation
 	f    DecoratorFunc
 }
 
