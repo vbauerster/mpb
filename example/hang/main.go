@@ -19,7 +19,7 @@ func main() {
 		return fmt.Sprintf("%8s", str)
 	}
 
-	p := mpb.New(nil)
+	p := mpb.New()
 	bar := p.AddBar(totalItem).PrependFunc(decor).AppendETA(-6)
 
 	blockSize := rand.Intn(maxBlockSize) + 1

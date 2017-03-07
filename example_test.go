@@ -12,7 +12,7 @@ func Example() {
 	// Star mpb's rendering goroutine.
 	// If you don't plan to cancel, feed with nil
 	// otherwise provide context.Context, see cancel example
-	p := mpb.New(nil)
+	p := mpb.New()
 	// Set custom width for every bar, which mpb will contain
 	// The default one in 70
 	p.SetWidth(80)
@@ -37,7 +37,7 @@ func Example() {
 }
 
 func ExampleBar_InProgress() {
-	p := mpb.New(nil)
+	p := mpb.New()
 	bar := p.AddBar(100).AppendPercentage()
 
 	for bar.InProgress() {
@@ -53,7 +53,7 @@ func ExampleBar_PrependFunc() {
 	}
 
 	totalItem := 100
-	p := mpb.New(nil)
+	p := mpb.New()
 	bar := p.AddBar(int64(totalItem)).PrependFunc(decor)
 
 	for i := 0; i < totalItem; i++ {
@@ -69,7 +69,7 @@ func ExampleBar_AppendFunc() {
 	}
 
 	totalItem := 100
-	p := mpb.New(nil)
+	p := mpb.New()
 	bar := p.AddBar(int64(totalItem)).AppendFunc(decor)
 
 	for i := 0; i < totalItem; i++ {
