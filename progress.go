@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"runtime"
 	"sync"
 	"time"
 	"unicode/utf8"
@@ -206,13 +207,15 @@ func (p *Progress) server(cw *cwriter.Writer, t *time.Ticker) {
 		t.Stop()
 		close(p.done)
 	}()
-	const numDrawers = 3
-	bars := make([]*Bar, 0, 4)
+	bars := make([]*Bar, 0, 3)
 	var beforeRender BeforeRender
 	var wg sync.WaitGroup
 	recoverIfPanic := func() {
-		if e := recover(); e != nil {
-			logger.Printf("unexpected panic: %+v\n", e)
+		if p := recover(); p != nil {
+			logger.Printf("unexpected panic: %+v\n", p)
+			var buf [4096]byte
+			n := runtime.Stack(buf[:], false)
+			os.Stderr.Write(buf[:n])
 		}
 		wg.Done()
 	}
@@ -245,27 +248,33 @@ func (p *Progress) server(cw *cwriter.Writer, t *time.Ticker) {
 			respCh <- len(bars)
 		case beforeRender = <-p.brCh:
 		case <-t.C:
+			numBars := len(bars)
+
+			if numBars == 0 {
+				break
+			}
+
 			if beforeRender != nil {
 				beforeRender(bars)
 			}
 
 			width, _, _ := cwriter.GetTermSize()
 			ibars := iBarsGen(bars, width)
-			c := make(chan indexedBarBuffer)
-			wg.Add(numDrawers)
-			for i := 0; i < numDrawers; i++ {
+			ibbCh := make(chan indexedBarBuffer)
+			wg.Add(numBars)
+			for i := 0; i < numBars; i++ {
 				go func() {
 					defer recoverIfPanic()
-					drawer(ibars, c)
+					drawer(ibars, ibbCh)
 				}()
 			}
 			go func() {
 				wg.Wait()
-				close(c)
+				close(ibbCh)
 			}()
 
 			m := make(map[int][]byte, len(bars))
-			for r := range c {
+			for r := range ibbCh {
 				m[r.index] = r.buf
 			}
 			for i := 0; i < len(bars); i++ {
@@ -286,11 +295,11 @@ func (p *Progress) server(cw *cwriter.Writer, t *time.Ticker) {
 	}
 }
 
-func drawer(ibars <-chan indexedBar, c chan<- indexedBarBuffer) {
+func drawer(ibars <-chan indexedBar, ibbCh chan<- indexedBarBuffer) {
 	for b := range ibars {
 		buf := b.bar.bytes(b.termWidth)
 		buf = append(buf, '\n')
-		c <- indexedBarBuffer{b.index, buf}
+		ibbCh <- indexedBarBuffer{b.index, buf}
 	}
 }
 
