@@ -2,8 +2,23 @@ package mpb
 
 import (
 	"fmt"
-	"strconv"
 	"time"
+	"unicode/utf8"
+)
+
+const (
+	// DidentRight specifies identation direction.
+	// |   foo|     b| Without DidentRight
+	// |foo   |b     | With DidentRight
+	DidentRight = 1 << iota
+
+	// DwidthSync will auto sync max width
+	DwidthSync
+
+	// DextraSpace adds extra space, makes sence with DwidthSync only.
+	// When DidentRight bit set, the space will be added to the right,
+	// otherwise to the left.
+	DextraSpace
 )
 
 type decoratorOperation uint
@@ -23,69 +38,171 @@ type decorator struct {
 	f    DecoratorFunc
 }
 
-func (b *Bar) PrependName(name string, padding int) *Bar {
-	layout := "%" + strconv.Itoa(padding) + "s"
+func (b *Bar) PrependName(name string, minWidth int, conf byte) *Bar {
+	format := "%%"
+	if (conf & DidentRight) != 0 {
+		format += "-"
+	}
+	format += "%ds"
 	b.PrependFunc(func(s *Statistics, myWidth chan<- int, maxWidth <-chan int) string {
-		return fmt.Sprintf(layout, name)
+		if (conf & DwidthSync) != 0 {
+			myWidth <- utf8.RuneCountInString(name)
+			max := <-maxWidth
+			if (conf & DextraSpace) != 0 {
+				max++
+			}
+			return fmt.Sprintf(fmt.Sprintf(format, max), name)
+		}
+		return fmt.Sprintf(fmt.Sprintf(format, minWidth), name)
 	})
 	return b
 }
 
-func (b *Bar) PrependCounters(unit Units, padding int) *Bar {
-	layout := "%" + strconv.Itoa(padding) + "s"
+func (b *Bar) PrependCounters(unit Units, minWidth int, conf byte) *Bar {
+	format := "%%"
+	if (conf & DidentRight) != 0 {
+		format += "-"
+	}
+	format += "%ds"
 	b.PrependFunc(func(s *Statistics, myWidth chan<- int, maxWidth <-chan int) string {
 		current := Format(s.Current).To(unit)
 		total := Format(s.Total).To(unit)
 		str := fmt.Sprintf("%s / %s", current, total)
-		return fmt.Sprintf(layout, str)
+		if (conf & DwidthSync) != 0 {
+			myWidth <- utf8.RuneCountInString(str)
+			max := <-maxWidth
+			if (conf & DextraSpace) != 0 {
+				max++
+			}
+			return fmt.Sprintf(fmt.Sprintf(format, max), str)
+		}
+		return fmt.Sprintf(fmt.Sprintf(format, minWidth), str)
 	})
 	return b
 }
 
-func (b *Bar) PrependETA(padding int) *Bar {
-	layout := "ETA%" + strconv.Itoa(padding) + "s"
+func (b *Bar) PrependETA(minWidth int, conf byte) *Bar {
+	format := "%%"
+	if (conf & DidentRight) != 0 {
+		format += "-"
+	}
+	format += "%ds"
 	b.PrependFunc(func(s *Statistics, myWidth chan<- int, maxWidth <-chan int) string {
-		return fmt.Sprintf(layout, time.Duration(s.Eta().Seconds())*time.Second)
+		str := fmt.Sprint(time.Duration(s.Eta().Seconds()) * time.Second)
+		if (conf & DwidthSync) != 0 {
+			myWidth <- utf8.RuneCountInString(str)
+			max := <-maxWidth
+			if (conf & DextraSpace) != 0 {
+				max++
+			}
+			return fmt.Sprintf(fmt.Sprintf(format, max), str)
+		}
+		return fmt.Sprintf(fmt.Sprintf(format, minWidth), str)
 	})
 	return b
 }
 
-func (b *Bar) AppendETA(padding int) *Bar {
-	layout := "ETA %" + strconv.Itoa(padding) + "s"
+func (b *Bar) AppendETA(minWidth int, conf byte) *Bar {
+	format := "%%"
+	if (conf & DidentRight) != 0 {
+		format += "-"
+	}
+	format += "%ds"
 	b.AppendFunc(func(s *Statistics, myWidth chan<- int, maxWidth <-chan int) string {
-		return fmt.Sprintf(layout, time.Duration(s.Eta().Seconds())*time.Second)
+		str := fmt.Sprint(time.Duration(s.Eta().Seconds()) * time.Second)
+		if (conf & DwidthSync) != 0 {
+			myWidth <- utf8.RuneCountInString(str)
+			max := <-maxWidth
+			if (conf & DextraSpace) != 0 {
+				max++
+			}
+			return fmt.Sprintf(fmt.Sprintf(format, max), str)
+		}
+		return fmt.Sprintf(fmt.Sprintf(format, minWidth), str)
 	})
 	return b
 }
 
-func (b *Bar) PrependElapsed(padding int) *Bar {
-	layout := "%" + strconv.Itoa(padding) + "s"
+func (b *Bar) PrependElapsed(minWidth int, conf byte) *Bar {
+	format := "%%"
+	if (conf & DidentRight) != 0 {
+		format += "-"
+	}
+	format += "%ds"
 	b.PrependFunc(func(s *Statistics, myWidth chan<- int, maxWidth <-chan int) string {
-		return fmt.Sprintf(layout, time.Duration(s.TimeElapsed.Seconds())*time.Second)
+		str := fmt.Sprint(time.Duration(s.TimeElapsed.Seconds()) * time.Second)
+		if (conf & DwidthSync) != 0 {
+			myWidth <- utf8.RuneCountInString(str)
+			max := <-maxWidth
+			if (conf & DextraSpace) != 0 {
+				max++
+			}
+			return fmt.Sprintf(fmt.Sprintf(format, max), str)
+		}
+		return fmt.Sprintf(fmt.Sprintf(format, minWidth), str)
 	})
 	return b
 }
 
-func (b *Bar) AppendElapsed() *Bar {
+func (b *Bar) AppendElapsed(minWidth int, conf byte) *Bar {
+	format := "%%"
+	if (conf & DidentRight) != 0 {
+		format += "-"
+	}
+	format += "%ds"
 	b.AppendFunc(func(s *Statistics, myWidth chan<- int, maxWidth <-chan int) string {
-		return fmt.Sprint(time.Duration(s.TimeElapsed.Seconds()) * time.Second)
+		str := fmt.Sprint(time.Duration(s.TimeElapsed.Seconds()) * time.Second)
+		if (conf & DwidthSync) != 0 {
+			myWidth <- utf8.RuneCountInString(str)
+			max := <-maxWidth
+			if (conf & DextraSpace) != 0 {
+				max++
+			}
+			return fmt.Sprintf(fmt.Sprintf(format, max), str)
+		}
+		return fmt.Sprintf(fmt.Sprintf(format, minWidth), str)
 	})
 	return b
 }
 
-func (b *Bar) AppendPercentage() *Bar {
+func (b *Bar) AppendPercentage(minWidth int, conf byte) *Bar {
+	format := "%%"
+	if (conf & DidentRight) != 0 {
+		format += "-"
+	}
+	format += "%ds"
 	b.AppendFunc(func(s *Statistics, myWidth chan<- int, maxWidth <-chan int) string {
-		completed := percentage(s.Total, s.Current, 100)
-		return fmt.Sprintf("%3d %%", completed)
+		str := fmt.Sprintf("%d %%", percentage(s.Total, s.Current, 100))
+		if (conf & DwidthSync) != 0 {
+			myWidth <- utf8.RuneCountInString(str)
+			max := <-maxWidth
+			if (conf & DextraSpace) != 0 {
+				max++
+			}
+			return fmt.Sprintf(fmt.Sprintf(format, max), str)
+		}
+		return fmt.Sprintf(fmt.Sprintf(format, minWidth), str)
 	})
 	return b
 }
 
-func (b *Bar) PrependPercentage(padding int) *Bar {
-	layout := "%" + strconv.Itoa(padding) + "d %%"
+func (b *Bar) PrependPercentage(minWidth int, conf byte) *Bar {
+	format := "%%"
+	if (conf & DidentRight) != 0 {
+		format += "-"
+	}
+	format += "%ds"
 	b.PrependFunc(func(s *Statistics, myWidth chan<- int, maxWidth <-chan int) string {
-		completed := percentage(s.Total, s.Current, 100)
-		return fmt.Sprintf(layout, completed)
+		str := fmt.Sprintf("%d %%", percentage(s.Total, s.Current, 100))
+		if (conf & DwidthSync) != 0 {
+			myWidth <- utf8.RuneCountInString(str)
+			max := <-maxWidth
+			if (conf & DextraSpace) != 0 {
+				max++
+			}
+			return fmt.Sprintf(fmt.Sprintf(format, max), str)
+		}
+		return fmt.Sprintf(fmt.Sprintf(format, minWidth), str)
 	})
 	return b
 }
