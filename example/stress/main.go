@@ -11,21 +11,22 @@ import (
 
 const (
 	totalBars    = 32
-	maxBlockSize = 12
+	maxBlockSize = 8
 )
 
 func main() {
 
-	p := mpb.New(nil)
 	var wg sync.WaitGroup
+	p := mpb.New(nil)
 	wg.Add(totalBars)
 
 	for i := 0; i < totalBars; i++ {
 		name := fmt.Sprintf("Bar#%02d: ", i)
 		total := rand.Intn(120) + 10
 		bar := p.AddBar(int64(total)).
-			PrependName(name, len(name)).PrependETA(4).
-			AppendPercentage().TrimRightSpace()
+			PrependName(name, len(name), 0).
+			PrependETA(4, mpb.DwidthSync|mpb.DextraSpace).
+			AppendPercentage(5, 0)
 
 		go func() {
 			defer wg.Done()
