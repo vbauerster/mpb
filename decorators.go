@@ -38,6 +38,8 @@ type decorator struct {
 	f    DecoratorFunc
 }
 
+// PrependName prepends name argument to the bar.
+// The conf argument defines the formatting properties
 func (b *Bar) PrependName(name string, minWidth int, conf byte) *Bar {
 	format := "%%"
 	if (conf & DidentRight) != 0 {
