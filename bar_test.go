@@ -71,6 +71,9 @@ func TestFillBar(t *testing.T) {
 		},
 	}
 
+	stopWidthListen := make(chan struct{})
+	prependWs := newWidthSync(stopWidthListen, 1, 0)
+	appendWs := newWidthSync(stopWidthListen, 1, 0)
 	for _, test := range tests {
 		s := newTestState()
 		s.width = test.barWidth
@@ -79,7 +82,7 @@ func TestFillBar(t *testing.T) {
 		if test.barRefill != nil {
 			s.refill = test.barRefill
 		}
-		got := draw(s, test.termWidth)
+		got := draw(s, test.termWidth, prependWs, appendWs)
 		if !reflect.DeepEqual(test.want, got) {
 			t.Errorf("Want: %q, Got: %q\n", test.want, got)
 		}

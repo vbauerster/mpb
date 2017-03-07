@@ -47,7 +47,7 @@ func ExampleBar_InProgress() {
 }
 
 func ExampleBar_PrependFunc() {
-	decor := func(s *mpb.Statistics) string {
+	decor := func(s *mpb.Statistics, myWidth chan<- int, maxWidth <-chan int) string {
 		str := fmt.Sprintf("%d/%d", s.Current, s.Total)
 		return fmt.Sprintf("%8s", str)
 	}
@@ -63,7 +63,7 @@ func ExampleBar_PrependFunc() {
 }
 
 func ExampleBar_AppendFunc() {
-	decor := func(s *mpb.Statistics) string {
+	decor := func(s *mpb.Statistics, myWidth chan<- int, maxWidth <-chan int) string {
 		str := fmt.Sprintf("%d/%d", s.Current, s.Total)
 		return fmt.Sprintf("%8s", str)
 	}

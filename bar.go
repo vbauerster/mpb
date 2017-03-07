@@ -174,10 +174,18 @@ func (b *Bar) GetAppenders() []DecoratorFunc {
 	return s.appendFuncs
 }
 
+func (b *Bar) NumOfAppenders() int {
+	return len(b.GetAppenders())
+}
+
 // GetPrependers returns slice of prepender DecoratorFunc
 func (b *Bar) GetPrependers() []DecoratorFunc {
 	s := b.getState()
 	return s.prependFuncs
+}
+
+func (b *Bar) NumOfPrependers() int {
+	return len(b.GetPrependers())
 }
 
 // GetStatistics returs *Statistics, which contains information like Tottal,
@@ -247,8 +255,7 @@ func (b *Bar) getState() state {
 	if isClosed(b.done) {
 		return b.state
 	}
-	// ch := make(chan state, 1)
-	ch := make(chan state)
+	ch := make(chan state, 1)
 	b.stateReqCh <- ch
 	return <-ch
 }
@@ -353,13 +360,13 @@ func (s *state) updateFormat(format string) {
 	}
 }
 
-func (b *Bar) bytes(termWidth int, ws *widthSync) []byte {
+func (b *Bar) bytes(termWidth int, prependWs, appendWs *widthSync) []byte {
 	s := b.getState()
-	return draw(&s, termWidth, ws)
+	return draw(&s, termWidth, prependWs, appendWs)
 }
 
-func draw(s *state, termWidth int, ws *widthSync) []byte {
-	if len(s.prependFuncs) != len(ws.listen) {
+func draw(s *state, termWidth int, prependWs, appendWs *widthSync) []byte {
+	if len(s.prependFuncs) != len(prependWs.listen) || len(s.appendFuncs) != len(appendWs.listen) {
 		return []byte{}
 	}
 	if termWidth <= 0 {
@@ -368,16 +375,18 @@ func draw(s *state, termWidth int, ws *widthSync) []byte {
 
 	stat := newStatistics(s)
 
-	// render append functions to the right of the bar
-	var appendBlock []byte
-	for _, f := range s.appendFuncs {
-		appendBlock = append(appendBlock, []byte(f(stat, nil, nil))...)
-	}
-
 	// render prepend functions to the left of the bar
 	var prependBlock []byte
 	for i, f := range s.prependFuncs {
-		prependBlock = append(prependBlock, []byte(f(stat, ws.listen[i], ws.result[i]))...)
+		prependBlock = append(prependBlock,
+			[]byte(f(stat, prependWs.listen[i], prependWs.result[i]))...)
+	}
+
+	// render append functions to the right of the bar
+	var appendBlock []byte
+	for i, f := range s.appendFuncs {
+		appendBlock = append(appendBlock,
+			[]byte(f(stat, appendWs.listen[i], appendWs.result[i]))...)
 	}
 
 	prependCount := utf8.RuneCount(prependBlock)

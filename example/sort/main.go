@@ -96,7 +96,7 @@ func main() {
 }
 
 func getDecor() mpb.DecoratorFunc {
-	return func(s *mpb.Statistics) string {
+	return func(s *mpb.Statistics, myWidth chan<- int, maxWidth <-chan int) string {
 		str := fmt.Sprintf("%d/%d", s.Current, s.Total)
 		return fmt.Sprintf("%-7s", str)
 	}

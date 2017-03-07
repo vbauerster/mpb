@@ -251,10 +251,6 @@ func (p *Progress) server(cw *cwriter.Writer, t *time.Ticker) {
 				}
 				op.result <- ok
 			}
-			if len(bars) > 0 {
-				numPrependers = len(bars[0].GetPrependers())
-				// numAppenders = len(bars[0].GetAppenders())
-			}
 		case respCh := <-p.barCountReqCh:
 			respCh <- len(bars)
 		case beforeRender = <-p.brCh:
@@ -269,37 +265,9 @@ func (p *Progress) server(cw *cwriter.Writer, t *time.Ticker) {
 				beforeRender(bars)
 			}
 
-			prepWidthSync := &widthSync{
-				listen: make([]chan int, numPrependers),
-				result: make([]chan int, numPrependers),
-			}
-			for i := 0; i < numPrependers; i++ {
-				prepWidthSync.listen[i] = make(chan int, numBars)
-				prepWidthSync.result[i] = make(chan int, numBars)
-			}
 			stopWidthListen := make(chan struct{})
-			for i, listenCh := range prepWidthSync.listen {
-				go func(listenCh <-chan int, resultCh chan<- int) {
-					widths := make([]int, 0, numBars)
-				loop:
-					for {
-						select {
-						case w := <-listenCh:
-							widths = append(widths, w)
-							if len(widths) == numBars {
-								break loop
-							}
-						case <-stopWidthListen:
-							return
-						}
-					}
-					result := max(widths)
-					for i := 0; i < numBars; i++ {
-						resultCh <- result
-					}
-					close(resultCh)
-				}(listenCh, prepWidthSync.result[i])
-			}
+			prependWs := newWidthSync(stopWidthListen, numBars, bars[0].NumOfPrependers())
+			appendWs := newWidthSync(stopWidthListen, numBars, bars[0].NumOfAppenders())
 
 			width, _, _ := cwriter.GetTermSize()
 			ibars := iBarsGen(bars, width)
@@ -307,18 +275,18 @@ func (p *Progress) server(cw *cwriter.Writer, t *time.Ticker) {
 			wg.Add(numBars)
 			for i := 0; i < numBars; i++ {
 				go func() {
-					// defer recoverIfPanic()
-					defer func() {
-						wg.Done()
-					}()
-					drawer(ibars, ibbCh, prepWidthSync)
+					defer recoverIfPanic()
+					drawer(ibars, ibbCh, prependWs, appendWs)
 				}()
 			}
 			go func() {
 				wg.Wait()
 				close(ibbCh)
 				close(stopWidthListen)
-				for _, ch := range prepWidthSync.listen {
+				for _, ch := range prependWs.listen {
+					close(ch)
+				}
+				for _, ch := range appendWs.listen {
 					close(ch)
 				}
 			}()
@@ -345,9 +313,43 @@ func (p *Progress) server(cw *cwriter.Writer, t *time.Ticker) {
 	}
 }
 
-func drawer(ibars <-chan indexedBar, ibbCh chan<- indexedBarBuffer) {
+func newWidthSync(stopListen chan struct{}, numBars, numColumn int) *widthSync {
+	ws := &widthSync{
+		listen: make([]chan int, numColumn),
+		result: make([]chan int, numColumn),
+	}
+	for i := 0; i < numColumn; i++ {
+		ws.listen[i] = make(chan int, numBars)
+		ws.result[i] = make(chan int, numBars)
+	}
+	for i, listenCh := range ws.listen {
+		go func(listenCh <-chan int, resultCh chan<- int) {
+			widths := make([]int, 0, numBars)
+		loop:
+			for {
+				select {
+				case w := <-listenCh:
+					widths = append(widths, w)
+					if len(widths) == numBars {
+						break loop
+					}
+				case <-stopListen:
+					return
+				}
+			}
+			result := max(widths)
+			for i := 0; i < numBars; i++ {
+				resultCh <- result
+			}
+			close(resultCh)
+		}(listenCh, ws.result[i])
+	}
+	return ws
+}
+
+func drawer(ibars <-chan indexedBar, c chan<- indexedBarBuffer, prependWs, appendWs *widthSync) {
 	for b := range ibars {
-		buf := b.bar.bytes(b.termWidth, ws)
+		buf := b.bar.bytes(b.termWidth, prependWs, appendWs)
 		buf = append(buf, '\n')
 		ibbCh <- indexedBarBuffer{b.index, buf}
 	}
