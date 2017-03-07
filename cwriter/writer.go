@@ -26,19 +26,12 @@ func New(w io.Writer) *Writer {
 
 // Flush flushes the underlying buffer
 func (w *Writer) Flush() error {
-	// do nothing if buffer is empty
-	if len(w.buf.Bytes()) == 0 {
+	// Do nothing if buffer is empty
+	if w.buf.Len() == 0 {
 		return nil
 	}
 	w.clearLines()
-
-	lines := 0
-	for _, b := range w.buf.Bytes() {
-		if b == '\n' {
-			lines++
-		}
-	}
-	w.lineCount = lines
+	w.lineCount = bytes.Count(w.buf.Bytes(), []byte("\n"))
 	_, err := w.out.Write(w.buf.Bytes())
 	w.buf.Reset()
 	return err
