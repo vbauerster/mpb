@@ -322,8 +322,9 @@ func newWidthSync(stopListen chan struct{}, numBars, numColumn int) *widthSync {
 		ws.listen[i] = make(chan int, numBars)
 		ws.result[i] = make(chan int, numBars)
 	}
-	for i, listenCh := range ws.listen {
+	for i := 0; i < numColumn; i++ {
 		go func(listenCh <-chan int, resultCh chan<- int) {
+			defer close(resultCh)
 			widths := make([]int, 0, numBars)
 		loop:
 			for {
@@ -341,13 +342,12 @@ func newWidthSync(stopListen chan struct{}, numBars, numColumn int) *widthSync {
 			for i := 0; i < numBars; i++ {
 				resultCh <- result
 			}
-			close(resultCh)
-		}(listenCh, ws.result[i])
+		}(ws.listen[i], ws.result[i])
 	}
 	return ws
 }
 
-func drawer(ibars <-chan indexedBar, c chan<- indexedBarBuffer, prependWs, appendWs *widthSync) {
+func drawer(ibars <-chan indexedBar, ibbCh chan<- indexedBarBuffer, prependWs, appendWs *widthSync) {
 	for b := range ibars {
 		buf := b.bar.bytes(b.termWidth, prependWs, appendWs)
 		buf = append(buf, '\n')
