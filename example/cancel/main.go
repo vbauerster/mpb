@@ -21,10 +21,11 @@ func main() {
 	defer cancel()
 	p := mpb.New(ctx).SetWidth(64)
 
-	name1 := "Bar#1: "
+	name1 := "Bar#1:"
 	bar1 := p.AddBar(50).
-		PrependName(name1, len(name1)).PrependETA(4).
-		AppendPercentage().TrimRightSpace()
+		PrependName(name1, 0, mpb.DwidthSync|mpb.DidentRight).
+		PrependETA(4, mpb.DwidthSync|mpb.DextraSpace).
+		AppendPercentage(5, 0)
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -42,8 +43,9 @@ func main() {
 	}()
 
 	bar2 := p.AddBar(100).
-		PrependName("", 0-len(name1)).PrependETA(4).
-		AppendPercentage().TrimRightSpace()
+		PrependName("", 0, mpb.DwidthSync).
+		PrependETA(4, mpb.DwidthSync|mpb.DextraSpace).
+		AppendPercentage(5, 0)
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -61,8 +63,9 @@ func main() {
 	}()
 
 	bar3 := p.AddBar(80).
-		PrependName("Bar#3: ", 0).PrependETA(4).
-		AppendPercentage().TrimRightSpace()
+		PrependName("Bar#3:", 0, mpb.DwidthSync|mpb.DidentRight).
+		PrependETA(4, mpb.DwidthSync|mpb.DextraSpace).
+		AppendPercentage(5, 0)
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
