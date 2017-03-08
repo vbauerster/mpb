@@ -1,7 +1,6 @@
 package mpb
 
 import (
-	"context"
 	"errors"
 	"io"
 	"log"
@@ -65,7 +64,7 @@ const (
 // Progress represents the container that renders Progress bars
 type Progress struct {
 	// Context for canceling bars rendering
-	ctx context.Context
+	// ctx context.Context
 	// WaitGroup for internal rendering sync
 	wg *sync.WaitGroup
 
@@ -79,15 +78,13 @@ type Progress struct {
 	barCountReqCh  chan chan int
 	brCh           chan BeforeRender
 	done           chan struct{}
+	cancel         <-chan struct{}
 }
 
 // New creates new Progress instance, which will orchestrate bars rendering
 // process. It acceepts context.Context, for cancellation.
 // If you don't plan to cancel, it is safe to feed with nil
-func New(ctx context.Context) *Progress {
-	if ctx == nil {
-		ctx = context.Background()
-	}
+func New() *Progress {
 	p := &Progress{
 		width:          pwidth,
 		operationCh:    make(chan *operation),
@@ -97,19 +94,31 @@ func New(ctx context.Context) *Progress {
 		brCh:           make(chan BeforeRender),
 		done:           make(chan struct{}),
 		wg:             new(sync.WaitGroup),
-		ctx:            ctx,
 	}
 	go p.server(cwriter.New(os.Stdout), time.NewTicker(rr*time.Millisecond))
 	return p
 }
 
+// WithCancel cancellation via channel
+func (p *Progress) WithCancel(ch <-chan struct{}) *Progress {
+	if ch == nil {
+		panic("nil cancel channel")
+	}
+	p2 := new(Progress)
+	*p2 = *p
+	p2.cancel = ch
+	return p2
+}
+
 // SetWidth overrides default (70) width of bar(s)
 func (p *Progress) SetWidth(n int) *Progress {
-	if n <= 0 {
-		return p
+	if n < 0 {
+		panic("negative width")
 	}
-	p.width = n
-	return p
+	p2 := new(Progress)
+	*p2 = *p
+	p2.width = n
+	return p2
 }
 
 // SetOut sets underlying writer of progress. Default is os.Stdout
@@ -157,7 +166,7 @@ func (p *Progress) AddBarWithID(id int, total int64) *Bar {
 		panic(ErrCallAfterStop)
 	}
 	result := make(chan bool)
-	bar := newBar(p.ctx, p.wg, id, total, p.width, p.format)
+	bar := newBar(id, total, p.width, p.format, p.wg, p.cancel)
 	p.operationCh <- &operation{barAdd, bar, result}
 	if <-result {
 		p.wg.Add(1)
@@ -197,7 +206,10 @@ func (p *Progress) Format(format string) *Progress {
 	return p
 }
 
-// Stop waits for bars to finish rendering and stops the rendering goroutine
+// Stop shutdowns Progress' goroutine
+// Should be called only after each bor's work done, i.e. bar has reached its
+// 100 %. It is NOT for concelation. Use WithContext or WithCancel for
+// cancelation purposes.
 func (p *Progress) Stop() {
 	p.wg.Wait()
 	if isClosed(p.done) {
@@ -305,7 +317,7 @@ func (p *Progress) server(cw *cwriter.Writer, t *time.Ticker) {
 		case d := <-p.rrChangeReqCh:
 			t.Stop()
 			t = time.NewTicker(d)
-		case <-p.ctx.Done():
+		case <-p.cancel:
 			return
 		}
 	}

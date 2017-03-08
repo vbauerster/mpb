@@ -1,7 +1,6 @@
 package mpb
 
 import (
-	"context"
 	"io"
 	"sync"
 	"time"
@@ -79,7 +78,7 @@ type (
 	}
 )
 
-func newBar(ctx context.Context, wg *sync.WaitGroup, id int, total int64, width int, format string) *Bar {
+func newBar(id int, total int64, width int, format string, wg *sync.WaitGroup, cancel <-chan struct{}) *Bar {
 	b := &Bar{
 		stateReqCh:    make(chan chan state, 1),
 		widthCh:       make(chan int),
@@ -95,7 +94,7 @@ func newBar(ctx context.Context, wg *sync.WaitGroup, id int, total int64, width 
 		completeReqCh: make(chan struct{}),
 		done:          make(chan struct{}),
 	}
-	go b.server(ctx, wg, id, total, width, format)
+	go b.server(id, total, width, format, wg, cancel)
 	return b
 }
 
@@ -260,7 +259,7 @@ func (b *Bar) getState() state {
 	return <-ch
 }
 
-func (b *Bar) server(ctx context.Context, wg *sync.WaitGroup, id int, total int64, width int, format string) {
+func (b *Bar) server(id int, total int64, width int, format string, wg *sync.WaitGroup, cancel <-chan struct{}) {
 	var completed bool
 	timeStarted := time.Now()
 	blockStartTime := timeStarted
@@ -324,7 +323,7 @@ func (b *Bar) server(ctx context.Context, wg *sync.WaitGroup, id int, total int6
 			return
 		case <-b.removeReqCh:
 			return
-		case <-ctx.Done():
+		case <-cancel:
 			return
 		}
 	}
