@@ -41,6 +41,11 @@ type (
 		termWidth int
 		bar       *Bar
 	}
+
+	widthSync struct {
+		listen []chan int
+		result []chan int
+	}
 )
 
 const (
@@ -199,11 +204,6 @@ func (p *Progress) Stop() {
 		return
 	}
 	close(p.operationCh)
-}
-
-type widthSync struct {
-	listen []chan int
-	result []chan int
 }
 
 // server monitors underlying channels and renders any progress bars
