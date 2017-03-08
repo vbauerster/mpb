@@ -76,7 +76,10 @@ own goroutine, therefore adding multiple bars is easy and safe:
 		name := fmt.Sprintf("Bar#%d:", i)
 		bar := p.AddBar(100).
 			PrependName(name, len(name), 0).
-			AppendPercentage(5, 0)
+			// Prepend Percentage decorator and sync width
+			PrependPercentage(3, mpb.DwidthSync|mpb.DextraSpace).
+			// Append ETA and don't sync width
+			AppendETA(2, 0)
 		go func() {
 			defer wg.Done()
 			// you can p.AddBar() here, but ordering will be non deterministic
