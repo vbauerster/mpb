@@ -275,9 +275,8 @@ func (p *Progress) server(cw *cwriter.Writer, t *time.Ticker) {
 				beforeRender(bars)
 			}
 
-			stopWidthListen := make(chan struct{})
-			prependWs := newWidthSync(stopWidthListen, numBars, bars[0].NumOfPrependers())
-			appendWs := newWidthSync(stopWidthListen, numBars, bars[0].NumOfAppenders())
+			prependWs := newWidthSync(numBars, bars[0].NumOfPrependers())
+			appendWs := newWidthSync(numBars, bars[0].NumOfAppenders())
 
 			width, _, _ := cwriter.GetTermSize()
 			ibars := iBarsGen(bars, width)
@@ -292,7 +291,6 @@ func (p *Progress) server(cw *cwriter.Writer, t *time.Ticker) {
 			go func() {
 				wg.Wait()
 				close(ibbCh)
-				close(stopWidthListen)
 				for _, ch := range prependWs.listen {
 					close(ch)
 				}
@@ -323,7 +321,7 @@ func (p *Progress) server(cw *cwriter.Writer, t *time.Ticker) {
 	}
 }
 
-func newWidthSync(stopListen chan struct{}, numBars, numColumn int) *widthSync {
+func newWidthSync(numBars, numColumn int) *widthSync {
 	ws := &widthSync{
 		listen: make([]chan int, numColumn),
 		result: make([]chan int, numColumn),
@@ -344,7 +342,7 @@ func newWidthSync(stopListen chan struct{}, numBars, numColumn int) *widthSync {
 					if len(widths) == numBars {
 						break loop
 					}
-				case <-stopListen:
+				case <-time.After(rr * time.Millisecond):
 					return
 				}
 			}
