@@ -16,7 +16,20 @@ but unlike the last one, implementation is mutex free, following Go's idiom:
 * __Dynamic Sorting__:  Sort bars as you wish
 * __Dynamic Resize__:  Resize bars on terminal width change
 * __Custom Decorator Functions__: Add custom functions around the bar along with helper functions
+* __Dynamic Decorator's Width Sync__:  Sync width among decorator group (column)
 * __Predefined Decoratros__: Elapsed time, [Ewmaest](https://github.com/dgryski/trifles/tree/master/ewmaest) based ETA, Percentage, Bytes counter
+
+## Installation
+
+To get the package, execute:
+
+```sh
+go get gopkg.in/vbauerster/mpb.v1
+```
+
+```sh
+go get gopkg.in/vbauerster/mpb.v2
+```
 
 ## Usage
 
@@ -24,10 +37,8 @@ Following is the simplest use case:
 
 ```go
 	// Star mpb's rendering goroutine.
-	// If you don't plan to cancel, feed with nil
-	// otherwise provide context.Context, see cancel example
-	p := mpb.New(nil)
-	// Set custom width for every bar, which mpb will contain
+	p := mpb.New()
+	// Set custom width for every bar, which mpb will render
 	// The default one in 70
 	p.SetWidth(80)
 	// Set custom format for every bar, the default one is "[=>-]"
@@ -36,7 +47,7 @@ Following is the simplest use case:
 	p.RefreshRate(120 * time.Millisecond)
 
 	// Add a bar. You're not limited to just one bar, add many if you need.
-	bar := p.AddBar(100).PrependName("Single Bar:", 0).AppendPercentage()
+	bar := p.AddBar(100).PrependName("Single Bar:", 0, 0).AppendPercentage(5, 0)
 
 	for i := 0; i < 100; i++ {
 		bar.Incr(1) // increment progress bar
@@ -59,11 +70,13 @@ own goroutine, therefore adding multiple bars is easy and safe:
 
 ```go
 	var wg sync.WaitGroup
-	p := mpb.New(nil)
+	p := mpb.New()
+	wg.Add(3) // add wg delta
 	for i := 0; i < 3; i++ {
-		wg.Add(1) // add wg delta
 		name := fmt.Sprintf("Bar#%d:", i)
-		bar := p.AddBar(100).PrependName(name, len(name)).AppendPercentage()
+		bar := p.AddBar(100).
+			PrependName(name, len(name), 0).
+			AppendPercentage(5, 0)
 		go func() {
 			defer wg.Done()
 			// you can p.AddBar() here, but ordering will be non deterministic
@@ -77,8 +90,6 @@ own goroutine, therefore adding multiple bars is easy and safe:
 	}
 	wg.Wait() // Wait for goroutines to finish
 	p.Stop()  // Stop mpb's rendering goroutine
-	// p.AddBar(1) // panic: you cannot reuse p, create new one!
-	fmt.Println("finish")
 ```
 
 ![simple.gif](example/gifs/simple.gif)
@@ -118,12 +129,6 @@ The source code: [example/io/multiple/main.go](example/io/multiple/main.go)
 ### Custom Decorators
 
 [Here](https://github.com/vbauerster/getparty/blob/master/cmd/getparty/decorator.go) is example from [getparty](https://github.com/vbauerster/getparty) src code.
-
-## Installation
-
-```sh
-$ go get -u github.com/vbauerster/mpb
-```
 
 ## License
 
