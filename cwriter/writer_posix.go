@@ -8,10 +8,15 @@ import (
 	"unsafe"
 )
 
+var (
+	cursorUp           = fmt.Sprintf("%c[%dA", ESC, 1)
+	clearLine          = fmt.Sprintf("%c[2K\r", ESC)
+	clearCursorAndLine = cursorUp + clearLine
+)
+
 func (w *Writer) clearLines() {
 	for i := 0; i < w.lineCount; i++ {
-		fmt.Fprintf(w.out, "%c[%dA", ESC, 1) // move the cursor up
-		fmt.Fprintf(w.out, "%c[2K\r", ESC)   // clear the line
+		fmt.Fprint(w.out, clearCursorAndLine)
 	}
 }
 
