@@ -340,6 +340,7 @@ func newWidthSync(userRR time.Duration, numBars, numColumn int) *widthSync {
 		go func(listenCh <-chan int, resultCh chan<- int) {
 			defer close(resultCh)
 			widths := make([]int, 0, numBars)
+			abandon := time.After(userRR)
 		loop:
 			for {
 				select {
@@ -348,7 +349,7 @@ func newWidthSync(userRR time.Duration, numBars, numColumn int) *widthSync {
 					if len(widths) == numBars {
 						break loop
 					}
-				case <-time.After(userRR):
+				case <-abandon:
 					return
 				}
 			}
