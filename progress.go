@@ -95,7 +95,7 @@ func New() *Progress {
 		done:           make(chan struct{}),
 		wg:             new(sync.WaitGroup),
 	}
-	go p.server(cwriter.New(os.Stdout))
+	go p.server()
 	return p
 }
 
@@ -219,7 +219,7 @@ func (p *Progress) Stop() {
 }
 
 // server monitors underlying channels and renders any progress bars
-func (p *Progress) server(cw *cwriter.Writer) {
+func (p *Progress) server() {
 	userRR := rr * time.Millisecond
 	t := time.NewTicker(userRR)
 
@@ -239,6 +239,7 @@ func (p *Progress) server(cw *cwriter.Writer) {
 		wg.Done()
 	}
 	var beforeRender BeforeRender
+	cw := cwriter.New(os.Stdout)
 	bars := make([]*Bar, 0, 3)
 
 	for {
