@@ -12,10 +12,12 @@ import (
 func main() {
 	var wg sync.WaitGroup
 	p := mpb.New(nil)
+	wg.Add(3) // add wg delta
 	for i := 0; i < 3; i++ {
-		wg.Add(1) // add wg delta
 		name := fmt.Sprintf("Bar#%d:", i)
-		bar := p.AddBar(100).PrependName(name, len(name)).AppendPercentage()
+		bar := p.AddBar(100).
+			PrependName(name, len(name), 0).
+			AppendPercentage(5, 0)
 		go func() {
 			defer wg.Done()
 			// you can p.AddBar() here, but ordering will be non deterministic

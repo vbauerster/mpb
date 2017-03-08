@@ -23,7 +23,7 @@ func Example() {
 
 	// Add a bar. You're not limited to just one bar, add many if you need.
 	bar := p.AddBar(100).
-		PrependName("Single Bar:", 0, mpb.DwidthSync).
+		PrependName("Single Bar:", 0, 0).
 		AppendPercentage(5, 0)
 
 	for i := 0; i < 100; i++ {
