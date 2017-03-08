@@ -1,7 +1,6 @@
 package mpb
 
 import (
-	"context"
 	"io"
 	"sync"
 	"time"
@@ -33,9 +32,10 @@ type Bar struct {
 	flushedCh     chan struct{}
 	removeReqCh   chan struct{}
 	completeReqCh chan struct{}
+	stopCh        chan struct{}
 	done          chan struct{}
 
-	// follawing are used after (*Bar.done) is closed
+	// following are used after (*Bar.done) is closed
 	width int
 	state state
 }
@@ -79,7 +79,7 @@ type (
 	}
 )
 
-func newBar(ctx context.Context, wg *sync.WaitGroup, id int, total int64, width int, format string) *Bar {
+func newBar(wg *sync.WaitGroup, id int, total int64, width int, format string) *Bar {
 	b := &Bar{
 		stateReqCh:    make(chan chan state, 1),
 		widthCh:       make(chan int),
@@ -93,9 +93,10 @@ func newBar(ctx context.Context, wg *sync.WaitGroup, id int, total int64, width 
 		flushedCh:     make(chan struct{}, 1),
 		removeReqCh:   make(chan struct{}),
 		completeReqCh: make(chan struct{}),
+		stopCh:        make(chan struct{}),
 		done:          make(chan struct{}),
 	}
-	go b.server(ctx, wg, id, total, width, format)
+	go b.server(wg, id, total, width, format)
 	return b
 }
 
@@ -257,7 +258,7 @@ func (b *Bar) bytes(termWidth int) []byte {
 	return draw(&s, termWidth)
 }
 
-func (b *Bar) server(ctx context.Context, wg *sync.WaitGroup, id int, total int64, width int, format string) {
+func (b *Bar) server(wg *sync.WaitGroup, id int, total int64, width int, format string) {
 	var completed bool
 	timeStarted := time.Now()
 	blockStartTime := timeStarted
@@ -321,7 +322,7 @@ func (b *Bar) server(ctx context.Context, wg *sync.WaitGroup, id int, total int6
 			return
 		case <-b.removeReqCh:
 			return
-		case <-ctx.Done():
+		case <-b.stopCh:
 			return
 		}
 	}
@@ -331,6 +332,10 @@ func (b *Bar) stop(s *state, width int) {
 	b.state = *s
 	b.width = width
 	close(b.done)
+}
+
+func (b *Bar) Stop() {
+	b.stopCh <- struct{}{}
 }
 
 func (b *Bar) flushed() {

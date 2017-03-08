@@ -1,7 +1,6 @@
 package mpb
 
 import (
-	"context"
 	"errors"
 	"io"
 	"log"
@@ -59,8 +58,6 @@ const (
 
 // Progress represents the container that renders Progress bars
 type Progress struct {
-	// Context for canceling bars rendering
-	ctx context.Context
 	// WaitGroup for internal rendering sync
 	wg *sync.WaitGroup
 
@@ -73,16 +70,12 @@ type Progress struct {
 	outChangeReqCh chan io.Writer
 	barCountReqCh  chan chan int
 	brCh           chan BeforeRender
+	stopCh         chan struct{}
 	done           chan struct{}
 }
 
-// New creates new Progress instance, which will orchestrate bars rendering
-// process. It acceepts context.Context, for cancellation.
-// If you don't plan to cancel, it is safe to feed with nil
-func New(ctx context.Context) *Progress {
-	if ctx == nil {
-		ctx = context.Background()
-	}
+// New Progress instance, it orchestrates the rendering of progress bars.
+func New() *Progress {
 	p := &Progress{
 		width:          pwidth,
 		operationCh:    make(chan *operation),
@@ -90,9 +83,9 @@ func New(ctx context.Context) *Progress {
 		outChangeReqCh: make(chan io.Writer),
 		barCountReqCh:  make(chan chan int),
 		brCh:           make(chan BeforeRender),
+		stopCh:         make(chan struct{}),
 		done:           make(chan struct{}),
 		wg:             new(sync.WaitGroup),
-		ctx:            ctx,
 	}
 	go p.server(cwriter.New(os.Stdout), time.NewTicker(rr*time.Millisecond))
 	return p
@@ -152,7 +145,7 @@ func (p *Progress) AddBarWithID(id int, total int64) *Bar {
 		panic(ErrCallAfterStop)
 	}
 	result := make(chan bool)
-	bar := newBar(p.ctx, p.wg, id, total, p.width, p.format)
+	bar := newBar(p.wg, id, total, p.width, p.format)
 	p.operationCh <- &operation{barAdd, bar, result}
 	if <-result {
 		p.wg.Add(1)
@@ -194,10 +187,10 @@ func (p *Progress) Format(format string) *Progress {
 
 // Stop waits for bars to finish rendering and stops the rendering goroutine
 func (p *Progress) Stop() {
-	p.wg.Wait()
 	if isClosed(p.done) {
 		return
 	}
+	p.stopCh <- struct{}{}
 	close(p.operationCh)
 }
 
@@ -219,6 +212,7 @@ func (p *Progress) server(cw *cwriter.Writer, t *time.Ticker) {
 		}
 		wg.Done()
 	}
+
 	for {
 		select {
 		case w := <-p.outChangeReqCh:
@@ -289,7 +283,11 @@ func (p *Progress) server(cw *cwriter.Writer, t *time.Ticker) {
 		case d := <-p.rrChangeReqCh:
 			t.Stop()
 			t = time.NewTicker(d)
-		case <-p.ctx.Done():
+		case <-p.stopCh:
+			for _, b := range bars {
+				b.Stop()
+			}
+		case <-p.done:
 			return
 		}
 	}
