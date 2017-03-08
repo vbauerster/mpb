@@ -16,8 +16,7 @@ const (
 func main() {
 
 	var wg sync.WaitGroup
-	p := mpb.New(nil).SetWidth(64)
-	// p := mpb.New(nil).RefreshRate(100 * time.Millisecond).SetWidth(64)
+	p := mpb.New().SetWidth(64)
 
 	name1 := "Bar#1:"
 	bar1 := p.AddBar(50).

@@ -44,7 +44,7 @@ func percentage(total, current int64, ratio int) int {
 func main() {
 
 	var wg sync.WaitGroup
-	p := mpb.New(nil).SetWidth(60).BeforeRenderFunc(sortByProgressFunc())
+	p := mpb.New().SetWidth(60).BeforeRenderFunc(sortByProgressFunc())
 
 	name1 := "Bar#1:"
 	bar1 := p.AddBar(100).

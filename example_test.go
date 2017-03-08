@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"time"
+	"unicode/utf8"
 
 	"github.com/vbauerster/mpb"
 )
@@ -12,7 +13,7 @@ func Example() {
 	// Star mpb's rendering goroutine.
 	// If you don't plan to cancel, feed with nil
 	// otherwise provide context.Context, see cancel example
-	p := mpb.New(nil)
+	p := mpb.New()
 	// Set custom width for every bar, which mpb will contain
 	// The default one in 70
 	p.SetWidth(80)
@@ -39,7 +40,7 @@ func Example() {
 }
 
 func ExampleBar_InProgress() {
-	p := mpb.New(nil)
+	p := mpb.New()
 	bar := p.AddBar(100).AppendPercentage(5, 0)
 
 	for bar.InProgress() {
@@ -50,12 +51,14 @@ func ExampleBar_InProgress() {
 
 func ExampleBar_PrependFunc() {
 	decor := func(s *mpb.Statistics, myWidth chan<- int, maxWidth <-chan int) string {
-		str := fmt.Sprintf("%d/%d", s.Current, s.Total)
-		return fmt.Sprintf("%8s", str)
+		str := fmt.Sprintf("%3d/%3d", s.Current, s.Total)
+		myWidth <- utf8.RuneCountInString(str)
+		max := <-maxWidth
+		return fmt.Sprintf(fmt.Sprintf("%%%ds", max+1), str)
 	}
 
 	totalItem := 100
-	p := mpb.New(nil)
+	p := mpb.New()
 	bar := p.AddBar(int64(totalItem)).PrependFunc(decor)
 
 	for i := 0; i < totalItem; i++ {
@@ -66,12 +69,14 @@ func ExampleBar_PrependFunc() {
 
 func ExampleBar_AppendFunc() {
 	decor := func(s *mpb.Statistics, myWidth chan<- int, maxWidth <-chan int) string {
-		str := fmt.Sprintf("%d/%d", s.Current, s.Total)
-		return fmt.Sprintf("%8s", str)
+		str := fmt.Sprintf("%3d/%3d", s.Current, s.Total)
+		myWidth <- utf8.RuneCountInString(str)
+		max := <-maxWidth
+		return fmt.Sprintf(fmt.Sprintf("%%%ds", max+1), str)
 	}
 
 	totalItem := 100
-	p := mpb.New(nil)
+	p := mpb.New()
 	bar := p.AddBar(int64(totalItem)).AppendFunc(decor)
 
 	for i := 0; i < totalItem; i++ {

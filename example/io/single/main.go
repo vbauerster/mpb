@@ -35,7 +35,7 @@ func main() {
 	}
 	defer dest.Close()
 
-	p := mpb.New(nil).SetWidth(64)
+	p := mpb.New().SetWidth(64)
 
 	bar := p.AddBar(size).
 		PrependCounters("%3s / %3s", mpb.UnitBytes, 18, 0).

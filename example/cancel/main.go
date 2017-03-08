@@ -19,7 +19,7 @@ func main() {
 	var wg sync.WaitGroup
 	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
 	defer cancel()
-	p := mpb.New(ctx).SetWidth(64)
+	p := mpb.New().SetWidth(64).WithContext(ctx)
 
 	name1 := "Bar#1:"
 	bar1 := p.AddBar(50).

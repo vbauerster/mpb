@@ -17,7 +17,7 @@ const (
 func main() {
 
 	var wg sync.WaitGroup
-	p := mpb.New(nil)
+	p := mpb.New()
 	wg.Add(totalBars)
 
 	for i := 0; i < totalBars; i++ {

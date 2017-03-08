@@ -11,7 +11,7 @@ import (
 
 func main() {
 	var wg sync.WaitGroup
-	p := mpb.New(nil)
+	p := mpb.New()
 	wg.Add(3) // add wg delta
 	for i := 0; i < 3; i++ {
 		name := fmt.Sprintf("Bar#%d:", i)
@@ -31,6 +31,4 @@ func main() {
 	}
 	wg.Wait() // Wait for goroutines to finish
 	p.Stop()  // Stop mpb's rendering goroutine
-	// p.AddBar(1) // panic: you cannot reuse p, create new one!
-	fmt.Println("finish")
 }

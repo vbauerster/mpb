@@ -9,10 +9,8 @@ import (
 
 func main() {
 	// Star mpb's rendering goroutine.
-	// If you don't plan to cancel, feed with nil
-	// otherwise provide context.Context, see cancel example
-	p := mpb.New(nil)
-	// Set custom width for every bar, which mpb will contain
+	p := mpb.New()
+	// Set custom width for every bar, which mpb will render
 	// The default one in 70
 	p.SetWidth(80)
 	// Set custom format for every bar, the default one is "[=>-]"
