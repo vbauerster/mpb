@@ -3,6 +3,7 @@ package mpb
 import (
 	"reflect"
 	"testing"
+	"time"
 )
 
 func TestFillBar(t *testing.T) {
@@ -71,9 +72,8 @@ func TestFillBar(t *testing.T) {
 		},
 	}
 
-	stopWidthListen := make(chan struct{})
-	prependWs := newWidthSync(stopWidthListen, 1, 0)
-	appendWs := newWidthSync(stopWidthListen, 1, 0)
+	prependWs := newWidthSync(rr*time.Millisecond, 1, 0)
+	appendWs := newWidthSync(rr*time.Millisecond, 1, 0)
 	for _, test := range tests {
 		s := newTestState()
 		s.width = test.barWidth

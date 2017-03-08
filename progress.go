@@ -95,7 +95,7 @@ func New() *Progress {
 		done:           make(chan struct{}),
 		wg:             new(sync.WaitGroup),
 	}
-	go p.server(cwriter.New(os.Stdout), time.NewTicker(rr*time.Millisecond))
+	go p.server(cwriter.New(os.Stdout))
 	return p
 }
 
@@ -219,13 +219,15 @@ func (p *Progress) Stop() {
 }
 
 // server monitors underlying channels and renders any progress bars
-func (p *Progress) server(cw *cwriter.Writer, t *time.Ticker) {
+func (p *Progress) server(cw *cwriter.Writer) {
+	userRR := rr * time.Millisecond
+	t := time.NewTicker(userRR)
+
 	defer func() {
 		t.Stop()
 		close(p.done)
 	}()
-	bars := make([]*Bar, 0, 3)
-	var beforeRender BeforeRender
+
 	var wg sync.WaitGroup
 	recoverIfPanic := func() {
 		if p := recover(); p != nil {
@@ -236,6 +238,9 @@ func (p *Progress) server(cw *cwriter.Writer, t *time.Ticker) {
 		}
 		wg.Done()
 	}
+	var beforeRender BeforeRender
+	bars := make([]*Bar, 0, 3)
+
 	for {
 		select {
 		case w := <-p.outChangeReqCh:
@@ -275,8 +280,8 @@ func (p *Progress) server(cw *cwriter.Writer, t *time.Ticker) {
 				beforeRender(bars)
 			}
 
-			prependWs := newWidthSync(numBars, bars[0].NumOfPrependers())
-			appendWs := newWidthSync(numBars, bars[0].NumOfAppenders())
+			prependWs := newWidthSync(userRR, numBars, bars[0].NumOfPrependers())
+			appendWs := newWidthSync(userRR, numBars, bars[0].NumOfAppenders())
 
 			width, _, _ := cwriter.GetTermSize()
 			ibars := iBarsGen(bars, width)
@@ -312,16 +317,16 @@ func (p *Progress) server(cw *cwriter.Writer, t *time.Ticker) {
 			for _, b := range bars {
 				b.flushed()
 			}
-		case d := <-p.rrChangeReqCh:
+		case userRR = <-p.rrChangeReqCh:
 			t.Stop()
-			t = time.NewTicker(d)
+			t = time.NewTicker(userRR)
 		case <-p.cancel:
 			return
 		}
 	}
 }
 
-func newWidthSync(numBars, numColumn int) *widthSync {
+func newWidthSync(userRR time.Duration, numBars, numColumn int) *widthSync {
 	ws := &widthSync{
 		listen: make([]chan int, numColumn),
 		result: make([]chan int, numColumn),
@@ -342,7 +347,7 @@ func newWidthSync(numBars, numColumn int) *widthSync {
 					if len(widths) == numBars {
 						break loop
 					}
-				case <-time.After(rr * time.Millisecond):
+				case <-time.After(userRR):
 					return
 				}
 			}
