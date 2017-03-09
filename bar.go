@@ -2,6 +2,7 @@ package mpb
 
 import (
 	"io"
+	"math"
 	"sync"
 	"time"
 	"unicode/utf8"
@@ -433,12 +434,12 @@ func concatenateBlocks(buf []byte, blocks ...[]byte) []byte {
 }
 
 func fillBar(total, current int64, width int, fmtBytes barFmtBytes, rf *refill) []byte {
-	if width < 2 {
+	if width < 2 || total <= 0 {
 		return []byte{}
 	}
 
 	// bar width without leftEnd and rightEnd runes
-	barWidth := width - 1
+	barWidth := width - 2
 
 	completedWidth := percentage(total, current, barWidth)
 
@@ -453,20 +454,22 @@ func fillBar(total, current int64, width int, fmtBytes barFmtBytes, rf *refill) 
 		for i := 0; i < till; i++ {
 			buf = append(buf, rbytes...)
 		}
-		for i := till; i < completedWidth-1; i++ {
+		for i := till; i < completedWidth; i++ {
 			buf = append(buf, fmtBytes[rFill]...)
 		}
 	} else {
-		for i := 0; i < completedWidth-1; i++ {
+		for i := 0; i < completedWidth; i++ {
 			buf = append(buf, fmtBytes[rFill]...)
 		}
 	}
 
-	if completedWidth > 0 && completedWidth < barWidth {
+	if completedWidth < barWidth && completedWidth > 0 {
+		_, size := utf8.DecodeLastRune(buf)
+		buf = buf[:len(buf)-size]
 		buf = append(buf, fmtBytes[rTip]...)
 	}
 
-	for i := completedWidth + 1; i < barWidth; i++ {
+	for i := completedWidth; i < barWidth; i++ {
 		buf = append(buf, fmtBytes[rEmpty]...)
 	}
 
@@ -501,10 +504,18 @@ func calcTimePerItemEstimate(tpie time.Duration, blockStartTime time.Time, alpha
 }
 
 func percentage(total, current int64, ratio int) int {
-	if total <= 0 {
+	if current > total {
 		return 0
 	}
-	return int(float64(ratio) * float64(current) / float64(total))
+	num := float64(ratio) * float64(current) / float64(total)
+	ceil := math.Ceil(num)
+	diff := ceil - num
+	// num = 2.34 will return 2
+	// num = 2.44 will return 3
+	if math.Max(diff, 0.6) == diff {
+		return int(num)
+	}
+	return int(ceil)
 }
 
 func getSpinner() func() byte {
