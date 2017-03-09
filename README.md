@@ -16,7 +16,7 @@ but unlike the last one, implementation is mutex free, following Go's idiom:
 * __Dynamic Sorting__:  Sort bars as you wish
 * __Dynamic Resize__:  Resize bars on terminal width change
 * __Custom Decorator Functions__: Add custom functions around the bar along with helper functions
-* __Dynamic Decorator's Width Sync__:  Sync width among decorator group (column)
+* __Dynamic Decorator's Width Sync__:  Sync width among decorator group (available since v2)
 * __Predefined Decoratros__: Elapsed time, [Ewmaest](https://github.com/dgryski/trifles/tree/master/ewmaest) based ETA, Percentage, Bytes counter
 
 ## Installation
