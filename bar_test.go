@@ -3,7 +3,6 @@ package mpb
 import (
 	"reflect"
 	"testing"
-	"time"
 )
 
 func TestFillBar(t *testing.T) {
@@ -25,7 +24,7 @@ func TestFillBar(t *testing.T) {
 			barWidth:  100,
 			total:     100,
 			current:   20,
-			want:      []byte("[>]"),
+			want:      []byte("[]"),
 		},
 		{
 			termWidth: 20,
@@ -86,8 +85,8 @@ func TestFillBar(t *testing.T) {
 		},
 	}
 
-	prependWs := newWidthSync(rr*time.Millisecond, 1, 0)
-	appendWs := newWidthSync(rr*time.Millisecond, 1, 0)
+	prependWs := newWidthSync(nil, 1, 0)
+	appendWs := newWidthSync(nil, 1, 0)
 	for _, test := range tests {
 		s := newTestState()
 		s.width = test.barWidth

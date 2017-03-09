@@ -238,6 +238,7 @@ func (p *Progress) server() {
 		}
 		wg.Done()
 	}
+
 	var beforeRender BeforeRender
 	cw := cwriter.New(os.Stdout)
 	bars := make([]*Bar, 0, 3)
@@ -281,8 +282,14 @@ func (p *Progress) server() {
 				beforeRender(bars)
 			}
 
-			prependWs := newWidthSync(userRR, numBars, bars[0].NumOfPrependers())
-			appendWs := newWidthSync(userRR, numBars, bars[0].NumOfAppenders())
+			quitWidthSyncCh := make(chan struct{})
+			time.AfterFunc(userRR, func() {
+				close(quitWidthSyncCh)
+			})
+
+			b0 := bars[0]
+			prependWs := newWidthSync(quitWidthSyncCh, numBars, b0.NumOfPrependers())
+			appendWs := newWidthSync(quitWidthSyncCh, numBars, b0.NumOfAppenders())
 
 			width, _, _ := cwriter.GetTermSize()
 			ibars := iBarsGen(bars, width)
@@ -327,7 +334,7 @@ func (p *Progress) server() {
 	}
 }
 
-func newWidthSync(userRR time.Duration, numBars, numColumn int) *widthSync {
+func newWidthSync(quit <-chan struct{}, numBars, numColumn int) *widthSync {
 	ws := &widthSync{
 		listen: make([]chan int, numColumn),
 		result: make([]chan int, numColumn),
@@ -340,7 +347,6 @@ func newWidthSync(userRR time.Duration, numBars, numColumn int) *widthSync {
 		go func(listenCh <-chan int, resultCh chan<- int) {
 			defer close(resultCh)
 			widths := make([]int, 0, numBars)
-			abandon := time.After(userRR)
 		loop:
 			for {
 				select {
@@ -349,7 +355,7 @@ func newWidthSync(userRR time.Duration, numBars, numColumn int) *widthSync {
 					if len(widths) == numBars {
 						break loop
 					}
-				case <-abandon:
+				case <-quit:
 					return
 				}
 			}
