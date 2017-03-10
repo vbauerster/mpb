@@ -363,7 +363,7 @@ func newWidthSync(quit <-chan struct{}, numBars, numColumn int) *widthSync {
 				}
 			}
 			result := max(widths)
-			for i := 0; i < numBars; i++ {
+			for i := 0; i < len(widths); i++ {
 				resultCh <- result
 			}
 		}(ws.listen[i], ws.result[i])
