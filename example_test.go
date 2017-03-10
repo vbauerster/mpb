@@ -3,6 +3,7 @@ package mpb_test
 import (
 	"fmt"
 	"math/rand"
+	"sync"
 	"time"
 	"unicode/utf8"
 
@@ -52,35 +53,61 @@ func ExampleBar_InProgress() {
 func ExampleBar_PrependFunc() {
 	decor := func(s *mpb.Statistics, myWidth chan<- int, maxWidth <-chan int) string {
 		str := fmt.Sprintf("%3d/%3d", s.Current, s.Total)
+		// send width to Progress' goroutine
 		myWidth <- utf8.RuneCountInString(str)
+		// receive max width
 		max := <-maxWidth
 		return fmt.Sprintf(fmt.Sprintf("%%%ds", max+1), str)
 	}
 
 	totalItem := 100
+	var wg sync.WaitGroup
 	p := mpb.New()
-	bar := p.AddBar(int64(totalItem)).PrependFunc(decor)
-
-	for i := 0; i < totalItem; i++ {
-		bar.Incr(1) // increment progress bar
-		time.Sleep(time.Duration(rand.Intn(100)) * time.Millisecond)
+	wg.Add(3) // add wg delta
+	for i := 0; i < 3; i++ {
+		name := fmt.Sprintf("Bar#%d:", i)
+		bar := p.AddBar(int64(totalItem)).
+			PrependName(name, len(name), 0).
+			PrependFunc(decor)
+		go func() {
+			defer wg.Done()
+			for i := 0; i < totalItem; i++ {
+				bar.Incr(1)
+				time.Sleep(time.Duration(rand.Intn(totalItem)) * time.Millisecond)
+			}
+		}()
 	}
+	wg.Wait() // Wait for goroutines to finish
+	p.Stop()  // Stop mpb's rendering goroutine
 }
 
 func ExampleBar_AppendFunc() {
 	decor := func(s *mpb.Statistics, myWidth chan<- int, maxWidth <-chan int) string {
 		str := fmt.Sprintf("%3d/%3d", s.Current, s.Total)
+		// send width to Progress' goroutine
 		myWidth <- utf8.RuneCountInString(str)
+		// receive max width
 		max := <-maxWidth
 		return fmt.Sprintf(fmt.Sprintf("%%%ds", max+1), str)
 	}
 
 	totalItem := 100
+	var wg sync.WaitGroup
 	p := mpb.New()
-	bar := p.AddBar(int64(totalItem)).AppendFunc(decor)
-
-	for i := 0; i < totalItem; i++ {
-		bar.Incr(1) // increment progress bar
-		time.Sleep(time.Duration(rand.Intn(100)) * time.Millisecond)
+	wg.Add(3) // add wg delta
+	for i := 0; i < 3; i++ {
+		name := fmt.Sprintf("Bar#%d:", i)
+		bar := p.AddBar(int64(totalItem)).
+			PrependName(name, len(name), 0).
+			AppendFunc(decor)
+		go func() {
+			defer wg.Done()
+			for i := 0; i < totalItem; i++ {
+				bar.Incr(1)
+				time.Sleep(time.Duration(rand.Intn(totalItem)) * time.Millisecond)
+			}
+		}()
 	}
+	wg.Wait() // Wait for goroutines to finish
+	p.Stop()  // Stop mpb's rendering goroutine
 }
