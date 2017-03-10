@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/vbauerster/mpb"
+	"gopkg.in/vbauerster/mpb.v1"
 )
 
 const (

@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/vbauerster/mpb"
+	"gopkg.in/vbauerster/mpb.v1"
 )
 
 func main() {
