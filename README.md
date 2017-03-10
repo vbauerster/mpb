@@ -101,6 +101,11 @@ The source code: [example/simple/main.go](example/simple/main.go)
 
 ### Cancel
 
+To cancel use either
+[WithCancel](https://godoc.org/github.com/vbauerster/mpb#Progress.WithCancel) or
+[WithContext](https://godoc.org/github.com/vbauerster/mpb#Progress.WithContext)
+method. The last one requires Go 1.7
+
 ![cancel.gif](example/gifs/cancel.gif)
 
 The source code: [example/cancel/main.go](example/cancel/main.go)
