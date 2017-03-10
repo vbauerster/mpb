@@ -206,9 +206,9 @@ func (p *Progress) Format(format string) *Progress {
 	return p
 }
 
-// Stop shutdowns Progress' goroutine
-// Should be called only after each bor's work done, i.e. bar has reached its
-// 100 %. It is NOT for concelation. Use WithContext or WithCancel for
+// Stop shutdowns Progress' goroutine.
+// Should be called only after each bar's work done, i.e. bar has reached its
+// 100 %. It is NOT for cancelation. Use WithContext or WithCancel for
 // cancelation purposes.
 func (p *Progress) Stop() {
 	p.wg.Wait()
