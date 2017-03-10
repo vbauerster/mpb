@@ -138,8 +138,6 @@ The source code: [example/io/multiple/main.go](example/io/multiple/main.go)
 
 Refer to godoc [example](https://godoc.org/github.com/vbauerster/mpb#example-Bar-PrependFunc).
 
-More [sophisticated](https://github.com/vbauerster/getparty/blob/master/cmd/getparty/decorator.go) example.
-
 ## License
 
 [MIT](https://github.com/vbauerster/mpb/blob/master/LICENSE)
