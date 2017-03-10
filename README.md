@@ -131,7 +131,9 @@ The source code: [example/io/multiple/main.go](example/io/multiple/main.go)
 
 ### Custom Decorators
 
-[Here](https://github.com/vbauerster/getparty/blob/master/cmd/getparty/decorator.go) is example from [getparty](https://github.com/vbauerster/getparty) src code.
+Refer to godoc [example](https://godoc.org/github.com/vbauerster/mpb#example-Bar-PrependFunc).
+
+More [sophisticated](https://github.com/vbauerster/getparty/blob/master/cmd/getparty/decorator.go) example.
 
 ## License
 
