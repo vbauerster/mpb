@@ -356,7 +356,10 @@ func newWidthSync(quit <-chan struct{}, numBars, numColumn int) *widthSync {
 						break loop
 					}
 				case <-quit:
-					return
+					if len(widths) == 0 {
+						return
+					}
+					break loop
 				}
 			}
 			result := max(widths)
