@@ -81,7 +81,7 @@ type (
 
 func newBar(id int, total int64, width int, format string, wg *sync.WaitGroup, cancel <-chan struct{}) *Bar {
 	b := &Bar{
-		stateReqCh:    make(chan chan state, 1),
+		stateReqCh:    make(chan chan state),
 		widthCh:       make(chan int),
 		formatCh:      make(chan string),
 		etaAlphaCh:    make(chan float64),
@@ -255,7 +255,7 @@ func (b *Bar) getState() state {
 	if isClosed(b.done) {
 		return b.state
 	}
-	ch := make(chan state, 1)
+	ch := make(chan state)
 	b.stateReqCh <- ch
 	return <-ch
 }
@@ -263,7 +263,8 @@ func (b *Bar) getState() state {
 func (b *Bar) server(id int, total int64, width int, format string, wg *sync.WaitGroup, cancel <-chan struct{}) {
 	var completed bool
 	timeStarted := time.Now()
-	blockStartTime := timeStarted
+	prevStartTime := timeStarted
+	var blockStartTime time.Time
 	barState := state{
 		id:       id,
 		width:    width,
@@ -283,20 +284,20 @@ func (b *Bar) server(id int, total int64, width int, format string, wg *sync.Wai
 	for {
 		select {
 		case i := <-b.incrCh:
+			blockStartTime = time.Now()
 			n := barState.current + i
 			if total > 0 && n > total {
 				barState.current = total
 				completed = true
-				blockStartTime = time.Now()
 				break // break out of select
 			}
 			barState.timeElapsed = time.Since(timeStarted)
-			barState.timePerItem = calcTimePerItemEstimate(barState.timePerItem, blockStartTime, barState.etaAlpha, i)
+			barState.timePerItem = calcTimePerItemEstimate(barState.timePerItem, prevStartTime, barState.etaAlpha, i)
 			if n == total {
 				completed = true
 			}
 			barState.current = n
-			blockStartTime = time.Now()
+			prevStartTime = blockStartTime
 		case d := <-b.decoratorCh:
 			switch d.kind {
 			case decAppend:
