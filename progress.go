@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"runtime"
 	"sync"
@@ -13,8 +12,6 @@ import (
 
 	"github.com/vbauerster/mpb/cwriter"
 )
-
-var logger = log.New(os.Stderr, "mpb: ", log.LstdFlags|log.Lshortfile)
 
 // ErrCallAfterStop thrown by panic, if Progress methods like (*Progress).AddBar()
 // are called after (*Progress).Stop() has been called
