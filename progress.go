@@ -20,23 +20,12 @@ var ErrCallAfterStop = errors.New("method call on stopped Progress instance")
 type (
 	// BeforeRender is a func, which gets called before render process
 	BeforeRender func([]*Bar)
-	barOpType    uint
+	barAction    uint
 
-	operation struct {
-		kind   barOpType
+	bCommandData struct {
+		action barAction
 		bar    *Bar
 		result chan bool
-	}
-
-	indexedBarBuffer struct {
-		index int
-		buf   []byte
-	}
-
-	indexedBar struct {
-		index     int
-		termWidth int
-		bar       *Bar
 	}
 
 	widthSync struct {
@@ -46,8 +35,8 @@ type (
 )
 
 const (
-	barAdd barOpType = iota
-	barRemove
+	bAdd barAction = iota
+	bRemove
 )
 
 const (
@@ -70,7 +59,7 @@ type Progress struct {
 	width  int
 	format string
 
-	operationCh    chan *operation
+	bCommandCh     chan *bCommandData
 	rrChangeReqCh  chan time.Duration
 	outChangeReqCh chan io.Writer
 	barCountReqCh  chan chan int
@@ -85,7 +74,7 @@ type Progress struct {
 func New() *Progress {
 	p := &Progress{
 		width:          pwidth,
-		operationCh:    make(chan *operation),
+		bCommandCh:     make(chan *bCommandData),
 		rrChangeReqCh:  make(chan time.Duration),
 		outChangeReqCh: make(chan io.Writer),
 		barCountReqCh:  make(chan chan int),
@@ -165,7 +154,7 @@ func (p *Progress) AddBarWithID(id int, total int64) *Bar {
 	}
 	result := make(chan bool)
 	bar := newBar(id, total, p.width, p.format, p.wg, p.cancel)
-	p.operationCh <- &operation{barAdd, bar, result}
+	p.bCommandCh <- &bCommandData{bAdd, bar, result}
 	if <-result {
 		p.wg.Add(1)
 	}
@@ -179,7 +168,7 @@ func (p *Progress) RemoveBar(b *Bar) bool {
 		panic(ErrCallAfterStop)
 	}
 	result := make(chan bool)
-	p.operationCh <- &operation{barRemove, b, result}
+	p.bCommandCh <- &bCommandData{bRemove, b, result}
 	return <-result
 }
 
@@ -213,7 +202,7 @@ func (p *Progress) Stop() {
 	if isClosed(p.done) {
 		return
 	}
-	close(p.operationCh)
+	close(p.bCommandCh)
 }
 
 // server monitors underlying channels and renders any progress bars
@@ -245,25 +234,25 @@ func (p *Progress) server() {
 		case w := <-p.outChangeReqCh:
 			cw.Flush()
 			cw = cwriter.New(w)
-		case op, ok := <-p.operationCh:
+		case data, ok := <-p.bCommandCh:
 			if !ok {
 				return
 			}
-			switch op.kind {
-			case barAdd:
-				bars = append(bars, op.bar)
-				op.result <- true
-			case barRemove:
+			switch data.action {
+			case bAdd:
+				bars = append(bars, data.bar)
+				data.result <- true
+			case bRemove:
 				var ok bool
 				for i, b := range bars {
-					if b == op.bar {
+					if b == data.bar {
 						bars = append(bars[:i], bars[i+1:]...)
 						ok = true
 						b.remove()
 						break
 					}
 				}
-				op.result <- ok
+				data.result <- ok
 			}
 		case respCh := <-p.barCountReqCh:
 			respCh <- len(bars)

@@ -29,7 +29,7 @@ type Bar struct {
 	trimLeftCh    chan bool
 	trimRightCh   chan bool
 	refillCh      chan *refill
-	decoratorCh   chan *decorator
+	dCommandCh    chan *dCommandData
 	flushedCh     chan struct{}
 	removeReqCh   chan struct{}
 	completeReqCh chan struct{}
@@ -89,7 +89,7 @@ func newBar(id int, total int64, width int, format string, wg *sync.WaitGroup, c
 		trimLeftCh:    make(chan bool),
 		trimRightCh:   make(chan bool),
 		refillCh:      make(chan *refill),
-		decoratorCh:   make(chan *decorator),
+		dCommandCh:    make(chan *dCommandData),
 		flushedCh:     make(chan struct{}, 1),
 		removeReqCh:   make(chan struct{}),
 		completeReqCh: make(chan struct{}),
@@ -212,7 +212,7 @@ func (b *Bar) PrependFunc(f DecoratorFunc) *Bar {
 	if isClosed(b.done) {
 		return b
 	}
-	b.decoratorCh <- &decorator{decPrepend, f}
+	b.dCommandCh <- &dCommandData{dPrepend, f}
 	return b
 }
 
@@ -221,7 +221,7 @@ func (b *Bar) RemoveAllPrependers() {
 	if isClosed(b.done) {
 		return
 	}
-	b.decoratorCh <- &decorator{decPrependZero, nil}
+	b.dCommandCh <- &dCommandData{dPrependZero, nil}
 }
 
 // AppendFunc appends DecoratorFunc
@@ -229,7 +229,7 @@ func (b *Bar) AppendFunc(f DecoratorFunc) *Bar {
 	if isClosed(b.done) {
 		return b
 	}
-	b.decoratorCh <- &decorator{decAppend, f}
+	b.dCommandCh <- &dCommandData{dAppend, f}
 	return b
 }
 
@@ -238,7 +238,7 @@ func (b *Bar) RemoveAllAppenders() {
 	if isClosed(b.done) {
 		return
 	}
-	b.decoratorCh <- &decorator{decAppendZero, nil}
+	b.dCommandCh <- &dCommandData{dAppendZero, nil}
 }
 
 // Completed signals to the bar, that process has been completed.
@@ -298,15 +298,15 @@ func (b *Bar) server(id int, total int64, width int, format string, wg *sync.Wai
 			}
 			barState.current = n
 			prevStartTime = blockStartTime
-		case d := <-b.decoratorCh:
-			switch d.kind {
-			case decAppend:
-				barState.appendFuncs = append(barState.appendFuncs, d.f)
-			case decAppendZero:
+		case data := <-b.dCommandCh:
+			switch data.action {
+			case dAppend:
+				barState.appendFuncs = append(barState.appendFuncs, data.f)
+			case dAppendZero:
 				barState.appendFuncs = nil
-			case decPrepend:
-				barState.prependFuncs = append(barState.prependFuncs, d.f)
-			case decPrependZero:
+			case dPrepend:
+				barState.prependFuncs = append(barState.prependFuncs, data.f)
+			case dPrependZero:
 				barState.prependFuncs = nil
 			}
 		case ch := <-b.stateReqCh:
