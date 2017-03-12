@@ -2,6 +2,7 @@ package mpb
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -228,15 +229,14 @@ func (p *Progress) server() {
 		close(p.done)
 	}()
 
-	var wg sync.WaitGroup
-	recoverIfPanic := func() {
+	recoverFn := func(ch chan []byte) {
 		if p := recover(); p != nil {
-			logger.Printf("unexpected panic: %+v\n", p)
 			var buf [4096]byte
 			n := runtime.Stack(buf[:], false)
 			os.Stderr.Write(buf[:n])
+			ch <- []byte(fmt.Sprintln(p))
 		}
-		wg.Done()
+		close(ch)
 	}
 
 	var beforeRender BeforeRender
@@ -292,32 +292,16 @@ func (p *Progress) server() {
 			appendWs := newWidthSync(quitWidthSyncCh, numBars, b0.NumOfAppenders())
 
 			width, _, _ := cwriter.GetTermSize()
-			ibars := iBarsGen(bars, width)
-			ibbCh := make(chan indexedBarBuffer)
-			wg.Add(numBars)
-			for i := 0; i < numBars; i++ {
-				go func() {
-					defer recoverIfPanic()
-					drawer(ibars, ibbCh, prependWs, appendWs)
-				}()
-			}
-			go func() {
-				wg.Wait()
-				close(ibbCh)
-				for _, ch := range prependWs.listen {
-					close(ch)
-				}
-				for _, ch := range appendWs.listen {
-					close(ch)
-				}
-			}()
 
-			m := make(map[int][]byte, len(bars))
-			for ibb := range ibbCh {
-				m[ibb.index] = ibb.buf
+			sequence := make([]<-chan []byte, numBars)
+			for i, b := range bars {
+				sequence[i] = b.render(recoverFn, width, prependWs, appendWs)
 			}
-			for i := 0; i < len(bars); i++ {
-				cw.Write(m[i])
+
+			ch := fanIn(sequence...)
+
+			for buf := range ch {
+				cw.Write(buf)
 			}
 
 			cw.Flush()
@@ -371,23 +355,17 @@ func newWidthSync(quit <-chan struct{}, numBars, numColumn int) *widthSync {
 	return ws
 }
 
-func drawer(ibars <-chan indexedBar, ibbCh chan<- indexedBarBuffer, prependWs, appendWs *widthSync) {
-	for b := range ibars {
-		buf := b.bar.bytes(b.termWidth, prependWs, appendWs)
-		buf = append(buf, '\n')
-		ibbCh <- indexedBarBuffer{b.index, buf}
-	}
-}
+func fanIn(inputs ...<-chan []byte) <-chan []byte {
+	ch := make(chan []byte)
 
-func iBarsGen(bars []*Bar, width int) <-chan indexedBar {
-	ibars := make(chan indexedBar)
 	go func() {
-		defer close(ibars)
-		for i, b := range bars {
-			ibars <- indexedBar{i, width, b}
+		defer close(ch)
+		for _, input := range inputs {
+			ch <- <-input
 		}
 	}()
-	return ibars
+
+	return ch
 }
 
 // isClosed check if ch closed

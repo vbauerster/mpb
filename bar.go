@@ -361,9 +361,18 @@ func (s *state) updateFormat(format string) {
 	}
 }
 
-func (b *Bar) bytes(termWidth int, prependWs, appendWs *widthSync) []byte {
-	s := b.getState()
-	return draw(&s, termWidth, prependWs, appendWs)
+func (b *Bar) render(rFn func(chan []byte), termWidth int, prependWs, appendWs *widthSync) <-chan []byte {
+	ch := make(chan []byte)
+
+	go func() {
+		defer rFn(ch)
+		s := b.getState()
+		buf := draw(&s, termWidth, prependWs, appendWs)
+		buf = append(buf, '\n')
+		ch <- buf
+	}()
+
+	return ch
 }
 
 func draw(s *state, termWidth int, prependWs, appendWs *widthSync) []byte {
