@@ -65,6 +65,7 @@ type Progress struct {
 	barCountReqCh  chan chan int
 	brCh           chan BeforeRender
 	done           chan struct{}
+	beforeStop     chan struct{}
 	cancel         <-chan struct{}
 }
 
@@ -80,6 +81,7 @@ func New() *Progress {
 		barCountReqCh:  make(chan chan int),
 		brCh:           make(chan BeforeRender),
 		done:           make(chan struct{}),
+		beforeStop:     make(chan struct{}),
 		wg:             new(sync.WaitGroup),
 	}
 	go p.server()
@@ -198,10 +200,11 @@ func (p *Progress) Format(format string) *Progress {
 // 100 %. It is NOT for cancelation. Use WithContext or WithCancel for
 // cancelation purposes.
 func (p *Progress) Stop() {
-	p.wg.Wait()
 	if isClosed(p.done) {
 		return
 	}
+	p.beforeStop <- struct{}{}
+	p.wg.Wait()
 	close(p.bCommandCh)
 }
 
@@ -298,6 +301,12 @@ func (p *Progress) server() {
 		case userRR = <-p.rrChangeReqCh:
 			t.Stop()
 			t = time.NewTicker(userRR)
+		case <-p.beforeStop:
+			for _, b := range bars {
+				if b.GetStatistics().Total <= 0 {
+					b.Completed()
+				}
+			}
 		case <-p.cancel:
 			return
 		}
