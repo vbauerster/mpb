@@ -514,7 +514,7 @@ func calcTimePerItemEstimate(tpie time.Duration, blockStartTime time.Time, alpha
 }
 
 func percentage(total, current int64, ratio int) int {
-	if current > total || (total == 0 && current == 0) {
+	if total == 0 || current > total {
 		return 0
 	}
 	num := float64(ratio) * float64(current) / float64(total)
