@@ -35,7 +35,7 @@ func sortByProgressFunc() mpb.BeforeRender {
 }
 
 func percentage(total, current int64, ratio int) int {
-	if total <= 0 {
+	if total == 0 || current > total {
 		return 0
 	}
 	return int(float64(ratio) * float64(current) / float64(total))
