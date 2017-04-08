@@ -136,6 +136,6 @@ Refer to godoc [example](https://godoc.org/github.com/vbauerster/mpb#example-Bar
 
 ## License
 
-[MIT](https://github.com/vbauerster/mpb/blob/master/LICENSE)
+[BSD 3-Clause](https://opensource.org/licenses/BSD-3-Clause)
 
 The typeface used in screen shots: [Iosevka](https://be5invis.github.io/Iosevka)
