@@ -24,10 +24,6 @@ but unlike the last one, implementation is mutex free, following Go's idiom:
 To get the package, execute:
 
 ```sh
-go get gopkg.in/vbauerster/mpb.v1
-```
-
-```sh
 go get gopkg.in/vbauerster/mpb.v2
 ```
 
