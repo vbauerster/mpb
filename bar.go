@@ -47,8 +47,13 @@ type Bar struct {
 // Statistics represents statistics of the progress bar.
 // Cantains: Total, Current, TimeElapsed, TimePerItemEstimate
 type Statistics struct {
-	Total, Current                   int64
-	TimeElapsed, TimePerItemEstimate time.Duration
+	Completed           bool
+	Total               int64
+	Current             int64
+	IncrAmount          int64
+	StartTime           time.Time
+	TimeElapsed         time.Duration
+	TimePerItemEstimate time.Duration
 }
 
 // Eta returns exponential-weighted-moving-average ETA estimator
@@ -72,8 +77,11 @@ type (
 		etaAlpha       float64
 		total          int64
 		current        int64
+		incrAmount     int64
 		trimLeftSpace  bool
 		trimRightSpace bool
+		completed      bool
+		startTime      time.Time
 		timeElapsed    time.Duration
 		timePerItem    time.Duration
 		appendFuncs    []DecoratorFunc
@@ -265,16 +273,15 @@ func (b *Bar) getState() state {
 }
 
 func (b *Bar) server(id int, total int64, width int, format string, wg *sync.WaitGroup, cancel <-chan struct{}) {
-	var completed bool
-	timeStarted := time.Now()
-	prevStartTime := timeStarted
-	var blockStartTime time.Time
+	incrStartTime := time.Now()
 	barState := state{
-		id:       id,
-		width:    width,
-		format:   barFmtRunes{'[', '=', '>', '-', ']'},
-		etaAlpha: 0.25,
-		total:    total,
+		id:        id,
+		width:     width,
+		format:    barFmtRunes{'[', '=', '>', '-', ']'},
+		etaAlpha:  0.25,
+		total:     total,
+		startTime: incrStartTime,
+		completed: false,
 	}
 	if total <= 0 {
 		barState.simpleSpinner = getSpinner()
@@ -287,21 +294,20 @@ func (b *Bar) server(id int, total int64, width int, format string, wg *sync.Wai
 	}()
 	for {
 		select {
-		case i := <-b.incrCh:
-			blockStartTime = time.Now()
-			n := barState.current + i
+		case barState.incrAmount = <-b.incrCh:
+			n := barState.current + barState.incrAmount
 			if total > 0 && n > total {
 				barState.current = total
-				completed = true
+				barState.completed = true
 				break // break out of select
 			}
-			barState.timeElapsed = time.Since(timeStarted)
-			barState.timePerItem = calcTimePerItemEstimate(barState.timePerItem, prevStartTime, barState.etaAlpha, i)
+			barState.timeElapsed = time.Since(barState.startTime)
+			barState.updateTimePerItemEstimate(incrStartTime)
 			if n == total {
-				completed = true
+				barState.completed = true
 			}
 			barState.current = n
-			prevStartTime = blockStartTime
+			incrStartTime = time.Now()
 		case data := <-b.dCommandCh:
 			switch data.action {
 			case dAppend:
@@ -322,7 +328,7 @@ func (b *Bar) server(id int, total int64, width int, format string, wg *sync.Wai
 		case barState.trimLeftSpace = <-b.trimLeftCh:
 		case barState.trimRightSpace = <-b.trimRightCh:
 		case <-b.flushedCh:
-			if completed {
+			if barState.completed {
 				return
 			}
 		case <-b.completeReqCh:
@@ -355,16 +361,6 @@ func (b *Bar) remove() {
 	b.removeReqCh <- struct{}{}
 }
 
-func (s *state) updateFormat(format string) {
-	if format == "" {
-		return
-	}
-	for i, n := 0, 0; len(format) > 0; i++ {
-		s.format[i], n = utf8.DecodeRuneInString(format)
-		format = format[n:]
-	}
-}
-
 func (b *Bar) render(rFn func(chan []byte), termWidth int, prependWs, appendWs *widthSync) <-chan []byte {
 	ch := make(chan []byte)
 
@@ -377,6 +373,22 @@ func (b *Bar) render(rFn func(chan []byte), termWidth int, prependWs, appendWs *
 	}()
 
 	return ch
+}
+
+func (s *state) updateFormat(format string) {
+	if format == "" {
+		return
+	}
+	for i, n := 0, 0; len(format) > 0; i++ {
+		s.format[i], n = utf8.DecodeRuneInString(format)
+		format = format[n:]
+	}
+}
+
+func (s *state) updateTimePerItemEstimate(incrStartTime time.Time) {
+	lastBlockTime := time.Since(incrStartTime) // shorthand for time.Now().Sub(t)
+	lastItemEstimate := float64(lastBlockTime) / float64(s.incrAmount)
+	s.timePerItem = time.Duration((s.etaAlpha * lastItemEstimate) + (1-s.etaAlpha)*float64(s.timePerItem))
 }
 
 func draw(s *state, termWidth int, prependWs, appendWs *widthSync) []byte {
@@ -494,8 +506,11 @@ func fillBar(total, current int64, width int, fmtBytes barFmtBytes, rf *refill) 
 
 func newStatistics(s *state) *Statistics {
 	return &Statistics{
+		Completed:           s.completed,
 		Total:               s.total,
 		Current:             s.current,
+		IncrAmount:          s.incrAmount,
+		StartTime:           s.startTime,
 		TimeElapsed:         s.timeElapsed,
 		TimePerItemEstimate: s.timePerItem,
 	}
@@ -509,12 +524,6 @@ func convertFmtRunesToBytes(format barFmtRunes) barFmtBytes {
 		fmtBytes[i] = buf
 	}
 	return fmtBytes
-}
-
-func calcTimePerItemEstimate(tpie time.Duration, blockStartTime time.Time, alpha float64, items int64) time.Duration {
-	lastBlockTime := time.Since(blockStartTime)
-	lastItemEstimate := float64(lastBlockTime) / float64(items)
-	return time.Duration((alpha * lastItemEstimate) + (1-alpha)*float64(tpie))
 }
 
 func percentage(total, current int64, ratio int) int {
