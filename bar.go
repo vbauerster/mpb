@@ -273,15 +273,13 @@ func (b *Bar) getState() state {
 }
 
 func (b *Bar) server(id int, total int64, width int, format string, wg *sync.WaitGroup, cancel <-chan struct{}) {
-	incrStartTime := time.Now()
+	var incrStartTime time.Time
 	barState := state{
-		id:        id,
-		width:     width,
-		format:    barFmtRunes{'[', '=', '>', '-', ']'},
-		etaAlpha:  0.25,
-		total:     total,
-		startTime: incrStartTime,
-		completed: false,
+		id:       id,
+		width:    width,
+		format:   barFmtRunes{'[', '=', '>', '-', ']'},
+		etaAlpha: 0.25,
+		total:    total,
 	}
 	if total <= 0 {
 		barState.simpleSpinner = getSpinner()
@@ -295,6 +293,10 @@ func (b *Bar) server(id int, total int64, width int, format string, wg *sync.Wai
 	for {
 		select {
 		case barState.incrAmount = <-b.incrCh:
+			if barState.current == 0 {
+				incrStartTime = time.Now()
+				barState.startTime = incrStartTime
+			}
 			n := barState.current + barState.incrAmount
 			if total > 0 && n > total {
 				barState.current = total
