@@ -59,7 +59,6 @@ type Progress struct {
 	// WaitGroup for internal rendering sync
 	wg *sync.WaitGroup
 
-	out    io.Writer
 	width  int
 	format string
 

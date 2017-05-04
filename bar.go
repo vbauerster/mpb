@@ -62,10 +62,6 @@ func (s *Statistics) Eta() time.Duration {
 }
 
 type (
-	runeFormatElement struct {
-		char  rune
-		index uint8
-	}
 	refill struct {
 		char rune
 		till int64
