@@ -1,30 +1,85 @@
-package mpb
+package mpb_test
 
 import (
 	"bytes"
+	"context"
+	"fmt"
+	"math/rand"
+	"strings"
+	"sync"
 	"testing"
+	"time"
+	"unicode/utf8"
+
+	"github.com/vbauerster/mpb"
 )
 
-func TestAddBar(t *testing.T) {
+func TestDefaultWidth(t *testing.T) {
 	var buf bytes.Buffer
-	p := New().SetWidth(60).SetOut(&buf)
-	count := p.BarCount()
-	if count != 0 {
-		t.Errorf("Count want: %q, got: %q\n", 0, count)
-	}
-	bar := p.AddBar(10)
-	count = p.BarCount()
-	if count != 1 {
-		t.Errorf("Count want: %q, got: %q\n", 0, count)
-	}
-	for i := 0; i < 10; i++ {
+	p := mpb.New().SetOut(&buf)
+	bar := p.AddBar(100)
+	for i := 0; i < 100; i++ {
 		bar.Incr(1)
 	}
+	p.Stop()
+	runeCount := utf8.RuneCountInString(strings.TrimSpace(buf.String()))
+	defWidth := 80
+	if runeCount != defWidth {
+		t.Errorf("Expected default width: %d, got: %d\n", defWidth, runeCount)
+	}
+}
+
+func TestCustomWidth(t *testing.T) {
+	customWidth := 60
+	var buf bytes.Buffer
+	p := mpb.New().SetWidth(customWidth).SetOut(&buf)
+	bar := p.AddBar(100)
+	for i := 0; i < 100; i++ {
+		bar.Incr(1)
+	}
+	p.Stop()
+	runeCount := utf8.RuneCountInString(strings.TrimSpace(buf.String()))
+	if runeCount != customWidth {
+		t.Errorf("Expected default width: %d, got: %d\n", customWidth, runeCount)
+	}
+}
+
+func TestAddBar(t *testing.T) {
+	var wg sync.WaitGroup
+	var buf bytes.Buffer
+	p := mpb.New().SetOut(&buf)
+
+	count := p.BarCount()
+	if count != 0 {
+		t.Errorf("BarCount want: %q, got: %q\n", 0, count)
+	}
+
+	numBars := 3
+	wg.Add(numBars)
+
+	for i := 0; i < numBars; i++ {
+		name := fmt.Sprintf("Bar#%d:", i)
+		bar := p.AddBar(100).PrependName(name, len(name), 0)
+
+		go func() {
+			defer wg.Done()
+			for i := 0; i < 100; i++ {
+				bar.Incr(1)
+			}
+		}()
+	}
+
+	count = p.BarCount()
+	if count != numBars {
+		t.Errorf("BarCount want: %q, got: %q\n", numBars, count)
+	}
+	wg.Wait()
 	p.Stop()
 }
 
 func TestRemoveBar(t *testing.T) {
-	p := New()
+	p := mpb.New()
+
 	b := p.AddBar(10)
 
 	if !p.RemoveBar(b) {
@@ -33,7 +88,61 @@ func TestRemoveBar(t *testing.T) {
 
 	count := p.BarCount()
 	if count != 0 {
-		t.Errorf("Count want: %q, got: %q\n", 0, count)
+		t.Errorf("BarCount want: %q, got: %q\n", 0, count)
 	}
 	p.Stop()
+}
+
+func TestWithContext(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	shutdown := make(chan struct{})
+	p := mpb.New().WithContext(ctx).ShutdownNotify(shutdown)
+	numBars := 3
+
+	for i := 0; i < numBars; i++ {
+		name := fmt.Sprintf("Bar#%d:", i)
+		bar := p.AddBar(100).PrependName(name, len(name), 0)
+
+		go func() {
+			for i := 0; i < 10000; i++ {
+				bar.Incr(1)
+				time.Sleep(time.Duration(rand.Intn(100)) * time.Millisecond)
+			}
+		}()
+	}
+
+	cancel()
+
+	select {
+	case <-shutdown:
+	case <-time.After(500 * time.Millisecond):
+		t.Error("ProgressBar didn't stop")
+	}
+}
+
+func TestWithCancel(t *testing.T) {
+	cancel := make(chan struct{})
+	shutdown := make(chan struct{})
+	p := mpb.New().WithCancel(cancel).ShutdownNotify(shutdown)
+	numBars := 3
+
+	for i := 0; i < numBars; i++ {
+		name := fmt.Sprintf("Bar#%d:", i)
+		bar := p.AddBar(100).PrependName(name, len(name), 0)
+
+		go func() {
+			for i := 0; i < 10000; i++ {
+				bar.Incr(1)
+				time.Sleep(time.Duration(rand.Intn(100)) * time.Millisecond)
+			}
+		}()
+	}
+
+	close(cancel)
+
+	select {
+	case <-shutdown:
+	case <-time.After(500 * time.Millisecond):
+		t.Error("ProgressBar didn't stop")
+	}
 }
