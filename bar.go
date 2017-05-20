@@ -428,7 +428,7 @@ func draw(s *state, termWidth int, prependWs, appendWs *widthSync) []byte {
 	fmtBytes := convertFmtRunesToBytes(s.format)
 
 	if s.simpleSpinner != nil {
-		for _, block := range [...][]byte{fmtBytes[rLeft], []byte{s.simpleSpinner()}, fmtBytes[rRight]} {
+		for _, block := range [...][]byte{fmtBytes[rLeft], {s.simpleSpinner()}, fmtBytes[rRight]} {
 			barBlock = append(barBlock, block...)
 		}
 		return concatenateBlocks(buf, prependBlock, leftSpace, barBlock, rightSpace, appendBlock)
