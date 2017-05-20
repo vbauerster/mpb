@@ -21,6 +21,9 @@ import (
 // are called after (*Progress).Stop() has been called
 var ErrCallAfterStop = errors.New("method call on stopped Progress instance")
 
+// default RefreshRate
+var rr = 100 * time.Millisecond
+
 type (
 	// BeforeRender is a func, which gets called before render process
 	BeforeRender func([]*Bar)
@@ -36,6 +39,18 @@ type (
 		listen []chan int
 		result []chan int
 	}
+
+	// config changeable by user
+	userConf struct {
+		width        int
+		format       string
+		beforeRender BeforeRender
+		cw           *cwriter.Writer
+		ticker       *time.Ticker
+
+		shutdownNotifier chan struct{}
+		cancel           <-chan struct{}
+	}
 )
 
 const (
@@ -44,32 +59,24 @@ const (
 )
 
 const (
-	// default RefreshRate
-	rr = 100
 	// default width
-	pwidth = 70
+	pwidth = 80
+	// default format
+	pformat = "[=>-]"
 	// number of format runes for bar
 	numFmtRunes = 5
 )
 
 // Progress represents the container that renders Progress bars
 type Progress struct {
-	// Context for canceling bars rendering
-	// ctx context.Context
 	// WaitGroup for internal rendering sync
 	wg *sync.WaitGroup
 
-	width  int
-	format string
-
-	bCommandCh     chan *bCommandData
-	rrChangeReqCh  chan time.Duration
-	outChangeReqCh chan io.Writer
-	barCountReqCh  chan chan int
-	brCh           chan BeforeRender
-	done           chan struct{}
-	beforeStop     chan struct{}
-	cancel         <-chan struct{}
+	done          chan struct{}
+	userConf      chan userConf
+	bCommandCh    chan *bCommandData
+	barCountReqCh chan chan int
+	beforeStop    chan struct{}
 }
 
 // New creates new Progress instance, which will orchestrate bars rendering
@@ -77,43 +84,54 @@ type Progress struct {
 // If you don't plan to cancel, it is safe to feed with nil
 func New() *Progress {
 	p := &Progress{
-		width:          pwidth,
-		bCommandCh:     make(chan *bCommandData),
-		rrChangeReqCh:  make(chan time.Duration),
-		outChangeReqCh: make(chan io.Writer),
-		barCountReqCh:  make(chan chan int),
-		brCh:           make(chan BeforeRender),
-		done:           make(chan struct{}),
-		beforeStop:     make(chan struct{}),
-		wg:             new(sync.WaitGroup),
+		wg:            new(sync.WaitGroup),
+		done:          make(chan struct{}),
+		userConf:      make(chan userConf),
+		bCommandCh:    make(chan *bCommandData),
+		barCountReqCh: make(chan chan int),
+		beforeStop:    make(chan struct{}),
 	}
-	go p.server()
+	go p.server(userConf{
+		width:  pwidth,
+		format: pformat,
+		cw:     cwriter.New(os.Stdout),
+		ticker: time.NewTicker(rr),
+	})
 	return p
 }
 
-// WithCancel cancellation via channel
+// WithCancel cancellation via channel.
+// pancis, if called on stopped Progress instance, i.e after (*Progress).Stop()
+// or nil channel passed
 func (p *Progress) WithCancel(ch <-chan struct{}) *Progress {
+	if isClosed(p.done) {
+		panic(ErrCallAfterStop)
+	}
 	if ch == nil {
 		panic("nil cancel channel")
 	}
-	p2 := new(Progress)
-	*p2 = *p
-	p2.cancel = ch
-	return p2
+	conf := <-p.userConf
+	conf.cancel = ch
+	p.userConf <- conf
+	return p
 }
 
-// SetWidth overrides default (70) width of bar(s)
-func (p *Progress) SetWidth(n int) *Progress {
-	if n < 0 {
-		panic("negative width")
+// SetWidth overrides default (70) width of bar(s).
+// pancis, if called on stopped Progress instance, i.e after (*Progress).Stop()
+func (p *Progress) SetWidth(width int) *Progress {
+	if isClosed(p.done) {
+		panic(ErrCallAfterStop)
 	}
-	p2 := new(Progress)
-	*p2 = *p
-	p2.width = n
-	return p2
+	if width < 0 {
+		return p
+	}
+	conf := <-p.userConf
+	conf.width = width
+	p.userConf <- conf
+	return p
 }
 
-// SetOut sets underlying writer of progress. Default is os.Stdout
+// SetOut sets underlying writer of progress. Default one is os.Stdout.
 // pancis, if called on stopped Progress instance, i.e after (*Progress).Stop()
 func (p *Progress) SetOut(w io.Writer) *Progress {
 	if isClosed(p.done) {
@@ -122,7 +140,10 @@ func (p *Progress) SetOut(w io.Writer) *Progress {
 	if w == nil {
 		return p
 	}
-	p.outChangeReqCh <- w
+	conf := <-p.userConf
+	conf.cw.Flush()
+	conf.cw = cwriter.New(w)
+	p.userConf <- conf
 	return p
 }
 
@@ -132,33 +153,41 @@ func (p *Progress) RefreshRate(d time.Duration) *Progress {
 	if isClosed(p.done) {
 		panic(ErrCallAfterStop)
 	}
-	p.rrChangeReqCh <- d
+	conf := <-p.userConf
+	conf.ticker.Stop()
+	rr = d
+	conf.ticker = time.NewTicker(rr)
+	p.userConf <- conf
 	return p
 }
 
 // BeforeRenderFunc accepts a func, which gets called before render process.
+// pancis, if called on stopped Progress instance, i.e after (*Progress).Stop()
 func (p *Progress) BeforeRenderFunc(f BeforeRender) *Progress {
 	if isClosed(p.done) {
 		panic(ErrCallAfterStop)
 	}
-	p.brCh <- f
+	conf := <-p.userConf
+	conf.beforeRender = f
+	p.userConf <- conf
 	return p
 }
 
-// AddBar creates a new progress bar and adds to the container
+// AddBar creates a new progress bar and adds to the container.
 // pancis, if called on stopped Progress instance, i.e after (*Progress).Stop()
 func (p *Progress) AddBar(total int64) *Bar {
 	return p.AddBarWithID(0, total)
 }
 
-// AddBarWithID creates a new progress bar and adds to the container
+// AddBarWithID creates a new progress bar and adds to the container.
 // pancis, if called on stopped Progress instance, i.e after (*Progress).Stop()
 func (p *Progress) AddBarWithID(id int, total int64) *Bar {
 	if isClosed(p.done) {
 		panic(ErrCallAfterStop)
 	}
+	conf := <-p.userConf
 	result := make(chan bool)
-	bar := newBar(id, total, p.width, p.format, p.wg, p.cancel)
+	bar := newBar(id, total, p.wg, &conf)
 	p.bCommandCh <- &bCommandData{bAdd, bar, result}
 	if <-result {
 		p.wg.Add(1)
@@ -188,13 +217,30 @@ func (p *Progress) BarCount() int {
 	return <-respCh
 }
 
-// Format sets custom format for underlying bar(s).
-// The default one is "[=>-]"
+// ShutdownNotify means to be notified when main rendering goroutine quits, usualy after p.Stop() call.
+// pancis, if called on stopped Progress instance, i.e after (*Progress).Stop()
+func (p *Progress) ShutdownNotify(ch chan struct{}) *Progress {
+	if isClosed(p.done) {
+		panic(ErrCallAfterStop)
+	}
+	conf := <-p.userConf
+	conf.shutdownNotifier = ch
+	p.userConf <- conf
+	return p
+}
+
+// Format sets custom format for underlying bar(s), default one is "[=>-]".
+// pancis, if called on stopped Progress instance, i.e after (*Progress).Stop()
 func (p *Progress) Format(format string) *Progress {
+	if isClosed(p.done) {
+		panic(ErrCallAfterStop)
+	}
 	if utf8.RuneCountInString(format) != numFmtRunes {
 		return p
 	}
-	p.format = format
+	conf := <-p.userConf
+	conf.format = format
+	p.userConf <- conf
 	return p
 }
 
@@ -212,13 +258,14 @@ func (p *Progress) Stop() {
 }
 
 // server monitors underlying channels and renders any progress bars
-func (p *Progress) server() {
-	userRR := rr * time.Millisecond
-	t := time.NewTicker(userRR)
+func (p *Progress) server(conf userConf) {
 
 	defer func() {
-		t.Stop()
+		conf.ticker.Stop()
 		close(p.done)
+		if conf.shutdownNotifier != nil {
+			close(conf.shutdownNotifier)
+		}
 	}()
 
 	recoverFn := func(ch chan []byte) {
@@ -231,15 +278,12 @@ func (p *Progress) server() {
 		close(ch)
 	}
 
-	var beforeRender BeforeRender
-	cw := cwriter.New(os.Stdout)
 	bars := make([]*Bar, 0, 3)
 
 	for {
 		select {
-		case w := <-p.outChangeReqCh:
-			cw.Flush()
-			cw = cwriter.New(w)
+		case p.userConf <- conf:
+		case conf = <-p.userConf:
 		case data, ok := <-p.bCommandCh:
 			if !ok {
 				return
@@ -262,20 +306,19 @@ func (p *Progress) server() {
 			}
 		case respCh := <-p.barCountReqCh:
 			respCh <- len(bars)
-		case beforeRender = <-p.brCh:
-		case <-t.C:
+		case <-conf.ticker.C:
 			numBars := len(bars)
 
 			if numBars == 0 {
 				break
 			}
 
-			if beforeRender != nil {
-				beforeRender(bars)
+			if conf.beforeRender != nil {
+				conf.beforeRender(bars)
 			}
 
 			quitWidthSyncCh := make(chan struct{})
-			time.AfterFunc(userRR, func() {
+			time.AfterFunc(rr, func() {
 				close(quitWidthSyncCh)
 			})
 
@@ -293,24 +336,21 @@ func (p *Progress) server() {
 			ch := fanIn(sequence...)
 
 			for buf := range ch {
-				cw.Write(buf)
+				conf.cw.Write(buf)
 			}
 
-			cw.Flush()
+			conf.cw.Flush()
 
 			for _, b := range bars {
 				b.flushed()
 			}
-		case userRR = <-p.rrChangeReqCh:
-			t.Stop()
-			t = time.NewTicker(userRR)
 		case <-p.beforeStop:
 			for _, b := range bars {
 				if b.GetStatistics().Total <= 0 {
 					b.Completed()
 				}
 			}
-		case <-p.cancel:
+		case <-conf.cancel:
 			return
 		}
 	}

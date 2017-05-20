@@ -87,7 +87,7 @@ type (
 	}
 )
 
-func newBar(id int, total int64, width int, format string, wg *sync.WaitGroup, cancel <-chan struct{}) *Bar {
+func newBar(id int, total int64, wg *sync.WaitGroup, conf *userConf) *Bar {
 	b := &Bar{
 		stateReqCh:    make(chan chan state),
 		widthCh:       make(chan int),
@@ -103,7 +103,7 @@ func newBar(id int, total int64, width int, format string, wg *sync.WaitGroup, c
 		completeReqCh: make(chan struct{}),
 		done:          make(chan struct{}),
 	}
-	go b.server(id, total, width, format, wg, cancel)
+	go b.server(id, total, wg, conf)
 	return b
 }
 
@@ -205,8 +205,7 @@ func (b *Bar) GetStatistics() *Statistics {
 
 // GetID returs id of the bar
 func (b *Bar) GetID() int {
-	state := b.getState()
-	return state.id
+	return b.getState().id
 }
 
 // InProgress returns true, while progress is running
@@ -268,22 +267,21 @@ func (b *Bar) getState() state {
 	return <-ch
 }
 
-func (b *Bar) server(id int, total int64, width int, format string, wg *sync.WaitGroup, cancel <-chan struct{}) {
+func (b *Bar) server(id int, total int64, wg *sync.WaitGroup, conf *userConf) {
 	var incrStartTime time.Time
 	barState := state{
 		id:       id,
-		width:    width,
-		format:   barFmtRunes{'[', '=', '>', '-', ']'},
-		etaAlpha: 0.25,
 		total:    total,
+		width:    conf.width,
+		etaAlpha: 0.25,
 	}
 	if total <= 0 {
 		barState.simpleSpinner = getSpinner()
 	} else {
-		barState.updateFormat(format)
+		barState.updateFormat(conf.format)
 	}
 	defer func() {
-		b.stop(&barState, width)
+		b.stop(&barState, conf.width)
 		wg.Done()
 	}()
 	for {
@@ -333,7 +331,7 @@ func (b *Bar) server(id int, total int64, width int, format string, wg *sync.Wai
 			return
 		case <-b.removeReqCh:
 			return
-		case <-cancel:
+		case <-conf.cancel:
 			return
 		}
 	}
@@ -374,9 +372,6 @@ func (b *Bar) render(rFn func(chan []byte), termWidth int, prependWs, appendWs *
 }
 
 func (s *state) updateFormat(format string) {
-	if format == "" {
-		return
-	}
 	for i, n := 0, 0; len(format) > 0; i++ {
 		s.format[i], n = utf8.DecodeRuneInString(format)
 		format = format[n:]
