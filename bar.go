@@ -1,6 +1,7 @@
 package mpb
 
 import (
+	"fmt"
 	"io"
 	"math"
 	"sync"
@@ -21,19 +22,14 @@ type barFmtBytes [numFmtRunes][]byte
 
 // Bar represents a progress Bar
 type Bar struct {
-	stateReqCh    chan chan state
-	widthCh       chan int
-	formatCh      chan string
-	etaAlphaCh    chan float64
+	stateReqCh    chan state
 	incrCh        chan int64
-	trimLeftCh    chan bool
-	trimRightCh   chan bool
-	refillCh      chan *refill
 	dCommandCh    chan *dCommandData
 	flushedCh     chan struct{}
 	removeReqCh   chan struct{}
 	completeReqCh chan struct{}
 	done          chan struct{}
+	cancel        <-chan struct{}
 
 	// follawing are used after (*Bar.done) is closed
 	width int
@@ -46,7 +42,6 @@ type Statistics struct {
 	Completed           bool
 	Total               int64
 	Current             int64
-	IncrAmount          int64
 	StartTime           time.Time
 	TimeElapsed         time.Duration
 	TimePerItemEstimate time.Duration
@@ -69,7 +64,6 @@ type (
 		etaAlpha       float64
 		total          int64
 		current        int64
-		incrAmount     int64
 		trimLeftSpace  bool
 		trimRightSpace bool
 		completed      bool
@@ -85,21 +79,31 @@ type (
 
 func newBar(id int, total int64, wg *sync.WaitGroup, conf *userConf) *Bar {
 	b := &Bar{
-		stateReqCh:    make(chan chan state),
-		widthCh:       make(chan int),
-		formatCh:      make(chan string),
-		etaAlphaCh:    make(chan float64),
+		width:         conf.width,
+		stateReqCh:    make(chan state),
 		incrCh:        make(chan int64, 1),
-		trimLeftCh:    make(chan bool),
-		trimRightCh:   make(chan bool),
-		refillCh:      make(chan *refill),
 		dCommandCh:    make(chan *dCommandData),
 		flushedCh:     make(chan struct{}, 1),
 		removeReqCh:   make(chan struct{}),
 		completeReqCh: make(chan struct{}),
 		done:          make(chan struct{}),
+		cancel:        conf.cancel,
 	}
-	go b.server(id, total, wg, conf)
+
+	s := state{
+		id:       id,
+		total:    total,
+		width:    conf.width,
+		etaAlpha: 0.25,
+	}
+
+	if total <= 0 {
+		s.simpleSpinner = getSpinner()
+	} else {
+		s.updateFormat(conf.format)
+	}
+
+	go b.server(wg, s)
 	return b
 }
 
@@ -108,7 +112,9 @@ func (b *Bar) SetWidth(n int) *Bar {
 	if n < 2 || isClosed(b.done) {
 		return b
 	}
-	b.widthCh <- n
+	s := <-b.stateReqCh
+	s.width = n
+	b.stateReqCh <- s
 	return b
 }
 
@@ -117,7 +123,10 @@ func (b *Bar) TrimLeftSpace() *Bar {
 	if isClosed(b.done) {
 		return b
 	}
-	b.trimLeftCh <- true
+	// b.trimLeftCh <- true
+	s := <-b.stateReqCh
+	s.trimLeftSpace = true
+	b.stateReqCh <- s
 	return b
 }
 
@@ -126,7 +135,10 @@ func (b *Bar) TrimRightSpace() *Bar {
 	if isClosed(b.done) {
 		return b
 	}
-	b.trimRightCh <- true
+	// b.trimRightCh <- true
+	s := <-b.stateReqCh
+	s.trimRightSpace = true
+	b.stateReqCh <- s
 	return b
 }
 
@@ -135,7 +147,9 @@ func (b *Bar) Format(format string) *Bar {
 	if utf8.RuneCountInString(format) != numFmtRunes || isClosed(b.done) {
 		return b
 	}
-	b.formatCh <- format
+	s := <-b.stateReqCh
+	s.updateFormat(format)
+	b.stateReqCh <- s
 	return b
 }
 
@@ -146,7 +160,9 @@ func (b *Bar) SetEtaAlpha(a float64) *Bar {
 	if isClosed(b.done) {
 		return b
 	}
-	b.etaAlphaCh <- a
+	s := <-b.stateReqCh
+	s.etaAlpha = a
+	b.stateReqCh <- s
 	return b
 }
 
@@ -169,7 +185,10 @@ func (b *Bar) IncrWithReFill(n int, r rune) {
 		return
 	}
 	b.Incr(n)
-	b.refillCh <- &refill{r, int64(n)}
+	// b.refillCh <- &refill{r, int64(n)}
+	s := <-b.stateReqCh
+	s.refill = &refill{r, int64(n)}
+	b.stateReqCh <- s
 }
 
 // GetAppenders returns slice of appender DecoratorFunc
@@ -258,84 +277,68 @@ func (b *Bar) getState() state {
 	if isClosed(b.done) {
 		return b.state
 	}
-	ch := make(chan state)
-	b.stateReqCh <- ch
-	return <-ch
+	return <-b.stateReqCh
 }
 
-func (b *Bar) server(id int, total int64, wg *sync.WaitGroup, conf *userConf) {
+func (b *Bar) server(wg *sync.WaitGroup, s state) {
 	var incrStartTime time.Time
-	barState := state{
-		id:       id,
-		total:    total,
-		width:    conf.width,
-		etaAlpha: 0.25,
-	}
-	if total <= 0 {
-		barState.simpleSpinner = getSpinner()
-	} else {
-		barState.updateFormat(conf.format)
-	}
+
 	defer func() {
-		b.stop(&barState, conf.width)
+		// b.stop(&barState, conf.width)
+		b.stop(&s)
 		wg.Done()
+		fmt.Printf("Exited bar %d\n", s.id)
 	}()
+
 	for {
 		select {
-		case barState.incrAmount = <-b.incrCh:
-			if barState.current == 0 {
+		case b.stateReqCh <- s:
+		case s = <-b.stateReqCh:
+		case amount := <-b.incrCh:
+			if s.current == 0 {
 				incrStartTime = time.Now()
-				barState.startTime = incrStartTime
+				s.startTime = incrStartTime
 			}
-			n := barState.current + barState.incrAmount
-			if total > 0 && n > total {
-				barState.current = total
-				barState.completed = true
+			n := s.current + amount
+			if s.total > 0 && n > s.total {
+				s.current = s.total
+				s.completed = true
 				break // break out of select
 			}
-			barState.timeElapsed = time.Since(barState.startTime)
-			barState.updateTimePerItemEstimate(incrStartTime)
-			if n == total {
-				barState.completed = true
+			s.timeElapsed = time.Since(s.startTime)
+			s.updateTimePerItemEstimate(incrStartTime, amount)
+			if n == s.total {
+				s.completed = true
 			}
-			barState.current = n
+			s.current = n
 			incrStartTime = time.Now()
 		case data := <-b.dCommandCh:
 			switch data.action {
 			case dAppend:
-				barState.appendFuncs = append(barState.appendFuncs, data.f)
+				s.appendFuncs = append(s.appendFuncs, data.f)
 			case dAppendZero:
-				barState.appendFuncs = nil
+				s.appendFuncs = nil
 			case dPrepend:
-				barState.prependFuncs = append(barState.prependFuncs, data.f)
+				s.prependFuncs = append(s.prependFuncs, data.f)
 			case dPrependZero:
-				barState.prependFuncs = nil
+				s.prependFuncs = nil
 			}
-		case ch := <-b.stateReqCh:
-			ch <- barState
-		case format := <-b.formatCh:
-			barState.updateFormat(format)
-		case barState.width = <-b.widthCh:
-		case barState.refill = <-b.refillCh:
-		case barState.trimLeftSpace = <-b.trimLeftCh:
-		case barState.trimRightSpace = <-b.trimRightCh:
 		case <-b.flushedCh:
-			if barState.completed {
+			if s.completed {
 				return
 			}
 		case <-b.completeReqCh:
 			return
 		case <-b.removeReqCh:
 			return
-		case <-conf.cancel:
+		case <-b.cancel:
 			return
 		}
 	}
 }
 
-func (b *Bar) stop(s *state, width int) {
+func (b *Bar) stop(s *state) {
 	b.state = *s
-	b.width = width
 	close(b.done)
 }
 
@@ -374,9 +377,9 @@ func (s *state) updateFormat(format string) {
 	}
 }
 
-func (s *state) updateTimePerItemEstimate(incrStartTime time.Time) {
+func (s *state) updateTimePerItemEstimate(incrStartTime time.Time, amount int64) {
 	lastBlockTime := time.Since(incrStartTime) // shorthand for time.Now().Sub(t)
-	lastItemEstimate := float64(lastBlockTime) / float64(s.incrAmount)
+	lastItemEstimate := float64(lastBlockTime) / float64(amount)
 	s.timePerItem = time.Duration((s.etaAlpha * lastItemEstimate) + (1-s.etaAlpha)*float64(s.timePerItem))
 }
 
@@ -498,7 +501,6 @@ func newStatistics(s *state) *Statistics {
 		Completed:           s.completed,
 		Total:               s.total,
 		Current:             s.current,
-		IncrAmount:          s.incrAmount,
 		StartTime:           s.startTime,
 		TimeElapsed:         s.timeElapsed,
 		TimePerItemEstimate: s.timePerItem,
