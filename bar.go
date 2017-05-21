@@ -1,10 +1,8 @@
 package mpb
 
 import (
-	"fmt"
 	"io"
 	"math"
-	"os"
 	"sync"
 	"time"
 	"unicode/utf8"
@@ -23,12 +21,11 @@ type barFmtBytes [numFmtRunes][]byte
 
 // Bar represents a progress Bar
 type Bar struct {
-	stateReqCh chan state
-	incrCh     chan incrReq
-	// dCommandCh  chan *dCommandData
+	stateCh     chan state
+	incrCh      chan incrReq
 	flushedCh   chan struct{}
-	removeReqCh chan struct{}
 	completedCh chan struct{}
+	removeReqCh chan struct{}
 	done        chan struct{}
 	cancel      <-chan struct{}
 
@@ -86,10 +83,9 @@ type (
 
 func newBar(id int, total int64, wg *sync.WaitGroup, conf *userConf) *Bar {
 	b := &Bar{
-		width:      conf.width,
-		stateReqCh: make(chan state),
-		incrCh:     make(chan incrReq),
-		// dCommandCh:  make(chan *dCommandData),
+		width:       conf.width,
+		stateCh:     make(chan state),
+		incrCh:      make(chan incrReq),
 		flushedCh:   make(chan struct{}),
 		removeReqCh: make(chan struct{}),
 		completedCh: make(chan struct{}),
@@ -267,7 +263,6 @@ func (b *Bar) flushed() {
 	select {
 	case b.flushedCh <- struct{}{}:
 	case <-b.done:
-		fmt.Fprintf(os.Stderr, "flushedCh abort: %d\n", b.state.id)
 		return
 	}
 }
@@ -282,7 +277,7 @@ func (b *Bar) remove() {
 
 func (b *Bar) getState() state {
 	select {
-	case s := <-b.stateReqCh:
+	case s := <-b.stateCh:
 		return s
 	case <-b.done:
 		return b.state
@@ -293,7 +288,7 @@ func (b *Bar) updateState(cb func(s *state)) {
 	s := b.getState()
 	cb(&s)
 	select {
-	case b.stateReqCh <- s:
+	case b.stateCh <- s:
 	case <-b.done:
 		return
 	}
@@ -306,13 +301,12 @@ func (b *Bar) server(wg *sync.WaitGroup, s state) {
 		b.state = s
 		wg.Done()
 		close(b.done)
-		fmt.Fprintf(os.Stderr, "Exited bar %d\n", s.id)
 	}()
 
 	for {
 		select {
-		case b.stateReqCh <- s:
-		case s = <-b.stateReqCh:
+		case b.stateCh <- s:
+		case s = <-b.stateCh:
 		case r := <-b.incrCh:
 			if s.current == 0 {
 				incrStartTime = time.Now()
@@ -334,7 +328,6 @@ func (b *Bar) server(wg *sync.WaitGroup, s state) {
 			incrStartTime = time.Now()
 		case <-b.flushedCh:
 			if s.completed {
-				fmt.Fprintln(os.Stderr, "completed")
 				return
 			}
 		case <-b.completedCh:
