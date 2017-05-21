@@ -18,71 +18,40 @@ const (
 
 func main() {
 
-	var wg sync.WaitGroup
-	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	p := mpb.New().SetWidth(64).WithContext(ctx)
 
-	name1 := "Bar#1:"
-	bar1 := p.AddBar(50).
-		PrependName(name1, 0, mpb.DwidthSync|mpb.DidentRight).
-		PrependETA(4, mpb.DwidthSync|mpb.DextraSpace).
-		AppendPercentage(5, 0)
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		blockSize := rand.Intn(maxBlockSize) + 1
-		for i := 0; i < 50; i++ {
-			select {
-			case <-ctx.Done():
-				return
-			default:
+	p := mpb.New().WithContext(ctx)
+
+	var wg sync.WaitGroup
+	total := 100
+	numBars := 3
+	wg.Add(numBars)
+
+	for i := 0; i < numBars; i++ {
+		name := fmt.Sprintf("Bar#%d:", i)
+		bar := p.AddBarWithID(i, int64(total)).
+			PrependName(name, 0, mpb.DwidthSync|mpb.DidentRight).
+			PrependETA(4, mpb.DwidthSync|mpb.DextraSpace).
+			AppendPercentage(5, 0)
+		go func() {
+			defer func() {
+				// fmt.Printf("%s done\n", name)
+				wg.Done()
+			}()
+			blockSize := rand.Intn(maxBlockSize) + 1
+			for i := 0; i < total; i++ {
+				select {
+				case <-ctx.Done():
+					return
+				default:
+				}
 				sleep(blockSize)
-				bar1.Incr(1)
+				bar.Incr(1)
 				blockSize = rand.Intn(maxBlockSize) + 1
 			}
-		}
-	}()
-
-	bar2 := p.AddBar(100).
-		PrependName("", 0, mpb.DwidthSync).
-		PrependETA(4, mpb.DwidthSync|mpb.DextraSpace).
-		AppendPercentage(5, 0)
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		blockSize := rand.Intn(maxBlockSize) + 1
-		for i := 0; i < 100; i++ {
-			select {
-			case <-ctx.Done():
-				return
-			default:
-				sleep(blockSize)
-				bar2.Incr(1)
-				blockSize = rand.Intn(maxBlockSize) + 1
-			}
-		}
-	}()
-
-	bar3 := p.AddBar(80).
-		PrependName("Bar#3:", 0, mpb.DwidthSync|mpb.DidentRight).
-		PrependETA(4, mpb.DwidthSync|mpb.DextraSpace).
-		AppendPercentage(5, 0)
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		blockSize := rand.Intn(maxBlockSize) + 1
-		for i := 0; i < 80; i++ {
-			select {
-			case <-ctx.Done():
-				return
-			default:
-				sleep(blockSize)
-				bar3.Incr(1)
-				blockSize = rand.Intn(maxBlockSize) + 1
-			}
-		}
-	}()
+		}()
+	}
 
 	wg.Wait()
 	p.Stop()
