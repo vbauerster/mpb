@@ -38,3 +38,15 @@ func TestWithContext(t *testing.T) {
 		t.Error("ProgressBar didn't stop")
 	}
 }
+
+func TestWithNilContext(t *testing.T) {
+	defer func() {
+		if p := recover(); p != nil {
+			if msg, ok := p.(string); ok && msg == "nil context" {
+				return
+			}
+			t.Errorf("Expected nil context panic, got: %+v", p)
+		}
+	}()
+	_ = mpb.New().WithContext(nil)
+}
