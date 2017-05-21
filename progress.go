@@ -68,11 +68,14 @@ type Progress struct {
 	// WaitGroup for internal rendering sync
 	wg *sync.WaitGroup
 
-	done          chan struct{}
-	userConf      chan userConf
-	bCommandCh    chan *bCommandData
-	barCountReqCh chan chan int
-	beforeStopCh  chan struct{}
+	done         chan struct{}
+	userConfCh   chan userConf
+	bCommandCh   chan *bCommandData
+	barCountCh   chan int
+	beforeStopCh chan struct{}
+
+	// follawing is used after (*Progress.done) is closed
+	conf userConf
 }
 
 // New creates new Progress instance, which will orchestrate bars rendering
@@ -80,12 +83,12 @@ type Progress struct {
 // If you don't plan to cancel, it is safe to feed with nil
 func New() *Progress {
 	p := &Progress{
-		wg:            new(sync.WaitGroup),
-		done:          make(chan struct{}),
-		userConf:      make(chan userConf),
-		bCommandCh:    make(chan *bCommandData),
-		barCountReqCh: make(chan chan int),
-		beforeStopCh:  make(chan struct{}),
+		wg:           new(sync.WaitGroup),
+		done:         make(chan struct{}),
+		userConfCh:   make(chan userConf),
+		bCommandCh:   make(chan *bCommandData),
+		barCountCh:   make(chan int),
+		beforeStopCh: make(chan struct{}),
 	}
 	go p.server(userConf{
 		width:  pwidth,
@@ -97,146 +100,111 @@ func New() *Progress {
 }
 
 // WithCancel cancellation via channel.
-// pancis, if called on stopped Progress instance, i.e after (*Progress).Stop()
-// or nil channel passed
+// Pancis, if nil channel is passed.
 func (p *Progress) WithCancel(ch <-chan struct{}) *Progress {
-	if isClosed(p.done) {
-		panic(ErrCallAfterStop)
-	}
 	if ch == nil {
 		panic("nil cancel channel")
 	}
-	conf := <-p.userConf
-	conf.cancel = ch
-	p.userConf <- conf
+	p.updateConf(func(c *userConf) {
+		c.cancel = ch
+	})
 	return p
 }
 
-// SetWidth overrides default (70) width of bar(s).
-// pancis, if called on stopped Progress instance, i.e after (*Progress).Stop()
+// SetWidth overrides default (80) width of bar(s).
 func (p *Progress) SetWidth(width int) *Progress {
-	if isClosed(p.done) {
-		panic(ErrCallAfterStop)
-	}
-	if width < 0 {
+	if width < 2 {
 		return p
 	}
-	conf := <-p.userConf
-	conf.width = width
-	p.userConf <- conf
+	p.updateConf(func(c *userConf) {
+		c.width = width
+	})
 	return p
 }
 
 // SetOut sets underlying writer of progress. Default one is os.Stdout.
-// pancis, if called on stopped Progress instance, i.e after (*Progress).Stop()
 func (p *Progress) SetOut(w io.Writer) *Progress {
-	if isClosed(p.done) {
-		panic(ErrCallAfterStop)
-	}
 	if w == nil {
 		return p
 	}
-	conf := <-p.userConf
-	conf.cw.Flush()
-	conf.cw = cwriter.New(w)
-	p.userConf <- conf
+	p.updateConf(func(c *userConf) {
+		c.cw.Flush()
+		c.cw = cwriter.New(w)
+	})
 	return p
 }
 
 // RefreshRate overrides default (100ms) refresh rate value
-// pancis, if called on stopped Progress instance, i.e after (*Progress).Stop()
 func (p *Progress) RefreshRate(d time.Duration) *Progress {
-	if isClosed(p.done) {
-		panic(ErrCallAfterStop)
-	}
-	conf := <-p.userConf
-	conf.ticker.Stop()
-	rr = d
-	conf.ticker = time.NewTicker(rr)
-	p.userConf <- conf
+	p.updateConf(func(c *userConf) {
+		c.ticker.Stop()
+		c.ticker = time.NewTicker(d)
+		rr = d
+	})
 	return p
 }
 
 // BeforeRenderFunc accepts a func, which gets called before render process.
-// pancis, if called on stopped Progress instance, i.e after (*Progress).Stop()
 func (p *Progress) BeforeRenderFunc(f BeforeRender) *Progress {
-	if isClosed(p.done) {
-		panic(ErrCallAfterStop)
-	}
-	conf := <-p.userConf
-	conf.beforeRender = f
-	p.userConf <- conf
+	p.updateConf(func(c *userConf) {
+		c.beforeRender = f
+	})
 	return p
 }
 
 // AddBar creates a new progress bar and adds to the container.
-// pancis, if called on stopped Progress instance, i.e after (*Progress).Stop()
 func (p *Progress) AddBar(total int64) *Bar {
 	return p.AddBarWithID(0, total)
 }
 
 // AddBarWithID creates a new progress bar and adds to the container.
-// pancis, if called on stopped Progress instance, i.e after (*Progress).Stop()
 func (p *Progress) AddBarWithID(id int, total int64) *Bar {
-	if isClosed(p.done) {
-		panic(ErrCallAfterStop)
-	}
-	conf := <-p.userConf
-	result := make(chan bool)
+	conf := p.getConf()
 	bar := newBar(id, total, p.wg, &conf)
-	p.bCommandCh <- &bCommandData{bAdd, bar, result}
-	if <-result {
-		p.wg.Add(1)
+	p.bCommandCh <- &bCommandData{
+		action: bAdd,
+		bar:    bar,
 	}
 	return bar
 }
 
 // RemoveBar removes bar at any time.
-// Pancis, if called on stopped Progress instance, i.e after (*Progress).Stop()
 func (p *Progress) RemoveBar(b *Bar) bool {
-	if isClosed(p.done) {
-		panic(ErrCallAfterStop)
-	}
 	result := make(chan bool)
-	p.bCommandCh <- &bCommandData{bRemove, b, result}
-	return <-result
+	select {
+	case p.bCommandCh <- &bCommandData{bRemove, b, result}:
+		return <-result
+	case <-p.done:
+		return false
+	}
 }
 
 // BarCount returns bars count in the container.
-// Pancis if called on stopped Progress instance, i.e after (*Progress).Stop()
 func (p *Progress) BarCount() int {
-	if isClosed(p.done) {
-		panic(ErrCallAfterStop)
+	select {
+	case count := <-p.barCountCh:
+		return count
+	case <-p.done:
+		return 0
 	}
-	respCh := make(chan int, 1)
-	p.barCountReqCh <- respCh
-	return <-respCh
 }
 
 // ShutdownNotify means to be notified when main rendering goroutine quits, usualy after p.Stop() call.
-// pancis, if called on stopped Progress instance, i.e after (*Progress).Stop()
 func (p *Progress) ShutdownNotify(ch chan struct{}) *Progress {
-	if isClosed(p.done) {
-		panic(ErrCallAfterStop)
-	}
-	conf := <-p.userConf
-	conf.shutdownNotifier = ch
-	p.userConf <- conf
+	p.updateConf(func(c *userConf) {
+		c.shutdownNotifier = ch
+	})
 	return p
 }
 
 // Format sets custom format for underlying bar(s), default one is "[=>-]".
-// pancis, if called on stopped Progress instance, i.e after (*Progress).Stop()
 func (p *Progress) Format(format string) *Progress {
-	if isClosed(p.done) {
-		panic(ErrCallAfterStop)
-	}
 	if utf8.RuneCountInString(format) != numFmtRunes {
 		return p
 	}
-	conf := <-p.userConf
-	conf.format = format
-	p.userConf <- conf
+	p.updateConf(func(c *userConf) {
+		c.format = format
+	})
 	return p
 }
 
@@ -252,21 +220,39 @@ func (p *Progress) Stop() {
 	p.wg.Wait()
 
 	p.beforeStopCh <- struct{}{}
-	fmt.Println("signal sent to p.beforeStopCh")
+	// fmt.Println("signal sent to p.beforeStopCh")
+	// wait for p.server to quit
 	<-p.done
-	fmt.Println("p.done closed")
+}
+
+func (p *Progress) getConf() userConf {
+	select {
+	case conf := <-p.userConfCh:
+		return conf
+	case <-p.done:
+		return p.conf
+	}
+}
+
+func (p *Progress) updateConf(cb func(c *userConf)) {
+	c := p.getConf()
+	cb(&c)
+	select {
+	case p.userConfCh <- c:
+	case <-p.done:
+		return
+	}
 }
 
 // server monitors underlying channels and renders any progress bars
 func (p *Progress) server(conf userConf) {
 
 	defer func() {
-		// fmt.Println("exiting p.server")
-		// conf.ticker.Stop()
+		p.conf = conf
+		conf.ticker.Stop()
 		if conf.shutdownNotifier != nil {
 			close(conf.shutdownNotifier)
 		}
-		// fmt.Println("about to close(p.done)")
 		close(p.done)
 	}()
 
@@ -284,13 +270,13 @@ func (p *Progress) server(conf userConf) {
 
 	for {
 		select {
-		case p.userConf <- conf:
-		case conf = <-p.userConf:
+		case p.userConfCh <- conf:
+		case conf = <-p.userConfCh:
 		case data := <-p.bCommandCh:
 			switch data.action {
 			case bAdd:
 				bars = append(bars, data.bar)
-				data.result <- true
+				p.wg.Add(1)
 			case bRemove:
 				var ok bool
 				for i, b := range bars {
@@ -303,8 +289,7 @@ func (p *Progress) server(conf userConf) {
 				}
 				data.result <- ok
 			}
-		case respCh := <-p.barCountReqCh:
-			respCh <- len(bars)
+		case p.barCountCh <- len(bars):
 		case <-conf.ticker.C:
 			if conf.cancel != nil && isClosed(conf.cancel) {
 				conf.ticker.Stop()
@@ -355,7 +340,6 @@ func (p *Progress) server(conf userConf) {
 					b.Completed()
 				}
 			}
-			conf.ticker.Stop()
 			return
 		}
 	}
