@@ -216,11 +216,9 @@ func (p *Progress) Stop() {
 	if isClosed(p.done) {
 		return
 	}
-	// fmt.Println("inside p.Stop")
 	p.wg.Wait()
 
 	p.beforeStopCh <- struct{}{}
-	// fmt.Println("signal sent to p.beforeStopCh")
 	// wait for p.server to quit
 	<-p.done
 }
@@ -333,7 +331,6 @@ func (p *Progress) server(conf userConf) {
 				b.flushed()
 			}
 		case <-p.beforeStopCh:
-			// fmt.Println("case beforeStopCh")
 			for _, b := range bars {
 				if b.GetStatistics().Total <= 0 {
 					fmt.Println("completing the bar: ", b)
