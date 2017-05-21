@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"math/rand"
-	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -16,18 +15,15 @@ import (
 func TestDefaultWidth(t *testing.T) {
 	var buf bytes.Buffer
 	p := mpb.New().SetOut(&buf)
-	bar := p.AddBar(100)
+	bar := p.AddBar(100).TrimLeftSpace().TrimRightSpace()
 	for i := 0; i < 100; i++ {
 		bar.Incr(1)
 	}
 	p.Stop()
-	runeCount := utf8.RuneCountInString(strings.TrimSpace(buf.String()))
-	defWidth := 80
+	runeCount := utf8.RuneCountInString(buf.String())
+	defWidth := 81 // + 1 for new line
 	if runeCount != defWidth {
-		defWidth = 78 // when testing with ./...
-		if runeCount != defWidth {
-			t.Errorf("Expected default width: %d, got: %d\n", defWidth, runeCount)
-		}
+		t.Errorf("Expected default width: %d, got: %d\n", defWidth, runeCount)
 	}
 }
 
@@ -35,17 +31,14 @@ func TestCustomWidth(t *testing.T) {
 	customWidth := 60
 	var buf bytes.Buffer
 	p := mpb.New().SetWidth(customWidth).SetOut(&buf)
-	bar := p.AddBar(100)
+	bar := p.AddBar(100).TrimLeftSpace().TrimRightSpace()
 	for i := 0; i < 100; i++ {
 		bar.Incr(1)
 	}
 	p.Stop()
-	runeCount := utf8.RuneCountInString(strings.TrimSpace(buf.String()))
-	if runeCount != customWidth {
-		customWidth = 58 // when testing with ./...
-		if runeCount != customWidth {
-			t.Errorf("Expected default width: %d, got: %d\n", customWidth, runeCount)
-		}
+	runeCount := utf8.RuneCountInString(buf.String())
+	if runeCount != customWidth+1 { // +1 for new line
+		t.Errorf("Expected default width: %d, got: %d\n", customWidth, runeCount)
 	}
 }
 
@@ -155,44 +148,41 @@ func TestWithNilCancel(t *testing.T) {
 	_ = mpb.New().WithCancel(nil)
 }
 
-func TestFormat(t *testing.T) {
+func TestCustomFormat(t *testing.T) {
 	var buf bytes.Buffer
 	cancel := make(chan struct{})
 	shutdown := make(chan struct{})
 	customFormat := "╢▌▌░╟"
-	p := mpb.New().Format(customFormat)
-	p.WithCancel(cancel)
-	p.ShutdownNotify(shutdown)
-	p.SetOut(&buf)
+	p := mpb.New().Format(customFormat).
+		WithCancel(cancel).
+		ShutdownNotify(shutdown).
+		SetOut(&buf)
 	bar := p.AddBar(100).TrimLeftSpace().TrimRightSpace()
 
 	go func() {
 		for i := 0; i < 100; i++ {
-			bar.Incr(1)
 			time.Sleep(10 * time.Millisecond)
-			if i == 42 {
-				close(cancel)
-			}
+			bar.Incr(1)
 		}
 	}()
 
-	// p.Stop()
-	// time.Sleep(300 * time.Millisecond)
+	time.Sleep(300 * time.Millisecond)
+	close(cancel)
+	p.Stop()
 
-	// gotBar := strings.TrimSpace(buf.String())
-	gotBar := buf.String()
+	bytes := buf.Bytes()
+	_, size := utf8.DecodeLastRune(bytes)
+	bytes = bytes[:len(bytes)-size] // removing new line
+
 	seen := make(map[rune]bool)
-	for _, r := range gotBar {
+	for _, r := range string(bytes) {
 		if !seen[r] {
 			seen[r] = true
 		}
 	}
-	fmt.Println(gotBar)
-	for r, _ := range seen {
-		fmt.Printf("%#U\n", r)
+	for _, r := range customFormat {
+		if !seen[r] {
+			t.Errorf("Rune %#U not found in bar\n", r)
+		}
 	}
-	// expectBar := "╢▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌╟"
-	// if gotBar != expectBar {
-	// 	t.Errorf("Expected for")
-	// }
 }
