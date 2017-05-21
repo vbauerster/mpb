@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"math/rand"
 	"time"
 
@@ -11,8 +12,8 @@ func main() {
 	// Star mpb's rendering goroutine.
 	p := mpb.New()
 	// Set custom width for every bar, which mpb will render
-	// The default one in 70
-	p.SetWidth(80)
+	// The default one in 80
+	p.SetWidth(100)
 	// Set custom format for every bar, the default one is "[=>-]"
 	p.Format("╢▌▌░╟")
 	// Set custom refresh rate, the default one is 100 ms
@@ -28,7 +29,5 @@ func main() {
 
 	// Don't forget to stop mpb's rendering goroutine
 	p.Stop()
-
-	// You cannot add bars after p.Stop() has been called
-	// p.AddBar(100) // will panic
+	fmt.Println("Stop")
 }
