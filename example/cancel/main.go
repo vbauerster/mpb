@@ -55,7 +55,6 @@ func main() {
 
 	wg.Wait()
 	p.Stop()
-	// p.AddBar(2) // panic: you cannot reuse p, create new one!
 	fmt.Println("stop")
 }
 
