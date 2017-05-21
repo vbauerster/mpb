@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"sync"
 	"testing"
 	"time"
 
@@ -16,21 +17,37 @@ func TestWithContext(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	shutdown := make(chan struct{})
 	p := mpb.New().WithContext(ctx).ShutdownNotify(shutdown)
+
+	var wg sync.WaitGroup
+	total := 100
 	numBars := 3
+	wg.Add(numBars)
 
 	for i := 0; i < numBars; i++ {
 		name := fmt.Sprintf("Bar#%d:", i)
-		bar := p.AddBar(100).PrependName(name, len(name), 0)
+		bar := p.AddBarWithID(i, int64(total)).PrependName(name, len(name), 0)
 
 		go func() {
-			for i := 0; i < 10000; i++ {
-				bar.Incr(1)
+			defer func() {
+				// fmt.Printf("%s done\n", name)
+				wg.Done()
+			}()
+			for i := 0; i < total; i++ {
+				select {
+				case <-ctx.Done():
+					return
+				default:
+				}
 				time.Sleep(time.Duration(rand.Intn(100)) * time.Millisecond)
+				bar.Incr(1)
 			}
 		}()
 	}
 
-	cancel()
+	time.AfterFunc(300*time.Millisecond, cancel)
+
+	wg.Wait()
+	p.Stop()
 
 	select {
 	case <-shutdown:
