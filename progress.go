@@ -72,7 +72,7 @@ type Progress struct {
 	userConf      chan userConf
 	bCommandCh    chan *bCommandData
 	barCountReqCh chan chan int
-	beforeStop    chan struct{}
+	beforeStopCh  chan struct{}
 }
 
 // New creates new Progress instance, which will orchestrate bars rendering
@@ -85,7 +85,7 @@ func New() *Progress {
 		userConf:      make(chan userConf),
 		bCommandCh:    make(chan *bCommandData),
 		barCountReqCh: make(chan chan int),
-		beforeStop:    make(chan struct{}),
+		beforeStopCh:  make(chan struct{}),
 	}
 	go p.server(userConf{
 		width:  pwidth,
@@ -248,20 +248,26 @@ func (p *Progress) Stop() {
 	if isClosed(p.done) {
 		return
 	}
-	p.beforeStop <- struct{}{}
+	// fmt.Println("inside p.Stop")
 	p.wg.Wait()
-	close(p.bCommandCh)
+
+	p.beforeStopCh <- struct{}{}
+	fmt.Println("signal sent to p.beforeStopCh")
+	<-p.done
+	fmt.Println("p.done closed")
 }
 
 // server monitors underlying channels and renders any progress bars
 func (p *Progress) server(conf userConf) {
 
 	defer func() {
-		conf.ticker.Stop()
-		close(p.done)
+		// fmt.Println("exiting p.server")
+		// conf.ticker.Stop()
 		if conf.shutdownNotifier != nil {
 			close(conf.shutdownNotifier)
 		}
+		// fmt.Println("about to close(p.done)")
+		close(p.done)
 	}()
 
 	recoverFn := func(ch chan []byte) {
@@ -280,10 +286,7 @@ func (p *Progress) server(conf userConf) {
 		select {
 		case p.userConf <- conf:
 		case conf = <-p.userConf:
-		case data, ok := <-p.bCommandCh:
-			if !ok {
-				return
-			}
+		case data := <-p.bCommandCh:
 			switch data.action {
 			case bAdd:
 				bars = append(bars, data.bar)
@@ -303,8 +306,12 @@ func (p *Progress) server(conf userConf) {
 		case respCh := <-p.barCountReqCh:
 			respCh <- len(bars)
 		case <-conf.ticker.C:
-			numBars := len(bars)
+			if conf.cancel != nil && isClosed(conf.cancel) {
+				conf.ticker.Stop()
+				break
+			}
 
+			numBars := len(bars)
 			if numBars == 0 {
 				break
 			}
@@ -340,13 +347,15 @@ func (p *Progress) server(conf userConf) {
 			for _, b := range bars {
 				b.flushed()
 			}
-		case <-p.beforeStop:
+		case <-p.beforeStopCh:
+			// fmt.Println("case beforeStopCh")
 			for _, b := range bars {
 				if b.GetStatistics().Total <= 0 {
+					fmt.Println("completing the bar: ", b)
 					b.Completed()
 				}
 			}
-		case <-conf.cancel:
+			conf.ticker.Stop()
 			return
 		}
 	}

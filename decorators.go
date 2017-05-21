@@ -21,22 +21,22 @@ const (
 	DextraSpace
 )
 
-type decoratorAction uint
+// type decoratorAction uint
 
-const (
-	dAppend decoratorAction = iota
-	dPrepend
-	dAppendZero
-	dPrependZero
-)
+// const (
+// 	dAppend decoratorAction = iota
+// 	dPrepend
+// 	dAppendZero
+// 	dPrependZero
+// )
 
 // DecoratorFunc is a function that can be prepended and appended to the progress bar
 type DecoratorFunc func(s *Statistics, myWidth chan<- int, maxWidth <-chan int) string
 
-type dCommandData struct {
-	action decoratorAction
-	f      DecoratorFunc
-}
+// type dCommandData struct {
+// 	action decoratorAction
+// 	f      DecoratorFunc
+// }
 
 // PrependName prepends name argument to the bar.
 // The conf argument defines the formatting properties

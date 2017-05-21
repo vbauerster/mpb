@@ -1,8 +1,10 @@
 package mpb
 
 import (
+	"fmt"
 	"io"
 	"math"
+	"os"
 	"sync"
 	"time"
 	"unicode/utf8"
@@ -21,9 +23,9 @@ type barFmtBytes [numFmtRunes][]byte
 
 // Bar represents a progress Bar
 type Bar struct {
-	stateReqCh  chan state
-	incrCh      chan incrReq
-	dCommandCh  chan *dCommandData
+	stateReqCh chan state
+	incrCh     chan incrReq
+	// dCommandCh  chan *dCommandData
 	flushedCh   chan struct{}
 	removeReqCh chan struct{}
 	completedCh chan struct{}
@@ -84,10 +86,10 @@ type (
 
 func newBar(id int, total int64, wg *sync.WaitGroup, conf *userConf) *Bar {
 	b := &Bar{
-		width:       conf.width,
-		stateReqCh:  make(chan state),
-		incrCh:      make(chan incrReq),
-		dCommandCh:  make(chan *dCommandData),
+		width:      conf.width,
+		stateReqCh: make(chan state),
+		incrCh:     make(chan incrReq),
+		// dCommandCh:  make(chan *dCommandData),
 		flushedCh:   make(chan struct{}),
 		removeReqCh: make(chan struct{}),
 		completedCh: make(chan struct{}),
@@ -114,47 +116,39 @@ func newBar(id int, total int64, wg *sync.WaitGroup, conf *userConf) *Bar {
 
 // SetWidth overrides width of individual bar
 func (b *Bar) SetWidth(n int) *Bar {
-	if n < 2 || isClosed(b.done) {
+	if n < 2 {
 		return b
 	}
-	s := <-b.stateReqCh
-	s.width = n
-	b.stateReqCh <- s
+	b.updateState(func(s *state) {
+		s.width = n
+	})
 	return b
 }
 
 // TrimLeftSpace removes space befor LeftEnd charater
 func (b *Bar) TrimLeftSpace() *Bar {
-	if isClosed(b.done) {
-		return b
-	}
-	// b.trimLeftCh <- true
-	s := <-b.stateReqCh
-	s.trimLeftSpace = true
-	b.stateReqCh <- s
+	b.updateState(func(s *state) {
+		s.trimLeftSpace = true
+	})
 	return b
 }
 
 // TrimRightSpace removes space after RightEnd charater
 func (b *Bar) TrimRightSpace() *Bar {
-	if isClosed(b.done) {
-		return b
-	}
-	// b.trimRightCh <- true
-	s := <-b.stateReqCh
-	s.trimRightSpace = true
-	b.stateReqCh <- s
+	b.updateState(func(s *state) {
+		s.trimRightSpace = true
+	})
 	return b
 }
 
 // Format overrides format of individual bar
 func (b *Bar) Format(format string) *Bar {
-	if utf8.RuneCountInString(format) != numFmtRunes || isClosed(b.done) {
+	if utf8.RuneCountInString(format) != numFmtRunes {
 		return b
 	}
-	s := <-b.stateReqCh
-	s.updateFormat(format)
-	b.stateReqCh <- s
+	b.updateState(func(s *state) {
+		s.updateFormat(format)
+	})
 	return b
 }
 
@@ -162,13 +156,40 @@ func (b *Bar) Format(format string) *Bar {
 // Defaults to 0.25
 // Normally you shouldn't touch this
 func (b *Bar) SetEtaAlpha(a float64) *Bar {
-	if isClosed(b.done) {
-		return b
-	}
-	s := <-b.stateReqCh
-	s.etaAlpha = a
-	b.stateReqCh <- s
+	b.updateState(func(s *state) {
+		s.etaAlpha = a
+	})
 	return b
+}
+
+// PrependFunc prepends DecoratorFunc
+func (b *Bar) PrependFunc(f DecoratorFunc) *Bar {
+	b.updateState(func(s *state) {
+		s.prependFuncs = append(s.prependFuncs, f)
+	})
+	return b
+}
+
+// AppendFunc appends DecoratorFunc
+func (b *Bar) AppendFunc(f DecoratorFunc) *Bar {
+	b.updateState(func(s *state) {
+		s.appendFuncs = append(s.appendFuncs, f)
+	})
+	return b
+}
+
+// RemoveAllPrependers removes all prepend functions
+func (b *Bar) RemoveAllPrependers() {
+	b.updateState(func(s *state) {
+		s.prependFuncs = nil
+	})
+}
+
+// RemoveAllAppenders removes all append functions
+func (b *Bar) RemoveAllAppenders() {
+	b.updateState(func(s *state) {
+		s.appendFuncs = nil
+	})
 }
 
 // ProxyReader wrapper for io operations, like io.Copy
@@ -231,46 +252,29 @@ func (b *Bar) InProgress() bool {
 	return !isClosed(b.done)
 }
 
-// PrependFunc prepends DecoratorFunc
-func (b *Bar) PrependFunc(f DecoratorFunc) *Bar {
-	if isClosed(b.done) {
-		return b
-	}
-	b.dCommandCh <- &dCommandData{dPrepend, f}
-	return b
-}
-
-// RemoveAllPrependers removes all prepend functions
-func (b *Bar) RemoveAllPrependers() {
-	if isClosed(b.done) {
-		return
-	}
-	b.dCommandCh <- &dCommandData{dPrependZero, nil}
-}
-
-// AppendFunc appends DecoratorFunc
-func (b *Bar) AppendFunc(f DecoratorFunc) *Bar {
-	if isClosed(b.done) {
-		return b
-	}
-	b.dCommandCh <- &dCommandData{dAppend, f}
-	return b
-}
-
-// RemoveAllAppenders removes all append functions
-func (b *Bar) RemoveAllAppenders() {
-	if isClosed(b.done) {
-		return
-	}
-	b.dCommandCh <- &dCommandData{dAppendZero, nil}
-}
-
 // Completed signals to the bar, that process has been completed.
 // You should call this method when total is unknown and you've reached the point
 // of process completion.
 func (b *Bar) Completed() {
 	select {
 	case b.completedCh <- struct{}{}:
+	case <-b.done:
+		return
+	}
+}
+
+func (b *Bar) flushed() {
+	select {
+	case b.flushedCh <- struct{}{}:
+	case <-b.done:
+		fmt.Fprintf(os.Stderr, "flushedCh abort: %d\n", b.state.id)
+		return
+	}
+}
+
+func (b *Bar) remove() {
+	select {
+	case b.removeReqCh <- struct{}{}:
 	case <-b.done:
 		return
 	}
@@ -285,14 +289,24 @@ func (b *Bar) getState() state {
 	}
 }
 
+func (b *Bar) updateState(cb func(s *state)) {
+	s := b.getState()
+	cb(&s)
+	select {
+	case b.stateReqCh <- s:
+	case <-b.done:
+		return
+	}
+}
+
 func (b *Bar) server(wg *sync.WaitGroup, s state) {
 	var incrStartTime time.Time
 
 	defer func() {
 		b.state = s
 		wg.Done()
-		// fmt.Printf("Exited bar %d\n", s.id)
 		close(b.done)
+		fmt.Fprintf(os.Stderr, "Exited bar %d\n", s.id)
 	}()
 
 	for {
@@ -318,19 +332,9 @@ func (b *Bar) server(wg *sync.WaitGroup, s state) {
 			s.current = n
 			s.refill = r.refill
 			incrStartTime = time.Now()
-		case data := <-b.dCommandCh:
-			switch data.action {
-			case dAppend:
-				s.appendFuncs = append(s.appendFuncs, data.f)
-			case dAppendZero:
-				s.appendFuncs = nil
-			case dPrepend:
-				s.prependFuncs = append(s.prependFuncs, data.f)
-			case dPrependZero:
-				s.prependFuncs = nil
-			}
 		case <-b.flushedCh:
 			if s.completed {
+				fmt.Fprintln(os.Stderr, "completed")
 				return
 			}
 		case <-b.completedCh:
@@ -341,22 +345,6 @@ func (b *Bar) server(wg *sync.WaitGroup, s state) {
 		case <-b.cancel:
 			return
 		}
-	}
-}
-
-func (b *Bar) flushed() {
-	select {
-	case b.flushedCh <- struct{}{}:
-	case <-b.done:
-		return
-	}
-}
-
-func (b *Bar) remove() {
-	select {
-	case b.removeReqCh <- struct{}{}:
-	case <-b.done:
-		return
 	}
 }
 
