@@ -48,7 +48,7 @@ type Statistics struct {
 // Refil is a struct for b.IncrWithReFill
 type Refill struct {
 	Char rune
-	Till int64
+	till int64
 }
 
 // Eta returns exponential-weighted-moving-average ETA estimator
@@ -324,7 +324,10 @@ func (b *Bar) server(wg *sync.WaitGroup, s state) {
 				s.completed = true
 			}
 			s.current = n
-			s.refill = r.refill
+			if r.refill != nil {
+				r.refill.till = n
+				s.refill = r.refill
+			}
 			incrStartTime = time.Now()
 		case <-b.flushedCh:
 			if s.completed {
@@ -450,7 +453,7 @@ func fillBar(total, current int64, width int, fmtBytes barFmtBytes, rf *Refill) 
 	buf = append(buf, fmtBytes[rLeft]...)
 
 	if rf != nil {
-		till := percentage(total, rf.Till, barWidth)
+		till := percentage(total, rf.till, barWidth)
 		rbytes := make([]byte, utf8.RuneLen(rf.Char))
 		utf8.EncodeRune(rbytes, rf.Char)
 		// append refill rune
