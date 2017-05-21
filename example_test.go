@@ -12,12 +12,10 @@ import (
 
 func Example() {
 	// Star mpb's rendering goroutine.
-	// If you don't plan to cancel, feed with nil
-	// otherwise provide context.Context, see cancel example
 	p := mpb.New()
 	// Set custom width for every bar, which mpb will contain
-	// The default one in 70
-	p.SetWidth(80)
+	// The default one in 80
+	p.SetWidth(100)
 	// Set custom format for every bar, the default one is "[=>-]"
 	p.Format("╢▌▌░╟")
 	// Set custom refresh rate, the default one is 100 ms
