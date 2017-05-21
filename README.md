@@ -37,7 +37,7 @@ Following is the simplest use case:
 	// Star mpb's rendering goroutine.
 	p := mpb.New()
 	// Set custom width for every bar, which mpb will render
-	// The default one in 80
+	// The default one is 80
 	p.SetWidth(100)
 	// Set custom format for every bar, the default one is "[=>-]"
 	p.Format("╢▌▌░╟")
