@@ -48,15 +48,12 @@ Following is the simplest use case:
 	bar := p.AddBar(100).PrependName("Single Bar:", 0, 0).AppendPercentage(5, 0)
 
 	for i := 0; i < 100; i++ {
-		bar.Incr(1) // increment progress bar
 		time.Sleep(time.Duration(rand.Intn(100)) * time.Millisecond)
+		bar.Incr(1) // increment progress bar
 	}
 
 	// Don't forget to stop mpb's rendering goroutine
 	p.Stop()
-
-	// You cannot add bars after p.Stop() has been called
-	// p.AddBar(100) // will panic
 ```
 
 Running [this](example/singleBar/main.go), will produce:
