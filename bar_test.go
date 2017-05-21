@@ -11,7 +11,7 @@ func TestFillBar(t *testing.T) {
 		barWidth  int
 		total     int64
 		current   int64
-		barRefill *refill
+		barRefill *Refill
 		want      []byte
 	}{
 		{
@@ -66,7 +66,7 @@ func TestFillBar(t *testing.T) {
 			barWidth:  100,
 			total:     100,
 			current:   40,
-			barRefill: &refill{'+', 32},
+			barRefill: &Refill{'+', 32},
 			want:      []byte("[+++++++++++++++++++++++++++++++=======>-----------------------------------------------------------]"),
 		},
 		{
