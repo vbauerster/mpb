@@ -66,11 +66,28 @@ func TestAppendPercentage(t *testing.T) {
 
 	p.Stop()
 
-	bytes := removeLastRune(buf.Bytes())
-	out := string(bytes)
-	out = out[strings.LastIndex(out, "]")+1:]
 	want := "100 %"
-	if out != want {
-		t.Errorf("Expected: %s, got %s\n", want, out)
+	if !strings.Contains(buf.String(), want) {
+		t.Errorf("%q not found in bar\n", want)
+	}
+}
+
+func TestPrependPercentage(t *testing.T) {
+	var buf bytes.Buffer
+	p := mpb.New().SetOut(&buf)
+
+	bar := p.AddBar(100).TrimLeftSpace().TrimRightSpace().
+		PrependPercentage(0, 0)
+
+	for i := 0; i < 100; i++ {
+		time.Sleep(10 * time.Millisecond)
+		bar.Incr(1)
+	}
+
+	p.Stop()
+
+	want := "100 %"
+	if !strings.Contains(buf.String(), want) {
+		t.Errorf("%q not found in bar\n", want)
 	}
 }
