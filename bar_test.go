@@ -99,7 +99,7 @@ func TestBarInvalidFormat(t *testing.T) {
 
 	bytes := removeLastRune(buf.Bytes())
 	got := string(bytes[len(bytes)-customWidth:])
-	want := "[==========================================================]"
+	want := fmt.Sprintf("[%s]", strings.Repeat("=", customWidth-2))
 	if got != want {
 		t.Errorf("Expected format: %s, got %s\n", want, got)
 	}
