@@ -151,11 +151,9 @@ func TestWithNilCancel(t *testing.T) {
 func TestCustomFormat(t *testing.T) {
 	var buf bytes.Buffer
 	cancel := make(chan struct{})
-	shutdown := make(chan struct{})
 	customFormat := "╢▌▌░╟"
 	p := mpb.New().Format(customFormat).
 		WithCancel(cancel).
-		ShutdownNotify(shutdown).
 		SetOut(&buf)
 	bar := p.AddBar(100).TrimLeftSpace().TrimRightSpace()
 
@@ -166,7 +164,7 @@ func TestCustomFormat(t *testing.T) {
 		}
 	}()
 
-	time.Sleep(300 * time.Millisecond)
+	time.Sleep(250 * time.Millisecond)
 	close(cancel)
 	p.Stop()
 
