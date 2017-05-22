@@ -129,6 +129,32 @@ func TestBarInProgress(t *testing.T) {
 	}
 }
 
+func TestGetSpinner(t *testing.T) {
+	var buf bytes.Buffer
+	p := mpb.New().SetOut(&buf)
+	bar := p.AddBar(0).TrimLeftSpace().TrimRightSpace()
+
+	for i := 0; i < 100; i++ {
+		time.Sleep(10 * time.Millisecond)
+		bar.Incr(1)
+	}
+
+	p.Stop()
+
+	spinnerChars := []byte(`-\|/`)
+	seen := make(map[byte]bool)
+	for _, b := range buf.Bytes() {
+		if !seen[b] {
+			seen[b] = true
+		}
+	}
+	for _, b := range spinnerChars {
+		if !seen[b] {
+			t.Errorf("Char %#U not found in bar's output\n", b)
+		}
+	}
+}
+
 func removeLastRune(bytes []byte) []byte {
 	_, size := utf8.DecodeLastRune(bytes)
 	return bytes[:len(bytes)-size]
