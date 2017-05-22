@@ -20,25 +20,43 @@ func TestDefaultWidth(t *testing.T) {
 		bar.Incr(1)
 	}
 	p.Stop()
-	runeCount := utf8.RuneCountInString(buf.String())
-	defWidth := 81 // + 1 for new line
-	if runeCount != defWidth {
-		t.Errorf("Expected default width: %d, got: %d\n", defWidth, runeCount)
+
+	wantWidth := 80
+	gotWidth := utf8.RuneCount(buf.Bytes())
+	if gotWidth != wantWidth+1 { // + 1 for new line
+		t.Errorf("Expected default width: %d, got: %d\n", wantWidth, gotWidth)
 	}
 }
 
 func TestCustomWidth(t *testing.T) {
-	customWidth := 60
+	wantWidth := 60
 	var buf bytes.Buffer
-	p := mpb.New().SetWidth(customWidth).SetOut(&buf)
+	p := mpb.New().SetWidth(wantWidth).SetOut(&buf)
 	bar := p.AddBar(100).TrimLeftSpace().TrimRightSpace()
 	for i := 0; i < 100; i++ {
 		bar.Incr(1)
 	}
 	p.Stop()
-	runeCount := utf8.RuneCountInString(buf.String())
-	if runeCount != customWidth+1 { // +1 for new line
-		t.Errorf("Expected default width: %d, got: %d\n", customWidth, runeCount)
+
+	gotWidth := utf8.RuneCount(buf.Bytes())
+	if gotWidth != wantWidth+1 { // +1 for new line
+		t.Errorf("Expected default width: %d, got: %d\n", wantWidth, gotWidth)
+	}
+}
+
+func TestInvalidWidth(t *testing.T) {
+	var buf bytes.Buffer
+	p := mpb.New().SetWidth(1).SetOut(&buf)
+	bar := p.AddBar(100).TrimLeftSpace().TrimRightSpace()
+	for i := 0; i < 100; i++ {
+		bar.Incr(1)
+	}
+	p.Stop()
+
+	wantWidth := 80
+	gotWidth := utf8.RuneCount(buf.Bytes())
+	if gotWidth != wantWidth+1 { // +1 for new line
+		t.Errorf("Expected width: %d, got: %d\n", wantWidth, gotWidth)
 	}
 }
 
