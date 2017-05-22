@@ -168,9 +168,7 @@ func TestCustomFormat(t *testing.T) {
 	close(cancel)
 	p.Stop()
 
-	bytes := buf.Bytes()
-	_, size := utf8.DecodeLastRune(bytes)
-	bytes = bytes[:len(bytes)-size] // removing new line
+	bytes := removeLastRune(buf.Bytes())
 
 	seen := make(map[rune]bool)
 	for _, r := range string(bytes) {
