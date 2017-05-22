@@ -2,6 +2,8 @@ package mpb_test
 
 import (
 	"bytes"
+	"fmt"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -186,6 +188,38 @@ func TestBarGetID(t *testing.T) {
 
 	wg.Wait()
 	p.Stop()
+}
+
+func TestBarIncrWithReFill(t *testing.T) {
+	var buf bytes.Buffer
+
+	width := 100
+	p := mpb.New().SetWidth(width).SetOut(&buf)
+
+	total := 100
+	refill := 30
+	delta := total - refill
+	refillChar := '+'
+	bar := p.AddBar(int64(total)).TrimLeftSpace().TrimRightSpace()
+
+	bar.IncrWithReFill(refill, &mpb.Refill{Char: refillChar})
+
+	for i := 0; i < delta; i++ {
+		time.Sleep(10 * time.Millisecond)
+		bar.Incr(1)
+	}
+
+	p.Stop()
+
+	bytes := removeLastRune(buf.Bytes())
+
+	gotBar := string(bytes[len(bytes)-width:])
+	wantBar := fmt.Sprintf("[%s%s]",
+		strings.Repeat(string(refillChar), refill-1),
+		strings.Repeat("=", delta-1))
+	if gotBar != wantBar {
+		t.Errorf("Want bar: %s, got bar: %s\n", wantBar, gotBar)
+	}
 }
 
 func removeLastRune(bytes []byte) []byte {
