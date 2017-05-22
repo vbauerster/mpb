@@ -2,6 +2,7 @@ package mpb_test
 
 import (
 	"bytes"
+	"sync"
 	"testing"
 	"time"
 	"unicode/utf8"
@@ -153,6 +154,38 @@ func TestGetSpinner(t *testing.T) {
 			t.Errorf("Char %#U not found in bar's output\n", b)
 		}
 	}
+}
+
+func TestBarGetID(t *testing.T) {
+	var wg sync.WaitGroup
+	var buf bytes.Buffer
+	p := mpb.New().SetOut(&buf)
+
+	numBars := 3
+	wg.Add(numBars)
+
+	bars := make([]*mpb.Bar, numBars)
+	for i := 0; i < numBars; i++ {
+		bars[i] = p.AddBarWithID(i, 100)
+
+		go func(bar *mpb.Bar) {
+			defer wg.Done()
+			for i := 0; i < 100; i++ {
+				time.Sleep(10 * time.Millisecond)
+				bar.Incr(1)
+			}
+		}(bars[i])
+	}
+
+	for wantID, bar := range bars {
+		gotID := bar.GetID()
+		if gotID != wantID {
+			t.Errorf("Expected bar id: %d, got %d\n", wantID, gotID)
+		}
+	}
+
+	wg.Wait()
+	p.Stop()
 }
 
 func removeLastRune(bytes []byte) []byte {
