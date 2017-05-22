@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"runtime"
 	"sync"
 	"time"
 	"unicode/utf8"
@@ -63,11 +62,12 @@ type Progress struct {
 	// WaitGroup for internal rendering sync
 	wg *sync.WaitGroup
 
-	done       chan struct{}
-	userConfCh chan userConf
-	bCommandCh chan *bCommandData
-	barCountCh chan int
-	stopReqCh  chan struct{}
+	done                     chan struct{}
+	userConfCh               chan userConf
+	bCommandCh               chan *bCommandData
+	barCountCh               chan int
+	stopReqCh                chan struct{}
+	totalUnknownBarStopReqCh chan struct{}
 
 	// follawing is used after (*Progress.done) is closed
 	conf userConf
@@ -78,12 +78,13 @@ type Progress struct {
 // If you don't plan to cancel, it is safe to feed with nil
 func New() *Progress {
 	p := &Progress{
-		wg:         new(sync.WaitGroup),
-		done:       make(chan struct{}),
-		userConfCh: make(chan userConf),
-		bCommandCh: make(chan *bCommandData),
-		barCountCh: make(chan int),
-		stopReqCh:  make(chan struct{}),
+		wg:                       new(sync.WaitGroup),
+		done:                     make(chan struct{}),
+		userConfCh:               make(chan userConf),
+		bCommandCh:               make(chan *bCommandData),
+		barCountCh:               make(chan int),
+		stopReqCh:                make(chan struct{}),
+		totalUnknownBarStopReqCh: make(chan struct{}),
 	}
 	go p.server(userConf{
 		width:  pwidth,
@@ -212,9 +213,14 @@ func (p *Progress) Stop() {
 	case <-p.done:
 		return
 	default:
-		p.wg.Wait() // wait for all bars to quit
+		// complet Total unknown bars
+		p.totalUnknownBarStopReqCh <- struct{}{}
+		// wait for all bars to quit
+		p.wg.Wait()
+		// stop request
 		p.stopReqCh <- struct{}{}
-		<-p.done // wait for p.server to quit
+		// wait for p.server to quit
+		<-p.done
 	}
 }
 
@@ -241,8 +247,9 @@ func (p *Progress) updateConf(cb func(*userConf)) {
 func (p *Progress) server(conf userConf) {
 
 	defer func() {
-		p.conf = conf
 		conf.ticker.Stop()
+		conf.cw.Flush()
+		p.conf = conf
 		if conf.shutdownNotifier != nil {
 			close(conf.shutdownNotifier)
 		}
@@ -251,9 +258,6 @@ func (p *Progress) server(conf userConf) {
 
 	recoverFn := func(ch chan []byte) {
 		if p := recover(); p != nil {
-			var buf [4096]byte
-			n := runtime.Stack(buf[:], false)
-			os.Stderr.Write(buf[:n])
 			ch <- []byte(fmt.Sprintln(p))
 		}
 		close(ch)
@@ -329,12 +333,13 @@ func (p *Progress) server(conf userConf) {
 			for _, b := range bars {
 				b.flushed()
 			}
-		case <-p.stopReqCh:
+		case <-p.totalUnknownBarStopReqCh:
 			for _, b := range bars {
 				if b.GetStatistics().Total <= 0 {
 					b.Completed()
 				}
 			}
+		case <-p.stopReqCh:
 			return
 		}
 	}
