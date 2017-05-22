@@ -222,6 +222,44 @@ func TestBarIncrWithReFill(t *testing.T) {
 	}
 }
 
+func TestBarPanics(t *testing.T) {
+	var wg sync.WaitGroup
+	var buf bytes.Buffer
+	p := mpb.New().SetOut(&buf)
+
+	wantPanic := "Upps!!!"
+	numBars := 3
+	wg.Add(numBars)
+
+	for i := 0; i < numBars; i++ {
+		name := fmt.Sprintf("b#%02d:", i)
+		bar := p.AddBarWithID(i, 100).
+			PrependFunc(func(s *mpb.Statistics, yw chan<- int, mw <-chan int) string {
+				if s.Id == 2 && s.Current >= 42 {
+					panic(wantPanic)
+				}
+				return name
+			})
+
+		go func() {
+			defer wg.Done()
+			for i := 0; i < 100; i++ {
+				time.Sleep(10 * time.Millisecond)
+				bar.Incr(1)
+			}
+		}()
+	}
+
+	wg.Wait()
+	p.Stop()
+
+	out := strings.Split(buf.String(), "\n")
+	gotPanic := out[len(out)-2]
+	if gotPanic != wantPanic {
+		t.Errorf("Want panic: %s, got panic: %s\n", wantPanic, gotPanic)
+	}
+}
+
 func removeLastRune(bytes []byte) []byte {
 	_, size := utf8.DecodeLastRune(bytes)
 	return bytes[:len(bytes)-size]
