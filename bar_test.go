@@ -63,9 +63,8 @@ func TestBarFormat(t *testing.T) {
 	close(cancel)
 	p.Stop()
 
-	bytes := buf.Bytes()
-	_, size := utf8.DecodeLastRune(bytes)
-	bytes = bytes[:len(bytes)-size] // removing new line
+	// removing new line
+	bytes := removeLastRune(buf.Bytes())
 
 	seen := make(map[rune]bool)
 	for _, r := range string(bytes) {
@@ -77,6 +76,29 @@ func TestBarFormat(t *testing.T) {
 		if !seen[r] {
 			t.Errorf("Rune %#U not found in bar\n", r)
 		}
+	}
+}
+
+func TestBarInvalidFormat(t *testing.T) {
+	var buf bytes.Buffer
+	customWidth := 60
+	p := mpb.New().SetWidth(customWidth).SetOut(&buf)
+	customFormat := "(#>=_)"
+	bar := p.AddBar(100).Format(customFormat).
+		TrimLeftSpace().TrimRightSpace()
+
+	for i := 0; i < 100; i++ {
+		time.Sleep(10 * time.Millisecond)
+		bar.Incr(1)
+	}
+
+	p.Stop()
+
+	bytes := removeLastRune(buf.Bytes())
+	got := string(bytes[len(bytes)-customWidth:])
+	want := "[==========================================================]"
+	if got != want {
+		t.Errorf("Expected format: %s, got %s\n", want, got)
 	}
 }
 
@@ -105,4 +127,9 @@ func TestBarInProgress(t *testing.T) {
 	case <-time.After(300 * time.Millisecond):
 		t.Error("bar.InProgress returns true after cancel")
 	}
+}
+
+func removeLastRune(bytes []byte) []byte {
+	_, size := utf8.DecodeLastRune(bytes)
+	return bytes[:len(bytes)-size]
 }
