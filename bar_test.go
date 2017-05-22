@@ -79,3 +79,30 @@ func TestBarFormat(t *testing.T) {
 		}
 	}
 }
+
+func TestBarInProgress(t *testing.T) {
+	var buf bytes.Buffer
+	cancel := make(chan struct{})
+	p := mpb.New().WithCancel(cancel).SetOut(&buf)
+	bar := p.AddBar(100).TrimLeftSpace().TrimRightSpace()
+
+	stopped := make(chan struct{})
+
+	go func() {
+		defer close(stopped)
+		for bar.InProgress() {
+			time.Sleep(10 * time.Millisecond)
+			bar.Incr(1)
+		}
+	}()
+
+	time.Sleep(250 * time.Millisecond)
+	close(cancel)
+	p.Stop()
+
+	select {
+	case <-stopped:
+	case <-time.After(300 * time.Millisecond):
+		t.Error("bar.InProgress returns true after cancel")
+	}
+}

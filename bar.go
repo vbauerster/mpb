@@ -348,6 +348,7 @@ func (b *Bar) server(wg *sync.WaitGroup, s state) {
 		case <-b.removeReqCh:
 			return
 		case <-b.cancel:
+			close(b.completed)
 			return
 		}
 	}
