@@ -21,13 +21,14 @@ type barFmtBytes [numFmtRunes][]byte
 
 // Bar represents a progress Bar
 type Bar struct {
-	stateCh     chan state
-	incrCh      chan incrReq
-	flushedCh   chan struct{}
-	completedCh chan struct{}
-	removeReqCh chan struct{}
-	done        chan struct{}
-	cancel      <-chan struct{}
+	stateCh       chan state
+	incrCh        chan incrReq
+	flushedCh     chan struct{}
+	completeReqCh chan struct{}
+	removeReqCh   chan struct{}
+	done          chan struct{}
+	completed     chan struct{}
+	cancel        <-chan struct{}
 
 	// follawing are used after (*Bar.done) is closed
 	width int
@@ -83,14 +84,15 @@ type (
 
 func newBar(id int, total int64, wg *sync.WaitGroup, conf *userConf) *Bar {
 	b := &Bar{
-		width:       conf.width,
-		stateCh:     make(chan state),
-		incrCh:      make(chan incrReq),
-		flushedCh:   make(chan struct{}),
-		removeReqCh: make(chan struct{}),
-		completedCh: make(chan struct{}),
-		done:        make(chan struct{}),
-		cancel:      conf.cancel,
+		width:         conf.width,
+		stateCh:       make(chan state),
+		incrCh:        make(chan incrReq),
+		flushedCh:     make(chan struct{}),
+		removeReqCh:   make(chan struct{}),
+		completeReqCh: make(chan struct{}),
+		done:          make(chan struct{}),
+		completed:     make(chan struct{}),
+		cancel:        conf.cancel,
 	}
 
 	s := state{
@@ -242,10 +244,15 @@ func (b *Bar) GetID() int {
 	return b.getState().id
 }
 
-// InProgress returns true, while progress is running
+// InProgress returns true, while progress is running.
 // Can be used as condition in for loop
 func (b *Bar) InProgress() bool {
-	return !isClosed(b.done)
+	select {
+	case <-b.completed:
+		return false
+	default:
+		return true
+	}
 }
 
 // Completed signals to the bar, that process has been completed.
@@ -253,7 +260,7 @@ func (b *Bar) InProgress() bool {
 // of process completion.
 func (b *Bar) Completed() {
 	select {
-	case b.completedCh <- struct{}{}:
+	case b.completeReqCh <- struct{}{}:
 	case <-b.done:
 		return
 	}
@@ -322,6 +329,7 @@ func (b *Bar) server(wg *sync.WaitGroup, s state) {
 			s.updateTimePerItemEstimate(incrStartTime, r.amount)
 			if n == s.total {
 				s.completed = true
+				close(b.completed)
 			}
 			s.current = n
 			if r.refill != nil {
@@ -333,7 +341,7 @@ func (b *Bar) server(wg *sync.WaitGroup, s state) {
 			if s.completed {
 				return
 			}
-		case <-b.completedCh:
+		case <-b.completeReqCh:
 			s.completed = true
 			return
 		case <-b.removeReqCh:
