@@ -1,7 +1,6 @@
 package mpb
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -12,10 +11,6 @@ import (
 
 	"github.com/vbauerster/mpb/cwriter"
 )
-
-// ErrCallAfterStop thrown by panic, if Progress methods like (*Progress).AddBar()
-// are called after (*Progress).Stop() has been called
-var ErrCallAfterStop = errors.New("method call on stopped Progress instance")
 
 // default RefreshRate
 var rr = 100 * time.Millisecond
@@ -68,11 +63,11 @@ type Progress struct {
 	// WaitGroup for internal rendering sync
 	wg *sync.WaitGroup
 
-	done         chan struct{}
-	userConfCh   chan userConf
-	bCommandCh   chan *bCommandData
-	barCountCh   chan int
-	beforeStopCh chan struct{}
+	done       chan struct{}
+	userConfCh chan userConf
+	bCommandCh chan *bCommandData
+	barCountCh chan int
+	stopReqCh  chan struct{}
 
 	// follawing is used after (*Progress.done) is closed
 	conf userConf
@@ -83,12 +78,12 @@ type Progress struct {
 // If you don't plan to cancel, it is safe to feed with nil
 func New() *Progress {
 	p := &Progress{
-		wg:           new(sync.WaitGroup),
-		done:         make(chan struct{}),
-		userConfCh:   make(chan userConf),
-		bCommandCh:   make(chan *bCommandData),
-		barCountCh:   make(chan int),
-		beforeStopCh: make(chan struct{}),
+		wg:         new(sync.WaitGroup),
+		done:       make(chan struct{}),
+		userConfCh: make(chan userConf),
+		bCommandCh: make(chan *bCommandData),
+		barCountCh: make(chan int),
+		stopReqCh:  make(chan struct{}),
 	}
 	go p.server(userConf{
 		width:  pwidth,
@@ -213,14 +208,14 @@ func (p *Progress) Format(format string) *Progress {
 // 100 %. It is NOT for cancelation. Use WithContext or WithCancel for
 // cancelation purposes.
 func (p *Progress) Stop() {
-	if isClosed(p.done) {
+	select {
+	case <-p.done:
 		return
+	default:
+		p.wg.Wait() // wait for all bars to quit
+		p.stopReqCh <- struct{}{}
+		<-p.done // wait for p.server to quit
 	}
-	p.wg.Wait()
-
-	p.beforeStopCh <- struct{}{}
-	// wait for p.server to quit
-	<-p.done
 }
 
 func (p *Progress) getConf() userConf {
@@ -289,9 +284,12 @@ func (p *Progress) server(conf userConf) {
 			}
 		case p.barCountCh <- len(bars):
 		case <-conf.ticker.C:
-			if conf.cancel != nil && isClosed(conf.cancel) {
+			// stop ticking if cancel requested
+			select {
+			case <-conf.cancel:
 				conf.ticker.Stop()
 				break
+			default:
 			}
 
 			numBars := len(bars)
@@ -330,10 +328,9 @@ func (p *Progress) server(conf userConf) {
 			for _, b := range bars {
 				b.flushed()
 			}
-		case <-p.beforeStopCh:
+		case <-p.stopReqCh:
 			for _, b := range bars {
 				if b.GetStatistics().Total <= 0 {
-					fmt.Println("completing the bar: ", b)
 					b.Completed()
 				}
 			}
@@ -390,17 +387,6 @@ func fanIn(inputs ...<-chan []byte) <-chan []byte {
 	}()
 
 	return ch
-}
-
-// isClosed check if ch closed
-// caution see: http://www.tapirgames.com/blog/golang-channel-closing
-func isClosed(ch <-chan struct{}) bool {
-	select {
-	case <-ch:
-		return true
-	default:
-		return false
-	}
 }
 
 func max(slice []int) int {
