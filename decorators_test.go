@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/vbauerster/mpb"
 )
@@ -46,6 +47,29 @@ func TestPrependCounters(t *testing.T) {
 	out := buf.String()
 	out = out[:strings.IndexRune(out, '[')]
 	want := fmt.Sprintf("%[1]db / %[1]db", total)
+	if out != want {
+		t.Errorf("Expected: %s, got %s\n", want, out)
+	}
+}
+
+func TestAppendPercentage(t *testing.T) {
+	var buf bytes.Buffer
+	p := mpb.New().SetOut(&buf)
+
+	bar := p.AddBar(100).TrimLeftSpace().TrimRightSpace().
+		AppendPercentage(0, 0)
+
+	for i := 0; i < 100; i++ {
+		time.Sleep(10 * time.Millisecond)
+		bar.Incr(1)
+	}
+
+	p.Stop()
+
+	bytes := removeLastRune(buf.Bytes())
+	out := string(bytes)
+	out = out[strings.LastIndex(out, "]")+1:]
+	want := "100 %"
 	if out != want {
 		t.Errorf("Expected: %s, got %s\n", want, out)
 	}
