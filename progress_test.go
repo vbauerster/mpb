@@ -131,7 +131,7 @@ func TestWithCancel(t *testing.T) {
 
 	select {
 	case <-shutdown:
-	case <-time.After(500 * time.Millisecond):
+	case <-time.After(300 * time.Millisecond):
 		t.Error("ProgressBar didn't stop")
 	}
 }
