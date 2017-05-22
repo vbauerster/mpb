@@ -227,7 +227,7 @@ func (p *Progress) getConf() userConf {
 	}
 }
 
-func (p *Progress) updateConf(cb func(c *userConf)) {
+func (p *Progress) updateConf(cb func(*userConf)) {
 	c := p.getConf()
 	cb(&c)
 	select {

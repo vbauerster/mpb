@@ -292,7 +292,7 @@ func (b *Bar) getState() state {
 	}
 }
 
-func (b *Bar) updateState(cb func(s *state)) {
+func (b *Bar) updateState(cb func(*state)) {
 	s := b.getState()
 	cb(&s)
 	select {
