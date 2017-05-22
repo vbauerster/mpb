@@ -284,16 +284,17 @@ func (p *Progress) server(conf userConf) {
 			}
 		case p.barCountCh <- len(bars):
 		case <-conf.ticker.C:
-			// stop ticking if cancel requested
+			var notick bool
 			select {
+			// stop ticking if cancel requested
 			case <-conf.cancel:
 				conf.ticker.Stop()
-				break
+				notick = true
 			default:
 			}
 
 			numBars := len(bars)
-			if numBars == 0 {
+			if notick || numBars == 0 {
 				break
 			}
 
