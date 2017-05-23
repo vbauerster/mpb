@@ -267,3 +267,45 @@ func TestAppendElapsedDindentRight(t *testing.T) {
 		t.Errorf("%q not found in bar: %s\n", want, barOut)
 	}
 }
+
+func TestPrependETA(t *testing.T) {
+	var buf bytes.Buffer
+	p := mpb.New().SetOut(&buf)
+
+	bar := p.AddBar(100).TrimLeftSpace().TrimRightSpace().
+		PrependETA(0, 0)
+
+	for i := 0; i < 100; i++ {
+		time.Sleep(10 * time.Millisecond)
+		bar.Incr(1)
+	}
+
+	p.Stop()
+
+	want := "0s["
+	barOut := buf.String()
+	if !strings.Contains(barOut, want) {
+		t.Errorf("%q not found in bar: %s\n", want, barOut)
+	}
+}
+
+func TestPrependETADindentRight(t *testing.T) {
+	var buf bytes.Buffer
+	p := mpb.New().SetOut(&buf)
+
+	bar := p.AddBar(100).TrimLeftSpace().TrimRightSpace().
+		PrependETA(3, mpb.DidentRight)
+
+	for i := 0; i < 100; i++ {
+		time.Sleep(10 * time.Millisecond)
+		bar.Incr(1)
+	}
+
+	p.Stop()
+
+	want := "0s ["
+	barOut := buf.String()
+	if !strings.Contains(barOut, want) {
+		t.Errorf("%q not found in bar: %s\n", want, barOut)
+	}
+}
