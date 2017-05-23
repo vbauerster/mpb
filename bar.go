@@ -30,7 +30,7 @@ type Bar struct {
 	inProgress    chan struct{}
 	cancel        <-chan struct{}
 
-	// follawing are used after (*Bar.done) is closed
+	// following are used after (*Bar.done) is closed
 	width int
 	state state
 }

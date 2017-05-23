@@ -69,7 +69,7 @@ type Progress struct {
 	stopReqCh               chan struct{}
 	uncompletedBarStopReqCh chan struct{}
 
-	// follawing is used after (*Progress.done) is closed
+	// following is used after (*Progress.done) is closed
 	conf userConf
 }
 
@@ -213,7 +213,7 @@ func (p *Progress) Stop() {
 	case <-p.done:
 		return
 	default:
-		// complet Total unknown bars
+		// complete Total unknown bars
 		p.uncompletedBarStopReqCh <- struct{}{}
 		// wait for all bars to quit
 		p.wg.Wait()
