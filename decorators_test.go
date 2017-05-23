@@ -311,7 +311,7 @@ func TestPrependETADindentRight(t *testing.T) {
 
 	p.Stop()
 
-	want := `0s? \[`
+	want := `0s?\s+\[`
 	barOut := buf.String()
 
 	matched, err := regexp.MatchString(want, barOut)
