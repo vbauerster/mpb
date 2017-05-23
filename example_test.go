@@ -40,8 +40,8 @@ func ExampleBar_InProgress() {
 	bar := p.AddBar(100).AppendPercentage(5, 0)
 
 	for bar.InProgress() {
-		bar.Incr(1)
 		time.Sleep(time.Millisecond * 20)
+		bar.Incr(1)
 	}
 }
 
@@ -67,8 +67,8 @@ func ExampleBar_PrependFunc() {
 		go func() {
 			defer wg.Done()
 			for i := 0; i < totalItem; i++ {
-				bar.Incr(1)
 				time.Sleep(time.Duration(rand.Intn(totalItem)) * time.Millisecond)
+				bar.Incr(1)
 			}
 		}()
 	}
@@ -98,8 +98,8 @@ func ExampleBar_AppendFunc() {
 		go func() {
 			defer wg.Done()
 			for i := 0; i < totalItem; i++ {
-				bar.Incr(1)
 				time.Sleep(time.Duration(rand.Intn(totalItem)) * time.Millisecond)
+				bar.Incr(1)
 			}
 		}()
 	}
