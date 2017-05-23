@@ -233,7 +233,7 @@ func TestBarPanics(t *testing.T) {
 	for i := 0; i < numBars; i++ {
 		name := fmt.Sprintf("b#%02d:", i)
 		bar := p.AddBarWithID(i, 100).
-			PrependFunc(func(s *mpb.Statistics, yw chan<- int, mw <-chan int) string {
+			PrependFunc(func(s *mpb.Statistics, _ chan<- int, _ <-chan int) string {
 				if s.ID == 2 && s.Current >= 42 {
 					panic(wantPanic)
 				}
@@ -252,8 +252,9 @@ func TestBarPanics(t *testing.T) {
 	wg.Wait()
 	p.Stop()
 
-	out := strings.Split(buf.String(), "\n")
-	gotPanic := out[len(out)-2]
+	bytes := removeLastRune(buf.Bytes())
+	out := strings.Split(string(bytes), "\n")
+	gotPanic := out[len(out)-1]
 	if gotPanic != wantPanic {
 		t.Errorf("Want panic: %s, got panic: %s\n", wantPanic, gotPanic)
 	}
