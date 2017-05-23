@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -282,9 +283,16 @@ func TestPrependETA(t *testing.T) {
 
 	p.Stop()
 
-	want := "0s["
+	want := `0s?\[`
 	barOut := buf.String()
-	if !strings.Contains(barOut, want) {
+
+	matched, err := regexp.MatchString(want, barOut)
+	if err != nil {
+		t.Logf("Regex %q err: %+v\n", want, err)
+		t.FailNow()
+	}
+
+	if !matched {
 		t.Errorf("%q not found in bar: %s\n", want, barOut)
 	}
 }
@@ -303,9 +311,16 @@ func TestPrependETADindentRight(t *testing.T) {
 
 	p.Stop()
 
-	want := "0s ["
+	want := `0s? \[`
 	barOut := buf.String()
-	if !strings.Contains(barOut, want) {
+
+	matched, err := regexp.MatchString(want, barOut)
+	if err != nil {
+		t.Logf("Regex %q err: %+v\n", want, err)
+		t.FailNow()
+	}
+
+	if !matched {
 		t.Errorf("%q not found in bar: %s\n", want, barOut)
 	}
 }
@@ -324,9 +339,16 @@ func TestAppendETA(t *testing.T) {
 
 	p.Stop()
 
-	want := "]0s"
+	want := `\]0s?`
 	barOut := buf.String()
-	if !strings.Contains(barOut, want) {
+
+	matched, err := regexp.MatchString(want, barOut)
+	if err != nil {
+		t.Logf("Regex %q err: %+v\n", want, err)
+		t.FailNow()
+	}
+
+	if !matched {
 		t.Errorf("%q not found in bar: %s\n", want, barOut)
 	}
 }
@@ -345,9 +367,16 @@ func TestAppendETADindentRight(t *testing.T) {
 
 	p.Stop()
 
-	want := "]0s "
+	want := `\]0s? `
 	barOut := buf.String()
-	if !strings.Contains(barOut, want) {
+
+	matched, err := regexp.MatchString(want, barOut)
+	if err != nil {
+		t.Logf("Regex %q err: %+v\n", want, err)
+		t.FailNow()
+	}
+
+	if !matched {
 		t.Errorf("%q not found in bar: %s\n", want, barOut)
 	}
 }
