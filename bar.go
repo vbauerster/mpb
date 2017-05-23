@@ -213,28 +213,16 @@ func (b *Bar) IncrWithReFill(n int, refill *Refill) {
 	}
 }
 
-// GetAppenders returns slice of appender DecoratorFunc
-func (b *Bar) GetAppenders() []DecoratorFunc {
-	s := b.getState()
-	return s.appendFuncs
-}
-
 func (b *Bar) NumOfAppenders() int {
-	return len(b.GetAppenders())
-}
-
-// GetPrependers returns slice of prepender DecoratorFunc
-func (b *Bar) GetPrependers() []DecoratorFunc {
-	s := b.getState()
-	return s.prependFuncs
+	return len(b.getState().appendFuncs)
 }
 
 func (b *Bar) NumOfPrependers() int {
-	return len(b.GetPrependers())
+	return len(b.getState().prependFuncs)
 }
 
-// GetStatistics returs *Statistics, which contains information like Tottal,
-// Current, TimeElapsed and TimePerItemEstimate
+// GetStatistics returs *Statistics, which contains information like
+// Tottal, Current, TimeElapsed and TimePerItemEstimate
 func (b *Bar) GetStatistics() *Statistics {
 	s := b.getState()
 	return newStatistics(&s)
