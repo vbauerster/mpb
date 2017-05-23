@@ -62,12 +62,12 @@ type Progress struct {
 	// WaitGroup for internal rendering sync
 	wg *sync.WaitGroup
 
-	done                     chan struct{}
-	userConfCh               chan userConf
-	bCommandCh               chan *bCommandData
-	barCountCh               chan int
-	stopReqCh                chan struct{}
-	totalUnknownBarStopReqCh chan struct{}
+	done                    chan struct{}
+	userConfCh              chan userConf
+	bCommandCh              chan *bCommandData
+	barCountCh              chan int
+	stopReqCh               chan struct{}
+	uncompletedBarStopReqCh chan struct{}
 
 	// follawing is used after (*Progress.done) is closed
 	conf userConf
@@ -78,13 +78,13 @@ type Progress struct {
 // If you don't plan to cancel, it is safe to feed with nil
 func New() *Progress {
 	p := &Progress{
-		wg:                       new(sync.WaitGroup),
-		done:                     make(chan struct{}),
-		userConfCh:               make(chan userConf),
-		bCommandCh:               make(chan *bCommandData),
-		barCountCh:               make(chan int),
-		stopReqCh:                make(chan struct{}),
-		totalUnknownBarStopReqCh: make(chan struct{}),
+		wg:                      new(sync.WaitGroup),
+		done:                    make(chan struct{}),
+		userConfCh:              make(chan userConf),
+		bCommandCh:              make(chan *bCommandData),
+		barCountCh:              make(chan int),
+		stopReqCh:               make(chan struct{}),
+		uncompletedBarStopReqCh: make(chan struct{}),
 	}
 	go p.server(userConf{
 		width:  pwidth,
@@ -214,7 +214,7 @@ func (p *Progress) Stop() {
 		return
 	default:
 		// complet Total unknown bars
-		p.totalUnknownBarStopReqCh <- struct{}{}
+		p.uncompletedBarStopReqCh <- struct{}{}
 		// wait for all bars to quit
 		p.wg.Wait()
 		// stop request
@@ -333,9 +333,10 @@ func (p *Progress) server(conf userConf) {
 			for _, b := range bars {
 				b.flushed()
 			}
-		case <-p.totalUnknownBarStopReqCh:
+		case <-p.uncompletedBarStopReqCh:
 			for _, b := range bars {
-				if b.GetStatistics().Total <= 0 {
+				stat := b.GetStatistics()
+				if !stat.Completed {
 					b.Completed()
 				}
 			}
