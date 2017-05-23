@@ -27,7 +27,7 @@ type Bar struct {
 	completeReqCh chan struct{}
 	removeReqCh   chan struct{}
 	done          chan struct{}
-	completed     chan struct{}
+	inProgress    chan struct{}
 	cancel        <-chan struct{}
 
 	// follawing are used after (*Bar.done) is closed
@@ -40,6 +40,7 @@ type Bar struct {
 type Statistics struct {
 	ID                  int
 	Completed           bool
+	Aborted             bool
 	Total               int64
 	Current             int64
 	StartTime           time.Time
@@ -73,6 +74,7 @@ type (
 		trimLeftSpace  bool
 		trimRightSpace bool
 		completed      bool
+		aborted        bool
 		startTime      time.Time
 		timeElapsed    time.Duration
 		timePerItem    time.Duration
@@ -92,7 +94,7 @@ func newBar(id int, total int64, wg *sync.WaitGroup, conf *userConf) *Bar {
 		removeReqCh:   make(chan struct{}),
 		completeReqCh: make(chan struct{}),
 		done:          make(chan struct{}),
-		completed:     make(chan struct{}),
+		inProgress:    make(chan struct{}),
 		cancel:        conf.cancel,
 	}
 
@@ -237,7 +239,7 @@ func (b *Bar) GetID() int {
 // Can be used as condition in for loop
 func (b *Bar) InProgress() bool {
 	select {
-	case <-b.completed:
+	case <-b.inProgress:
 		return false
 	default:
 		return true
@@ -324,7 +326,7 @@ func (b *Bar) server(wg *sync.WaitGroup, s state) {
 			s.updateTimePerItemEstimate(incrStartTime, r.amount)
 			if n == s.total {
 				s.completed = true
-				close(b.completed)
+				close(b.inProgress)
 			}
 			s.current = n
 			if r.refill != nil {
@@ -342,7 +344,8 @@ func (b *Bar) server(wg *sync.WaitGroup, s state) {
 		case <-b.removeReqCh:
 			return
 		case <-b.cancel:
-			close(b.completed)
+			s.aborted = true
+			close(b.inProgress)
 			return
 		}
 	}
@@ -492,6 +495,7 @@ func newStatistics(s *state) *Statistics {
 	return &Statistics{
 		ID:                  s.id,
 		Completed:           s.completed,
+		Aborted:             s.aborted,
 		Total:               s.total,
 		Current:             s.current,
 		StartTime:           s.startTime,

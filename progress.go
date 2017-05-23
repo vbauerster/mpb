@@ -335,9 +335,9 @@ func (p *Progress) server(conf userConf) {
 			}
 		case <-p.uncompletedBarStopReqCh:
 			for _, b := range bars {
-				stat := b.GetStatistics()
-				if !stat.Completed {
-					b.Completed()
+				s := b.getState()
+				if !s.completed && !s.aborted {
+					b.Complete()
 				}
 			}
 		case <-p.stopReqCh:
