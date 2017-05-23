@@ -256,15 +256,21 @@ func (b *Bar) InProgress() bool {
 	}
 }
 
-// Completed signals to the bar, that process has been completed.
+// Complete signals to the bar, that process has been completed.
 // You should call this method when total is unknown and you've reached the point
-// of process completion.
-func (b *Bar) Completed() {
+// of process completion. If you don't call this method, it will be called
+// implicitly, upon p.Stop() call.
+func (b *Bar) Complete() {
 	select {
 	case b.completeReqCh <- struct{}{}:
 	case <-b.done:
 		return
 	}
+}
+
+// Completed: deprecated! Use b.Complete()
+func (b *Bar) Completed() {
+	b.Complete()
 }
 
 func (b *Bar) flushed() {
