@@ -234,7 +234,7 @@ func TestBarPanics(t *testing.T) {
 		name := fmt.Sprintf("b#%02d:", i)
 		bar := p.AddBarWithID(i, 100).
 			PrependFunc(func(s *mpb.Statistics, yw chan<- int, mw <-chan int) string {
-				if s.Id == 2 && s.Current >= 42 {
+				if s.ID == 2 && s.Current >= 42 {
 					panic(wantPanic)
 				}
 				return name

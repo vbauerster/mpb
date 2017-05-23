@@ -38,7 +38,7 @@ type Bar struct {
 // Statistics represents statistics of the progress bar.
 // Cantains: Total, Current, TimeElapsed, TimePerItemEstimate
 type Statistics struct {
-	Id                  int
+	ID                  int
 	Completed           bool
 	Total               int64
 	Current             int64
@@ -502,7 +502,7 @@ func fillBar(total, current int64, width int, fmtBytes barFmtBytes, rf *Refill) 
 
 func newStatistics(s *state) *Statistics {
 	return &Statistics{
-		Id:                  s.id,
+		ID:                  s.id,
 		Completed:           s.completed,
 		Total:               s.total,
 		Current:             s.current,
