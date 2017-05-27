@@ -20,8 +20,8 @@ type (
 		result []chan int
 	}
 
-	// config changeable by user
-	userConf struct {
+	// progress config, all fieals are adjustable by user
+	pConf struct {
 		bars []*Bar
 
 		width        int
@@ -53,11 +53,11 @@ type Progress struct {
 	wg *sync.WaitGroup
 
 	done      chan struct{}
-	ops       chan func(*userConf)
+	ops       chan func(*pConf)
 	stopReqCh chan struct{}
 
 	// following is used after (*Progress.done) is closed
-	conf userConf
+	conf pConf
 }
 
 // New creates new Progress instance, which will orchestrate bars rendering
@@ -67,10 +67,10 @@ func New() *Progress {
 	p := &Progress{
 		wg:        new(sync.WaitGroup),
 		done:      make(chan struct{}),
-		ops:       make(chan func(*userConf)),
+		ops:       make(chan func(*pConf)),
 		stopReqCh: make(chan struct{}),
 	}
-	go p.server(userConf{
+	go p.server(pConf{
 		bars:   make([]*Bar, 0, 3),
 		width:  pwidth,
 		format: pformat,
@@ -87,7 +87,7 @@ func (p *Progress) WithCancel(ch <-chan struct{}) *Progress {
 	if ch == nil {
 		panic("nil cancel channel")
 	}
-	return updateConf(p, func(c *userConf) {
+	return updateConf(p, func(c *pConf) {
 		c.cancel = ch
 	})
 }
@@ -97,7 +97,7 @@ func (p *Progress) SetWidth(width int) *Progress {
 	if width < 2 {
 		return p
 	}
-	return updateConf(p, func(c *userConf) {
+	return updateConf(p, func(c *pConf) {
 		c.width = width
 	})
 }
@@ -107,7 +107,7 @@ func (p *Progress) SetOut(w io.Writer) *Progress {
 	if w == nil {
 		return p
 	}
-	return updateConf(p, func(c *userConf) {
+	return updateConf(p, func(c *pConf) {
 		c.cw.Flush()
 		c.cw = cwriter.New(w)
 	})
@@ -115,7 +115,7 @@ func (p *Progress) SetOut(w io.Writer) *Progress {
 
 // RefreshRate overrides default (100ms) refresh rate value
 func (p *Progress) RefreshRate(d time.Duration) *Progress {
-	return updateConf(p, func(c *userConf) {
+	return updateConf(p, func(c *pConf) {
 		c.ticker.Stop()
 		c.ticker = time.NewTicker(d)
 		c.rr = d
@@ -124,7 +124,7 @@ func (p *Progress) RefreshRate(d time.Duration) *Progress {
 
 // BeforeRenderFunc accepts a func, which gets called before render process.
 func (p *Progress) BeforeRenderFunc(f BeforeRender) *Progress {
-	return updateConf(p, func(c *userConf) {
+	return updateConf(p, func(c *pConf) {
 		c.beforeRender = f
 	})
 }
@@ -137,7 +137,7 @@ func (p *Progress) AddBar(total int64) *Bar {
 // AddBarWithID creates a new progress bar and adds to the container.
 func (p *Progress) AddBarWithID(id int, total int64) *Bar {
 	result := make(chan *Bar, 1)
-	op := func(c *userConf) {
+	op := func(c *pConf) {
 		bar := newBar(id, total, c.width, c.format, p.wg, c.cancel)
 		c.bars = append(c.bars, bar)
 		p.wg.Add(1)
@@ -154,7 +154,7 @@ func (p *Progress) AddBarWithID(id int, total int64) *Bar {
 // RemoveBar removes bar at any time.
 func (p *Progress) RemoveBar(b *Bar) bool {
 	result := make(chan bool, 1)
-	op := func(c *userConf) {
+	op := func(c *pConf) {
 		var ok bool
 		for i, bar := range c.bars {
 			if bar == b {
@@ -174,10 +174,10 @@ func (p *Progress) RemoveBar(b *Bar) bool {
 	}
 }
 
-// BarCount returns bars count in the container.
+// BarCount returns bars count
 func (p *Progress) BarCount() int {
 	result := make(chan int, 1)
-	op := func(c *userConf) {
+	op := func(c *pConf) {
 		result <- len(c.bars)
 	}
 	select {
@@ -190,7 +190,7 @@ func (p *Progress) BarCount() int {
 
 // ShutdownNotify means to be notified when main rendering goroutine quits, usualy after p.Stop() call.
 func (p *Progress) ShutdownNotify(ch chan struct{}) *Progress {
-	return updateConf(p, func(c *userConf) {
+	return updateConf(p, func(c *pConf) {
 		c.shutdownNotifier = ch
 	})
 }
@@ -200,7 +200,7 @@ func (p *Progress) Format(format string) *Progress {
 	if utf8.RuneCountInString(format) != numFmtRunes {
 		return p
 	}
-	return updateConf(p, func(c *userConf) {
+	return updateConf(p, func(c *pConf) {
 		c.format = format
 	})
 }
@@ -215,7 +215,7 @@ func (p *Progress) Stop() {
 		return
 	default:
 		// complete Total unknown bars
-		p.ops <- func(c *userConf) {
+		p.ops <- func(c *pConf) {
 			for _, b := range c.bars {
 				s := b.getState()
 				if !s.completed && !s.aborted {
@@ -232,36 +232,8 @@ func (p *Progress) Stop() {
 	}
 }
 
-// func (p *Progress) getConf() userConf {
-// 	select {
-// 	case conf := <-p.userConfCh:
-// 		return conf
-// 	case <-p.done:
-// 		return p.conf
-// 	}
-// }
-
-// func (p *Progress) updateConf(op func(*userConf)) {
-// 	// c := p.getConf()
-// 	// cb(&c)
-// 	select {
-// 	case p.ops <- op:
-// 	case <-p.done:
-// 		return
-// 	}
-// }
-
-func updateConf(p *Progress, op func(*userConf)) *Progress {
-	select {
-	case p.ops <- op:
-		return p
-	case <-p.done:
-		return nil
-	}
-}
-
 // server monitors underlying channels and renders any progress bars
-func (p *Progress) server(conf userConf) {
+func (p *Progress) server(conf pConf) {
 
 	defer func() {
 		conf.ticker.Stop()
@@ -384,6 +356,15 @@ func fanIn(inputs ...<-chan []byte) <-chan []byte {
 	}()
 
 	return ch
+}
+
+func updateConf(p *Progress, op func(*pConf)) *Progress {
+	select {
+	case p.ops <- op:
+		return p
+	case <-p.done:
+		return nil
+	}
 }
 
 func max(slice []int) int {

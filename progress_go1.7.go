@@ -10,7 +10,7 @@ func (p *Progress) WithContext(ctx context.Context) *Progress {
 	if ctx == nil {
 		panic("nil context")
 	}
-	return updateConf(p, func(c *userConf) {
+	return updateConf(p, func(c *pConf) {
 		c.cancel = ctx.Done()
 	})
 }
