@@ -82,6 +82,7 @@ func New() *Progress {
 }
 
 // WithCancel cancellation via channel.
+// You have to call p.Stop() anyway, after cancel.
 // Pancis, if nil channel is passed.
 func (p *Progress) WithCancel(ch <-chan struct{}) *Progress {
 	if ch == nil {
@@ -236,8 +237,6 @@ func (p *Progress) Stop() {
 func (p *Progress) server(conf pConf) {
 
 	defer func() {
-		conf.ticker.Stop()
-		conf.cw.Flush()
 		p.conf = conf
 		if conf.shutdownNotifier != nil {
 			close(conf.shutdownNotifier)
@@ -257,17 +256,8 @@ func (p *Progress) server(conf pConf) {
 		case op := <-p.ops:
 			op(&conf)
 		case <-conf.ticker.C:
-			var notick bool
-			select {
-			// stop ticking if cancel requested
-			case <-conf.cancel:
-				conf.ticker.Stop()
-				notick = true
-			default:
-			}
-
 			numBars := len(conf.bars)
-			if notick || numBars == 0 {
+			if numBars == 0 {
 				break
 			}
 
@@ -302,7 +292,11 @@ func (p *Progress) server(conf pConf) {
 			for _, b := range conf.bars {
 				b.flushed()
 			}
+		case <-conf.cancel:
+			conf.ticker.Stop()
+			conf.cancel = nil
 		case <-p.stopReqCh:
+			conf.ticker.Stop()
 			return
 		}
 	}
