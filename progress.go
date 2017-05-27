@@ -11,9 +11,6 @@ import (
 	"github.com/vbauerster/mpb/cwriter"
 )
 
-// default RefreshRate
-var rr = 100 * time.Millisecond
-
 type (
 	// BeforeRender is a func, which gets called before render process
 	BeforeRender func([]*Bar)
@@ -25,12 +22,14 @@ type (
 
 	// config changeable by user
 	userConf struct {
+		bars []*Bar
+
 		width        int
 		format       string
-		bars         []*Bar
-		beforeRender BeforeRender
+		rr           time.Duration
 		cw           *cwriter.Writer
 		ticker       *time.Ticker
+		beforeRender BeforeRender
 
 		shutdownNotifier chan struct{}
 		cancel           <-chan struct{}
@@ -38,6 +37,8 @@ type (
 )
 
 const (
+	// default RefreshRate
+	prr = 100 * time.Millisecond
 	// default width
 	pwidth = 80
 	// default format
@@ -74,7 +75,8 @@ func New() *Progress {
 		width:  pwidth,
 		format: pformat,
 		cw:     cwriter.New(os.Stdout),
-		ticker: time.NewTicker(rr),
+		rr:     prr,
+		ticker: time.NewTicker(prr),
 	})
 	return p
 }
@@ -113,10 +115,10 @@ func (p *Progress) SetOut(w io.Writer) *Progress {
 
 // RefreshRate overrides default (100ms) refresh rate value
 func (p *Progress) RefreshRate(d time.Duration) *Progress {
-	rr = d // TODO: don't update global var
 	return updateConf(p, func(c *userConf) {
 		c.ticker.Stop()
 		c.ticker = time.NewTicker(d)
+		c.rr = d
 	})
 }
 
@@ -302,7 +304,7 @@ func (p *Progress) server(conf userConf) {
 			}
 
 			quitWidthSyncCh := make(chan struct{})
-			time.AfterFunc(rr, func() {
+			time.AfterFunc(conf.rr, func() {
 				close(quitWidthSyncCh)
 			})
 
