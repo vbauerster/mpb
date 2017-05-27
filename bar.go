@@ -85,9 +85,9 @@ type (
 	}
 )
 
-func newBar(id int, total int64, wg *sync.WaitGroup, conf *userConf) *Bar {
+func newBar(id int, total int64, width int, format string, wg *sync.WaitGroup, cancel <-chan struct{}) *Bar {
 	b := &Bar{
-		width:         conf.width,
+		width:         width,
 		stateCh:       make(chan state),
 		incrCh:        make(chan incrReq),
 		flushedCh:     make(chan struct{}),
@@ -95,20 +95,20 @@ func newBar(id int, total int64, wg *sync.WaitGroup, conf *userConf) *Bar {
 		completeReqCh: make(chan struct{}),
 		done:          make(chan struct{}),
 		inProgress:    make(chan struct{}),
-		cancel:        conf.cancel,
+		cancel:        cancel,
 	}
 
 	s := state{
 		id:       id,
 		total:    total,
-		width:    conf.width,
+		width:    width,
 		etaAlpha: 0.25,
 	}
 
 	if total <= 0 {
 		s.simpleSpinner = getSpinner()
 	} else {
-		s.updateFormat(conf.format)
+		s.updateFormat(format)
 	}
 
 	go b.server(wg, s)

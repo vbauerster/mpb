@@ -17,13 +17,6 @@ var rr = 100 * time.Millisecond
 type (
 	// BeforeRender is a func, which gets called before render process
 	BeforeRender func([]*Bar)
-	barAction    uint
-
-	bCommandData struct {
-		action barAction
-		bar    *Bar
-		result chan bool
-	}
 
 	widthSync struct {
 		listen []chan int
@@ -34,6 +27,7 @@ type (
 	userConf struct {
 		width        int
 		format       string
+		bars         []*Bar
 		beforeRender BeforeRender
 		cw           *cwriter.Writer
 		ticker       *time.Ticker
@@ -41,11 +35,6 @@ type (
 		shutdownNotifier chan struct{}
 		cancel           <-chan struct{}
 	}
-)
-
-const (
-	bAdd barAction = iota
-	bRemove
 )
 
 const (
@@ -62,12 +51,9 @@ type Progress struct {
 	// WaitGroup for internal rendering sync
 	wg *sync.WaitGroup
 
-	done                    chan struct{}
-	userConfCh              chan userConf
-	bCommandCh              chan *bCommandData
-	barCountCh              chan int
-	stopReqCh               chan struct{}
-	uncompletedBarStopReqCh chan struct{}
+	done      chan struct{}
+	ops       chan func(*userConf)
+	stopReqCh chan struct{}
 
 	// following is used after (*Progress.done) is closed
 	conf userConf
@@ -78,15 +64,13 @@ type Progress struct {
 // If you don't plan to cancel, it is safe to feed with nil
 func New() *Progress {
 	p := &Progress{
-		wg:                      new(sync.WaitGroup),
-		done:                    make(chan struct{}),
-		userConfCh:              make(chan userConf),
-		bCommandCh:              make(chan *bCommandData),
-		barCountCh:              make(chan int),
-		stopReqCh:               make(chan struct{}),
-		uncompletedBarStopReqCh: make(chan struct{}),
+		wg:        new(sync.WaitGroup),
+		done:      make(chan struct{}),
+		ops:       make(chan func(*userConf)),
+		stopReqCh: make(chan struct{}),
 	}
 	go p.server(userConf{
+		bars:   make([]*Bar, 0, 3),
 		width:  pwidth,
 		format: pformat,
 		cw:     cwriter.New(os.Stdout),
@@ -101,10 +85,9 @@ func (p *Progress) WithCancel(ch <-chan struct{}) *Progress {
 	if ch == nil {
 		panic("nil cancel channel")
 	}
-	p.updateConf(func(c *userConf) {
+	return updateConf(p, func(c *userConf) {
 		c.cancel = ch
 	})
-	return p
 }
 
 // SetWidth overrides default (80) width of bar(s).
@@ -112,10 +95,9 @@ func (p *Progress) SetWidth(width int) *Progress {
 	if width < 2 {
 		return p
 	}
-	p.updateConf(func(c *userConf) {
+	return updateConf(p, func(c *userConf) {
 		c.width = width
 	})
-	return p
 }
 
 // SetOut sets underlying writer of progress. Default one is os.Stdout.
@@ -123,29 +105,26 @@ func (p *Progress) SetOut(w io.Writer) *Progress {
 	if w == nil {
 		return p
 	}
-	p.updateConf(func(c *userConf) {
+	return updateConf(p, func(c *userConf) {
 		c.cw.Flush()
 		c.cw = cwriter.New(w)
 	})
-	return p
 }
 
 // RefreshRate overrides default (100ms) refresh rate value
 func (p *Progress) RefreshRate(d time.Duration) *Progress {
-	p.updateConf(func(c *userConf) {
+	rr = d // TODO: don't update global var
+	return updateConf(p, func(c *userConf) {
 		c.ticker.Stop()
 		c.ticker = time.NewTicker(d)
-		rr = d
 	})
-	return p
 }
 
 // BeforeRenderFunc accepts a func, which gets called before render process.
 func (p *Progress) BeforeRenderFunc(f BeforeRender) *Progress {
-	p.updateConf(func(c *userConf) {
+	return updateConf(p, func(c *userConf) {
 		c.beforeRender = f
 	})
-	return p
 }
 
 // AddBar creates a new progress bar and adds to the container.
@@ -155,20 +134,38 @@ func (p *Progress) AddBar(total int64) *Bar {
 
 // AddBarWithID creates a new progress bar and adds to the container.
 func (p *Progress) AddBarWithID(id int, total int64) *Bar {
-	conf := p.getConf()
-	bar := newBar(id, total, p.wg, &conf)
-	p.bCommandCh <- &bCommandData{
-		action: bAdd,
-		bar:    bar,
+	result := make(chan *Bar, 1)
+	op := func(c *userConf) {
+		bar := newBar(id, total, c.width, c.format, p.wg, c.cancel)
+		c.bars = append(c.bars, bar)
+		p.wg.Add(1)
+		result <- bar
 	}
-	return bar
+	select {
+	case p.ops <- op:
+		return <-result
+	case <-p.done:
+		return nil
+	}
 }
 
 // RemoveBar removes bar at any time.
 func (p *Progress) RemoveBar(b *Bar) bool {
-	result := make(chan bool)
+	result := make(chan bool, 1)
+	op := func(c *userConf) {
+		var ok bool
+		for i, bar := range c.bars {
+			if bar == b {
+				c.bars = append(c.bars[:i], c.bars[i+1:]...)
+				bar.remove()
+				ok = true
+				break
+			}
+		}
+		result <- ok
+	}
 	select {
-	case p.bCommandCh <- &bCommandData{bRemove, b, result}:
+	case p.ops <- op:
 		return <-result
 	case <-p.done:
 		return false
@@ -177,9 +174,13 @@ func (p *Progress) RemoveBar(b *Bar) bool {
 
 // BarCount returns bars count in the container.
 func (p *Progress) BarCount() int {
+	result := make(chan int, 1)
+	op := func(c *userConf) {
+		result <- len(c.bars)
+	}
 	select {
-	case count := <-p.barCountCh:
-		return count
+	case p.ops <- op:
+		return <-result
 	case <-p.done:
 		return 0
 	}
@@ -187,10 +188,9 @@ func (p *Progress) BarCount() int {
 
 // ShutdownNotify means to be notified when main rendering goroutine quits, usualy after p.Stop() call.
 func (p *Progress) ShutdownNotify(ch chan struct{}) *Progress {
-	p.updateConf(func(c *userConf) {
+	return updateConf(p, func(c *userConf) {
 		c.shutdownNotifier = ch
 	})
-	return p
 }
 
 // Format sets custom format for underlying bar(s), default one is "[=>-]".
@@ -198,10 +198,9 @@ func (p *Progress) Format(format string) *Progress {
 	if utf8.RuneCountInString(format) != numFmtRunes {
 		return p
 	}
-	p.updateConf(func(c *userConf) {
+	return updateConf(p, func(c *userConf) {
 		c.format = format
 	})
-	return p
 }
 
 // Stop shutdowns Progress' goroutine.
@@ -214,7 +213,14 @@ func (p *Progress) Stop() {
 		return
 	default:
 		// complete Total unknown bars
-		p.uncompletedBarStopReqCh <- struct{}{}
+		p.ops <- func(c *userConf) {
+			for _, b := range c.bars {
+				s := b.getState()
+				if !s.completed && !s.aborted {
+					b.Complete()
+				}
+			}
+		}
 		// wait for all bars to quit
 		p.wg.Wait()
 		// stop request
@@ -224,22 +230,31 @@ func (p *Progress) Stop() {
 	}
 }
 
-func (p *Progress) getConf() userConf {
-	select {
-	case conf := <-p.userConfCh:
-		return conf
-	case <-p.done:
-		return p.conf
-	}
-}
+// func (p *Progress) getConf() userConf {
+// 	select {
+// 	case conf := <-p.userConfCh:
+// 		return conf
+// 	case <-p.done:
+// 		return p.conf
+// 	}
+// }
 
-func (p *Progress) updateConf(cb func(*userConf)) {
-	c := p.getConf()
-	cb(&c)
+// func (p *Progress) updateConf(op func(*userConf)) {
+// 	// c := p.getConf()
+// 	// cb(&c)
+// 	select {
+// 	case p.ops <- op:
+// 	case <-p.done:
+// 		return
+// 	}
+// }
+
+func updateConf(p *Progress, op func(*userConf)) *Progress {
 	select {
-	case p.userConfCh <- c:
+	case p.ops <- op:
+		return p
 	case <-p.done:
-		return
+		return nil
 	}
 }
 
@@ -263,30 +278,10 @@ func (p *Progress) server(conf userConf) {
 		close(ch)
 	}
 
-	bars := make([]*Bar, 0, 3)
-
 	for {
 		select {
-		case p.userConfCh <- conf:
-		case conf = <-p.userConfCh:
-		case data := <-p.bCommandCh:
-			switch data.action {
-			case bAdd:
-				bars = append(bars, data.bar)
-				p.wg.Add(1)
-			case bRemove:
-				var ok bool
-				for i, b := range bars {
-					if b == data.bar {
-						bars = append(bars[:i], bars[i+1:]...)
-						ok = true
-						b.remove()
-						break
-					}
-				}
-				data.result <- ok
-			}
-		case p.barCountCh <- len(bars):
+		case op := <-p.ops:
+			op(&conf)
 		case <-conf.ticker.C:
 			var notick bool
 			select {
@@ -297,13 +292,13 @@ func (p *Progress) server(conf userConf) {
 			default:
 			}
 
-			numBars := len(bars)
+			numBars := len(conf.bars)
 			if notick || numBars == 0 {
 				break
 			}
 
 			if conf.beforeRender != nil {
-				conf.beforeRender(bars)
+				conf.beforeRender(conf.bars)
 			}
 
 			quitWidthSyncCh := make(chan struct{})
@@ -311,14 +306,14 @@ func (p *Progress) server(conf userConf) {
 				close(quitWidthSyncCh)
 			})
 
-			b0 := bars[0]
+			b0 := conf.bars[0]
 			prependWs := newWidthSync(quitWidthSyncCh, numBars, b0.NumOfPrependers())
 			appendWs := newWidthSync(quitWidthSyncCh, numBars, b0.NumOfAppenders())
 
 			width, _, _ := cwriter.GetTermSize()
 
 			sequence := make([]<-chan []byte, numBars)
-			for i, b := range bars {
+			for i, b := range conf.bars {
 				sequence[i] = b.render(recoverFn, width, prependWs, appendWs)
 			}
 
@@ -330,15 +325,8 @@ func (p *Progress) server(conf userConf) {
 
 			conf.cw.Flush()
 
-			for _, b := range bars {
+			for _, b := range conf.bars {
 				b.flushed()
-			}
-		case <-p.uncompletedBarStopReqCh:
-			for _, b := range bars {
-				s := b.getState()
-				if !s.completed && !s.aborted {
-					b.Complete()
-				}
 			}
 		case <-p.stopReqCh:
 			return
