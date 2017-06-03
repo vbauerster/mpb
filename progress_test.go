@@ -112,7 +112,7 @@ func TestRemoveBar(t *testing.T) {
 func TestWithCancel(t *testing.T) {
 	cancel := make(chan struct{})
 	shutdown := make(chan struct{})
-	p := mpb.New().WithCancel(cancel).ShutdownNotify(shutdown)
+	p := mpb.New(mpb.WithCancel(cancel), mpb.WithShutdownNotifier(shutdown))
 
 	var wg sync.WaitGroup
 	total := 100

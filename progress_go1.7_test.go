@@ -16,7 +16,7 @@ import (
 func TestWithContext(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	shutdown := make(chan struct{})
-	p := mpb.New().WithContext(ctx).ShutdownNotify(shutdown)
+	p := mpb.New(mpb.WithContext(ctx), mpb.WithShutdownNotifier(shutdown))
 
 	var wg sync.WaitGroup
 	total := 100

@@ -60,30 +60,34 @@ type Progress struct {
 	conf pConf
 }
 
-// New creates new Progress instance, which will orchestrate bars rendering
-// process. It acceepts context.Context, for cancellation.
-// If you don't plan to cancel, it is safe to feed with nil
-func New() *Progress {
-	p := &Progress{
-		wg:        new(sync.WaitGroup),
-		done:      make(chan struct{}),
-		ops:       make(chan func(*pConf)),
-		stopReqCh: make(chan struct{}),
-	}
-	go p.server(pConf{
+// New creates new Progress instance, which orchestrates bars rendering process.
+// Accepts mpb.ProgressOption funcs for customization.
+func New(options ...ProgressOption) *Progress {
+	// defaults
+	conf := pConf{
 		bars:   make([]*Bar, 0, 3),
 		width:  pwidth,
 		format: pformat,
 		cw:     cwriter.New(os.Stdout),
 		rr:     prr,
 		ticker: time.NewTicker(prr),
-	})
+	}
+
+	for _, opt := range options {
+		opt(&conf)
+	}
+
+	p := &Progress{
+		wg:        new(sync.WaitGroup),
+		done:      make(chan struct{}),
+		ops:       make(chan func(*pConf)),
+		stopReqCh: make(chan struct{}),
+	}
+	go p.server(conf)
 	return p
 }
 
-// WithCancel cancellation via channel.
-// You have to call p.Stop() anyway, after cancel.
-// Pancis, if nil channel is passed.
+// WithCancel Deprecated, use mpb.WithCancel
 func (p *Progress) WithCancel(ch <-chan struct{}) *Progress {
 	if ch == nil {
 		panic("nil cancel channel")
@@ -93,7 +97,7 @@ func (p *Progress) WithCancel(ch <-chan struct{}) *Progress {
 	})
 }
 
-// SetWidth overrides default (80) width of bar(s).
+// SetWidth Deprecated, use mpb.WithWidth
 func (p *Progress) SetWidth(width int) *Progress {
 	if width < 2 {
 		return p
@@ -103,7 +107,7 @@ func (p *Progress) SetWidth(width int) *Progress {
 	})
 }
 
-// SetOut sets underlying writer of progress. Default one is os.Stdout.
+// SetOut Deprecated, use mpb.Output
 func (p *Progress) SetOut(w io.Writer) *Progress {
 	if w == nil {
 		return p
@@ -114,19 +118,12 @@ func (p *Progress) SetOut(w io.Writer) *Progress {
 	})
 }
 
-// RefreshRate overrides default (100ms) refresh rate value
+// RefreshRate Deprecated, use mpb.WithRefreshRate
 func (p *Progress) RefreshRate(d time.Duration) *Progress {
 	return updateConf(p, func(c *pConf) {
 		c.ticker.Stop()
 		c.ticker = time.NewTicker(d)
 		c.rr = d
-	})
-}
-
-// BeforeRenderFunc accepts a func, which gets called before render process.
-func (p *Progress) BeforeRenderFunc(f BeforeRender) *Progress {
-	return updateConf(p, func(c *pConf) {
-		c.beforeRender = f
 	})
 }
 
@@ -189,14 +186,7 @@ func (p *Progress) BarCount() int {
 	}
 }
 
-// ShutdownNotify means to be notified when main rendering goroutine quits, usualy after p.Stop() call.
-func (p *Progress) ShutdownNotify(ch chan struct{}) *Progress {
-	return updateConf(p, func(c *pConf) {
-		c.shutdownNotifier = ch
-	})
-}
-
-// Format sets custom format for underlying bar(s), default one is "[=>-]".
+// Format Deprecated, use mpb.WithFormat
 func (p *Progress) Format(format string) *Progress {
 	if utf8.RuneCountInString(format) != numFmtRunes {
 		return p
