@@ -118,28 +118,15 @@ func (p *Progress) SetOut(w io.Writer) *Progress {
 	})
 }
 
-// RefreshRate Deprecated, use mpb.WithRefreshRate
-func (p *Progress) RefreshRate(d time.Duration) *Progress {
-	return updateConf(p, func(c *pConf) {
-		c.ticker.Stop()
-		c.ticker = time.NewTicker(d)
-		c.rr = d
-	})
-}
-
 // AddBar creates a new progress bar and adds to the container.
-func (p *Progress) AddBar(total int64) *Bar {
-	return p.AddBarWithID(0, total)
-}
-
-// AddBarWithID creates a new progress bar and adds to the container.
-func (p *Progress) AddBarWithID(id int, total int64) *Bar {
+func (p *Progress) AddBar(total int64, options ...BarOption) *Bar {
 	result := make(chan *Bar, 1)
 	op := func(c *pConf) {
-		bar := newBar(id, total, c.width, c.format, p.wg, c.cancel)
-		c.bars = append(c.bars, bar)
+		options = append(options, barWidth(c.width), barFormat(c.format))
+		b := newBar(total, p.wg, c.cancel, options...)
+		c.bars = append(c.bars, b)
 		p.wg.Add(1)
-		result <- bar
+		result <- b
 	}
 	select {
 	case p.ops <- op:

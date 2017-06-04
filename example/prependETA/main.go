@@ -15,61 +15,40 @@ const (
 
 func main() {
 
+	p := mpb.New(mpb.WithWidth(64))
+
+	total := 100
+	numBars := 3
 	var wg sync.WaitGroup
-	p := mpb.New().SetWidth(64)
+	wg.Add(numBars)
 
-	name1 := "Bar#1:"
-	bar1 := p.AddBar(50).
-		PrependName(name1, 0, mpb.DwidthSync|mpb.DidentRight).
-		PrependETA(4, mpb.DwidthSync|mpb.DextraSpace).
-		AppendPercentage(5, 0)
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		blockSize := rand.Intn(maxBlockSize) + 1
-		for i := 0; i < 50; i++ {
-			sleep(blockSize)
-			bar1.Incr(1)
-			blockSize = rand.Intn(maxBlockSize) + 1
+	for i := 0; i < numBars; i++ {
+		var name string
+		if i != 1 {
+			name = fmt.Sprintf("Bar#%d:", i)
 		}
-	}()
-
-	bar2 := p.AddBar(100).
-		PrependName("", 0, mpb.DwidthSync).
-		PrependETA(4, mpb.DwidthSync|mpb.DextraSpace).
-		AppendPercentage(5, 0)
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		blockSize := rand.Intn(maxBlockSize) + 1
-		for i := 0; i < 100; i++ {
-			sleep(blockSize)
-			bar2.Incr(1)
-			blockSize = rand.Intn(maxBlockSize) + 1
-		}
-	}()
-
-	bar3 := p.AddBar(80).
-		PrependName("Bar#3:", 0, mpb.DwidthSync|mpb.DidentRight).
-		PrependETA(4, mpb.DwidthSync|mpb.DextraSpace).
-		AppendPercentage(5, 0)
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		blockSize := rand.Intn(maxBlockSize) + 1
-		for i := 0; i < 80; i++ {
-			sleep(blockSize)
-			bar3.Incr(1)
-			blockSize = rand.Intn(maxBlockSize) + 1
-		}
-	}()
+		b := p.AddBar(int64(total),
+			mpb.PrependDecorators(
+				mpb.Name(name, 0, mpb.DwidthSync|mpb.DidentRight),
+				mpb.ETA(4, mpb.DwidthSync|mpb.DextraSpace),
+			),
+			mpb.AppendDecorators(
+				mpb.Percentage(5, 0),
+			),
+		)
+		go func() {
+			defer wg.Done()
+			blockSize := rand.Intn(maxBlockSize) + 1
+			for i := 0; i < total; i++ {
+				sleep(blockSize)
+				b.Incr(1)
+				blockSize = rand.Intn(maxBlockSize) + 1
+			}
+		}()
+	}
 
 	wg.Wait()
 	p.Stop()
-	// p.AddBar(1) // panic: you cannot reuse p, create new one!
 	fmt.Println("stop")
 }
 

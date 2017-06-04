@@ -24,15 +24,13 @@ const (
 // DecoratorFunc is a function that can be prepended and appended to the progress bar
 type DecoratorFunc func(s *Statistics, myWidth chan<- int, maxWidth <-chan int) string
 
-// PrependName prepends name argument to the bar.
-// The conf argument defines the formatting properties
-func (b *Bar) PrependName(name string, minWidth int, conf byte) *Bar {
+func Name(name string, minWidth int, conf byte) DecoratorFunc {
 	format := "%%"
 	if (conf & DidentRight) != 0 {
 		format += "-"
 	}
 	format += "%ds"
-	b.PrependFunc(func(s *Statistics, myWidth chan<- int, maxWidth <-chan int) string {
+	return func(s *Statistics, myWidth chan<- int, maxWidth <-chan int) string {
 		if (conf & DwidthSync) != 0 {
 			myWidth <- utf8.RuneCountInString(name)
 			max := <-maxWidth
@@ -42,17 +40,16 @@ func (b *Bar) PrependName(name string, minWidth int, conf byte) *Bar {
 			return fmt.Sprintf(fmt.Sprintf(format, max), name)
 		}
 		return fmt.Sprintf(fmt.Sprintf(format, minWidth), name)
-	})
-	return b
+	}
 }
 
-func (b *Bar) PrependCounters(pairFormat string, unit Units, minWidth int, conf byte) *Bar {
+func Counters(pairFormat string, unit Units, minWidth int, conf byte) DecoratorFunc {
 	format := "%%"
 	if (conf & DidentRight) != 0 {
 		format += "-"
 	}
 	format += "%ds"
-	b.PrependFunc(func(s *Statistics, myWidth chan<- int, maxWidth <-chan int) string {
+	return func(s *Statistics, myWidth chan<- int, maxWidth <-chan int) string {
 		current := Format(s.Current).To(unit)
 		total := Format(s.Total).To(unit)
 		str := fmt.Sprintf(pairFormat, current, total)
@@ -65,17 +62,16 @@ func (b *Bar) PrependCounters(pairFormat string, unit Units, minWidth int, conf 
 			return fmt.Sprintf(fmt.Sprintf(format, max), str)
 		}
 		return fmt.Sprintf(fmt.Sprintf(format, minWidth), str)
-	})
-	return b
+	}
 }
 
-func (b *Bar) PrependETA(minWidth int, conf byte) *Bar {
+func ETA(minWidth int, conf byte) DecoratorFunc {
 	format := "%%"
 	if (conf & DidentRight) != 0 {
 		format += "-"
 	}
 	format += "%ds"
-	b.PrependFunc(func(s *Statistics, myWidth chan<- int, maxWidth <-chan int) string {
+	return func(s *Statistics, myWidth chan<- int, maxWidth <-chan int) string {
 		str := fmt.Sprint(time.Duration(s.Eta().Seconds()) * time.Second)
 		if (conf & DwidthSync) != 0 {
 			myWidth <- utf8.RuneCountInString(str)
@@ -86,38 +82,16 @@ func (b *Bar) PrependETA(minWidth int, conf byte) *Bar {
 			return fmt.Sprintf(fmt.Sprintf(format, max), str)
 		}
 		return fmt.Sprintf(fmt.Sprintf(format, minWidth), str)
-	})
-	return b
+	}
 }
 
-func (b *Bar) AppendETA(minWidth int, conf byte) *Bar {
+func (b *Bar) Elapsed(minWidth int, conf byte) DecoratorFunc {
 	format := "%%"
 	if (conf & DidentRight) != 0 {
 		format += "-"
 	}
 	format += "%ds"
-	b.AppendFunc(func(s *Statistics, myWidth chan<- int, maxWidth <-chan int) string {
-		str := fmt.Sprint(time.Duration(s.Eta().Seconds()) * time.Second)
-		if (conf & DwidthSync) != 0 {
-			myWidth <- utf8.RuneCountInString(str)
-			max := <-maxWidth
-			if (conf & DextraSpace) != 0 {
-				max++
-			}
-			return fmt.Sprintf(fmt.Sprintf(format, max), str)
-		}
-		return fmt.Sprintf(fmt.Sprintf(format, minWidth), str)
-	})
-	return b
-}
-
-func (b *Bar) PrependElapsed(minWidth int, conf byte) *Bar {
-	format := "%%"
-	if (conf & DidentRight) != 0 {
-		format += "-"
-	}
-	format += "%ds"
-	b.PrependFunc(func(s *Statistics, myWidth chan<- int, maxWidth <-chan int) string {
+	return func(s *Statistics, myWidth chan<- int, maxWidth <-chan int) string {
 		str := fmt.Sprint(time.Duration(s.TimeElapsed.Seconds()) * time.Second)
 		if (conf & DwidthSync) != 0 {
 			myWidth <- utf8.RuneCountInString(str)
@@ -128,38 +102,16 @@ func (b *Bar) PrependElapsed(minWidth int, conf byte) *Bar {
 			return fmt.Sprintf(fmt.Sprintf(format, max), str)
 		}
 		return fmt.Sprintf(fmt.Sprintf(format, minWidth), str)
-	})
-	return b
+	}
 }
 
-func (b *Bar) AppendElapsed(minWidth int, conf byte) *Bar {
+func Percentage(minWidth int, conf byte) DecoratorFunc {
 	format := "%%"
 	if (conf & DidentRight) != 0 {
 		format += "-"
 	}
 	format += "%ds"
-	b.AppendFunc(func(s *Statistics, myWidth chan<- int, maxWidth <-chan int) string {
-		str := fmt.Sprint(time.Duration(s.TimeElapsed.Seconds()) * time.Second)
-		if (conf & DwidthSync) != 0 {
-			myWidth <- utf8.RuneCountInString(str)
-			max := <-maxWidth
-			if (conf & DextraSpace) != 0 {
-				max++
-			}
-			return fmt.Sprintf(fmt.Sprintf(format, max), str)
-		}
-		return fmt.Sprintf(fmt.Sprintf(format, minWidth), str)
-	})
-	return b
-}
-
-func (b *Bar) AppendPercentage(minWidth int, conf byte) *Bar {
-	format := "%%"
-	if (conf & DidentRight) != 0 {
-		format += "-"
-	}
-	format += "%ds"
-	b.AppendFunc(func(s *Statistics, myWidth chan<- int, maxWidth <-chan int) string {
+	return func(s *Statistics, myWidth chan<- int, maxWidth <-chan int) string {
 		str := fmt.Sprintf("%d %%", percentage(s.Total, s.Current, 100))
 		if (conf & DwidthSync) != 0 {
 			myWidth <- utf8.RuneCountInString(str)
@@ -170,27 +122,5 @@ func (b *Bar) AppendPercentage(minWidth int, conf byte) *Bar {
 			return fmt.Sprintf(fmt.Sprintf(format, max), str)
 		}
 		return fmt.Sprintf(fmt.Sprintf(format, minWidth), str)
-	})
-	return b
-}
-
-func (b *Bar) PrependPercentage(minWidth int, conf byte) *Bar {
-	format := "%%"
-	if (conf & DidentRight) != 0 {
-		format += "-"
 	}
-	format += "%ds"
-	b.PrependFunc(func(s *Statistics, myWidth chan<- int, maxWidth <-chan int) string {
-		str := fmt.Sprintf("%d %%", percentage(s.Total, s.Current, 100))
-		if (conf & DwidthSync) != 0 {
-			myWidth <- utf8.RuneCountInString(str)
-			max := <-maxWidth
-			if (conf & DextraSpace) != 0 {
-				max++
-			}
-			return fmt.Sprintf(fmt.Sprintf(format, max), str)
-		}
-		return fmt.Sprintf(fmt.Sprintf(format, minWidth), str)
-	})
-	return b
 }
