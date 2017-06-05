@@ -27,12 +27,12 @@ const (
 
 type Units uint
 
-func Format(i int) *formatter {
+func Format(i int64) *formatter {
 	return &formatter{n: i}
 }
 
 type formatter struct {
-	n     int
+	n     int64
 	unit  Units
 	width int
 }
@@ -58,7 +58,7 @@ func (f *formatter) String() string {
 	}
 }
 
-func formatKiB(i int) (result string) {
+func formatKiB(i int64) (result string) {
 	switch {
 	case i >= TiB:
 		result = fmt.Sprintf("%.1fTiB", float64(i)/TiB)
@@ -74,7 +74,7 @@ func formatKiB(i int) (result string) {
 	return
 }
 
-func formatKB(i int) (result string) {
+func formatKB(i int64) (result string) {
 	switch {
 	case i >= TB:
 		result = fmt.Sprintf("%.1fTB", float64(i)/TB)

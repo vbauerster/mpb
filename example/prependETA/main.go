@@ -28,7 +28,7 @@ func main() {
 		if i != 1 {
 			name = fmt.Sprintf("Bar#%d:", i)
 		}
-		b := p.AddBar(total,
+		b := p.AddBar(int64(total),
 			mpb.PrependDecorators(
 				decor.Name(name, 0, decor.DwidthSync|decor.DidentRight),
 				decor.ETA(4, decor.DSyncSpace),

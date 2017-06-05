@@ -42,7 +42,7 @@ type Bar struct {
 // Refil is a struct for b.IncrWithReFill
 type refill struct {
 	char rune
-	till int
+	till int64
 }
 
 type (
@@ -55,8 +55,8 @@ type (
 		width          int
 		format         barFmtRunes
 		etaAlpha       float64
-		total          int
-		current        int
+		total          int64
+		current        int64
 		trimLeftSpace  bool
 		trimRightSpace bool
 		completed      bool
@@ -72,7 +72,7 @@ type (
 	}
 )
 
-func newBar(total int, wg *sync.WaitGroup, cancel <-chan struct{}, options ...BarOption) *Bar {
+func newBar(total int64, wg *sync.WaitGroup, cancel <-chan struct{}, options ...BarOption) *Bar {
 	s := state{
 		total:    total,
 		etaAlpha: etaAlpha,
@@ -137,7 +137,7 @@ func (b *Bar) Incr(n int) {
 			s.startTime = time.Now()
 			s.blockStartTime = s.startTime
 		}
-		sum := s.current + n
+		sum := s.current + int64(n)
 		s.timeElapsed = time.Since(s.startTime)
 		s.updateTimePerItemEstimate(n)
 		if s.total > 0 && sum >= s.total {
@@ -155,7 +155,7 @@ func (b *Bar) Incr(n int) {
 
 // ResumeFill fills bar with different r rune,
 // from 0 to till amount of progress.
-func (b *Bar) ResumeFill(r rune, till int) {
+func (b *Bar) ResumeFill(r rune, till int64) {
 	if till < 1 {
 		return
 	}
@@ -370,7 +370,7 @@ func concatenateBlocks(buf []byte, blocks ...[]byte) []byte {
 	return buf
 }
 
-func fillBar(total, current, width int, fmtBytes barFmtBytes, rf *refill) []byte {
+func fillBar(total, current int64, width int, fmtBytes barFmtBytes, rf *refill) []byte {
 	if width < 2 || total <= 0 {
 		return []byte{}
 	}

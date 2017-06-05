@@ -83,7 +83,7 @@ func New(options ...ProgressOption) *Progress {
 }
 
 // AddBar creates a new progress bar and adds to the container.
-func (p *Progress) AddBar(total int, options ...BarOption) *Bar {
+func (p *Progress) AddBar(total int64, options ...BarOption) *Bar {
 	result := make(chan *Bar, 1)
 	op := func(c *pConf) {
 		options = append(options, barWidth(c.width), barFormat(c.format))

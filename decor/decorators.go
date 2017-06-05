@@ -30,8 +30,8 @@ type Statistics struct {
 	ID                  int
 	Completed           bool
 	Aborted             bool
-	Total               int
-	Current             int
+	Total               int64
+	Current             int64
 	StartTime           time.Time
 	TimeElapsed         time.Duration
 	TimePerItemEstimate time.Duration
@@ -146,7 +146,7 @@ func Percentage(minWidth int, conf byte) DecoratorFunc {
 	}
 }
 
-func CalcPercentage(total, current, width int) int {
+func CalcPercentage(total, current int64, width int) int {
 	if total == 0 || current > total {
 		return 0
 	}
