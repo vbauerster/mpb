@@ -22,7 +22,7 @@ func WithWidth(w int) ProgressOption {
 // WithFormat overrides default bar format "[=>-]"
 func WithFormat(format string) ProgressOption {
 	return func(c *pConf) {
-		if utf8.RuneCountInString(format) == numFmtRunes {
+		if utf8.RuneCountInString(format) == formatLen {
 			c.format = format
 		}
 	}
