@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/vbauerster/mpb"
+	"github.com/vbauerster/mpb/decor"
 )
 
 func main() {
@@ -35,11 +36,12 @@ func main() {
 	}
 	defer dest.Close()
 
-	p := mpb.New().SetWidth(64)
+	p := mpb.New(mpb.WithWidth(64))
 
-	bar := p.AddBar(size).
-		PrependCounters("%3s / %3s", mpb.UnitBytes, 18, 0).
-		AppendETA(3, 0)
+	bar := p.AddBar(size,
+		mpb.PrependDecorators(
+			decor.Counters("%3s / %3s", decor.Unit_KiB, 18, 0),
+		))
 
 	// create proxy reader
 	reader := bar.ProxyReader(resp.Body)
