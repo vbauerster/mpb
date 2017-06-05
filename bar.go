@@ -7,6 +7,8 @@ import (
 	"sync"
 	"time"
 	"unicode/utf8"
+
+	"github.com/vbauerster/mpb/decor"
 )
 
 const (
@@ -38,28 +40,10 @@ type Bar struct {
 	state state
 }
 
-// Statistics represents statistics of the progress bar.
-// Cantains: Total, Current, TimeElapsed, TimePerItemEstimate
-type Statistics struct {
-	ID                  int
-	Completed           bool
-	Aborted             bool
-	Total               int
-	Current             int
-	StartTime           time.Time
-	TimeElapsed         time.Duration
-	TimePerItemEstimate time.Duration
-}
-
 // Refil is a struct for b.IncrWithReFill
 type refill struct {
 	char rune
 	till int
-}
-
-// Eta returns exponential-weighted-moving-average ETA estimator
-func (s *Statistics) Eta() time.Duration {
-	return time.Duration(s.Total-s.Current) * s.TimePerItemEstimate
 }
 
 type (
@@ -82,11 +66,10 @@ type (
 		timeElapsed    time.Duration
 		blockStartTime time.Time
 		timePerItem    time.Duration
-		appendFuncs    []DecoratorFunc
-		prependFuncs   []DecoratorFunc
+		appendFuncs    []decor.DecoratorFunc
+		prependFuncs   []decor.DecoratorFunc
 		simpleSpinner  func() byte
 		refill         *refill
-		// flushed        chan struct{}
 	}
 )
 
@@ -206,20 +189,8 @@ func (b *Bar) NumOfPrependers() int {
 	}
 }
 
-// Statistics returs *Statistics, which contains information like
-// Tottal, Current, TimeElapsed and TimePerItemEstimate
-func (b *Bar) Statistics() *Statistics {
-	result := make(chan *Statistics, 1)
-	select {
-	case b.ops <- func(s *state) { result <- newStatistics(s) }:
-		return <-result
-	case <-b.done:
-		return newStatistics(&b.state)
-	}
-}
-
-// GetID returs id of the bar
-func (b *Bar) GetID() int {
+// ID returs id of the bar
+func (b *Bar) ID() int {
 	result := make(chan int, 1)
 	select {
 	case b.ops <- func(s *state) { result <- s.id }:
@@ -247,9 +218,19 @@ func (b *Bar) InProgress() bool {
 func (b *Bar) Complete() {
 	select {
 	case <-b.completeReqCh:
-		return
 	default:
 		close(b.completeReqCh)
+	}
+}
+
+func (b *Bar) complete() {
+	select {
+	case b.ops <- func(s *state) {
+		if !s.completed {
+			b.Complete()
+		}
+	}:
+	default:
 	}
 }
 
@@ -257,10 +238,8 @@ func (b *Bar) server(s state, wg *sync.WaitGroup, cancel <-chan struct{}) {
 
 	defer func() {
 		b.state = s
-		// <-s.flushed
-		// fmt.Fprintf(os.Stderr, "Bar:%d flushed\n", s.id)
-		wg.Done()
 		close(b.done)
+		wg.Done()
 	}()
 
 	for {
@@ -277,42 +256,6 @@ func (b *Bar) server(s state, wg *sync.WaitGroup, cancel <-chan struct{}) {
 		}
 	}
 }
-
-// func (b *Bar) render(tw int, flushed chan struct{}, prependWs, appendWs *widthSync) <-chan []byte {
-// 	ch := make(chan []byte)
-
-// 	go func() {
-// 		defer func() {
-// 			// recovering if external decorators panic
-// 			if p := recover(); p != nil {
-// 				ch <- []byte(fmt.Sprintln(p))
-// 			}
-// 			close(ch)
-// 		}()
-// 		result := make(chan []byte, 1)
-// 		select {
-// 		case b.ops <- func(s *state) {
-// 			buf := draw(s, tw, prependWs, appendWs)
-// 			buf = append(buf, '\n')
-// 			result <- buf
-// 			// wait for flushed
-// 			if s.completed {
-// 				<-flushed
-// 				b.Complete()
-// 			}
-// 		}:
-// 			ch <- <-result
-// 		case <-b.done:
-// 			buf := draw(&b.state, tw, prependWs, appendWs)
-// 			buf = append(buf, '\n')
-// 			ch <- buf
-// 		default:
-// 			ch <- []byte{}
-// 		}
-// 	}()
-
-// 	return ch
-// }
 
 func (b *Bar) render(tw int, flushed chan struct{}, prependWs, appendWs *widthSync) <-chan []byte {
 	ch := make(chan []byte)
@@ -473,8 +416,8 @@ func fillBar(total, current, width int, fmtBytes barFmtBytes, rf *refill) []byte
 	return buf
 }
 
-func newStatistics(s *state) *Statistics {
-	return &Statistics{
+func newStatistics(s *state) *decor.Statistics {
+	return &decor.Statistics{
 		ID:                  s.id,
 		Completed:           s.completed,
 		Aborted:             s.aborted,

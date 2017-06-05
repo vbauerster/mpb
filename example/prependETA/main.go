@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/vbauerster/mpb"
+	"github.com/vbauerster/mpb/decor"
 )
 
 const (
@@ -27,13 +28,13 @@ func main() {
 		if i != 1 {
 			name = fmt.Sprintf("Bar#%d:", i)
 		}
-		b := p.AddBar(int64(total),
+		b := p.AddBar(total,
 			mpb.PrependDecorators(
-				mpb.Name(name, 0, mpb.DwidthSync|mpb.DidentRight),
-				mpb.ETA(4, mpb.DwidthSync|mpb.DextraSpace),
+				decor.Name(name, 0, decor.DwidthSync|decor.DidentRight),
+				decor.ETA(4, decor.DwidthSync|decor.DextraSpace),
 			),
 			mpb.AppendDecorators(
-				mpb.Percentage(5, 0),
+				decor.Percentage(5, 0),
 			),
 		)
 		go func() {

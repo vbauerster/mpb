@@ -150,10 +150,7 @@ func (p *Progress) Stop() {
 		// complete Total unknown bars
 		p.ops <- func(c *pConf) {
 			for _, b := range c.bars {
-				s := b.Statistics()
-				if !s.Completed && !s.Aborted {
-					b.Complete()
-				}
+				b.complete()
 			}
 		}
 		// wait for all bars to quit
