@@ -9,8 +9,8 @@ import (
 
 const (
 	// DidentRight specifies identation direction.
-	// |   foo|     b| Without DidentRight
 	// |foo   |b     | With DidentRight
+	// |   foo|     b| Without DidentRight
 	DidentRight = 1 << iota
 
 	// DwidthSync will auto sync max width
@@ -20,6 +20,8 @@ const (
 	// When DidentRight bit set, the space will be added to the right,
 	// otherwise to the left.
 	DextraSpace
+
+	DSyncSpace = DwidthSync | DextraSpace
 )
 
 // Statistics represents statistics of the progress bar.

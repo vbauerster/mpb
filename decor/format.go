@@ -3,23 +3,24 @@ package decor
 import "fmt"
 
 const (
-	_          = iota
-	bytesInKiB = 1 << (iota * 10)
-	bytesInMiB
-	bytesInGiB
-	bytesInTiB
+	_   = iota
+	KiB = 1 << (iota * 10)
+	MiB
+	GiB
+	TiB
 )
 
 const (
-	bytesInKb = 1000
-	bytesInMB = bytesInKb * 1000
-	bytesInGB = bytesInMB * 1000
-	bytesInTB = bytesInGB * 1000
+	KB = 1000
+	MB = KB * 1000
+	GB = MB * 1000
+	TB = GB * 1000
 )
 
 const (
+	_ = iota
 	// Kibibyte = 1024 b
-	Unit_KiB = iota
+	Unit_KiB
 	// Kilobyte = 1000 b
 	Unit_kB
 )
@@ -59,14 +60,14 @@ func (f *formatter) String() string {
 
 func formatKiB(i int) (result string) {
 	switch {
-	case i >= bytesInTiB:
-		result = fmt.Sprintf("%.1fTiB", float64(i)/bytesInTiB)
-	case i >= bytesInGiB:
-		result = fmt.Sprintf("%.1fGiB", float64(i)/bytesInGiB)
-	case i >= bytesInMiB:
-		result = fmt.Sprintf("%.1fMiB", float64(i)/bytesInMiB)
-	case i >= bytesInKiB:
-		result = fmt.Sprintf("%.1fKiB", float64(i)/bytesInKiB)
+	case i >= TiB:
+		result = fmt.Sprintf("%.1fTiB", float64(i)/TiB)
+	case i >= GiB:
+		result = fmt.Sprintf("%.1fGiB", float64(i)/GiB)
+	case i >= MiB:
+		result = fmt.Sprintf("%.1fMiB", float64(i)/MiB)
+	case i >= KiB:
+		result = fmt.Sprintf("%.1fKiB", float64(i)/KiB)
 	default:
 		result = fmt.Sprintf("%db", i)
 	}
@@ -75,14 +76,14 @@ func formatKiB(i int) (result string) {
 
 func formatKB(i int) (result string) {
 	switch {
-	case i >= bytesInTB:
-		result = fmt.Sprintf("%.1fTB", float64(i)/bytesInTB)
-	case i >= bytesInGB:
-		result = fmt.Sprintf("%.1fGB", float64(i)/bytesInGB)
-	case i >= bytesInMB:
-		result = fmt.Sprintf("%.1fMB", float64(i)/bytesInMB)
-	case i >= bytesInKb:
-		result = fmt.Sprintf("%.1fkB", float64(i)/bytesInKb)
+	case i >= TB:
+		result = fmt.Sprintf("%.1fTB", float64(i)/TB)
+	case i >= GB:
+		result = fmt.Sprintf("%.1fGB", float64(i)/GB)
+	case i >= MB:
+		result = fmt.Sprintf("%.1fMB", float64(i)/MB)
+	case i >= KB:
+		result = fmt.Sprintf("%.1fkB", float64(i)/KB)
 	default:
 		result = fmt.Sprintf("%db", i)
 	}
