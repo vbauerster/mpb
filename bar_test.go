@@ -10,18 +10,20 @@ import (
 	"unicode/utf8"
 
 	"github.com/vbauerster/mpb"
+	"github.com/vbauerster/mpb/decor"
 )
 
 func TestBarSetWidth(t *testing.T) {
 	var buf bytes.Buffer
-	p := mpb.New().SetOut(&buf)
 	// overwrite default width 80
 	customWidth := 60
-	bar := p.AddBar(100).SetWidth(customWidth).
-		TrimLeftSpace().TrimRightSpace()
+	p := mpb.New(mpb.Output(&buf), mpb.WithWidth(customWidth))
+	bar := p.AddBar(100, mpb.BarTrim())
+
 	for i := 0; i < 100; i++ {
 		bar.Incr(1)
 	}
+
 	p.Stop()
 
 	gotWidth := len(buf.Bytes())
@@ -32,12 +34,13 @@ func TestBarSetWidth(t *testing.T) {
 
 func TestBarSetInvalidWidth(t *testing.T) {
 	var buf bytes.Buffer
-	p := mpb.New().SetOut(&buf)
-	bar := p.AddBar(100).SetWidth(1).
-		TrimLeftSpace().TrimRightSpace()
+	p := mpb.New(mpb.Output(&buf), mpb.WithWidth(1))
+	bar := p.AddBar(100, mpb.BarTrim())
+
 	for i := 0; i < 100; i++ {
 		bar.Incr(1)
 	}
+
 	p.Stop()
 
 	wantWidth := 80
@@ -50,10 +53,13 @@ func TestBarSetInvalidWidth(t *testing.T) {
 func TestBarFormat(t *testing.T) {
 	var buf bytes.Buffer
 	cancel := make(chan struct{})
-	p := mpb.New().WithCancel(cancel).SetOut(&buf)
 	customFormat := "(#>_)"
-	bar := p.AddBar(100).Format(customFormat).
-		TrimLeftSpace().TrimRightSpace()
+	p := mpb.New(
+		mpb.Output(&buf),
+		mpb.WithCancel(cancel),
+		mpb.WithFormat(customFormat),
+	)
+	bar := p.AddBar(100, mpb.BarTrim())
 
 	go func() {
 		for i := 0; i < 100; i++ {
@@ -66,11 +72,10 @@ func TestBarFormat(t *testing.T) {
 	close(cancel)
 	p.Stop()
 
-	// removing new line
-	bytes := removeLastRune(buf.Bytes())
+	barAsStr := strings.Trim(buf.String(), "\n")
 
 	seen := make(map[rune]bool)
-	for _, r := range string(bytes) {
+	for _, r := range barAsStr {
 		if !seen[r] {
 			seen[r] = true
 		}
@@ -85,10 +90,13 @@ func TestBarFormat(t *testing.T) {
 func TestBarInvalidFormat(t *testing.T) {
 	var buf bytes.Buffer
 	customWidth := 60
-	p := mpb.New().SetWidth(customWidth).SetOut(&buf)
 	customFormat := "(#>=_)"
-	bar := p.AddBar(100).Format(customFormat).
-		TrimLeftSpace().TrimRightSpace()
+	p := mpb.New(
+		mpb.Output(&buf),
+		mpb.WithWidth(customWidth),
+		mpb.WithFormat(customFormat),
+	)
+	bar := p.AddBar(100, mpb.BarTrim())
 
 	for i := 0; i < 100; i++ {
 		time.Sleep(10 * time.Millisecond)
@@ -107,8 +115,11 @@ func TestBarInvalidFormat(t *testing.T) {
 func TestBarInProgress(t *testing.T) {
 	var buf bytes.Buffer
 	cancel := make(chan struct{})
-	p := mpb.New().WithCancel(cancel).SetOut(&buf)
-	bar := p.AddBar(100).TrimLeftSpace().TrimRightSpace()
+	p := mpb.New(
+		mpb.Output(&buf),
+		mpb.WithCancel(cancel),
+	)
+	bar := p.AddBar(100, mpb.BarTrim())
 
 	stopped := make(chan struct{})
 
@@ -133,8 +144,8 @@ func TestBarInProgress(t *testing.T) {
 
 func TestGetSpinner(t *testing.T) {
 	var buf bytes.Buffer
-	p := mpb.New().SetOut(&buf)
-	bar := p.AddBar(0).TrimLeftSpace().TrimRightSpace()
+	p := mpb.New(mpb.Output(&buf))
+	bar := p.AddBar(0, mpb.BarTrim())
 
 	for i := 0; i < 100; i++ {
 		time.Sleep(10 * time.Millisecond)
@@ -145,7 +156,7 @@ func TestGetSpinner(t *testing.T) {
 
 	spinnerChars := []byte(`-\|/`)
 	seen := make(map[byte]bool)
-	for _, b := range buf.Bytes() {
+	for _, b := range bytes.Trim(buf.Bytes(), "\n") {
 		if !seen[b] {
 			seen[b] = true
 		}
@@ -160,14 +171,14 @@ func TestGetSpinner(t *testing.T) {
 func TestBarGetID(t *testing.T) {
 	var wg sync.WaitGroup
 	var buf bytes.Buffer
-	p := mpb.New().SetOut(&buf)
+	p := mpb.New(mpb.Output(&buf))
 
 	numBars := 3
 	wg.Add(numBars)
 
 	bars := make([]*mpb.Bar, numBars)
 	for i := 0; i < numBars; i++ {
-		bars[i] = p.AddBarWithID(i, 100)
+		bars[i] = p.AddBar(100, mpb.BarID(i))
 
 		go func(bar *mpb.Bar) {
 			defer wg.Done()
@@ -179,7 +190,7 @@ func TestBarGetID(t *testing.T) {
 	}
 
 	for wantID, bar := range bars {
-		gotID := bar.GetID()
+		gotID := bar.ID()
 		if gotID != wantID {
 			t.Errorf("Expected bar id: %d, got %d\n", wantID, gotID)
 		}
@@ -193,17 +204,20 @@ func TestBarIncrWithReFill(t *testing.T) {
 	var buf bytes.Buffer
 
 	width := 100
-	p := mpb.New().SetWidth(width).SetOut(&buf)
+	p := mpb.New(
+		mpb.Output(&buf),
+		mpb.WithWidth(width),
+	)
 
 	total := 100
-	refill := 30
-	delta := total - refill
+	till := 30
 	refillChar := '+'
-	bar := p.AddBar(int64(total)).TrimLeftSpace().TrimRightSpace()
 
-	bar.IncrWithReFill(refill, &mpb.Refill{Char: refillChar})
+	bar := p.AddBar(100, mpb.BarTrim())
 
-	for i := 0; i < delta; i++ {
+	bar.ResumeFill(refillChar, int64(till))
+
+	for i := 0; i < total; i++ {
 		time.Sleep(10 * time.Millisecond)
 		bar.Incr(1)
 	}
@@ -214,8 +228,8 @@ func TestBarIncrWithReFill(t *testing.T) {
 
 	gotBar := string(bytes[len(bytes)-width:])
 	wantBar := fmt.Sprintf("[%s%s]",
-		strings.Repeat(string(refillChar), refill-1),
-		strings.Repeat("=", delta-1))
+		strings.Repeat(string(refillChar), till-1),
+		strings.Repeat("=", total-till-1))
 	if gotBar != wantBar {
 		t.Errorf("Want bar: %s, got bar: %s\n", wantBar, gotBar)
 	}
@@ -224,7 +238,7 @@ func TestBarIncrWithReFill(t *testing.T) {
 func TestBarPanics(t *testing.T) {
 	var wg sync.WaitGroup
 	var buf bytes.Buffer
-	p := mpb.New().SetOut(&buf)
+	p := mpb.New(mpb.Output(&buf))
 
 	wantPanic := "Upps!!!"
 	numBars := 3
@@ -232,13 +246,14 @@ func TestBarPanics(t *testing.T) {
 
 	for i := 0; i < numBars; i++ {
 		name := fmt.Sprintf("b#%02d:", i)
-		bar := p.AddBarWithID(i, 100).
-			PrependFunc(func(s *mpb.Statistics, _ chan<- int, _ <-chan int) string {
+		bar := p.AddBar(100, mpb.BarID(i), mpb.PrependDecorators(
+			func(s *decor.Statistics, _ chan<- int, _ <-chan int) string {
 				if s.ID == 2 && s.Current >= 42 {
 					panic(wantPanic)
 				}
 				return name
-			})
+			},
+		))
 
 		go func() {
 			defer wg.Done()
