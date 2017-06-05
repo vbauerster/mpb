@@ -28,7 +28,6 @@ type barFmtBytes [formatLen][]byte
 
 // Bar represents a progress Bar
 type Bar struct {
-	incrCh        chan incrReq
 	completeReqCh chan struct{}
 	done          chan struct{}
 	inProgress    chan struct{}
@@ -39,16 +38,10 @@ type Bar struct {
 	state state
 }
 
-// Refil is a struct for b.IncrWithReFill
-type refill struct {
-	char rune
-	till int64
-}
-
 type (
-	incrReq struct {
-		amount int64
-		refill *refill
+	refill struct {
+		char rune
+		till int64
 	}
 	state struct {
 		id             int
@@ -87,7 +80,6 @@ func newBar(total int64, wg *sync.WaitGroup, cancel <-chan struct{}, options ...
 	}
 
 	b := &Bar{
-		incrCh:        make(chan incrReq),
 		completeReqCh: make(chan struct{}),
 		done:          make(chan struct{}),
 		inProgress:    make(chan struct{}),
@@ -229,7 +221,8 @@ func (b *Bar) complete() {
 			b.Complete()
 		}
 	}:
-	default:
+	case <-time.After(prr):
+		return
 	}
 }
 
