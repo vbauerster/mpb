@@ -1,6 +1,7 @@
 package mpb
 
 import (
+	"fmt"
 	"io"
 	"math"
 	"sync"
@@ -16,19 +17,21 @@ const (
 	rRight
 )
 
-type barFmtRunes [numFmtRunes]rune
-type barFmtBytes [numFmtRunes][]byte
+const (
+	formatLen = 5
+	etaAlpha  = 0.25
+)
+
+type barFmtRunes [formatLen]rune
+type barFmtBytes [formatLen][]byte
 
 // Bar represents a progress Bar
 type Bar struct {
-	stateCh       chan state
 	incrCh        chan incrReq
-	flushedCh     chan struct{}
 	completeReqCh chan struct{}
-	removeReqCh   chan struct{}
 	done          chan struct{}
 	inProgress    chan struct{}
-	cancel        <-chan struct{}
+	ops           chan func(*state)
 
 	// following are used after (*Bar.done) is closed
 	width int
@@ -41,17 +44,17 @@ type Statistics struct {
 	ID                  int
 	Completed           bool
 	Aborted             bool
-	Total               int64
-	Current             int64
+	Total               int
+	Current             int
 	StartTime           time.Time
 	TimeElapsed         time.Duration
 	TimePerItemEstimate time.Duration
 }
 
 // Refil is a struct for b.IncrWithReFill
-type Refill struct {
-	Char rune
-	till int64
+type refill struct {
+	char rune
+	till int
 }
 
 // Eta returns exponential-weighted-moving-average ETA estimator
@@ -62,44 +65,35 @@ func (s *Statistics) Eta() time.Duration {
 type (
 	incrReq struct {
 		amount int64
-		refill *Refill
+		refill *refill
 	}
 	state struct {
 		id             int
 		width          int
 		format         barFmtRunes
 		etaAlpha       float64
-		total          int64
-		current        int64
+		total          int
+		current        int
 		trimLeftSpace  bool
 		trimRightSpace bool
 		completed      bool
 		aborted        bool
 		startTime      time.Time
 		timeElapsed    time.Duration
+		blockStartTime time.Time
 		timePerItem    time.Duration
 		appendFuncs    []DecoratorFunc
 		prependFuncs   []DecoratorFunc
 		simpleSpinner  func() byte
-		refill         *Refill
+		refill         *refill
+		flushed        chan struct{}
 	}
 )
 
-func newBar(total int64, wg *sync.WaitGroup, cancel <-chan struct{}, options ...BarOption) *Bar {
-	b := &Bar{
-		// width:         width,
-		stateCh:       make(chan state),
-		incrCh:        make(chan incrReq),
-		flushedCh:     make(chan struct{}),
-		removeReqCh:   make(chan struct{}),
-		completeReqCh: make(chan struct{}),
-		done:          make(chan struct{}),
-		inProgress:    make(chan struct{}),
-	}
-
+func newBar(total int, wg *sync.WaitGroup, cancel <-chan struct{}, options ...BarOption) *Bar {
 	s := state{
 		total:    total,
-		etaAlpha: 0.25,
+		etaAlpha: etaAlpha,
 	}
 
 	if total <= 0 {
@@ -110,88 +104,39 @@ func newBar(total int64, wg *sync.WaitGroup, cancel <-chan struct{}, options ...
 		opt(&s)
 	}
 
+	b := &Bar{
+		incrCh:        make(chan incrReq),
+		completeReqCh: make(chan struct{}),
+		done:          make(chan struct{}),
+		inProgress:    make(chan struct{}),
+		ops:           make(chan func(*state)),
+	}
 	b.width = s.width
 
 	go b.server(s, wg, cancel)
 	return b
 }
 
-// SetWidth overrides width of individual bar
-func (b *Bar) SetWidth(n int) *Bar {
-	if n < 2 {
-		return b
-	}
-	b.updateState(func(s *state) {
-		s.width = n
-	})
-	return b
-}
-
-// TrimLeftSpace removes space befor LeftEnd charater
-func (b *Bar) TrimLeftSpace() *Bar {
-	b.updateState(func(s *state) {
-		s.trimLeftSpace = true
-	})
-	return b
-}
-
-// TrimRightSpace removes space after RightEnd charater
-func (b *Bar) TrimRightSpace() *Bar {
-	b.updateState(func(s *state) {
-		s.trimRightSpace = true
-	})
-	return b
-}
-
-// Format overrides format of individual bar
-func (b *Bar) Format(format string) *Bar {
-	if utf8.RuneCountInString(format) != numFmtRunes {
-		return b
-	}
-	b.updateState(func(s *state) {
-		s.updateFormat(format)
-	})
-	return b
-}
-
-// SetEtaAlpha sets alfa for exponential-weighted-moving-average ETA estimator
-// Defaults to 0.25
-// Normally you shouldn't touch this
-func (b *Bar) SetEtaAlpha(a float64) *Bar {
-	b.updateState(func(s *state) {
-		s.etaAlpha = a
-	})
-	return b
-}
-
-// PrependFunc prepends DecoratorFunc
-func (b *Bar) PrependFunc(f DecoratorFunc) *Bar {
-	b.updateState(func(s *state) {
-		s.prependFuncs = append(s.prependFuncs, f)
-	})
-	return b
-}
-
-// AppendFunc appends DecoratorFunc
-func (b *Bar) AppendFunc(f DecoratorFunc) *Bar {
-	b.updateState(func(s *state) {
-		s.appendFuncs = append(s.appendFuncs, f)
-	})
-	return b
-}
-
 // RemoveAllPrependers removes all prepend functions
 func (b *Bar) RemoveAllPrependers() {
-	b.updateState(func(s *state) {
+	select {
+	case b.ops <- func(s *state) {
 		s.prependFuncs = nil
-	})
+	}:
+	case <-b.done:
+		return
+	}
 }
 
 // RemoveAllAppenders removes all append functions
 func (b *Bar) RemoveAllAppenders() {
-	b.updateState(func(s *state) {
+	select {
+	case b.ops <- func(s *state) {
 		s.appendFuncs = nil
-	})
+	}:
+	case <-b.done:
+		return
+	}
 }
 
 // ProxyReader wrapper for io operations, like io.Copy
@@ -201,46 +146,99 @@ func (b *Bar) ProxyReader(r io.Reader) *Reader {
 
 // Incr increments progress bar
 func (b *Bar) Incr(n int) {
-	b.IncrWithReFill(n, nil)
-}
-
-// IncrWithReFill increments pb with different fill character
-func (b *Bar) IncrWithReFill(n int, refill *Refill) {
 	if n < 1 {
 		return
 	}
 	select {
-	case b.incrCh <- incrReq{int64(n), refill}:
+	case b.ops <- func(s *state) {
+		defer func() {
+			if s.completed {
+				b.Complete()
+			}
+			s.blockStartTime = time.Now()
+		}()
+		if s.current == 0 {
+			s.startTime = time.Now()
+			s.blockStartTime = s.startTime
+		}
+		sum := s.current + n
+		s.timeElapsed = time.Since(s.startTime)
+		s.updateTimePerItemEstimate(n)
+		if s.total > 0 && sum >= s.total {
+			s.current = s.total
+			s.completed = true
+			return
+		}
+		s.current = sum
+	}:
+	case <-b.done:
+		return
+	}
+}
+
+// ResumeFill fills bar with different r rune,
+// from 0 to till amount of progress.
+func (b *Bar) ResumeFill(r rune, till int) {
+	if till < 1 {
+		return
+	}
+	select {
+	case b.ops <- func(s *state) {
+		s.refill = &refill{r, till}
+	}:
 	case <-b.done:
 		return
 	}
 }
 
 func (b *Bar) NumOfAppenders() int {
-	return len(b.getState().appendFuncs)
+	result := make(chan int, 1)
+	select {
+	case b.ops <- func(s *state) { result <- len(s.appendFuncs) }:
+		return <-result
+	case <-b.done:
+		return len(b.state.appendFuncs)
+	}
 }
 
 func (b *Bar) NumOfPrependers() int {
-	return len(b.getState().prependFuncs)
+	result := make(chan int, 1)
+	select {
+	case b.ops <- func(s *state) { result <- len(s.prependFuncs) }:
+		return <-result
+	case <-b.done:
+		return len(b.state.prependFuncs)
+	}
 }
 
-// GetStatistics returs *Statistics, which contains information like
+// Statistics returs *Statistics, which contains information like
 // Tottal, Current, TimeElapsed and TimePerItemEstimate
-func (b *Bar) GetStatistics() *Statistics {
-	s := b.getState()
-	return newStatistics(&s)
+func (b *Bar) Statistics() *Statistics {
+	result := make(chan *Statistics, 1)
+	select {
+	case b.ops <- func(s *state) { result <- newStatistics(s) }:
+		return <-result
+	case <-b.done:
+		return newStatistics(&b.state)
+	}
 }
 
 // GetID returs id of the bar
 func (b *Bar) GetID() int {
-	return b.getState().id
+	result := make(chan int, 1)
+	select {
+	case b.ops <- func(s *state) { result <- s.id }:
+		return <-result
+	case <-b.done:
+		return b.state.id
+	}
 }
 
 // InProgress returns true, while progress is running.
 // Can be used as condition in for loop
 func (b *Bar) InProgress() bool {
 	select {
-	case <-b.inProgress:
+	case <-b.completeReqCh:
 		return false
 	default:
 		return true
@@ -253,112 +251,71 @@ func (b *Bar) InProgress() bool {
 // implicitly, upon p.Stop() call.
 func (b *Bar) Complete() {
 	select {
-	case b.completeReqCh <- struct{}{}:
-	case <-b.done:
+	case <-b.completeReqCh:
 		return
+	default:
+		close(b.completeReqCh)
 	}
 }
 
-// Completed: deprecated! Use b.Complete()
-func (b *Bar) Completed() {
-	b.Complete()
-}
-
-func (b *Bar) flushed() {
-	select {
-	case b.flushedCh <- struct{}{}:
-	case <-b.done:
-		return
-	}
-}
-
-func (b *Bar) remove() {
-	select {
-	case b.removeReqCh <- struct{}{}:
-	case <-b.done:
-		return
-	}
-}
-
-func (b *Bar) getState() state {
-	select {
-	case s := <-b.stateCh:
-		return s
-	case <-b.done:
-		return b.state
-	}
-}
-
-func (b *Bar) updateState(cb func(*state)) {
-	s := b.getState()
-	cb(&s)
-	select {
-	case b.stateCh <- s:
-	case <-b.done:
-		return
-	}
-}
+// func (b *Bar) getState() state {
+// 	result := make(chan state, 1)
+// 	select {
+// 	case b.ops <- func(s *state) { result <- *s }:
+// 		return <-result
+// 	case <-b.done:
+// 		return b.state
+// 	}
+// }
 
 func (b *Bar) server(s state, wg *sync.WaitGroup, cancel <-chan struct{}) {
-	var incrStartTime time.Time
 
 	defer func() {
 		b.state = s
-		wg.Done()
 		close(b.done)
+		<-s.flushed
+		// fmt.Fprintf(os.Stderr, "Bar:%d flushed\n", s.id)
+		wg.Done()
 	}()
 
 	for {
 		select {
-		case b.stateCh <- s:
-		case s = <-b.stateCh:
-		case r := <-b.incrCh:
-			if s.current == 0 {
-				incrStartTime = time.Now()
-				s.startTime = incrStartTime
-			}
-			n := s.current + r.amount
-			if s.total > 0 && n > s.total {
-				s.current = s.total
-				s.completed = true
-				break // break out of select
-			}
-			s.timeElapsed = time.Since(s.startTime)
-			s.updateTimePerItemEstimate(incrStartTime, r.amount)
-			if n == s.total {
-				s.completed = true
-				close(b.inProgress)
-			}
-			s.current = n
-			if r.refill != nil {
-				r.refill.till = n
-				s.refill = r.refill
-			}
-			incrStartTime = time.Now()
-		case <-b.flushedCh:
-			if s.completed {
-				return
-			}
+		case op := <-b.ops:
+			op(&s)
 		case <-b.completeReqCh:
 			s.completed = true
 			return
-		case <-b.removeReqCh:
-			return
-		case <-b.cancel:
+		case <-cancel:
 			s.aborted = true
-			close(b.inProgress)
-			return
+			cancel = nil
+			b.Complete()
 		}
 	}
 }
 
-func (b *Bar) render(rFn func(chan []byte), termWidth int, prependWs, appendWs *widthSync) <-chan []byte {
+func (b *Bar) render(tw int, flushed chan struct{}, prependWs, appendWs *widthSync) <-chan []byte {
 	ch := make(chan []byte)
 
 	go func() {
-		defer rFn(ch)
-		s := b.getState()
-		buf := draw(&s, termWidth, prependWs, appendWs)
+		defer func() {
+			// recovering if external decorators panic
+			if p := recover(); p != nil {
+				ch <- []byte(fmt.Sprintln(p))
+			}
+			close(ch)
+		}()
+		var st state
+		result := make(chan state, 1)
+		select {
+		case b.ops <- func(s *state) {
+			s.flushed = flushed
+			result <- *s
+		}:
+			st = <-result
+		case <-b.done:
+			st = b.state
+		}
+		buf := draw(&st, tw, prependWs, appendWs)
 		buf = append(buf, '\n')
 		ch <- buf
 	}()
@@ -373,8 +330,8 @@ func (s *state) updateFormat(format string) {
 	}
 }
 
-func (s *state) updateTimePerItemEstimate(incrStartTime time.Time, amount int64) {
-	lastBlockTime := time.Since(incrStartTime) // shorthand for time.Now().Sub(t)
+func (s *state) updateTimePerItemEstimate(amount int) {
+	lastBlockTime := time.Since(s.blockStartTime) // shorthand for time.Now().Sub(t)
 	lastItemEstimate := float64(lastBlockTime) / float64(amount)
 	s.timePerItem = time.Duration((s.etaAlpha * lastItemEstimate) + (1-s.etaAlpha)*float64(s.timePerItem))
 }
@@ -447,7 +404,7 @@ func concatenateBlocks(buf []byte, blocks ...[]byte) []byte {
 	return buf
 }
 
-func fillBar(total, current int64, width int, fmtBytes barFmtBytes, rf *Refill) []byte {
+func fillBar(total, current, width int, fmtBytes barFmtBytes, rf *refill) []byte {
 	if width < 2 || total <= 0 {
 		return []byte{}
 	}
@@ -462,8 +419,8 @@ func fillBar(total, current int64, width int, fmtBytes barFmtBytes, rf *Refill) 
 
 	if rf != nil {
 		till := percentage(total, rf.till, barWidth)
-		rbytes := make([]byte, utf8.RuneLen(rf.Char))
-		utf8.EncodeRune(rbytes, rf.Char)
+		rbytes := make([]byte, utf8.RuneLen(rf.char))
+		utf8.EncodeRune(rbytes, rf.char)
 		// append refill rune
 		for i := 0; i < till; i++ {
 			buf = append(buf, rbytes...)
@@ -515,7 +472,7 @@ func convertFmtRunesToBytes(format barFmtRunes) barFmtBytes {
 	return fmtBytes
 }
 
-func percentage(total, current int64, ratio int) int {
+func percentage(total, current, ratio int) int {
 	if total == 0 || current > total {
 		return 0
 	}

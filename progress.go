@@ -1,12 +1,9 @@
 package mpb
 
 import (
-	"fmt"
-	"io"
 	"os"
 	"sync"
 	"time"
-	"unicode/utf8"
 
 	"github.com/vbauerster/mpb/cwriter"
 )
@@ -43,8 +40,6 @@ const (
 	pwidth = 80
 	// default format
 	pformat = "[=>-]"
-	// number of format runes for bar
-	numFmtRunes = 5
 )
 
 // Progress represents the container that renders Progress bars
@@ -87,39 +82,8 @@ func New(options ...ProgressOption) *Progress {
 	return p
 }
 
-// WithCancel Deprecated, use mpb.WithCancel
-func (p *Progress) WithCancel(ch <-chan struct{}) *Progress {
-	if ch == nil {
-		panic("nil cancel channel")
-	}
-	return updateConf(p, func(c *pConf) {
-		c.cancel = ch
-	})
-}
-
-// SetWidth Deprecated, use mpb.WithWidth
-func (p *Progress) SetWidth(width int) *Progress {
-	if width < 2 {
-		return p
-	}
-	return updateConf(p, func(c *pConf) {
-		c.width = width
-	})
-}
-
-// SetOut Deprecated, use mpb.Output
-func (p *Progress) SetOut(w io.Writer) *Progress {
-	if w == nil {
-		return p
-	}
-	return updateConf(p, func(c *pConf) {
-		c.cw.Flush()
-		c.cw = cwriter.New(w)
-	})
-}
-
 // AddBar creates a new progress bar and adds to the container.
-func (p *Progress) AddBar(total int64, options ...BarOption) *Bar {
+func (p *Progress) AddBar(total int, options ...BarOption) *Bar {
 	result := make(chan *Bar, 1)
 	op := func(c *pConf) {
 		options = append(options, barWidth(c.width), barFormat(c.format))
@@ -143,8 +107,9 @@ func (p *Progress) RemoveBar(b *Bar) bool {
 		var ok bool
 		for i, bar := range c.bars {
 			if bar == b {
+				// bar.remove()
+				bar.Complete()
 				c.bars = append(c.bars[:i], c.bars[i+1:]...)
-				bar.remove()
 				ok = true
 				break
 			}
@@ -173,16 +138,6 @@ func (p *Progress) BarCount() int {
 	}
 }
 
-// Format Deprecated, use mpb.WithFormat
-func (p *Progress) Format(format string) *Progress {
-	if utf8.RuneCountInString(format) != numFmtRunes {
-		return p
-	}
-	return updateConf(p, func(c *pConf) {
-		c.format = format
-	})
-}
-
 // Stop shutdowns Progress' goroutine.
 // Should be called only after each bar's work done, i.e. bar has reached its
 // 100 %. It is NOT for cancelation. Use WithContext or WithCancel for
@@ -195,8 +150,8 @@ func (p *Progress) Stop() {
 		// complete Total unknown bars
 		p.ops <- func(c *pConf) {
 			for _, b := range c.bars {
-				s := b.getState()
-				if !s.completed && !s.aborted {
+				s := b.Statistics()
+				if !s.Completed && !s.Aborted {
 					b.Complete()
 				}
 			}
@@ -221,12 +176,12 @@ func (p *Progress) server(conf pConf) {
 		close(p.done)
 	}()
 
-	recoverFn := func(ch chan []byte) {
-		if p := recover(); p != nil {
-			ch <- []byte(fmt.Sprintln(p))
-		}
-		close(ch)
-	}
+	// recoverFn := func(ch chan []byte) {
+	// 	if p := recover(); p != nil {
+	// 		ch <- []byte(fmt.Sprintln(p))
+	// 	}
+	// 	close(ch)
+	// }
 
 	for {
 		select {
@@ -251,11 +206,12 @@ func (p *Progress) server(conf pConf) {
 			prependWs := newWidthSync(quitWidthSyncCh, numBars, b0.NumOfPrependers())
 			appendWs := newWidthSync(quitWidthSyncCh, numBars, b0.NumOfAppenders())
 
-			width, _, _ := cwriter.GetTermSize()
+			tw, _, _ := cwriter.GetTermSize()
 
+			flushed := make(chan struct{})
 			sequence := make([]<-chan []byte, numBars)
 			for i, b := range conf.bars {
-				sequence[i] = b.render(recoverFn, width, prependWs, appendWs)
+				sequence[i] = b.render(tw, flushed, prependWs, appendWs)
 			}
 
 			ch := fanIn(sequence...)
@@ -265,10 +221,7 @@ func (p *Progress) server(conf pConf) {
 			}
 
 			conf.cw.Flush()
-
-			for _, b := range conf.bars {
-				b.flushed()
-			}
+			close(flushed)
 		case <-conf.cancel:
 			conf.ticker.Stop()
 			conf.cancel = nil
