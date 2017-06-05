@@ -131,7 +131,7 @@ func Percentage(minWidth int, conf byte) DecoratorFunc {
 	}
 	format += "%ds"
 	return func(s *Statistics, myWidth chan<- int, maxWidth <-chan int) string {
-		str := fmt.Sprintf("%d %%", percentage(s.Total, s.Current, 100))
+		str := fmt.Sprintf("%d %%", CalcPercentage(s.Total, s.Current, 100))
 		if (conf & DwidthSync) != 0 {
 			myWidth <- utf8.RuneCountInString(str)
 			max := <-maxWidth
@@ -144,11 +144,11 @@ func Percentage(minWidth int, conf byte) DecoratorFunc {
 	}
 }
 
-func percentage(total, current, ratio int) int {
+func CalcPercentage(total, current, width int) int {
 	if total == 0 || current > total {
 		return 0
 	}
-	num := float64(ratio) * float64(current) / float64(total)
+	num := float64(width) * float64(current) / float64(total)
 	ceil := math.Ceil(num)
 	diff := ceil - num
 	// num = 2.34 will return 2

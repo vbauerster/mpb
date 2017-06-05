@@ -3,7 +3,6 @@ package mpb
 import (
 	"fmt"
 	"io"
-	"math"
 	"sync"
 	"time"
 	"unicode/utf8"
@@ -379,13 +378,13 @@ func fillBar(total, current, width int, fmtBytes barFmtBytes, rf *refill) []byte
 	// bar width without leftEnd and rightEnd runes
 	barWidth := width - 2
 
-	completedWidth := percentage(total, current, barWidth)
+	completedWidth := decor.CalcPercentage(total, current, barWidth)
 
 	buf := make([]byte, 0, width)
 	buf = append(buf, fmtBytes[rLeft]...)
 
 	if rf != nil {
-		till := percentage(total, rf.till, barWidth)
+		till := decor.CalcPercentage(total, rf.till, barWidth)
 		rbytes := make([]byte, utf8.RuneLen(rf.char))
 		utf8.EncodeRune(rbytes, rf.char)
 		// append refill rune
@@ -437,21 +436,6 @@ func convertFmtRunesToBytes(format barFmtRunes) barFmtBytes {
 		fmtBytes[i] = buf
 	}
 	return fmtBytes
-}
-
-func percentage(total, current, ratio int) int {
-	if total == 0 || current > total {
-		return 0
-	}
-	num := float64(ratio) * float64(current) / float64(total)
-	ceil := math.Ceil(num)
-	diff := ceil - num
-	// num = 2.34 will return 2
-	// num = 2.44 will return 3
-	if math.Max(diff, 0.6) == diff {
-		return int(num)
-	}
-	return int(ceil)
 }
 
 func getSpinner() func() byte {
