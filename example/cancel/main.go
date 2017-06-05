@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/vbauerster/mpb"
+	"github.com/vbauerster/mpb/decor"
 )
 
 const (
@@ -21,7 +22,7 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	p := mpb.New().WithContext(ctx)
+	p := mpb.New(mpb.WithContext(ctx))
 
 	var wg sync.WaitGroup
 	total := 100
@@ -30,10 +31,15 @@ func main() {
 
 	for i := 0; i < numBars; i++ {
 		name := fmt.Sprintf("Bar#%d:", i)
-		bar := p.AddBarWithID(i, int64(total)).
-			PrependName(name, 0, mpb.DwidthSync|mpb.DidentRight).
-			PrependETA(4, mpb.DwidthSync|mpb.DextraSpace).
-			AppendPercentage(5, 0)
+		bar := p.AddBar(int64(total), mpb.BarID(i),
+			mpb.PrependDecorators(
+				decor.Name(name, 0, decor.DwidthSync|decor.DidentRight),
+				decor.ETA(4, decor.DSyncSpace),
+			),
+			mpb.AppendDecorators(
+				decor.Percentage(5, 0),
+			),
+		)
 		go func() {
 			defer func() {
 				// fmt.Printf("%s done\n", name)
