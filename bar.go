@@ -86,7 +86,7 @@ type (
 		prependFuncs   []DecoratorFunc
 		simpleSpinner  func() byte
 		refill         *refill
-		flushed        chan struct{}
+		// flushed        chan struct{}
 	}
 )
 
@@ -151,12 +151,6 @@ func (b *Bar) Incr(n int) {
 	}
 	select {
 	case b.ops <- func(s *state) {
-		defer func() {
-			if s.completed {
-				b.Complete()
-			}
-			s.blockStartTime = time.Now()
-		}()
 		if s.current == 0 {
 			s.startTime = time.Now()
 			s.blockStartTime = s.startTime
@@ -170,6 +164,7 @@ func (b *Bar) Incr(n int) {
 			return
 		}
 		s.current = sum
+		s.blockStartTime = time.Now()
 	}:
 	case <-b.done:
 		return
@@ -258,24 +253,14 @@ func (b *Bar) Complete() {
 	}
 }
 
-// func (b *Bar) getState() state {
-// 	result := make(chan state, 1)
-// 	select {
-// 	case b.ops <- func(s *state) { result <- *s }:
-// 		return <-result
-// 	case <-b.done:
-// 		return b.state
-// 	}
-// }
-
 func (b *Bar) server(s state, wg *sync.WaitGroup, cancel <-chan struct{}) {
 
 	defer func() {
 		b.state = s
-		close(b.done)
-		<-s.flushed
+		// <-s.flushed
 		// fmt.Fprintf(os.Stderr, "Bar:%d flushed\n", s.id)
 		wg.Done()
+		close(b.done)
 	}()
 
 	for {
@@ -293,6 +278,42 @@ func (b *Bar) server(s state, wg *sync.WaitGroup, cancel <-chan struct{}) {
 	}
 }
 
+// func (b *Bar) render(tw int, flushed chan struct{}, prependWs, appendWs *widthSync) <-chan []byte {
+// 	ch := make(chan []byte)
+
+// 	go func() {
+// 		defer func() {
+// 			// recovering if external decorators panic
+// 			if p := recover(); p != nil {
+// 				ch <- []byte(fmt.Sprintln(p))
+// 			}
+// 			close(ch)
+// 		}()
+// 		result := make(chan []byte, 1)
+// 		select {
+// 		case b.ops <- func(s *state) {
+// 			buf := draw(s, tw, prependWs, appendWs)
+// 			buf = append(buf, '\n')
+// 			result <- buf
+// 			// wait for flushed
+// 			if s.completed {
+// 				<-flushed
+// 				b.Complete()
+// 			}
+// 		}:
+// 			ch <- <-result
+// 		case <-b.done:
+// 			buf := draw(&b.state, tw, prependWs, appendWs)
+// 			buf = append(buf, '\n')
+// 			ch <- buf
+// 		default:
+// 			ch <- []byte{}
+// 		}
+// 	}()
+
+// 	return ch
+// }
+
 func (b *Bar) render(tw int, flushed chan struct{}, prependWs, appendWs *widthSync) <-chan []byte {
 	ch := make(chan []byte)
 
@@ -308,8 +329,11 @@ func (b *Bar) render(tw int, flushed chan struct{}, prependWs, appendWs *widthSy
 		result := make(chan state, 1)
 		select {
 		case b.ops <- func(s *state) {
-			s.flushed = flushed
 			result <- *s
+			if s.completed {
+				<-flushed
+				b.Complete()
+			}
 		}:
 			st = <-result
 		case <-b.done:
