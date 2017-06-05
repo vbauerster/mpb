@@ -1,35 +1,52 @@
 package mpb
 
+import "github.com/vbauerster/mpb/decor"
+
 type BarOption func(*state)
 
-func AppendDecorators(appenders ...DecoratorFunc) BarOption {
+func AppendDecorators(appenders ...decor.DecoratorFunc) BarOption {
 	return func(bs *state) {
 		bs.appendFuncs = append(bs.appendFuncs, appenders...)
 	}
 }
 
-func PrependDecorators(prependers ...DecoratorFunc) BarOption {
+func PrependDecorators(prependers ...decor.DecoratorFunc) BarOption {
 	return func(bs *state) {
 		bs.prependFuncs = append(bs.prependFuncs, prependers...)
 	}
 }
 
-func BarTrimLeft(bs *state) {
-	bs.trimLeftSpace = true
+func BarTrimLeft() BarOption {
+	return func(bs *state) {
+		bs.trimLeftSpace = true
+	}
 }
 
-func BarTrimRight(bs *state) {
-	bs.trimRightSpace = true
+func BarTrimRight() BarOption {
+	return func(bs *state) {
+		bs.trimRightSpace = true
+	}
 }
 
-func BarTrim(bs *state) {
-	bs.trimLeftSpace = true
-	bs.trimRightSpace = true
+func BarTrim() BarOption {
+	return func(bs *state) {
+		bs.trimLeftSpace = true
+		bs.trimRightSpace = true
+	}
 }
 
 func BarID(id int) BarOption {
 	return func(bs *state) {
 		bs.id = id
+	}
+}
+
+// BarEtaAlpha option is a way to adjust ETA behavior.
+// You can play with it, if you're not satisfied with default behavior.
+// Default value is 0.25.
+func BarEtaAlpha(a float64) BarOption {
+	return func(bs *state) {
+		bs.etaAlpha = a
 	}
 }
 
