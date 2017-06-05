@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/vbauerster/mpb"
+	"github.com/vbauerster/mpb/decor"
 )
 
 func TestWithContext(t *testing.T) {
@@ -25,13 +26,11 @@ func TestWithContext(t *testing.T) {
 
 	for i := 0; i < numBars; i++ {
 		name := fmt.Sprintf("Bar#%d:", i)
-		bar := p.AddBarWithID(i, int64(total)).PrependName(name, len(name), 0)
+		bar := p.AddBar(int64(total), mpb.BarID(i),
+			mpb.PrependDecorators(decor.Name(name, len(name), 0)))
 
 		go func() {
-			defer func() {
-				// fmt.Printf("%s done\n", name)
-				wg.Done()
-			}()
+			defer wg.Done()
 			for i := 0; i < total; i++ {
 				select {
 				case <-ctx.Done():
@@ -54,16 +53,4 @@ func TestWithContext(t *testing.T) {
 	case <-time.After(500 * time.Millisecond):
 		t.Error("ProgressBar didn't stop")
 	}
-}
-
-func TestWithNilContext(t *testing.T) {
-	defer func() {
-		if p := recover(); p != nil {
-			if msg, ok := p.(string); ok && msg == "nil context" {
-				return
-			}
-			t.Errorf("Expected nil context panic, got: %+v", p)
-		}
-	}()
-	_ = mpb.New().WithContext(nil)
 }

@@ -10,12 +10,14 @@ import (
 	"unicode/utf8"
 
 	"github.com/vbauerster/mpb"
+	"github.com/vbauerster/mpb/decor"
 )
 
 func TestDefaultWidth(t *testing.T) {
 	var buf bytes.Buffer
-	p := mpb.New().SetOut(&buf)
-	bar := p.AddBar(100).TrimLeftSpace().TrimRightSpace()
+	p := mpb.New(mpb.Output(&buf))
+	bar := p.AddBar(100, mpb.BarTrim())
+
 	for i := 0; i < 100; i++ {
 		bar.Incr(1)
 	}
@@ -31,8 +33,9 @@ func TestDefaultWidth(t *testing.T) {
 func TestCustomWidth(t *testing.T) {
 	wantWidth := 60
 	var buf bytes.Buffer
-	p := mpb.New().SetWidth(wantWidth).SetOut(&buf)
-	bar := p.AddBar(100).TrimLeftSpace().TrimRightSpace()
+	p := mpb.New(mpb.WithWidth(wantWidth), mpb.Output(&buf))
+	bar := p.AddBar(100, mpb.BarTrim())
+
 	for i := 0; i < 100; i++ {
 		bar.Incr(1)
 	}
@@ -46,8 +49,9 @@ func TestCustomWidth(t *testing.T) {
 
 func TestInvalidWidth(t *testing.T) {
 	var buf bytes.Buffer
-	p := mpb.New().SetWidth(1).SetOut(&buf)
-	bar := p.AddBar(100).TrimLeftSpace().TrimRightSpace()
+	p := mpb.New(mpb.WithWidth(1), mpb.Output(&buf))
+	bar := p.AddBar(100, mpb.BarTrim())
+
 	for i := 0; i < 100; i++ {
 		bar.Incr(1)
 	}
@@ -63,7 +67,7 @@ func TestInvalidWidth(t *testing.T) {
 func TestAddBar(t *testing.T) {
 	var wg sync.WaitGroup
 	var buf bytes.Buffer
-	p := mpb.New().SetOut(&buf)
+	p := mpb.New(mpb.Output(&buf))
 
 	count := p.BarCount()
 	if count != 0 {
@@ -75,7 +79,7 @@ func TestAddBar(t *testing.T) {
 
 	for i := 0; i < numBars; i++ {
 		name := fmt.Sprintf("Bar#%d:", i)
-		bar := p.AddBar(100).PrependName(name, len(name), 0)
+		bar := p.AddBar(100, mpb.PrependDecorators(decor.Name(name, len(name), 0)))
 
 		go func() {
 			defer wg.Done()
@@ -121,7 +125,8 @@ func TestWithCancel(t *testing.T) {
 
 	for i := 0; i < numBars; i++ {
 		name := fmt.Sprintf("Bar#%d:", i)
-		bar := p.AddBarWithID(i, int64(total)).PrependName(name, len(name), 0)
+		bar := p.AddBar(int64(total), mpb.BarID(i),
+			mpb.PrependDecorators(decor.Name(name, len(name), 0)))
 
 		go func() {
 			defer func() {
@@ -154,26 +159,12 @@ func TestWithCancel(t *testing.T) {
 	}
 }
 
-func TestWithNilCancel(t *testing.T) {
-	defer func() {
-		if p := recover(); p != nil {
-			if msg, ok := p.(string); ok && msg == "nil cancel channel" {
-				return
-			}
-			t.Errorf("Expected nil channel panic, got: %+v", p)
-		}
-	}()
-	_ = mpb.New().WithCancel(nil)
-}
-
 func TestCustomFormat(t *testing.T) {
 	var buf bytes.Buffer
 	cancel := make(chan struct{})
 	customFormat := "╢▌▌░╟"
-	p := mpb.New().Format(customFormat).
-		WithCancel(cancel).
-		SetOut(&buf)
-	bar := p.AddBar(100).TrimLeftSpace().TrimRightSpace()
+	p := mpb.New(mpb.Output(&buf), mpb.WithCancel(cancel), mpb.WithFormat(customFormat))
+	bar := p.AddBar(100, mpb.BarTrim())
 
 	go func() {
 		for i := 0; i < 100; i++ {
