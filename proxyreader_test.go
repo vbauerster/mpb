@@ -22,12 +22,12 @@ const content = `Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed d
 
 func TestProxyReader(t *testing.T) {
 	var buf bytes.Buffer
-	p := mpb.New().SetOut(&buf)
+	p := mpb.New(mpb.Output(&buf))
 
 	reader := strings.NewReader(content)
 
-	total := int64(len(content))
-	bar := p.AddBar(total).TrimLeftSpace().TrimRightSpace()
+	total := len(content)
+	bar := p.AddBar(100, mpb.BarTrim())
 	preader := bar.ProxyReader(reader)
 
 	written, err := io.Copy(ioutil.Discard, preader)
@@ -37,7 +37,7 @@ func TestProxyReader(t *testing.T) {
 
 	p.Stop()
 
-	if written != total {
+	if written != int64(total) {
 		t.Errorf("Expected written: %d, got: %d\n", total, written)
 	}
 
@@ -50,7 +50,7 @@ func TestProxyReader(t *testing.T) {
 
 func TestProxyReaderCloser(t *testing.T) {
 	var buf bytes.Buffer
-	p := mpb.New().SetOut(&buf)
+	p := mpb.New(mpb.Output(&buf))
 
 	ts := setupTestHttpServer(content)
 	defer ts.Close()
@@ -62,7 +62,7 @@ func TestProxyReaderCloser(t *testing.T) {
 	}
 
 	total := resp.ContentLength
-	bar := p.AddBar(total).TrimLeftSpace().TrimRightSpace()
+	bar := p.AddBar(total, mpb.BarTrim())
 	reader := bar.ProxyReader(resp.Body)
 
 	// calling reader.Close() will call resp.Body.Close() implicitly
