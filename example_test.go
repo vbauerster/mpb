@@ -22,7 +22,7 @@ func Example() {
 	total := 100
 	barName := "Single Bar:"
 	// Add a bar. You're not limited to just one bar, add many if you need.
-	bar := p.AddBar(total,
+	bar := p.AddBar(int64(total),
 		mpb.PrependDecorators(
 			decor.Name(barName, 0, decor.DwidthSync|decor.DidentRight),
 			decor.ETA(4, decor.DSyncSpace),
