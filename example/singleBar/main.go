@@ -6,21 +6,24 @@ import (
 	"time"
 
 	"github.com/vbauerster/mpb"
+	"github.com/vbauerster/mpb/decor"
 )
 
 func main() {
-	// Star mpb's rendering goroutine.
-	p := mpb.New()
-	// Set custom width for every bar, which mpb will render
-	// The default one in 80
-	p.SetWidth(100)
-	// Set custom format for every bar, the default one is "[=>-]"
-	p.Format("╢▌▌░╟")
-	// Set custom refresh rate, the default one is 100 ms
-	p.RefreshRate(120 * time.Millisecond)
+	p := mpb.New(
+		// Override default (80) width
+		mpb.WithWidth(100),
+		// Override default "[=>-]" format
+		mpb.WithFormat("╢▌▌░╟"),
+		// Override default 100ms refresh rate
+		mpb.WithRefreshRate(120*time.Millisecond),
+	)
 
 	// Add a bar. You're not limited to just one bar, add many if you need.
-	bar := p.AddBar(100).PrependName("Single Bar:", 0, 0).AppendPercentage(5, 0)
+	bar := p.AddBar(100,
+		mpb.PrependDecorators(decor.Name("Single Bar:", 0, 0)),
+		mpb.AppendDecorators(decor.Percentage(5, 0)),
+	)
 
 	for i := 0; i < 100; i++ {
 		bar.Incr(1) // increment progress bar

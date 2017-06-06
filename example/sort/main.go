@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/vbauerster/mpb"
+	"github.com/vbauerster/mpb/decor"
 )
 
 const (
@@ -19,10 +20,8 @@ type barSlice []*mpb.Bar
 func (bs barSlice) Len() int { return len(bs) }
 
 func (bs barSlice) Less(i, j int) bool {
-	is := bs[i].GetStatistics()
-	js := bs[j].GetStatistics()
-	ip := percentage(is.Total, is.Current, 100)
-	jp := percentage(js.Total, js.Current, 100)
+	ip := decor.CalcPercentage(bs[i].Total(), bs[i].Current(), 100)
+	jp := decor.CalcPercentage(bs[j].Total(), bs[j].Current(), 100)
 	return ip < jp
 }
 
@@ -34,67 +33,42 @@ func sortByProgressFunc() mpb.BeforeRender {
 	}
 }
 
-func percentage(total, current int64, ratio int) int {
-	if total == 0 || current > total {
-		return 0
-	}
-	return int(float64(ratio) * float64(current) / float64(total))
-}
-
 func main() {
 
+	p := mpb.New(mpb.WithWidth(64), mpb.WithBeforeRenderFunc(sortByProgressFunc()))
+
+	total := 100
+	numBars := 3
 	var wg sync.WaitGroup
-	p := mpb.New().SetWidth(60).BeforeRenderFunc(sortByProgressFunc())
+	wg.Add(numBars)
 
-	name1 := "Bar#1:"
-	bar1 := p.AddBar(100).
-		PrependName(name1, 0, mpb.DwidthSync).
-		PrependCounters("%3s/%3s", 0, 10, mpb.DwidthSync|mpb.DextraSpace).
-		AppendETA(3, 0)
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		blockSize := rand.Intn(maxBlockSize) + 1
-		for i := 0; i < 100; i++ {
-			sleep(blockSize)
-			bar1.Incr(1)
-			blockSize = rand.Intn(maxBlockSize) + 1
+	for i := 0; i < numBars; i++ {
+		var name string
+		if i != 1 {
+			name = fmt.Sprintf("Bar#%d:", i)
 		}
-	}()
-
-	bar2 := p.AddBar(60).
-		PrependName("", 0, mpb.DwidthSync).
-		PrependCounters("%3s/%3s", 0, 10, mpb.DwidthSync|mpb.DextraSpace).
-		AppendETA(3, 0)
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		blockSize := rand.Intn(maxBlockSize) + 1
-		for i := 0; i < 60; i++ {
-			sleep(blockSize)
-			bar2.Incr(1)
-			blockSize = rand.Intn(maxBlockSize) + 1
-		}
-	}()
-
-	bar3 := p.AddBar(80).
-		PrependName("Bar#3:", 0, mpb.DwidthSync).
-		PrependCounters("%3s/%3s", 0, 10, mpb.DwidthSync|mpb.DextraSpace).
-		AppendETA(3, 0)
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		blockSize := rand.Intn(maxBlockSize) + 1
-		for i := 0; i < 80; i++ {
-			sleep(blockSize)
-			bar3.Incr(1)
-			blockSize = rand.Intn(maxBlockSize) + 1
-		}
-	}()
+		b := p.AddBar(int64(total),
+			mpb.PrependDecorators(
+				decor.Name(name, 0, decor.DwidthSync),
+				decor.Counters("%3s/%3s", 0, 10, decor.DSyncSpace),
+			),
+			mpb.AppendDecorators(
+				decor.ETA(3, 0),
+			),
+		)
+		go func() {
+			defer wg.Done()
+			blockSize := rand.Intn(maxBlockSize) + 1
+			for i := 0; i < total; i++ {
+				sleep(blockSize)
+				b.Incr(1)
+				blockSize = rand.Intn(maxBlockSize) + 1
+			}
+		}()
+	}
 
 	wg.Wait()
 	p.Stop()
-	// p.AddBar(1) // panic: you cannot reuse p, create new one!
 	fmt.Println("stop")
 }
 

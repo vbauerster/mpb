@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/vbauerster/mpb"
+	"github.com/vbauerster/mpb/decor"
 )
 
 const (
@@ -23,10 +24,15 @@ func main() {
 	for i := 0; i < totalBars; i++ {
 		name := fmt.Sprintf("Bar#%02d: ", i)
 		total := rand.Intn(120) + 10
-		bar := p.AddBar(int64(total)).
-			PrependName(name, len(name), 0).
-			PrependETA(4, mpb.DwidthSync|mpb.DextraSpace).
-			AppendPercentage(5, 0)
+		bar := p.AddBar(int64(total),
+			mpb.PrependDecorators(
+				decor.Name(name, len(name), 0),
+				decor.ETA(4, decor.DSyncSpace),
+			),
+			mpb.AppendDecorators(
+				decor.Percentage(5, 0),
+			),
+		)
 
 		go func() {
 			defer wg.Done()
@@ -41,7 +47,6 @@ func main() {
 
 	wg.Wait()
 	p.Stop()
-	// p.AddBar(1) // panic: you cannot reuse p, create new one!
 	fmt.Println("stop")
 }
 

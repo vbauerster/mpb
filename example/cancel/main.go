@@ -41,10 +41,7 @@ func main() {
 			),
 		)
 		go func() {
-			defer func() {
-				// fmt.Printf("%s done\n", name)
-				wg.Done()
-			}()
+			defer wg.Done()
 			blockSize := rand.Intn(maxBlockSize) + 1
 			for i := 0; i < total; i++ {
 				select {
