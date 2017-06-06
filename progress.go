@@ -47,12 +47,11 @@ type Progress struct {
 	// WaitGroup for internal rendering sync
 	wg *sync.WaitGroup
 
-	done      chan struct{}
-	ops       chan func(*pConf)
-	stopReqCh chan struct{}
-
-	// following is used after (*Progress.done) is closed
-	conf pConf
+	// quit channel to request p.server to quit
+	quit chan struct{}
+	// done channel is receiveable after p.server has been quit
+	done chan struct{}
+	ops  chan func(*pConf)
 }
 
 // New creates new Progress instance, which orchestrates bars rendering process.
@@ -73,10 +72,10 @@ func New(options ...ProgressOption) *Progress {
 	}
 
 	p := &Progress{
-		wg:        new(sync.WaitGroup),
-		done:      make(chan struct{}),
-		ops:       make(chan func(*pConf)),
-		stopReqCh: make(chan struct{}),
+		wg:   new(sync.WaitGroup),
+		done: make(chan struct{}),
+		ops:  make(chan func(*pConf)),
+		quit: make(chan struct{}),
 	}
 	go p.server(conf)
 	return p
@@ -95,7 +94,7 @@ func (p *Progress) AddBar(total int64, options ...BarOption) *Bar {
 	select {
 	case p.ops <- op:
 		return <-result
-	case <-p.done:
+	case <-p.quit:
 		return nil
 	}
 }
@@ -119,7 +118,7 @@ func (p *Progress) RemoveBar(b *Bar) bool {
 	select {
 	case p.ops <- op:
 		return <-result
-	case <-p.done:
+	case <-p.quit:
 		return false
 	}
 }
@@ -133,7 +132,7 @@ func (p *Progress) BarCount() int {
 	select {
 	case p.ops <- op:
 		return <-result
-	case <-p.done:
+	case <-p.quit:
 		return 0
 	}
 }
@@ -144,7 +143,7 @@ func (p *Progress) BarCount() int {
 // cancelation purposes.
 func (p *Progress) Stop() {
 	select {
-	case <-p.done:
+	case <-p.quit:
 		return
 	default:
 		// complete Total unknown bars
@@ -155,10 +154,18 @@ func (p *Progress) Stop() {
 		}
 		// wait for all bars to quit
 		p.wg.Wait()
-		// stop request
-		p.stopReqCh <- struct{}{}
+		// request p.server to quit
+		p.quitRequest()
 		// wait for p.server to quit
 		<-p.done
+	}
+}
+
+func (p *Progress) quitRequest() {
+	select {
+	case <-p.quit:
+	default:
+		close(p.quit)
 	}
 }
 
@@ -166,19 +173,12 @@ func (p *Progress) Stop() {
 func (p *Progress) server(conf pConf) {
 
 	defer func() {
-		p.conf = conf
+		// p.conf = conf
 		if conf.shutdownNotifier != nil {
 			close(conf.shutdownNotifier)
 		}
 		close(p.done)
 	}()
-
-	// recoverFn := func(ch chan []byte) {
-	// 	if p := recover(); p != nil {
-	// 		ch <- []byte(fmt.Sprintln(p))
-	// 	}
-	// 	close(ch)
-	// }
 
 	for {
 		select {
@@ -194,14 +194,14 @@ func (p *Progress) server(conf pConf) {
 				conf.beforeRender(conf.bars)
 			}
 
-			quitWidthSyncCh := make(chan struct{})
+			wSyncTimeout := make(chan struct{})
 			time.AfterFunc(conf.rr, func() {
-				close(quitWidthSyncCh)
+				close(wSyncTimeout)
 			})
 
 			b0 := conf.bars[0]
-			prependWs := newWidthSync(quitWidthSyncCh, numBars, b0.NumOfPrependers())
-			appendWs := newWidthSync(quitWidthSyncCh, numBars, b0.NumOfAppenders())
+			prependWs := newWidthSync(wSyncTimeout, numBars, b0.NumOfPrependers())
+			appendWs := newWidthSync(wSyncTimeout, numBars, b0.NumOfAppenders())
 
 			tw, _, _ := cwriter.GetTermSize()
 
@@ -222,14 +222,16 @@ func (p *Progress) server(conf pConf) {
 		case <-conf.cancel:
 			conf.ticker.Stop()
 			conf.cancel = nil
-		case <-p.stopReqCh:
-			conf.ticker.Stop()
+		case <-p.quit:
+			if conf.cancel != nil {
+				conf.ticker.Stop()
+			}
 			return
 		}
 	}
 }
 
-func newWidthSync(quit <-chan struct{}, numBars, numColumn int) *widthSync {
+func newWidthSync(timeout <-chan struct{}, numBars, numColumn int) *widthSync {
 	ws := &widthSync{
 		listen: make([]chan int, numColumn),
 		result: make([]chan int, numColumn),
@@ -250,7 +252,7 @@ func newWidthSync(quit <-chan struct{}, numBars, numColumn int) *widthSync {
 					if len(widths) == numBars {
 						break loop
 					}
-				case <-quit:
+				case <-timeout:
 					if len(widths) == 0 {
 						return
 					}
@@ -277,15 +279,6 @@ func fanIn(inputs ...<-chan []byte) <-chan []byte {
 	}()
 
 	return ch
-}
-
-func updateConf(p *Progress, op func(*pConf)) *Progress {
-	select {
-	case p.ops <- op:
-		return p
-	case <-p.done:
-		return nil
-	}
 }
 
 func max(slice []int) int {
