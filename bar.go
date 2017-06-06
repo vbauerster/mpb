@@ -28,14 +28,14 @@ type barFmtBytes [formatLen][]byte
 
 // Bar represents a progress Bar
 type Bar struct {
-	completeReqCh chan struct{}
-	done          chan struct{}
-	inProgress    chan struct{}
-	ops           chan func(*state)
+	// quit channel to request b.server to quit
+	quit chan struct{}
+	// done channel is receiveable after b.server has been quit
+	done chan struct{}
+	ops  chan func(*state)
 
-	// following are used after (*Bar.done) is closed
-	width int
-	state state
+	// following are used after b.done is receiveable
+	cacheState state
 }
 
 type (
@@ -80,12 +80,10 @@ func newBar(total int64, wg *sync.WaitGroup, cancel <-chan struct{}, options ...
 	}
 
 	b := &Bar{
-		completeReqCh: make(chan struct{}),
-		done:          make(chan struct{}),
-		inProgress:    make(chan struct{}),
-		ops:           make(chan func(*state)),
+		quit: make(chan struct{}),
+		done: make(chan struct{}),
+		ops:  make(chan func(*state)),
 	}
-	b.width = s.width
 
 	go b.server(s, wg, cancel)
 	return b
@@ -97,7 +95,7 @@ func (b *Bar) RemoveAllPrependers() {
 	case b.ops <- func(s *state) {
 		s.prependFuncs = nil
 	}:
-	case <-b.done:
+	case <-b.quit:
 		return
 	}
 }
@@ -108,7 +106,7 @@ func (b *Bar) RemoveAllAppenders() {
 	case b.ops <- func(s *state) {
 		s.appendFuncs = nil
 	}:
-	case <-b.done:
+	case <-b.quit:
 		return
 	}
 }
@@ -140,7 +138,7 @@ func (b *Bar) Incr(n int) {
 		s.current = sum
 		s.blockStartTime = time.Now()
 	}:
-	case <-b.done:
+	case <-b.quit:
 		return
 	}
 }
@@ -155,7 +153,7 @@ func (b *Bar) ResumeFill(r rune, till int64) {
 	case b.ops <- func(s *state) {
 		s.refill = &refill{r, till}
 	}:
-	case <-b.done:
+	case <-b.quit:
 		return
 	}
 }
@@ -166,7 +164,7 @@ func (b *Bar) NumOfAppenders() int {
 	case b.ops <- func(s *state) { result <- len(s.appendFuncs) }:
 		return <-result
 	case <-b.done:
-		return len(b.state.appendFuncs)
+		return len(b.cacheState.appendFuncs)
 	}
 }
 
@@ -176,7 +174,7 @@ func (b *Bar) NumOfPrependers() int {
 	case b.ops <- func(s *state) { result <- len(s.prependFuncs) }:
 		return <-result
 	case <-b.done:
-		return len(b.state.prependFuncs)
+		return len(b.cacheState.prependFuncs)
 	}
 }
 
@@ -187,7 +185,27 @@ func (b *Bar) ID() int {
 	case b.ops <- func(s *state) { result <- s.id }:
 		return <-result
 	case <-b.done:
-		return b.state.id
+		return b.cacheState.id
+	}
+}
+
+func (b *Bar) Current() int64 {
+	result := make(chan int64, 1)
+	select {
+	case b.ops <- func(s *state) { result <- s.current }:
+		return <-result
+	case <-b.done:
+		return b.cacheState.current
+	}
+}
+
+func (b *Bar) Total() int64 {
+	result := make(chan int64, 1)
+	select {
+	case b.ops <- func(s *state) { result <- s.total }:
+		return <-result
+	case <-b.done:
+		return b.cacheState.total
 	}
 }
 
@@ -195,7 +213,7 @@ func (b *Bar) ID() int {
 // Can be used as condition in for loop
 func (b *Bar) InProgress() bool {
 	select {
-	case <-b.completeReqCh:
+	case <-b.quit:
 		return false
 	default:
 		return true
@@ -208,9 +226,9 @@ func (b *Bar) InProgress() bool {
 // implicitly, upon p.Stop() call.
 func (b *Bar) Complete() {
 	select {
-	case <-b.completeReqCh:
+	case <-b.quit:
 	default:
-		close(b.completeReqCh)
+		close(b.quit)
 	}
 }
 
@@ -229,7 +247,7 @@ func (b *Bar) complete() {
 func (b *Bar) server(s state, wg *sync.WaitGroup, cancel <-chan struct{}) {
 
 	defer func() {
-		b.state = s
+		b.cacheState = s
 		close(b.done)
 		wg.Done()
 	}()
@@ -238,7 +256,7 @@ func (b *Bar) server(s state, wg *sync.WaitGroup, cancel <-chan struct{}) {
 		select {
 		case op := <-b.ops:
 			op(&s)
-		case <-b.completeReqCh:
+		case <-b.quit:
 			s.completed = true
 			return
 		case <-cancel:
@@ -272,7 +290,7 @@ func (b *Bar) render(tw int, flushed chan struct{}, prependWs, appendWs *widthSy
 		}:
 			st = <-result
 		case <-b.done:
-			st = b.state
+			st = b.cacheState
 		}
 		buf := draw(&st, tw, prependWs, appendWs)
 		buf = append(buf, '\n')
@@ -349,8 +367,8 @@ func draw(s *state, termWidth int, prependWs, appendWs *widthSync) []byte {
 	barCount := utf8.RuneCount(barBlock)
 	totalCount := prependCount + barCount + appendCount
 	if totalCount > termWidth {
-		newWidth := termWidth - prependCount - appendCount
-		barBlock = fillBar(s.total, s.current, newWidth, fmtBytes, s.refill)
+		shrinkWidth := termWidth - prependCount - appendCount
+		barBlock = fillBar(s.total, s.current, shrinkWidth, fmtBytes, s.refill)
 	}
 
 	return concatenateBlocks(buf, prependBlock, leftSpace, barBlock, rightSpace, appendBlock)
