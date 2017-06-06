@@ -21,9 +21,9 @@ func main() {
 		name := fmt.Sprintf("Bar#%d:", i)
 		bar := p.AddBar(int64(total),
 			mpb.PrependDecorators(
-				// Name decorator with minWidth and no width sync
+				// Name decorator with minWidth and no width sync options
 				decor.Name(name, len(name), 0),
-				// Percentage decorator with DwidthSync and DextraSpace
+				// Percentage decorator with minWidth and width sync options DwidthSync|DextraSpace
 				decor.Percentage(3, decor.DSyncSpace),
 			),
 			mpb.AppendDecorators(
@@ -31,7 +31,6 @@ func main() {
 				decor.ETA(2, 0),
 			),
 		)
-
 		go func() {
 			defer wg.Done()
 			for i := 0; i < total; i++ {

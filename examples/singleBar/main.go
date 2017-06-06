@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"math/rand"
 	"time"
 
@@ -11,26 +10,36 @@ import (
 
 func main() {
 	p := mpb.New(
-		// Override default (80) width
+		// override default (80) width
 		mpb.WithWidth(100),
-		// Override default "[=>-]" format
+		// override default "[=>-]" format
 		mpb.WithFormat("╢▌▌░╟"),
-		// Override default 100ms refresh rate
+		// override default 100ms refresh rate
 		mpb.WithRefreshRate(120*time.Millisecond),
 	)
 
+	total := 100
+	name := "Single Bar:"
 	// Add a bar. You're not limited to just one bar, add many if you need.
-	bar := p.AddBar(100,
-		mpb.PrependDecorators(decor.Name("Single Bar:", 0, 0)),
-		mpb.AppendDecorators(decor.Percentage(5, 0)),
+	bar := p.AddBar(int64(total),
+		// Prepending decorators
+		mpb.PrependDecorators(
+			// Name decorator with minWidth and no width sync options
+			decor.Name(name, len(name), 0),
+			// ETA decorator with minWidth and width sync options DwidthSync|DextraSpace
+			decor.ETA(4, decor.DSyncSpace),
+		),
+		// Appending decorators
+		mpb.AppendDecorators(
+			// Percentage decorator with minWidth and no width sync options
+			decor.Percentage(5, 0),
+		),
 	)
 
-	for i := 0; i < 100; i++ {
-		bar.Incr(1) // increment progress bar
+	for i := 0; i < total; i++ {
 		time.Sleep(time.Duration(rand.Intn(100)) * time.Millisecond)
+		bar.Incr(1) // increment progress bar
 	}
 
-	// Don't forget to stop mpb's rendering goroutine
 	p.Stop()
-	fmt.Println("Stop")
 }

@@ -29,7 +29,7 @@ but unlike the last one, implementation is mutex free, following Go's idiom:
 To get the package, execute:
 
 ```sh
-go get gopkg.in/vbauerster/mpb.v2
+go get gopkg.in/vbauerster/mpb.v3
 ```
 
 ## Usage
@@ -37,53 +37,69 @@ go get gopkg.in/vbauerster/mpb.v2
 Following is the simplest use case:
 
 ```go
-	// Star mpb's rendering goroutine.
-	p := mpb.New()
-	// Set custom width for every bar, which mpb will render
-	// The default one is 80
-	p.SetWidth(100)
-	// Set custom format for every bar, the default one is "[=>-]"
-	p.Format("╢▌▌░╟")
-	// Set custom refresh rate, the default one is 100 ms
-	p.RefreshRate(120 * time.Millisecond)
+	p := mpb.New(
+		// override default (80) width
+		mpb.WithWidth(100),
+		// override default "[=>-]" format
+		mpb.WithFormat("╢▌▌░╟"),
+		// override default 100ms refresh rate
+		mpb.WithRefreshRate(120*time.Millisecond),
+	)
 
+	total := 100
+	name := "Single Bar:"
 	// Add a bar. You're not limited to just one bar, add many if you need.
-	bar := p.AddBar(100).PrependName("Single Bar:", 0, 0).AppendPercentage(5, 0)
+	bar := p.AddBar(int64(total),
+		// Prepending decorators
+		mpb.PrependDecorators(
+			// Name decorator with minWidth and no width sync options
+			decor.Name(name, len(name), 0),
+			// ETA decorator with minWidth and width sync options DwidthSync|DextraSpace
+			decor.ETA(4, decor.DSyncSpace),
+		),
+		// Appending decorators
+		mpb.AppendDecorators(
+			// Percentage decorator with minWidth and no width sync options
+			decor.Percentage(5, 0),
+		),
+	)
 
-	for i := 0; i < 100; i++ {
+	for i := 0; i < total; i++ {
 		time.Sleep(time.Duration(rand.Intn(100)) * time.Millisecond)
 		bar.Incr(1) // increment progress bar
 	}
 
-	// Don't forget to stop mpb's rendering goroutine
 	p.Stop()
 ```
 
-Running [this](example/singleBar/main.go), will produce:
+Running [this](examples/singleBar/main.go), will produce:
 
-![gif](example/gifs/single.gif)
+![gif](examples/gifs/single.gif)
 
 However **mpb** was designed with concurrency in mind. Each new bar renders in its
 own goroutine, therefore adding multiple bars is easy and safe:
 
 ```go
-	var wg sync.WaitGroup
 	p := mpb.New()
-	wg.Add(3) // add wg delta
-	for i := 0; i < 3; i++ {
+	total := 100
+	numBars := 3
+	var wg sync.WaitGroup
+	wg.Add(numBars)
+
+	for i := 0; i < numBars; i++ {
 		name := fmt.Sprintf("Bar#%d:", i)
-		bar := p.AddBar(100).
-			PrependName(name, len(name), 0).
-			// Prepend Percentage decorator and sync width
-			PrependPercentage(3, mpb.DwidthSync|mpb.DextraSpace).
-			// Append ETA and don't sync width
-			AppendETA(2, 0)
+		bar := p.AddBar(int64(total),
+			mpb.PrependDecorators(
+				decor.Name(name, len(name), 0),
+				decor.Percentage(3, decor.DSyncSpace),
+			),
+			mpb.AppendDecorators(
+				decor.ETA(2, 0),
+			),
+		)
 		go func() {
 			defer wg.Done()
-			// you can p.AddBar() here, but ordering will be non deterministic
-			// if you still need p.AddBar() here and maintain ordering, use
-			// (*mpb.Progress).BeforeRenderFunc(f mpb.BeforeRender)
-			for i := 0; i < 100; i++ {
+			for i := 0; i < total; i++ {
 				time.Sleep(time.Duration(rand.Intn(100)) * time.Millisecond)
 				bar.Incr(1)
 			}
@@ -93,48 +109,39 @@ own goroutine, therefore adding multiple bars is easy and safe:
 	p.Stop()  // Stop mpb's rendering goroutine
 ```
 
-![simple.gif](example/gifs/simple.gif)
+![simple.gif](examples/gifs/simple.gif)
 
-The source code: [example/simple/main.go](example/simple/main.go)
+The source code: [examples/simple/main.go](examples/simple/main.go)
 
 ### Cancel
 
-To cancel use either
-[WithCancel](https://godoc.org/github.com/vbauerster/mpb#Progress.WithCancel) or
-[WithContext](https://godoc.org/github.com/vbauerster/mpb#Progress.WithContext)
-method. The last one requires Go 1.7
+![cancel.gif](examples/gifs/cancel.gif)
 
-![cancel.gif](example/gifs/cancel.gif)
-
-The source code: [example/cancel/main.go](example/cancel/main.go)
+The source code: [examples/cancel/main.go](examples/cancel/main.go)
 
 ### Removing bar
 
-![remove.gif](example/gifs/remove.gif)
+![remove.gif](examples/gifs/remove.gif)
 
-The source code: [example/remove/main.go](example/remove/main.go)
+The source code: [examples/remove/main.go](examples/remove/main.go)
 
 ### Sorting bars by progress
 
-![sort.gif](example/gifs/sort.gif)
+![sort.gif](examples/gifs/sort.gif)
 
-The source code: [example/sort/main.go](example/sort/main.go)
+The source code: [examples/sort/main.go](examples/sort/main.go)
 
 ### Resizing bars on terminal width change
 
-![resize.gif](example/gifs/resize.gif)
+![resize.gif](examples/gifs/resize.gif)
 
-The source code: [example/prependETA/main.go](example/prependETA/main.go)
+The source code: [examples/prependETA/main.go](examples/prependETA/main.go)
 
 ### Multiple io
 
-![io-multiple.gif](example/gifs/io-multiple.gif)
+![io-multiple.gif](examples/gifs/io-multiple.gif)
 
-The source code: [example/io/multiple/main.go](example/io/multiple/main.go)
-
-### Custom Decorators
-
-Refer to godoc [example](https://godoc.org/github.com/vbauerster/mpb#example-Bar-PrependFunc).
+The source code: [examples/io/multiple/main.go](examples/io/multiple/main.go)
 
 ## License
 

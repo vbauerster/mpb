@@ -9,7 +9,6 @@ import (
 )
 
 func Example() {
-	// Star mpb's rendering goroutine.
 	p := mpb.New(
 		// override default (80) width
 		mpb.WithWidth(100),
@@ -20,22 +19,28 @@ func Example() {
 	)
 
 	total := 100
-	barName := "Single Bar:"
+	name := "Single Bar:"
 	// Add a bar. You're not limited to just one bar, add many if you need.
 	bar := p.AddBar(int64(total),
+		// Prepending decorators
 		mpb.PrependDecorators(
-			decor.Name(barName, 0, decor.DwidthSync|decor.DidentRight),
+			// Name decorator with minWidth and no width sync options
+			decor.Name(name, len(name), 0),
+			// ETA decorator with minWidth and width sync options DwidthSync|DextraSpace
 			decor.ETA(4, decor.DSyncSpace),
 		),
-		mpb.AppendDecorators(decor.Percentage(5, 0)),
+		// Appending decorators
+		mpb.AppendDecorators(
+			// Percentage decorator with minWidth and no width sync options
+			decor.Percentage(5, 0),
+		),
 	)
 
-	for i := 0; i < 100; i++ {
+	for i := 0; i < total; i++ {
 		time.Sleep(time.Duration(rand.Intn(100)) * time.Millisecond)
 		bar.Incr(1) // increment progress bar
 	}
 
-	// Don't forget to stop mpb's rendering goroutine
 	p.Stop()
 }
 
