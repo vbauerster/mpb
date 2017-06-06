@@ -24,7 +24,7 @@ func TestFormatWidth(t *testing.T) {
 
 func TestFormatToBytes(t *testing.T) {
 	inputs := []struct {
-		v int
+		v int64
 		e string
 	}{
 		{v: 1000, e: "1000b"},
