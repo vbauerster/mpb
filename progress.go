@@ -106,7 +106,6 @@ func (p *Progress) RemoveBar(b *Bar) bool {
 		var ok bool
 		for i, bar := range c.bars {
 			if bar == b {
-				// bar.remove()
 				bar.Complete()
 				c.bars = append(c.bars[:i], c.bars[i+1:]...)
 				ok = true
