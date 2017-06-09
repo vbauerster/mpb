@@ -17,7 +17,7 @@ type (
 		result []chan int
 	}
 
-	// progress config, all fieals are adjustable by user
+	// progress config, fields are adjustable by user indirectly
 	pConf struct {
 		bars []*Bar
 
@@ -172,7 +172,6 @@ func (p *Progress) quitRequest() {
 func (p *Progress) server(conf pConf) {
 
 	defer func() {
-		// p.conf = conf
 		if conf.shutdownNotifier != nil {
 			close(conf.shutdownNotifier)
 		}
