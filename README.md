@@ -48,7 +48,8 @@ Following is the simplest use case:
 
 	total := 100
 	name := "Single Bar:"
-	// Add a bar. You're not limited to just one bar, add many if you need.
+	// Add a bar
+	// You're not limited to just a single bar, add as many as you need
 	bar := p.AddBar(int64(total),
 		// Prepending decorators
 		mpb.PrependDecorators(
