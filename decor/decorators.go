@@ -16,7 +16,7 @@ const (
 	// DwidthSync will auto sync max width
 	DwidthSync
 
-	// DextraSpace adds extra space, makes sence with DwidthSync only.
+	// DextraSpace adds extra space, makes sense with DwidthSync only.
 	// When DidentRight bit set, the space will be added to the right,
 	// otherwise to the left.
 	DextraSpace
