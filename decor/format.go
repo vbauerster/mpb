@@ -19,9 +19,9 @@ const (
 
 const (
 	_ = iota
-	// Kibibyte = 1024 b
+	// Unit_KiB Kibibyte = 1024 b
 	Unit_KiB
-	// Kilobyte = 1000 b
+	// Unit_kB Kilobyte = 1000 b
 	Unit_kB
 )
 
