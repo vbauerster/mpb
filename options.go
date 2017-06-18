@@ -8,6 +8,8 @@ import (
 	"github.com/vbauerster/mpb/cwriter"
 )
 
+// ProgressOption is a function option which changes the default behavior of
+// progress pool, if passed to mpb.New(...ProgressOption)
 type ProgressOption func(*pConf)
 
 // WithWidth overrides default width 80

@@ -2,6 +2,8 @@ package mpb
 
 import "github.com/vbauerster/mpb/decor"
 
+// BarOption is a function option which changes the default behavior of a bar,
+// if passed to p.AddBar(int64, ...BarOption)
 type BarOption func(*state)
 
 func AppendDecorators(appenders ...decor.DecoratorFunc) BarOption {
