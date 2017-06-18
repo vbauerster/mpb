@@ -21,6 +21,7 @@ const (
 	// otherwise to the left.
 	DextraSpace
 
+	// DSyncSpace is shortcut for DwidthSync|DextraSpace
 	DSyncSpace = DwidthSync | DextraSpace
 )
 
