@@ -20,13 +20,15 @@ func Example() {
 
 	total := 100
 	name := "Single Bar:"
-	// Add a bar. You're not limited to just one bar, add many if you need.
+	// Add a bar
+	// You're not limited to just a single bar, add as many as you need
 	bar := p.AddBar(int64(total),
 		// Prepending decorators
 		mpb.PrependDecorators(
 			// Name decorator with minWidth and no width sync options
 			decor.Name(name, len(name), 0),
-			// ETA decorator with minWidth and width sync options DwidthSync|DextraSpace
+			// ETA decorator with minWidth and width sync options
+			// DSyncSpace is shortcut for DwidthSync|DextraSpace
 			decor.ETA(4, decor.DSyncSpace),
 		),
 		// Appending decorators
