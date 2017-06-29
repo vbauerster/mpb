@@ -23,8 +23,8 @@ const (
 	etaAlpha  = 0.25
 )
 
-type barFmtRunes [formatLen]rune
-type barFmtBytes [formatLen][]byte
+type fmtRunes [formatLen]rune
+type fmtByteSegments [formatLen][]byte
 
 // Bar represents a progress Bar
 type Bar struct {
@@ -46,7 +46,7 @@ type (
 	state struct {
 		id             int
 		width          int
-		format         barFmtRunes
+		format         fmtRunes
 		etaAlpha       float64
 		total          int64
 		current        int64
@@ -354,21 +354,20 @@ func draw(s *state, termWidth int, prependWs, appendWs *widthSync) []byte {
 
 	var barBlock []byte
 	buf := make([]byte, 0, termWidth)
-	fmtBytes := convertFmtRunesToBytes(s.format)
+	segments := fmtRunesToByteSegments(s.format)
 
 	if s.simpleSpinner != nil {
-		for _, block := range [...][]byte{fmtBytes[rLeft], {s.simpleSpinner()}, fmtBytes[rRight]} {
+		for _, block := range [...][]byte{segments[rLeft], {s.simpleSpinner()}, segments[rRight]} {
 			barBlock = append(barBlock, block...)
 		}
-		return concatenateBlocks(buf, prependBlock, leftSpace, barBlock, rightSpace, appendBlock)
-	}
-
-	barBlock = fillBar(s.total, s.current, s.width, fmtBytes, s.refill)
-	barCount := utf8.RuneCount(barBlock)
-	totalCount := prependCount + barCount + appendCount
-	if totalCount > termWidth {
-		shrinkWidth := termWidth - prependCount - appendCount
-		barBlock = fillBar(s.total, s.current, shrinkWidth, fmtBytes, s.refill)
+	} else {
+		barBlock = fillBar(s.total, s.current, s.width, segments, s.refill)
+		barCount := utf8.RuneCount(barBlock)
+		totalCount := prependCount + barCount + appendCount
+		if totalCount > termWidth {
+			shrinkWidth := termWidth - prependCount - appendCount
+			barBlock = fillBar(s.total, s.current, shrinkWidth, segments, s.refill)
+		}
 	}
 
 	return concatenateBlocks(buf, prependBlock, leftSpace, barBlock, rightSpace, appendBlock)
@@ -381,7 +380,7 @@ func concatenateBlocks(buf []byte, blocks ...[]byte) []byte {
 	return buf
 }
 
-func fillBar(total, current int64, width int, fmtBytes barFmtBytes, rf *refill) []byte {
+func fillBar(total, current int64, width int, fmtBytes fmtByteSegments, rf *refill) []byte {
 	if width < 2 || total <= 0 {
 		return []byte{}
 	}
@@ -439,14 +438,14 @@ func newStatistics(s *state) *decor.Statistics {
 	}
 }
 
-func convertFmtRunesToBytes(format barFmtRunes) barFmtBytes {
-	var fmtBytes barFmtBytes
+func fmtRunesToByteSegments(format fmtRunes) fmtByteSegments {
+	var segments fmtByteSegments
 	for i, r := range format {
 		buf := make([]byte, utf8.RuneLen(r))
 		utf8.EncodeRune(buf, r)
-		fmtBytes[i] = buf
+		segments[i] = buf
 	}
-	return fmtBytes
+	return segments
 }
 
 func getSpinner() func() byte {
