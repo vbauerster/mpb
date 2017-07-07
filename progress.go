@@ -1,6 +1,7 @@
 package mpb
 
 import (
+	"io"
 	"os"
 	"sync"
 	"time"
@@ -27,6 +28,7 @@ type (
 		cw           *cwriter.Writer
 		ticker       *time.Ticker
 		beforeRender BeforeRender
+		interceptors []func(io.Writer)
 
 		shutdownNotifier chan struct{}
 		cancel           <-chan struct{}
@@ -213,6 +215,10 @@ func (p *Progress) server(conf pConf) {
 
 			for buf := range ch {
 				conf.cw.Write(buf)
+			}
+
+			for _, interceptor := range conf.interceptors {
+				interceptor(conf.cw)
 			}
 
 			conf.cw.Flush()
