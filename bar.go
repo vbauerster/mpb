@@ -268,7 +268,7 @@ func (b *Bar) server(s state, wg *sync.WaitGroup, cancel <-chan struct{}) {
 }
 
 func (b *Bar) render(tw int, flushed chan struct{}, prependWs, appendWs *widthSync) <-chan []byte {
-	ch := make(chan []byte)
+	ch := make(chan []byte, 1)
 
 	go func() {
 		defer func() {

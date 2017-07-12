@@ -211,9 +211,7 @@ func (p *Progress) server(conf pConf) {
 				sequence[i] = b.render(tw, flushed, prependWs, appendWs)
 			}
 
-			ch := fanIn(sequence...)
-
-			for buf := range ch {
+			for buf := range fanIn(sequence...) {
 				conf.cw.Write(buf)
 			}
 
