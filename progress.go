@@ -14,8 +14,8 @@ type (
 	BeforeRender func([]*Bar)
 
 	widthSync struct {
-		listen []chan int
-		result []chan int
+		Listen []chan int
+		Result []chan int
 	}
 
 	// progress config, fields are adjustable by user indirectly
@@ -237,12 +237,12 @@ func (p *Progress) server(conf pConf) {
 
 func newWidthSync(timeout <-chan struct{}, numBars, numColumn int) *widthSync {
 	ws := &widthSync{
-		listen: make([]chan int, numColumn),
-		result: make([]chan int, numColumn),
+		Listen: make([]chan int, numColumn),
+		Result: make([]chan int, numColumn),
 	}
 	for i := 0; i < numColumn; i++ {
-		ws.listen[i] = make(chan int, numBars)
-		ws.result[i] = make(chan int, numBars)
+		ws.Listen[i] = make(chan int, numBars)
+		ws.Result[i] = make(chan int, numBars)
 	}
 	for i := 0; i < numColumn; i++ {
 		go func(listenCh <-chan int, resultCh chan<- int) {
@@ -267,7 +267,7 @@ func newWidthSync(timeout <-chan struct{}, numBars, numColumn int) *widthSync {
 			for i := 0; i < len(widths); i++ {
 				resultCh <- result
 			}
-		}(ws.listen[i], ws.result[i])
+		}(ws.Listen[i], ws.Result[i])
 	}
 	return ws
 }

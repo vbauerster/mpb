@@ -46,13 +46,30 @@ func (s *Statistics) Eta() time.Duration {
 // DecoratorFunc is a function that can be prepended and appended to the progress bar
 type DecoratorFunc func(s *Statistics, myWidth chan<- int, maxWidth <-chan int) string
 
+// Name deprecated, use StaticName instead
 func Name(name string, minWidth int, conf byte) DecoratorFunc {
+	return StaticName(name, minWidth, conf)
+}
+
+// StaticName to be used, when there is no plan to change the name during whole
+// life of a progress rendering process
+func StaticName(name string, minWidth int, conf byte) DecoratorFunc {
+	nameFn := func(s *Statistics) string {
+		return name
+	}
+	return DynamicName(nameFn, minWidth, conf)
+}
+
+// DynamicName to be used, when there is a plan to chane the name once or
+// several times during progress rendering process
+func DynamicName(nameFn func(*Statistics) string, minWidth int, conf byte) DecoratorFunc {
 	format := "%%"
 	if (conf & DidentRight) != 0 {
 		format += "-"
 	}
 	format += "%ds"
 	return func(s *Statistics, myWidth chan<- int, maxWidth <-chan int) string {
+		name := nameFn(s)
 		if (conf & DwidthSync) != 0 {
 			myWidth <- utf8.RuneCountInString(name)
 			max := <-maxWidth

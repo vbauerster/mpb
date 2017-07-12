@@ -314,7 +314,7 @@ func (s *state) updateTimePerItemEstimate(amount int) {
 }
 
 func draw(s *state, termWidth int, prependWs, appendWs *widthSync) []byte {
-	if len(s.prependFuncs) != len(prependWs.listen) || len(s.appendFuncs) != len(appendWs.listen) {
+	if len(s.prependFuncs) != len(prependWs.Listen) || len(s.appendFuncs) != len(appendWs.Listen) {
 		return []byte{}
 	}
 	if termWidth <= 0 {
@@ -327,14 +327,14 @@ func draw(s *state, termWidth int, prependWs, appendWs *widthSync) []byte {
 	var prependBlock []byte
 	for i, f := range s.prependFuncs {
 		prependBlock = append(prependBlock,
-			[]byte(f(stat, prependWs.listen[i], prependWs.result[i]))...)
+			[]byte(f(stat, prependWs.Listen[i], prependWs.Result[i]))...)
 	}
 
 	// render append functions to the right of the bar
 	var appendBlock []byte
 	for i, f := range s.appendFuncs {
 		appendBlock = append(appendBlock,
-			[]byte(f(stat, appendWs.listen[i], appendWs.result[i]))...)
+			[]byte(f(stat, appendWs.Listen[i], appendWs.Result[i]))...)
 	}
 
 	prependCount := utf8.RuneCount(prependBlock)
