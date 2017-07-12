@@ -60,7 +60,7 @@ func StaticName(name string, minWidth int, conf byte) DecoratorFunc {
 	return DynamicName(nameFn, minWidth, conf)
 }
 
-// DynamicName to be used, when there is a plan to chane the name once or
+// DynamicName to be used, when there is a plan to change the name once or
 // several times during progress rendering process
 func DynamicName(nameFn func(*Statistics) string, minWidth int, conf byte) DecoratorFunc {
 	format := "%%"
@@ -82,6 +82,10 @@ func DynamicName(nameFn func(*Statistics) string, minWidth int, conf byte) Decor
 	}
 }
 
+// Counters provides basic counters decorator.
+// Accepts pairFormat string, something like "%s / %s" to be used in
+// fmt.Sprintf(pairFormat, current, total) and one of (Unit_KiB/Unit_kB)
+// constant
 func Counters(pairFormat string, unit Units, minWidth int, conf byte) DecoratorFunc {
 	format := "%%"
 	if (conf & DidentRight) != 0 {
