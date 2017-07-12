@@ -53,7 +53,8 @@ Following is the simplest use case:
 	bar := p.AddBar(int64(total),
 		// Prepending decorators
 		mpb.PrependDecorators(
-			// Name decorator with minWidth and no width sync options
+			// StaticName decorator with minWidth and no width sync options
+			// If you need to change name while rendering, use DynamicName
 			decor.Name(name, len(name), 0),
 			// ETA decorator with minWidth and width sync options
 			// DSyncSpace is shortcut for DwidthSync|DextraSpace
