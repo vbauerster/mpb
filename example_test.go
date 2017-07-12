@@ -27,7 +27,7 @@ func Example() {
 		mpb.PrependDecorators(
 			// StaticName decorator with minWidth and no width sync options
 			// If you need to change name while rendering, use DynamicName
-			decor.Name(name, len(name), 0),
+			decor.StaticName(name, len(name), 0),
 			// ETA decorator with minWidth and width sync options
 			// DSyncSpace is shortcut for DwidthSync|DextraSpace
 			decor.ETA(4, decor.DSyncSpace),
