@@ -26,7 +26,7 @@ func main() {
 		total := rand.Intn(120) + 10
 		bar := p.AddBar(int64(total),
 			mpb.PrependDecorators(
-				decor.Name(name, len(name), 0),
+				decor.StaticName(name, len(name), 0),
 				decor.ETA(4, decor.DSyncSpace),
 			),
 			mpb.AppendDecorators(

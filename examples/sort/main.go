@@ -49,7 +49,7 @@ func main() {
 		}
 		b := p.AddBar(int64(total),
 			mpb.PrependDecorators(
-				decor.Name(name, 0, decor.DwidthSync),
+				decor.StaticName(name, 0, decor.DwidthSync),
 				decor.Counters("%3s/%3s", 0, 10, decor.DSyncSpace),
 			),
 			mpb.AppendDecorators(

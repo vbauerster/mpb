@@ -33,7 +33,7 @@ func main() {
 		name := fmt.Sprintf("Bar#%d:", i)
 		bar := p.AddBar(int64(total), mpb.BarID(i),
 			mpb.PrependDecorators(
-				decor.Name(name, 0, decor.DwidthSync|decor.DidentRight),
+				decor.StaticName(name, 0, decor.DwidthSync|decor.DidentRight),
 				decor.ETA(4, decor.DSyncSpace),
 			),
 			mpb.AppendDecorators(

@@ -93,7 +93,7 @@ own goroutine, therefore adding multiple bars is easy and safe:
 		name := fmt.Sprintf("Bar#%d:", i)
 		bar := p.AddBar(int64(total),
 			mpb.PrependDecorators(
-				decor.Name(name, len(name), 0),
+				decor.StaticName(name, 0, 0),
 				decor.Percentage(3, decor.DSyncSpace),
 			),
 			mpb.AppendDecorators(
