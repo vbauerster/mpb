@@ -97,7 +97,7 @@ func (p *Progress) AddBar(total int64, options ...BarOption) *Bar {
 	case p.ops <- op:
 		return <-result
 	case <-p.quit:
-		return nil
+		return new(Bar)
 	}
 }
 
