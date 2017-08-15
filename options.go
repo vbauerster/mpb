@@ -1,12 +1,12 @@
 package mpb
 
 import (
+	"github.com/vbauerster/mpb/cwriter"
 	"io"
 	"io/ioutil"
+	"os"
 	"time"
 	"unicode/utf8"
-
-	"github.com/vbauerster/mpb/cwriter"
 )
 
 // ProgressOption is a function option which changes the default behavior of
@@ -70,6 +70,13 @@ func Output(w io.Writer) ProgressOption {
 			w = ioutil.Discard
 		}
 		c.cw = cwriter.New(w)
+	}
+}
+
+// Output overrides default output os.Stdout
+func OutputStderr() ProgressOption {
+	return func(c *pConf) {
+		c.cw = cwriter.New(os.Stderr)
 	}
 }
 
