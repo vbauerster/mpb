@@ -7,11 +7,6 @@
 
 **mpb** is a Go lib for rendering progress bars in terminal applications.
 
-It is inspired by [uiprogress](https://github.com/gosuri/uiprogress) library,
-but unlike the last one, implementation is mutex free, following Go's idiom:
-
-> Don't communicate by sharing memory, share memory by communicating.
-
 ## Features
 
 * __Multiple Bars__: mpb can render multiple progress bars that can be tracked concurrently
