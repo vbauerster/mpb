@@ -116,6 +116,11 @@ func (b *Bar) ProxyReader(r io.Reader) *Reader {
 	return &Reader{r, b}
 }
 
+// Increment shorthand for b.Incr(1)
+func (b *Bar) Increment() {
+	b.Incr(1)
+}
+
 // Incr increments progress bar
 func (b *Bar) Incr(n int) {
 	if n < 1 {
