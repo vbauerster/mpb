@@ -62,7 +62,9 @@ func StaticName(name string, minWidth int, conf byte) DecoratorFunc {
 }
 
 // DynamicName to be used, when there is a plan to change the name once or
-// several times during progress rendering process
+// several times during progress rendering process. If there're more than one
+// bar, and you'd like to synchronize column width, conf param shauld have
+// DwidthSync bit set.
 func DynamicName(nameFn func(*Statistics) string, minWidth int, conf byte) DecoratorFunc {
 	format := "%%"
 	if (conf & DidentRight) != 0 {
@@ -86,7 +88,8 @@ func DynamicName(nameFn func(*Statistics) string, minWidth int, conf byte) Decor
 // Counters provides basic counters decorator.
 // Accepts pairFormat string, something like "%s / %s" to be used in
 // fmt.Sprintf(pairFormat, current, total) and one of (Unit_KiB/Unit_kB)
-// constant
+// constant. If there're more than one bar, and you'd like to synchronize column
+// width, conf param shauld have DwidthSync bit set.
 func Counters(pairFormat string, unit Units, minWidth int, conf byte) DecoratorFunc {
 	format := "%%"
 	if (conf & DidentRight) != 0 {
@@ -109,6 +112,9 @@ func Counters(pairFormat string, unit Units, minWidth int, conf byte) DecoratorF
 	}
 }
 
+// ETA provides exponential-weighted-moving-average ETA decorator.
+// If there're more than one bar, and you'd like to synchronize column width,
+// conf param shauld have DwidthSync bit set.
 func ETA(minWidth int, conf byte) DecoratorFunc {
 	format := "%%"
 	if (conf & DidentRight) != 0 {
@@ -129,6 +135,9 @@ func ETA(minWidth int, conf byte) DecoratorFunc {
 	}
 }
 
+// Elapsed provides elapsed time decorator.
+// If there're more than one bar, and you'd like to synchronize column width,
+// conf param shauld have DwidthSync bit set.
 func Elapsed(minWidth int, conf byte) DecoratorFunc {
 	format := "%%"
 	if (conf & DidentRight) != 0 {
@@ -149,6 +158,9 @@ func Elapsed(minWidth int, conf byte) DecoratorFunc {
 	}
 }
 
+// Percentage provides percentage decorator.
+// If there're more than one bar, and you'd like to synchronize column width,
+// conf param shauld have DwidthSync bit set.
 func Percentage(minWidth int, conf byte) DecoratorFunc {
 	format := "%%"
 	if (conf & DidentRight) != 0 {

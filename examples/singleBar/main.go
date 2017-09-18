@@ -25,16 +25,15 @@ func main() {
 	bar := p.AddBar(int64(total),
 		// Prepending decorators
 		mpb.PrependDecorators(
-			// StaticName decorator with minWidth and no width sync options
+			// StaticName decorator with minWidth and no extra config
 			// If you need to change name while rendering, use DynamicName
 			decor.StaticName(name, len(name), 0),
-			// ETA decorator with minWidth and width sync options
-			// DSyncSpace is shortcut for DwidthSync|DextraSpace
-			decor.ETA(4, decor.DSyncSpace),
+			// ETA decorator with minWidth and no extra config
+			decor.ETA(4, 0),
 		),
 		// Appending decorators
 		mpb.AppendDecorators(
-			// Percentage decorator with minWidth and no width sync options
+			// Percentage decorator with minWidth and no extra config
 			decor.Percentage(5, 0),
 		),
 	)
