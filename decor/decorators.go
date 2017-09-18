@@ -14,7 +14,7 @@ const (
 	DidentRight = 1 << iota
 
 	// DwidthSync will auto sync max width.
-	// Makes sence when there're more than one bar
+	// Makes sense when there're more than one bar
 	DwidthSync
 
 	// DextraSpace adds extra space, makes sense with DwidthSync only.
