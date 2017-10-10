@@ -62,8 +62,8 @@ Following is the simplest use case:
 	)
 
 	for i := 0; i < total; i++ {
-		time.Sleep(time.Duration(rand.Intn(100)) * time.Millisecond)
-		bar.Incr(1) // increment progress bar
+		time.Sleep(time.Duration(rand.Intn(10)+1) * time.Second / 100)
+		bar.Increment()
 	}
 
 	p.Stop()
