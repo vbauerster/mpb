@@ -20,7 +20,7 @@ func main() {
 	url2 := "https://homebrew.bintray.com/bottles/libtiff-4.0.7.sierra.bottle.tar.gz"
 
 	var wg sync.WaitGroup
-	p := mpb.New(mpb.WithWidth(64))
+	p := mpb.New(mpb.WithWaitGroup(&wg))
 
 	for i, url := range [...]string{url1, url2} {
 		wg.Add(1)
@@ -28,7 +28,6 @@ func main() {
 		go download(&wg, p, name, url)
 	}
 
-	wg.Wait()
 	p.Stop()
 	fmt.Println("Finished")
 }

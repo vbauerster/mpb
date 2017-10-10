@@ -11,10 +11,10 @@ import (
 )
 
 func main() {
-	p := mpb.New()
+	var wg sync.WaitGroup
+	p := mpb.New(mpb.WithWaitGroup(&wg))
 	total := 100
 	numBars := 3
-	var wg sync.WaitGroup
 	wg.Add(numBars)
 
 	for i := 0; i < numBars; i++ {
@@ -31,11 +31,12 @@ func main() {
 		go func() {
 			defer wg.Done()
 			for i := 0; i < total; i++ {
-				time.Sleep(time.Duration(rand.Intn(100)) * time.Millisecond)
-				bar.Incr(1)
+				time.Sleep(time.Duration(rand.Intn(10)+1) * time.Second / 100)
+				bar.Increment()
 			}
 		}()
 	}
-	wg.Wait() // Wait for goroutines to finish
-	p.Stop()  // Stop mpb's rendering goroutine
+	// Wait for incr loop goroutines to finish,
+	// and shutdown mpb's rendering goroutine
+	p.Stop()
 }

@@ -22,9 +22,11 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	p := mpb.New(mpb.WithContext(ctx))
-
 	var wg sync.WaitGroup
+	p := mpb.New(
+		mpb.WithWaitGroup(&wg),
+		mpb.WithContext(ctx),
+	)
 	total := 100
 	numBars := 3
 	wg.Add(numBars)
@@ -56,7 +58,6 @@ func main() {
 		}()
 	}
 
-	wg.Wait()
 	p.Stop()
 	fmt.Println("stop")
 }

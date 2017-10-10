@@ -35,11 +35,13 @@ func sortByProgressFunc() mpb.BeforeRender {
 
 func main() {
 
-	p := mpb.New(mpb.WithWidth(64), mpb.WithBeforeRenderFunc(sortByProgressFunc()))
-
+	var wg sync.WaitGroup
+	p := mpb.New(
+		mpb.WithWaitGroup(&wg),
+		mpb.WithBeforeRenderFunc(sortByProgressFunc()),
+	)
 	total := 100
 	numBars := 3
-	var wg sync.WaitGroup
 	wg.Add(numBars)
 
 	for i := 0; i < numBars; i++ {
@@ -67,7 +69,6 @@ func main() {
 		}()
 	}
 
-	wg.Wait()
 	p.Stop()
 	fmt.Println("stop")
 }

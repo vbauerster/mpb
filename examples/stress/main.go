@@ -18,7 +18,7 @@ const (
 func main() {
 
 	var wg sync.WaitGroup
-	p := mpb.New()
+	p := mpb.New(mpb.WithWaitGroup(&wg))
 	wg.Add(totalBars)
 
 	for i := 0; i < totalBars; i++ {
@@ -45,7 +45,6 @@ func main() {
 		}()
 	}
 
-	wg.Wait()
 	p.Stop()
 	fmt.Println("stop")
 }

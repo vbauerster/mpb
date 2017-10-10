@@ -25,6 +25,7 @@ type (
 		width        int
 		format       string
 		rr           time.Duration
+		ewg          *sync.WaitGroup
 		cw           *cwriter.Writer
 		ticker       *time.Ticker
 		beforeRender BeforeRender
@@ -46,8 +47,10 @@ const (
 
 // Progress represents the container that renders Progress bars
 type Progress struct {
-	// WaitGroup for internal rendering sync
+	// wg for internal rendering sync
 	wg *sync.WaitGroup
+	// External wg
+	ewg *sync.WaitGroup
 
 	// quit channel to request p.server to quit
 	quit chan struct{}
@@ -74,6 +77,7 @@ func New(options ...ProgressOption) *Progress {
 	}
 
 	p := &Progress{
+		ewg:  conf.ewg,
 		wg:   new(sync.WaitGroup),
 		done: make(chan struct{}),
 		ops:  make(chan func(*pConf)),
@@ -138,11 +142,14 @@ func (p *Progress) BarCount() int {
 	}
 }
 
-// Stop shutdowns Progress' goroutine.
-// Should be called only after each bar's work done, i.e. bar has reached its
-// 100 %. It is NOT for cancelation. Use WithContext or WithCancel for
-// cancelation purposes.
+// Stop is a way to gracefully shutdown mpb's rendering goroutine.
+// It is NOT for cancelation (use mpb.WithContext for cancelation purposes).
+// If *sync.WaitGroup has been provided via mpb.WithWaitGroup(), its Wait()
+// method will be called first.
 func (p *Progress) Stop() {
+	if p.ewg != nil {
+		p.ewg.Wait()
+	}
 	select {
 	case <-p.quit:
 		return

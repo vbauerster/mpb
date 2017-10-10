@@ -39,8 +39,8 @@ func Example() {
 	)
 
 	for i := 0; i < total; i++ {
-		time.Sleep(time.Duration(rand.Intn(100)) * time.Millisecond)
-		bar.Incr(1) // increment progress bar
+		time.Sleep(time.Duration(rand.Intn(10)+1) * time.Second / 100)
+		bar.Increment()
 	}
 
 	p.Stop()
@@ -51,7 +51,7 @@ func ExampleBar_InProgress() {
 	bar := p.AddBar(100, mpb.AppendDecorators(decor.Percentage(5, 0)))
 
 	for bar.InProgress() {
-		time.Sleep(time.Millisecond * 20)
-		bar.Incr(1)
+		time.Sleep(time.Duration(rand.Intn(10)+1) * time.Second / 100)
+		bar.Increment()
 	}
 }

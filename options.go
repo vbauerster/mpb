@@ -3,6 +3,7 @@ package mpb
 import (
 	"io"
 	"io/ioutil"
+	"sync"
 	"time"
 	"unicode/utf8"
 
@@ -12,6 +13,16 @@ import (
 // ProgressOption is a function option which changes the default behavior of
 // progress pool, if passed to mpb.New(...ProgressOption)
 type ProgressOption func(*pConf)
+
+// WithWaitGroup provides means to have a single joint point.
+// If *sync.WaitGroup is provided, you can safely call just p.Stop()
+// without calling Wait() on provided *sync.WaitGroup.
+// Makes sense when there are more than one bar to render.
+func WithWaitGroup(wg *sync.WaitGroup) ProgressOption {
+	return func(c *pConf) {
+		c.ewg = wg
+	}
+}
 
 // WithWidth overrides default width 80
 func WithWidth(w int) ProgressOption {
