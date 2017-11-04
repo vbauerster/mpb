@@ -3,6 +3,7 @@ package mpb
 import (
 	"io"
 	"os"
+	"runtime"
 	"sync"
 	"time"
 
@@ -194,6 +195,7 @@ func (p *Progress) server(conf pConf) {
 		case <-conf.ticker.C:
 			numBars := len(conf.bars)
 			if numBars == 0 {
+				runtime.Gosched()
 				break
 			}
 
