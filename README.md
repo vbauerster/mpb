@@ -16,16 +16,16 @@
 * __Dynamic Sorting__:  Sort bars as you wish
 * __Dynamic Resize__:  Resize bars on terminal width change
 * __Custom Decorator Functions__: Add custom functions around the bar along with helper functions
-* __Dynamic Decorator's Width Sync__:  Sync width among decorator group (available since v2)
+* __Dynamic Decorator's Width Sync__:  Sync width among decorator group
 * __Predefined Decoratros__: Elapsed time, [Ewmaest](https://github.com/dgryski/trifles/tree/master/ewmaest) based ETA, Percentage, Bytes counter
 
 ## Installation
 
-To get the package, execute:
-
 ```sh
-go get gopkg.in/vbauerster/mpb.v3
+go get github.com/vbauerster/mpb
 ```
+
+Note: it is preferable to go get from github.com, rather than gopkg.in. See issue [#11](https://github.com/vbauerster/mpb/issues/11).
 
 ## Usage
 
