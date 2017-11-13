@@ -277,7 +277,7 @@ func (b *Bar) server(s state, wg *sync.WaitGroup, cancel <-chan struct{}) {
 	}
 }
 
-func (b *Bar) render(tw int, flushed chan struct{}, prependWs, appendWs *widthSync) <-chan []byte {
+func (b *Bar) render(tw int, prependWs, appendWs *widthSync) <-chan []byte {
 	ch := make(chan []byte)
 
 	go func() {
@@ -292,8 +292,6 @@ func (b *Bar) render(tw int, flushed chan struct{}, prependWs, appendWs *widthSy
 		select {
 		case b.ops <- func(s *state) {
 			if s.completed {
-				fmt.Fprintln(os.Stderr, "bar completed")
-				// <-flushed
 				b.Complete()
 			}
 			result <- *s

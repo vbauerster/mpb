@@ -214,10 +214,9 @@ func (p *Progress) server(conf pConf) {
 
 			tw, _, _ := cwriter.GetTermSize()
 
-			flushed := make(chan struct{})
 			sequence := make([]<-chan []byte, numBars)
 			for i, b := range conf.bars {
-				sequence[i] = b.render(tw, flushed, prependWs, appendWs)
+				sequence[i] = b.render(tw, prependWs, appendWs)
 			}
 
 			for buf := range fanIn(sequence...) {
@@ -229,7 +228,6 @@ func (p *Progress) server(conf pConf) {
 			}
 
 			conf.cw.Flush()
-			close(flushed)
 		case <-conf.cancel:
 			conf.ticker.Stop()
 			conf.cancel = nil
