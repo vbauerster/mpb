@@ -1,8 +1,10 @@
 package mpb
 
 import (
+	"bytes"
 	"fmt"
 	"io"
+	"os"
 	"sync"
 	"time"
 	"unicode/utf8"
@@ -44,24 +46,25 @@ type (
 		till int64
 	}
 	state struct {
-		id             int
-		width          int
-		format         fmtRunes
-		etaAlpha       float64
-		total          int64
-		current        int64
-		trimLeftSpace  bool
-		trimRightSpace bool
-		completed      bool
-		aborted        bool
-		startTime      time.Time
-		timeElapsed    time.Duration
-		blockStartTime time.Time
-		timePerItem    time.Duration
-		appendFuncs    []decor.DecoratorFunc
-		prependFuncs   []decor.DecoratorFunc
-		simpleSpinner  func() byte
-		refill         *refill
+		id               int
+		width            int
+		format           fmtRunes
+		etaAlpha         float64
+		total            int64
+		current          int64
+		trimLeftSpace    bool
+		trimRightSpace   bool
+		completed        bool
+		aborted          bool
+		startTime        time.Time
+		timeElapsed      time.Duration
+		blockStartTime   time.Time
+		timePerItem      time.Duration
+		appendFuncs      []decor.DecoratorFunc
+		prependFuncs     []decor.DecoratorFunc
+		simpleSpinner    func() byte
+		refill           *refill
+		bufP, bufB, bufA *bytes.Buffer
 	}
 )
 
@@ -71,13 +74,17 @@ func newBar(total int64, wg *sync.WaitGroup, cancel <-chan struct{}, options ...
 		etaAlpha: etaAlpha,
 	}
 
-	if total <= 0 {
-		s.simpleSpinner = getSpinner()
-	}
+	// if total <= 0 {
+	// 	s.simpleSpinner = getSpinner()
+	// }
 
 	for _, opt := range options {
 		opt(&s)
 	}
+
+	s.bufP = bytes.NewBuffer(make([]byte, 0, s.width/2))
+	s.bufB = bytes.NewBuffer(make([]byte, 0, s.width))
+	s.bufA = bytes.NewBuffer(make([]byte, 0, s.width/2))
 
 	b := &Bar{
 		quit: make(chan struct{}),
@@ -245,12 +252,10 @@ func (b *Bar) complete() {
 		}
 	}:
 	case <-time.After(prr):
-		return
 	}
 }
 
 func (b *Bar) server(s state, wg *sync.WaitGroup, cancel <-chan struct{}) {
-
 	defer func() {
 		b.cacheState = s
 		close(b.done)
@@ -273,33 +278,36 @@ func (b *Bar) server(s state, wg *sync.WaitGroup, cancel <-chan struct{}) {
 }
 
 func (b *Bar) render(tw int, flushed chan struct{}, prependWs, appendWs *widthSync) <-chan []byte {
-	ch := make(chan []byte, 1)
+	ch := make(chan []byte)
 
 	go func() {
 		defer func() {
 			// recovering if external decorators panic
 			if p := recover(); p != nil {
-				ch <- []byte(fmt.Sprintln(p))
+				fmt.Fprintf(os.Stderr, "bar panic: %q\n", p)
 			}
-			close(ch)
 		}()
 		var st state
 		result := make(chan state, 1)
 		select {
 		case b.ops <- func(s *state) {
-			result <- *s
 			if s.completed {
-				<-flushed
+				fmt.Fprintln(os.Stderr, "bar completed")
+				// <-flushed
 				b.Complete()
 			}
+			result <- *s
 		}:
 			st = <-result
 		case <-b.done:
 			st = b.cacheState
 		}
-		buf := draw(&st, tw, prependWs, appendWs)
+		st.draw(tw, prependWs, appendWs)
+		buf := make([]byte, 0, st.bufP.Len()+st.bufB.Len()+st.bufA.Len())
+		buf = concatenateBlocks(buf, st.bufP.Bytes(), st.bufB.Bytes(), st.bufA.Bytes())
 		buf = append(buf, '\n')
 		ch <- buf
+		close(ch)
 	}()
 
 	return ch
@@ -318,10 +326,7 @@ func (s *state) updateTimePerItemEstimate(amount int) {
 	s.timePerItem = time.Duration((s.etaAlpha * lastItemEstimate) + (1-s.etaAlpha)*float64(s.timePerItem))
 }
 
-func draw(s *state, termWidth int, prependWs, appendWs *widthSync) []byte {
-	if len(s.prependFuncs) != len(prependWs.Listen) || len(s.appendFuncs) != len(appendWs.Listen) {
-		return []byte{}
-	}
+func (s *state) draw(termWidth int, prependWs, appendWs *widthSync) {
 	if termWidth <= 0 {
 		termWidth = s.width
 	}
@@ -329,104 +334,82 @@ func draw(s *state, termWidth int, prependWs, appendWs *widthSync) []byte {
 	stat := newStatistics(s)
 
 	// render prepend functions to the left of the bar
-	var prependBlock []byte
+	s.bufP.Reset()
 	for i, f := range s.prependFuncs {
-		prependBlock = append(prependBlock,
-			[]byte(f(stat, prependWs.Listen[i], prependWs.Result[i]))...)
+		s.bufP.WriteString(f(stat, prependWs.Listen[i], prependWs.Result[i]))
+	}
+
+	if !s.trimLeftSpace {
+		s.bufP.WriteByte(' ')
 	}
 
 	// render append functions to the right of the bar
-	var appendBlock []byte
+	s.bufA.Reset()
 	for i, f := range s.appendFuncs {
-		appendBlock = append(appendBlock,
-			[]byte(f(stat, appendWs.Listen[i], appendWs.Result[i]))...)
+		s.bufA.WriteString(f(stat, appendWs.Listen[i], appendWs.Result[i]))
 	}
 
-	prependCount := utf8.RuneCount(prependBlock)
-	appendCount := utf8.RuneCount(appendBlock)
-
-	var leftSpace, rightSpace []byte
-	space := []byte{' '}
-
-	if !s.trimLeftSpace {
-		prependCount++
-		leftSpace = space
-	}
 	if !s.trimRightSpace {
-		appendCount++
-		rightSpace = space
+		s.bufA.WriteByte(' ')
 	}
 
-	var barBlock []byte
-	buf := make([]byte, 0, termWidth)
-	segments := fmtRunesToByteSegments(s.format)
+	prependCount := utf8.RuneCount(s.bufP.Bytes())
+	appendCount := utf8.RuneCount(s.bufA.Bytes())
 
-	if s.simpleSpinner != nil {
-		for _, block := range [...][]byte{segments[rLeft], {s.simpleSpinner()}, segments[rRight]} {
-			barBlock = append(barBlock, block...)
+	s.fillBar(s.width)
+	barCount := utf8.RuneCount(s.bufB.Bytes())
+	totalCount := prependCount + barCount + appendCount
+	if totalCount > termWidth {
+		shrinkWidth := termWidth - prependCount - appendCount
+		s.fillBar(shrinkWidth)
+	}
+}
+
+func (s *state) fillBar(width int) {
+	s.bufB.Reset()
+	if width <= 2 {
+		return
+	}
+
+	// bar s.width without leftEnd and rightEnd runes
+	barWidth := width - 2
+
+	completedWidth := decor.CalcPercentage(s.total, s.current, barWidth)
+
+	s.bufB.WriteRune(s.format[rLeft])
+
+	if s.refill != nil {
+		till := decor.CalcPercentage(s.total, s.refill.till, barWidth)
+		// append refill rune
+		for i := 0; i < till; i++ {
+			s.bufB.WriteRune(s.refill.char)
+		}
+		for i := till; i < completedWidth; i++ {
+			s.bufB.WriteRune(s.format[rFill])
 		}
 	} else {
-		barBlock = fillBar(s.total, s.current, s.width, segments, s.refill)
-		barCount := utf8.RuneCount(barBlock)
-		totalCount := prependCount + barCount + appendCount
-		if totalCount > termWidth {
-			shrinkWidth := termWidth - prependCount - appendCount
-			barBlock = fillBar(s.total, s.current, shrinkWidth, segments, s.refill)
+		for i := 0; i < completedWidth; i++ {
+			s.bufB.WriteRune(s.format[rFill])
 		}
 	}
 
-	return concatenateBlocks(buf, prependBlock, leftSpace, barBlock, rightSpace, appendBlock)
+	if completedWidth < barWidth && completedWidth > 0 {
+		_, size := utf8.DecodeLastRune(s.bufB.Bytes())
+		s.bufB.Truncate(s.bufB.Len() - size)
+		s.bufB.WriteRune(s.format[rTip])
+	}
+
+	for i := completedWidth; i < barWidth; i++ {
+		s.bufB.WriteRune(s.format[rEmpty])
+	}
+
+	s.bufB.WriteRune(s.format[rRight])
 }
 
 func concatenateBlocks(buf []byte, blocks ...[]byte) []byte {
 	for _, block := range blocks {
 		buf = append(buf, block...)
 	}
-	return buf
-}
-
-func fillBar(total, current int64, width int, fmtBytes fmtByteSegments, rf *refill) []byte {
-	if width < 2 || total <= 0 {
-		return []byte{}
-	}
-
-	// bar width without leftEnd and rightEnd runes
-	barWidth := width - 2
-
-	completedWidth := decor.CalcPercentage(total, current, barWidth)
-
-	buf := make([]byte, 0, width)
-	buf = append(buf, fmtBytes[rLeft]...)
-
-	if rf != nil {
-		till := decor.CalcPercentage(total, rf.till, barWidth)
-		rbytes := make([]byte, utf8.RuneLen(rf.char))
-		utf8.EncodeRune(rbytes, rf.char)
-		// append refill rune
-		for i := 0; i < till; i++ {
-			buf = append(buf, rbytes...)
-		}
-		for i := till; i < completedWidth; i++ {
-			buf = append(buf, fmtBytes[rFill]...)
-		}
-	} else {
-		for i := 0; i < completedWidth; i++ {
-			buf = append(buf, fmtBytes[rFill]...)
-		}
-	}
-
-	if completedWidth < barWidth && completedWidth > 0 {
-		_, size := utf8.DecodeLastRune(buf)
-		buf = buf[:len(buf)-size]
-		buf = append(buf, fmtBytes[rTip]...)
-	}
-
-	for i := completedWidth; i < barWidth; i++ {
-		buf = append(buf, fmtBytes[rEmpty]...)
-	}
-
-	buf = append(buf, fmtBytes[rRight]...)
-
 	return buf
 }
 
