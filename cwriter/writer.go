@@ -3,10 +3,17 @@ package cwriter
 import (
 	"bytes"
 	"io"
+	"fmt"
 )
 
 // ESC is the ASCII code for escape character
 const ESC = 27
+
+var (
+	cursorUp           = fmt.Sprintf("%c[%dA", ESC, 1)
+	clearLine          = fmt.Sprintf("%c[2K\r", ESC)
+	clearCursorAndLine = cursorUp + clearLine
+)
 
 // Writer is a buffered the writer that updates the terminal.
 // The contents of writer will be flushed when Flush is called.

@@ -6,18 +6,11 @@ import (
 	"fmt"
 	"syscall"
 	"unsafe"
-)
-
-var (
-	cursorUp           = fmt.Sprintf("%c[%dA", ESC, 1)
-	clearLine          = fmt.Sprintf("%c[2K\r", ESC)
-	clearCursorAndLine = cursorUp + clearLine
+	"strings"
 )
 
 func (w *Writer) clearLines() {
-	for i := 0; i < w.lineCount; i++ {
-		fmt.Fprint(w.out, clearCursorAndLine)
-	}
+	fmt.Fprint(w.out, strings.Repeat(clearCursorAndLine, w.lineCount))
 }
 
 // GetTermSize returns the dimensions of the given terminal.

@@ -18,19 +18,20 @@ func TestWriterPosix(t *testing.T) {
 	out := new(bytes.Buffer)
 	w := cwriter.New(out)
 
-	testCases := []struct {
+	for _, tcase := range []struct {
 		input, expectedOutput string
 	}{
 		{input: "foo\n", expectedOutput: "foo\n"},
 		{input: "bar\n", expectedOutput: "foo\n" + clearSequence + "bar\n"},
 		{input: "fizz\n", expectedOutput: "foo\n" + clearSequence + "bar\n" + clearSequence + "fizz\n"},
-	}
-	for _, testCase := range testCases {
-		w.Write([]byte(testCase.input))
-		w.Flush()
-		output := out.String()
-		if output != testCase.expectedOutput {
-			t.Fatalf("want %q, got %q", testCase.expectedOutput, output)
-		}
+	} {
+		t.Run(tcase.input, func(t *testing.T) {
+			w.Write([]byte(tcase.input))
+			w.Flush()
+			output := out.String()
+			if output != tcase.expectedOutput {
+				t.Fatalf("want %q, got %q", tcase.expectedOutput, output)
+			}
+		})
 	}
 }
