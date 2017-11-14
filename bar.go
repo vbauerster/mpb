@@ -51,32 +51,34 @@ type (
 		etaAlpha         float64
 		total            int64
 		current          int64
+		dropRatio        int64
 		trimLeftSpace    bool
 		trimRightSpace   bool
 		completed        bool
 		aborted          bool
+		dynamic          bool
 		startTime        time.Time
 		timeElapsed      time.Duration
 		blockStartTime   time.Time
 		timePerItem      time.Duration
 		appendFuncs      []decor.DecoratorFunc
 		prependFuncs     []decor.DecoratorFunc
-		simpleSpinner    func() byte
 		refill           *refill
 		bufP, bufB, bufA *bytes.Buffer
 	}
 )
 
 func newBar(ID int, total int64, wg *sync.WaitGroup, cancel <-chan struct{}, options ...BarOption) *Bar {
-	s := state{
-		id:       ID,
-		total:    total,
-		etaAlpha: etaAlpha,
+	if total <= 0 {
+		total = time.Now().Unix()
 	}
 
-	// if total <= 0 {
-	// 	s.simpleSpinner = getSpinner()
-	// }
+	s := state{
+		id:        ID,
+		total:     total,
+		etaAlpha:  etaAlpha,
+		dropRatio: 10,
+	}
 
 	for _, opt := range options {
 		opt(&s)
@@ -103,7 +105,6 @@ func (b *Bar) RemoveAllPrependers() {
 		s.prependFuncs = nil
 	}:
 	case <-b.quit:
-		return
 	}
 }
 
@@ -114,7 +115,6 @@ func (b *Bar) RemoveAllAppenders() {
 		s.appendFuncs = nil
 	}:
 	case <-b.quit:
-		return
 	}
 }
 
@@ -143,15 +143,18 @@ func (b *Bar) Incr(n int) {
 		s.timeElapsed = time.Since(s.startTime)
 		s.updateTimePerItemEstimate(n)
 		if s.total > 0 && sum >= s.total {
-			s.current = s.total
-			s.completed = true
+			if s.dynamic {
+				sum -= sum * s.dropRatio / 100
+			} else {
+				s.current = s.total
+				s.completed = true
+			}
 			return
 		}
 		s.current = sum
 		s.blockStartTime = time.Now()
 	}:
 	case <-b.quit:
-		return
 	}
 }
 
@@ -166,7 +169,6 @@ func (b *Bar) ResumeFill(r rune, till int64) {
 		s.refill = &refill{r, till}
 	}:
 	case <-b.quit:
-		return
 	}
 }
 
@@ -218,6 +220,19 @@ func (b *Bar) Total() int64 {
 		return <-result
 	case <-b.done:
 		return b.cacheState.total
+	}
+}
+
+// SetTotal sets total dynamically. The final param indicates the very last set,
+// in other words you should set it to true when total is determined.
+// Also you may consider providing your drop ratio via BarDropRatio BarOption func.
+func (b *Bar) SetTotal(total int64, final bool) {
+	select {
+	case b.ops <- func(s *state) {
+		s.total = total
+		s.dynamic = !final
+	}:
+	case <-b.quit:
 	}
 }
 
@@ -311,13 +326,6 @@ func (b *Bar) render(tw int, prependWs, appendWs *widthSync) <-chan []byte {
 	return ch
 }
 
-func (s *state) updateFormat(format string) {
-	for i, n := 0, 0; len(format) > 0; i++ {
-		s.format[i], n = utf8.DecodeRuneInString(format)
-		format = format[n:]
-	}
-}
-
 func (s *state) updateTimePerItemEstimate(amount int) {
 	lastBlockTime := time.Since(s.blockStartTime) // shorthand for time.Now().Sub(t)
 	lastItemEstimate := float64(lastBlockTime) / float64(amount)
@@ -404,13 +412,6 @@ func (s *state) fillBar(width int) {
 	s.bufB.WriteRune(s.format[rRight])
 }
 
-func concatenateBlocks(buf []byte, blocks ...[]byte) []byte {
-	for _, block := range blocks {
-		buf = append(buf, block...)
-	}
-	return buf
-}
-
 func newStatistics(s *state) *decor.Statistics {
 	return &decor.Statistics{
 		ID:                  s.id,
@@ -424,15 +425,16 @@ func newStatistics(s *state) *decor.Statistics {
 	}
 }
 
-func getSpinner() func() byte {
-	chars := []byte(`-\|/`)
-	repeat := len(chars) - 1
-	index := repeat
-	return func() byte {
-		if index == repeat {
-			index = -1
-		}
-		index++
-		return chars[index]
+func concatenateBlocks(buf []byte, blocks ...[]byte) []byte {
+	for _, block := range blocks {
+		buf = append(buf, block...)
+	}
+	return buf
+}
+
+func (s *state) updateFormat(format string) {
+	for i, n := 0, 0; len(format) > 0; i++ {
+		s.format[i], n = utf8.DecodeRuneInString(format)
+		format = format[n:]
 	}
 }
