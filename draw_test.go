@@ -109,7 +109,6 @@ func TestFillBar(t *testing.T) {
 		if test.barRefill != nil {
 			s.refill = test.barRefill
 		}
-		// got := draw(s, test.termWidth, prependWs, appendWs)
 		s.draw(test.termWidth, prependWs, appendWs)
 		got := s.bufB.String()
 		if got != test.want {
