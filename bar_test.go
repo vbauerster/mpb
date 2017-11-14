@@ -142,32 +142,6 @@ func TestBarInProgress(t *testing.T) {
 	}
 }
 
-func TestGetSpinner(t *testing.T) {
-	var buf bytes.Buffer
-	p := mpb.New(mpb.Output(&buf))
-	bar := p.AddBar(0, mpb.BarTrim())
-
-	for i := 0; i < 100; i++ {
-		time.Sleep(10 * time.Millisecond)
-		bar.Incr(1)
-	}
-
-	p.Stop()
-
-	spinnerChars := []byte(`-\|/`)
-	seen := make(map[byte]bool)
-	for _, b := range bytes.Trim(buf.Bytes(), "\n") {
-		if !seen[b] {
-			seen[b] = true
-		}
-	}
-	for _, b := range spinnerChars {
-		if !seen[b] {
-			t.Errorf("Char %#U not found in bar's output\n", b)
-		}
-	}
-}
-
 func TestBarGetID(t *testing.T) {
 	var wg sync.WaitGroup
 	var buf bytes.Buffer
@@ -238,7 +212,7 @@ func TestBarIncrWithReFill(t *testing.T) {
 func TestBarPanics(t *testing.T) {
 	var wg sync.WaitGroup
 	var buf bytes.Buffer
-	p := mpb.New(mpb.Output(&buf))
+	p := mpb.New(mpb.Output(&buf), mpb.WithWaitGroup(&wg))
 
 	wantPanic := "Upps!!!"
 	numBars := 3
@@ -259,19 +233,17 @@ func TestBarPanics(t *testing.T) {
 			defer wg.Done()
 			for i := 0; i < 100; i++ {
 				time.Sleep(10 * time.Millisecond)
-				bar.Incr(1)
+				bar.Increment()
 			}
 		}()
 	}
 
-	wg.Wait()
 	p.Stop()
 
-	bytes := removeLastRune(buf.Bytes())
-	out := strings.Split(string(bytes), "\n")
+	out := bytes.Split(removeLastRune(buf.Bytes()), []byte("\n"))
 	gotPanic := out[len(out)-1]
-	if gotPanic != wantPanic {
-		t.Errorf("Want panic: %s, got panic: %s\n", wantPanic, gotPanic)
+	if string(gotPanic) != fmt.Sprintf("bar02 panic: %q", wantPanic) {
+		t.Errorf("Want: %q, got: %q\n", wantPanic, gotPanic)
 	}
 }
 

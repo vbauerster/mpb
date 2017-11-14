@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"os"
 	"sync"
 	"time"
 	"unicode/utf8"
@@ -293,15 +292,16 @@ func (b *Bar) server(s state, wg *sync.WaitGroup, cancel <-chan struct{}) {
 }
 
 func (b *Bar) render(tw int, prependWs, appendWs *widthSync) <-chan []byte {
-	ch := make(chan []byte)
+	ch := make(chan []byte, 1)
 
 	go func() {
 		var st state
 		defer func() {
 			// recovering if external decorators panic
 			if p := recover(); p != nil {
-				fmt.Fprintf(os.Stderr, "bar %d: %q\n", st.id, p)
+				ch <- []byte(fmt.Sprintf("bar%02d panic: %q\n", st.id, p))
 			}
+			close(ch)
 		}()
 		result := make(chan state, 1)
 		select {
@@ -320,7 +320,6 @@ func (b *Bar) render(tw int, prependWs, appendWs *widthSync) <-chan []byte {
 		buf = concatenateBlocks(buf, st.bufP.Bytes(), st.bufB.Bytes(), st.bufA.Bytes())
 		buf = append(buf, '\n')
 		ch <- buf
-		close(ch)
 	}()
 
 	return ch

@@ -1,7 +1,7 @@
 package mpb
 
 import (
-	"reflect"
+	"bytes"
 	"testing"
 )
 
@@ -12,54 +12,68 @@ func TestFillBar(t *testing.T) {
 		total     int64
 		current   int64
 		barRefill *refill
-		want      []byte
+		want      string
 	}{
-		{
-			termWidth: 1,
-			barWidth:  100,
-			want:      []byte{},
-		},
 		{
 			termWidth: 2,
 			barWidth:  100,
+			want:      "",
+		},
+		{
+			termWidth: 3,
+			barWidth:  100,
 			total:     100,
 			current:   20,
-			want:      []byte("[]"),
+			want:      "[-]",
+		},
+		{
+			termWidth: 5,
+			barWidth:  100,
+			total:     100,
+			current:   20,
+			want:      "[>--]",
+		},
+		{
+			termWidth: 6,
+			barWidth:  100,
+			total:     100,
+			current:   20,
+			want:      "[>---]",
 		},
 		{
 			termWidth: 20,
 			barWidth:  100,
 			total:     100,
 			current:   20,
-			want:      []byte("[===>--------------]"),
+			want:      "[===>--------------]",
 		},
 		{
 			termWidth: 50,
 			barWidth:  100,
 			total:     100,
 			current:   20,
-			want:      []byte("[=========>--------------------------------------]"),
+			want:      "[=========>--------------------------------------]",
 		},
 		{
 			termWidth: 100,
 			barWidth:  100,
 			total:     100,
 			current:   0,
-			want:      []byte("[--------------------------------------------------------------------------------------------------]"),
+			want:      "[--------------------------------------------------------------------------------------------------]",
 		},
 		{
 			termWidth: 100,
 			barWidth:  100,
 			total:     100,
 			current:   1,
-			want:      []byte("[>-------------------------------------------------------------------------------------------------]"),
+			want:      "[>-------------------------------------------------------------------------------------------------]",
 		},
 		{
 			termWidth: 100,
 			barWidth:  100,
 			total:     100,
 			current:   40,
-			want:      []byte("[======================================>-----------------------------------------------------------]"),
+			want:      "[======================================>-----------------------------------------------------------]",
 		},
 		{
 			termWidth: 100,
@@ -67,21 +81,21 @@ func TestFillBar(t *testing.T) {
 			total:     100,
 			current:   40,
 			barRefill: &refill{'+', 32},
-			want:      []byte("[+++++++++++++++++++++++++++++++=======>-----------------------------------------------------------]"),
+			want:      "[+++++++++++++++++++++++++++++++=======>-----------------------------------------------------------]",
 		},
 		{
 			termWidth: 100,
 			barWidth:  100,
 			total:     100,
 			current:   99,
-			want:      []byte("[================================================================================================>-]"),
+			want:      "[================================================================================================>-]",
 		},
 		{
 			termWidth: 100,
 			barWidth:  100,
 			total:     100,
 			current:   100,
-			want:      []byte("[==================================================================================================]"),
+			want:      "[==================================================================================================]",
 		},
 	}
 
@@ -95,8 +109,10 @@ func TestFillBar(t *testing.T) {
 		if test.barRefill != nil {
 			s.refill = test.barRefill
 		}
-		got := draw(s, test.termWidth, prependWs, appendWs)
-		if !reflect.DeepEqual(test.want, got) {
+		// got := draw(s, test.termWidth, prependWs, appendWs)
+		s.draw(test.termWidth, prependWs, appendWs)
+		got := s.bufB.String()
+		if got != test.want {
 			t.Errorf("Want: %q, Got: %q\n", test.want, got)
 		}
 	}
@@ -106,6 +122,9 @@ func newTestState() *state {
 	s := &state{
 		trimLeftSpace:  true,
 		trimRightSpace: true,
+		bufP:           new(bytes.Buffer),
+		bufB:           new(bytes.Buffer),
+		bufA:           new(bytes.Buffer),
 	}
 	s.updateFormat("[=>-]")
 	return s
