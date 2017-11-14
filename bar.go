@@ -350,12 +350,12 @@ func (s *state) draw(termWidth int, prependWs, appendWs *widthSync) {
 
 	// render append functions to the right of the bar
 	s.bufA.Reset()
-	for i, f := range s.appendFuncs {
-		s.bufA.WriteString(f(stat, appendWs.Listen[i], appendWs.Result[i]))
-	}
-
 	if !s.trimRightSpace {
 		s.bufA.WriteByte(' ')
+	}
+
+	for i, f := range s.appendFuncs {
+		s.bufA.WriteString(f(stat, appendWs.Listen[i], appendWs.Result[i]))
 	}
 
 	prependCount := utf8.RuneCount(s.bufP.Bytes())
