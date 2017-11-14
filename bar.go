@@ -26,7 +26,6 @@ const (
 )
 
 type fmtRunes [formatLen]rune
-type fmtByteSegments [formatLen][]byte
 
 // Bar represents a progress Bar
 type Bar struct {
@@ -68,8 +67,9 @@ type (
 	}
 )
 
-func newBar(total int64, wg *sync.WaitGroup, cancel <-chan struct{}, options ...BarOption) *Bar {
+func newBar(ID int, total int64, wg *sync.WaitGroup, cancel <-chan struct{}, options ...BarOption) *Bar {
 	s := state{
+		id:       ID,
 		total:    total,
 		etaAlpha: etaAlpha,
 	}
@@ -266,13 +266,13 @@ func (b *Bar) server(s state, wg *sync.WaitGroup, cancel <-chan struct{}) {
 		select {
 		case op := <-b.ops:
 			op(&s)
-		case <-b.quit:
-			s.completed = true
-			return
 		case <-cancel:
 			s.aborted = true
 			cancel = nil
 			b.Complete()
+		case <-b.quit:
+			s.completed = true
+			return
 		}
 	}
 }
@@ -281,13 +281,13 @@ func (b *Bar) render(tw int, prependWs, appendWs *widthSync) <-chan []byte {
 	ch := make(chan []byte)
 
 	go func() {
+		var st state
 		defer func() {
 			// recovering if external decorators panic
 			if p := recover(); p != nil {
-				fmt.Fprintf(os.Stderr, "bar panic: %q\n", p)
+				fmt.Fprintf(os.Stderr, "bar %d: %q\n", st.id, p)
 			}
 		}()
-		var st state
 		result := make(chan state, 1)
 		select {
 		case b.ops <- func(s *state) {
@@ -422,16 +422,6 @@ func newStatistics(s *state) *decor.Statistics {
 		TimeElapsed:         s.timeElapsed,
 		TimePerItemEstimate: s.timePerItem,
 	}
-}
-
-func fmtRunesToByteSegments(format fmtRunes) fmtByteSegments {
-	var segments fmtByteSegments
-	for i, r := range format {
-		buf := make([]byte, utf8.RuneLen(r))
-		utf8.EncodeRune(buf, r)
-		segments[i] = buf
-	}
-	return segments
 }
 
 func getSpinner() func() byte {

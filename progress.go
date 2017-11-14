@@ -23,6 +23,7 @@ type (
 	pConf struct {
 		bars []*Bar
 
+		idCounter    int
 		width        int
 		format       string
 		rr           time.Duration
@@ -90,16 +91,16 @@ func New(options ...ProgressOption) *Progress {
 
 // AddBar creates a new progress bar and adds to the container.
 func (p *Progress) AddBar(total int64, options ...BarOption) *Bar {
+	p.wg.Add(1)
 	result := make(chan *Bar, 1)
-	op := func(c *pConf) {
-		options = append(options, barWidth(c.width), barFormat(c.format))
-		b := newBar(total, p.wg, c.cancel, options...)
-		c.bars = append(c.bars, b)
-		p.wg.Add(1)
-		result <- b
-	}
 	select {
-	case p.ops <- op:
+	case p.ops <- func(c *pConf) {
+		options = append(options, barWidth(c.width), barFormat(c.format))
+		b := newBar(c.idCounter, total, p.wg, c.cancel, options...)
+		c.bars = append(c.bars, b)
+		c.idCounter++
+		result <- b
+	}:
 		return <-result
 	case <-p.quit:
 		return new(Bar)
