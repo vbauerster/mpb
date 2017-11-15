@@ -305,13 +305,11 @@ func (b *Bar) render(tw int, prependWs, appendWs *widthSync) <-chan []byte {
 		}()
 		result := make(chan state, 1)
 		select {
-		case b.ops <- func(s *state) {
-			if s.completed {
+		case b.ops <- func(s *state) { result <- *s }:
+			st = <-result
+			if st.completed {
 				b.Complete()
 			}
-			result <- *s
-		}:
-			st = <-result
 		case <-b.done:
 			st = b.cacheState
 		}
