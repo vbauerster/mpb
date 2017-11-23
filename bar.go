@@ -36,6 +36,8 @@ type Bar struct {
 
 	// following are used after b.done is receiveable
 	cacheState state
+
+	once sync.Once
 }
 
 type (
@@ -64,6 +66,11 @@ type (
 		prependFuncs     []decor.DecoratorFunc
 		refill           *refill
 		bufP, bufB, bufA *bytes.Buffer
+		panic            string
+	}
+	writeBuf struct {
+		buf                []byte
+		completeAfterFlush bool
 	}
 )
 
@@ -251,22 +258,11 @@ func (b *Bar) InProgress() bool {
 // of process completion. If you don't call this method, it will be called
 // implicitly, upon p.Stop() call.
 func (b *Bar) Complete() {
-	select {
-	case <-b.quit:
-	default:
-		close(b.quit)
-	}
+	b.once.Do(b.shutdown)
 }
 
-func (b *Bar) complete() {
-	select {
-	case b.ops <- func(s *state) {
-		if !s.completed {
-			b.Complete()
-		}
-	}:
-	case <-time.After(prr):
-	}
+func (b *Bar) shutdown() {
+	close(b.quit)
 }
 
 func (b *Bar) server(s state, wg *sync.WaitGroup, cancel <-chan struct{}) {
@@ -285,48 +281,75 @@ func (b *Bar) server(s state, wg *sync.WaitGroup, cancel <-chan struct{}) {
 			cancel = nil
 			b.Complete()
 		case <-b.quit:
-			s.completed = true
 			return
 		}
 	}
 }
 
-func (b *Bar) render(tw int, prependWs, appendWs *widthSync) <-chan []byte {
-	ch := make(chan []byte, 1)
+func (b *Bar) render(tw int, prependWs, appendWs *widthSync) <-chan *writeBuf {
+	ch := make(chan *writeBuf, 1)
 
 	go func() {
-		var st state
-		defer func() {
-			// recovering if external decorators panic
-			if p := recover(); p != nil {
-				ch <- []byte(fmt.Sprintf("bar%02d panic: %q\n", st.id, p))
-			}
-			close(ch)
-		}()
-		result := make(chan state, 1)
 		select {
-		case b.ops <- func(s *state) { result <- *s }:
-			st = <-result
-			if st.completed {
-				b.Complete()
-			}
+		case b.ops <- func(s *state) {
+			defer func() {
+				// recovering if external decorators panic
+				if p := recover(); p != nil {
+					s.panic = fmt.Sprintf("b#%02d panic: %v\n", s.id, p)
+					s.prependFuncs = nil
+					s.appendFuncs = nil
+
+					ch <- &writeBuf{[]byte(s.panic), true}
+				}
+				close(ch)
+			}()
+			s.draw(tw, prependWs, appendWs)
+			ch <- &writeBuf{s.toBytes(), s.isFull()}
+		}:
 		case <-b.done:
-			st = b.cacheState
+			s := b.cacheState
+			var buf []byte
+			if s.panic != "" {
+				buf = []byte(s.panic)
+			} else {
+				s.draw(tw, prependWs, appendWs)
+				buf = s.toBytes()
+			}
+			ch <- &writeBuf{buf, true}
+			close(ch)
 		}
-		st.draw(tw, prependWs, appendWs)
-		buf := make([]byte, 0, st.bufP.Len()+st.bufB.Len()+st.bufA.Len())
-		buf = concatenateBlocks(buf, st.bufP.Bytes(), st.bufB.Bytes(), st.bufA.Bytes())
-		buf = append(buf, '\n')
-		ch <- buf
 	}()
 
 	return ch
+}
+
+func (s *state) toBytes() []byte {
+	buf := make([]byte, 0, s.bufP.Len()+s.bufB.Len()+s.bufA.Len())
+	buf = concatenateBlocks(buf, s.bufP.Bytes(), s.bufB.Bytes(), s.bufA.Bytes())
+	return buf
 }
 
 func (s *state) updateTimePerItemEstimate(amount int) {
 	lastBlockTime := time.Since(s.blockStartTime) // shorthand for time.Now().Sub(t)
 	lastItemEstimate := float64(lastBlockTime) / float64(amount)
 	s.timePerItem = time.Duration((s.etaAlpha * lastItemEstimate) + (1-s.etaAlpha)*float64(s.timePerItem))
+}
+
+func (s *state) isFull() bool {
+	if !s.completed {
+		return false
+	}
+	bar := s.bufB.Bytes()
+	var r rune
+	var n int
+	for i := 0; len(bar) > 0; i++ {
+		r, n = utf8.DecodeLastRune(bar)
+		bar = bar[:len(bar)-n]
+		if i == 1 {
+			break
+		}
+	}
+	return r == s.format[rFill]
 }
 
 func (s *state) draw(termWidth int, prependWs, appendWs *widthSync) {
@@ -366,6 +389,7 @@ func (s *state) draw(termWidth int, prependWs, appendWs *widthSync) {
 		shrinkWidth := termWidth - prependCount - appendCount
 		s.fillBar(shrinkWidth)
 	}
+	s.bufA.WriteByte('\n')
 }
 
 func (s *state) fillBar(width int) {

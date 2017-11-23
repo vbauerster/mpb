@@ -242,7 +242,9 @@ func TestBarPanics(t *testing.T) {
 
 	out := bytes.Split(removeLastRune(buf.Bytes()), []byte("\n"))
 	gotPanic := out[len(out)-1]
-	if string(gotPanic) != fmt.Sprintf("bar02 panic: %q", wantPanic) {
+	wantPanic = fmt.Sprintf("b#%02d panic: %v", 2, wantPanic)
+
+	if string(gotPanic) != wantPanic {
 		t.Errorf("Want: %q, got: %q\n", wantPanic, gotPanic)
 	}
 }

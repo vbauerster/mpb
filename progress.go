@@ -1,6 +1,7 @@
 package mpb
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"runtime"
@@ -72,6 +73,7 @@ func New(options ...ProgressOption) *Progress {
 		cw:     cwriter.New(os.Stdout),
 		rr:     prr,
 		ticker: time.NewTicker(prr),
+		cancel: make(chan struct{}),
 	}
 
 	for _, opt := range options {
@@ -156,12 +158,6 @@ func (p *Progress) Stop() {
 	case <-p.quit:
 		return
 	default:
-		// complete Total unknown bars
-		p.ops <- func(c *pConf) {
-			for _, b := range c.bars {
-				b.complete()
-			}
-		}
 		// wait for all bars to quit
 		p.wg.Wait()
 		// request p.server to quit
@@ -181,7 +177,6 @@ func (p *Progress) quitRequest() {
 
 // server monitors underlying channels and renders any progress bars
 func (p *Progress) server(conf pConf) {
-
 	defer func() {
 		if conf.shutdownNotifier != nil {
 			close(conf.shutdownNotifier)
@@ -189,46 +184,28 @@ func (p *Progress) server(conf pConf) {
 		close(p.done)
 	}()
 
+	numP, numA := -1, -1
+
 	for {
 		select {
 		case op := <-p.ops:
 			op(&conf)
 		case <-conf.ticker.C:
-			numBars := len(conf.bars)
-			if numBars == 0 {
+			if len(conf.bars) == 0 {
 				runtime.Gosched()
 				break
 			}
-
-			if conf.beforeRender != nil {
-				conf.beforeRender(conf.bars)
-			}
-
-			wSyncTimeout := make(chan struct{})
-			time.AfterFunc(conf.rr, func() {
-				close(wSyncTimeout)
-			})
-
 			b0 := conf.bars[0]
-			prependWs := newWidthSync(wSyncTimeout, numBars, b0.NumOfPrependers())
-			appendWs := newWidthSync(wSyncTimeout, numBars, b0.NumOfAppenders())
-
-			tw, _, _ := cwriter.GetTermSize()
-
-			sequence := make([]<-chan []byte, numBars)
-			for i, b := range conf.bars {
-				sequence[i] = b.render(tw, prependWs, appendWs)
+			if numP == -1 {
+				numP = b0.NumOfPrependers()
 			}
-
-			for buf := range fanIn(sequence...) {
-				conf.cw.Write(buf)
+			if numA == -1 {
+				numA = b0.NumOfAppenders()
 			}
-
-			for _, interceptor := range conf.interceptors {
-				interceptor(conf.cw)
+			err := conf.writeAndFlush(numP, numA)
+			if err != nil {
+				fmt.Fprintln(os.Stderr, err)
 			}
-
-			conf.cw.Flush()
 		case <-conf.cancel:
 			conf.ticker.Stop()
 			conf.cancel = nil
@@ -278,8 +255,49 @@ func newWidthSync(timeout <-chan struct{}, numBars, numColumn int) *widthSync {
 	return ws
 }
 
-func fanIn(inputs ...<-chan []byte) <-chan []byte {
-	ch := make(chan []byte)
+func (p *pConf) writeAndFlush(numP, numA int) (err error) {
+	if p.beforeRender != nil {
+		p.beforeRender(p.bars)
+	}
+
+	wSyncTimeout := make(chan struct{})
+	time.AfterFunc(p.rr, func() {
+		close(wSyncTimeout)
+	})
+
+	prependWs := newWidthSync(wSyncTimeout, len(p.bars), numP)
+	appendWs := newWidthSync(wSyncTimeout, len(p.bars), numA)
+
+	tw, _, _ := cwriter.TermSize()
+
+	sequence := make([]<-chan *writeBuf, len(p.bars))
+	for i, b := range p.bars {
+		sequence[i] = b.render(tw, prependWs, appendWs)
+	}
+
+	var i int
+	for b := range fanIn(sequence...) {
+		_, err = p.cw.Write(b.buf)
+		defer func(bar *Bar, complete bool) {
+			if complete {
+				bar.Complete()
+			}
+		}(p.bars[i], b.completeAfterFlush)
+		i++
+	}
+
+	for _, interceptor := range p.interceptors {
+		interceptor(p.cw)
+	}
+
+	if e := p.cw.Flush(); err == nil {
+		err = e
+	}
+	return
+}
+
+func fanIn(inputs ...<-chan *writeBuf) <-chan *writeBuf {
+	ch := make(chan *writeBuf)
 
 	go func() {
 		defer close(ch)
