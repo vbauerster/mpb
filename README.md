@@ -9,7 +9,7 @@
 
 ## Features
 
-* __Multiple Bars__: mpb can render multiple progress bars that can be tracked concurrently
+* __Multiple Bars__: Multiple progress bars are supported
 * __Dynamic Total__: [Set total](https://github.com/vbauerster/mpb/issues/9#issuecomment-344448984) while bar is running
 * __Dynamic Addition__: Additional bar could be added at later time
 * __Dynamic Removal__: Remove particular bar, before or after completion
