@@ -2,8 +2,8 @@ package cwriter
 
 import (
 	"bytes"
-	"io"
 	"fmt"
+	"io"
 )
 
 // ESC is the ASCII code for escape character
@@ -47,4 +47,8 @@ func (w *Writer) Flush() error {
 // Write save the contents of b to its buffers. The only errors returned are ones encountered while writing to the underlying buffer.
 func (w *Writer) Write(b []byte) (n int, err error) {
 	return w.buf.Write(b)
+}
+
+func (w *Writer) WriteString(s string) (n int, err error) {
+	return w.buf.WriteString(s)
 }
