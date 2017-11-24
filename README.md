@@ -10,14 +10,13 @@
 ## Features
 
 * __Multiple Bars__: mpb can render multiple progress bars that can be tracked concurrently
-* __Cancellable__: cancel rendering goroutine at any time
-* __Dynamic Addition__:  Add additional progress bar at any time
-* __Dynamic Removal__:  Remove rendering progress bar at any time
-* __Dynamic Sorting__:  Sort bars as you wish
-* __Dynamic Resize__:  Resize bars on terminal width change
-* __Custom Decorator Functions__: Add custom functions around the bar along with helper functions
-* __Dynamic Decorator's Width Sync__:  Sync width among decorator group
+* __Dynamic Total__: [Set total](https://github.com/vbauerster/mpb/issues/9#issuecomment-344448984) while bar is running
+* __Dynamic Addition__: Additional bar could be added at later time
+* __Dynamic Removal__: Remove particular bar, before or after completion
+* __Dynamic Resize__: Bars are trying to resize at terminal width change
+* __Cancellation__: Cancel whole rendering process
 * __Predefined Decoratros__: Elapsed time, [Ewmaest](https://github.com/dgryski/trifles/tree/master/ewmaest) based ETA, Percentage, Bytes counter
+* __Decorator's width sync__:  Synchronized decorator's width among multiple bars
 
 ## Installation
 
@@ -114,7 +113,7 @@ own goroutine, therefore adding multiple bars is easy and safe:
 
 The source code: [examples/simple/main.go](examples/simple/main.go)
 
-### Cancel
+### Cancelation
 
 ![cancel.gif](examples/gifs/cancel.gif)
 
