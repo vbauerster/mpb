@@ -141,13 +141,16 @@ func (b *Bar) Incr(n int) {
 	}
 	select {
 	case b.ops <- func(s *state) {
+		next := time.Now()
 		if s.current == 0 {
-			s.startTime = time.Now()
-			s.blockStartTime = s.startTime
+			s.startTime = next
+			s.blockStartTime = next
+		} else {
+			now := time.Now()
+			s.updateTimePerItemEstimate(n, now, next)
+			s.timeElapsed = now.Sub(s.startTime)
 		}
 		sum := s.current + int64(n)
-		s.timeElapsed = time.Since(s.startTime)
-		s.updateTimePerItemEstimate(n)
 		if s.total > 0 && sum >= s.total {
 			if s.dynamic {
 				sum -= sum * s.dropRatio / 100
@@ -158,7 +161,6 @@ func (b *Bar) Incr(n int) {
 			return
 		}
 		s.current = sum
-		s.blockStartTime = time.Now()
 	}:
 	case <-b.quit:
 	}
@@ -329,10 +331,11 @@ func (s *state) toBytes() []byte {
 	return buf
 }
 
-func (s *state) updateTimePerItemEstimate(amount int) {
-	lastBlockTime := time.Since(s.blockStartTime) // shorthand for time.Now().Sub(t)
+func (s *state) updateTimePerItemEstimate(amount int, now, next time.Time) {
+	lastBlockTime := now.Sub(s.blockStartTime)
 	lastItemEstimate := float64(lastBlockTime) / float64(amount)
 	s.timePerItem = time.Duration((s.etaAlpha * lastItemEstimate) + (1-s.etaAlpha)*float64(s.timePerItem))
+	s.blockStartTime = next
 }
 
 func (s *state) isFull() bool {
