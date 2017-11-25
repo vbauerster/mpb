@@ -317,7 +317,7 @@ func (b *Bar) render(tw int, prependWs, appendWs *widthSync) <-chan *writeBuf {
 				s.draw(tw, prependWs, appendWs)
 				buf = s.toBytes()
 			}
-			ch <- &writeBuf{buf, true}
+			ch <- &writeBuf{buf, false}
 			close(ch)
 		}
 	}()
