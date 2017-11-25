@@ -3,6 +3,7 @@ package mpb_test
 import (
 	"bytes"
 	"fmt"
+	"io/ioutil"
 	"math/rand"
 	"sync"
 	"testing"
@@ -67,7 +68,7 @@ func TestInvalidWidth(t *testing.T) {
 func TestAddBar(t *testing.T) {
 	var wg sync.WaitGroup
 	var buf bytes.Buffer
-	p := mpb.New(mpb.Output(&buf))
+	p := mpb.New(mpb.Output(&buf), mpb.WithWaitGroup(&wg))
 
 	count := p.BarCount()
 	if count != 0 {
@@ -79,7 +80,7 @@ func TestAddBar(t *testing.T) {
 
 	for i := 0; i < numBars; i++ {
 		name := fmt.Sprintf("Bar#%d:", i)
-		bar := p.AddBar(100, mpb.PrependDecorators(decor.Name(name, len(name), 0)))
+		bar := p.AddBar(100, mpb.PrependDecorators(decor.StaticName(name, len(name), 0)))
 
 		go func() {
 			defer wg.Done()
@@ -93,7 +94,6 @@ func TestAddBar(t *testing.T) {
 	if count != numBars {
 		t.Errorf("BarCount want: %q, got: %q\n", numBars, count)
 	}
-	wg.Wait()
 	p.Stop()
 }
 
@@ -114,11 +114,16 @@ func TestRemoveBar(t *testing.T) {
 }
 
 func TestWithCancel(t *testing.T) {
+	var wg sync.WaitGroup
 	cancel := make(chan struct{})
 	shutdown := make(chan struct{})
-	p := mpb.New(mpb.WithCancel(cancel), mpb.WithShutdownNotifier(shutdown))
+	p := mpb.New(
+		mpb.Output(ioutil.Discard),
+		mpb.WithCancel(cancel),
+		mpb.WithShutdownNotifier(shutdown),
+		mpb.WithWaitGroup(&wg),
+	)
 
-	var wg sync.WaitGroup
 	total := 100
 	numBars := 3
 	wg.Add(numBars)
@@ -126,21 +131,18 @@ func TestWithCancel(t *testing.T) {
 	for i := 0; i < numBars; i++ {
 		name := fmt.Sprintf("Bar#%d:", i)
 		bar := p.AddBar(int64(total), mpb.BarID(i),
-			mpb.PrependDecorators(decor.Name(name, len(name), 0)))
+			mpb.PrependDecorators(decor.StaticName(name, len(name), 0)))
 
 		go func() {
-			defer func() {
-				// fmt.Printf("%s done\n", name)
-				wg.Done()
-			}()
+			defer wg.Done()
 			for i := 0; i < total; i++ {
 				select {
 				case <-cancel:
 					return
 				default:
 				}
-				time.Sleep(time.Duration(rand.Intn(100)) * time.Millisecond)
-				bar.Incr(1)
+				time.Sleep(time.Duration(rand.Intn(10)+1) * time.Second / 100)
+				bar.Increment()
 			}
 		}()
 	}
@@ -149,7 +151,6 @@ func TestWithCancel(t *testing.T) {
 		close(cancel)
 	})
 
-	wg.Wait()
 	p.Stop()
 
 	select {

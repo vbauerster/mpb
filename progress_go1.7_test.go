@@ -5,6 +5,7 @@ package mpb_test
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"math/rand"
 	"sync"
 	"testing"
@@ -17,7 +18,11 @@ import (
 func TestWithContext(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	shutdown := make(chan struct{})
-	p := mpb.New(mpb.WithContext(ctx), mpb.WithShutdownNotifier(shutdown))
+	p := mpb.New(
+		mpb.Output(ioutil.Discard),
+		mpb.WithContext(ctx),
+		mpb.WithShutdownNotifier(shutdown),
+	)
 
 	var wg sync.WaitGroup
 	total := 100
@@ -27,7 +32,7 @@ func TestWithContext(t *testing.T) {
 	for i := 0; i < numBars; i++ {
 		name := fmt.Sprintf("Bar#%d:", i)
 		bar := p.AddBar(int64(total), mpb.BarID(i),
-			mpb.PrependDecorators(decor.Name(name, len(name), 0)))
+			mpb.PrependDecorators(decor.StaticName(name, len(name), 0)))
 
 		go func() {
 			defer wg.Done()
@@ -37,8 +42,8 @@ func TestWithContext(t *testing.T) {
 					return
 				default:
 				}
-				time.Sleep(time.Duration(rand.Intn(100)) * time.Millisecond)
-				bar.Incr(1)
+				time.Sleep(time.Duration(rand.Intn(10)+1) * time.Second / 100)
+				bar.Increment()
 			}
 		}()
 	}
