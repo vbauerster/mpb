@@ -150,17 +150,15 @@ func (b *Bar) Incr(n int) {
 			s.updateTimePerItemEstimate(n, now, next)
 			s.timeElapsed = now.Sub(s.startTime)
 		}
-		sum := s.current + int64(n)
-		if s.total > 0 && sum >= s.total {
-			if s.dynamic {
-				sum -= sum * s.dropRatio / 100
-			} else {
-				s.current = s.total
-				s.completed = true
+		s.current += int64(n)
+		if s.dynamic {
+			for s.current >= s.total {
+				s.current -= s.current * s.dropRatio / 100
 			}
-			return
+		} else if s.current >= s.total {
+			s.current = s.total
+			s.completed = true
 		}
-		s.current = sum
 	}:
 	case <-b.quit:
 	}
