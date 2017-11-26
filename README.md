@@ -113,7 +113,7 @@ own goroutine, therefore adding multiple bars is easy and safe:
 
 The source code: [examples/simple/main.go](examples/simple/main.go)
 
-### Cancelation
+### Cancellation
 
 ![cancel.gif](examples/gifs/cancel.gif)
 
