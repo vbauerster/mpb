@@ -337,8 +337,8 @@ func (s *state) updateTimePerItemEstimate(amount int, now, next time.Time) {
 }
 
 func (s *state) draw(termWidth int, prependWs, appendWs *widthSync) {
-	if termWidth <= 0 {
-		termWidth = 2
+	if termWidth < 0 {
+		termWidth = s.width
 	}
 
 	stat := newStatistics(s)
