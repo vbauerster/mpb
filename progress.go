@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/signal"
 	"runtime"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/vbauerster/mpb/cwriter"
@@ -177,14 +179,22 @@ func (p *Progress) quitRequest() {
 
 // server monitors underlying channels and renders any progress bars
 func (p *Progress) server(conf pConf) {
+	winch := make(chan os.Signal, 1)
+	signal.Notify(winch, syscall.SIGWINCH)
+
 	defer func() {
 		if conf.shutdownNotifier != nil {
 			close(conf.shutdownNotifier)
 		}
+		signal.Stop(winch)
 		close(p.done)
 	}()
 
 	numP, numA := -1, -1
+
+	var timer *time.Timer
+	var resumeTicker <-chan time.Time
+	resumeDelay := 300 * time.Millisecond
 
 	for {
 		select {
@@ -202,10 +212,26 @@ func (p *Progress) server(conf pConf) {
 			if numA == -1 {
 				numA = b0.NumOfAppenders()
 			}
-			err := conf.writeAndFlush(numP, numA)
+			tw, _, _ := cwriter.TermSize()
+			err := conf.writeAndFlush(tw, numP, numA)
 			if err != nil {
 				fmt.Fprintln(os.Stderr, err)
 			}
+		case <-winch:
+			tw, _, _ := cwriter.TermSize()
+			err := conf.writeAndFlush(tw-tw/6, numP, numA)
+			if err != nil {
+				fmt.Fprintln(os.Stderr, err)
+			}
+			if timer != nil && timer.Reset(resumeDelay) {
+				break
+			}
+			conf.ticker.Stop()
+			timer = time.NewTimer(resumeDelay)
+			resumeTicker = timer.C
+		case <-resumeTicker:
+			conf.ticker = time.NewTicker(conf.rr)
+			resumeTicker = nil
 		case <-conf.cancel:
 			conf.ticker.Stop()
 			conf.cancel = nil
@@ -255,7 +281,7 @@ func newWidthSync(timeout <-chan struct{}, numBars, numColumn int) *widthSync {
 	return ws
 }
 
-func (p *pConf) writeAndFlush(numP, numA int) (err error) {
+func (p *pConf) writeAndFlush(tw, numP, numA int) (err error) {
 	if p.beforeRender != nil {
 		p.beforeRender(p.bars)
 	}
@@ -267,8 +293,6 @@ func (p *pConf) writeAndFlush(numP, numA int) (err error) {
 
 	prependWs := newWidthSync(wSyncTimeout, len(p.bars), numP)
 	appendWs := newWidthSync(wSyncTimeout, len(p.bars), numA)
-
-	tw, _, _ := cwriter.TermSize()
 
 	sequence := make([]<-chan *writeBuf, len(p.bars))
 	for i, b := range p.bars {

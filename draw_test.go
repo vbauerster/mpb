@@ -17,7 +17,7 @@ func TestFillBar(t *testing.T) {
 		{
 			termWidth: 2,
 			barWidth:  100,
-			want:      "",
+			want:      "[]",
 		},
 		{
 			termWidth: 3,

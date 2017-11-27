@@ -355,7 +355,7 @@ func (s *state) isFull() bool {
 
 func (s *state) draw(termWidth int, prependWs, appendWs *widthSync) {
 	if termWidth <= 0 {
-		termWidth = s.width
+		termWidth = 2
 	}
 
 	stat := newStatistics(s)
@@ -383,19 +383,24 @@ func (s *state) draw(termWidth int, prependWs, appendWs *widthSync) {
 	prependCount := utf8.RuneCount(s.bufP.Bytes())
 	appendCount := utf8.RuneCount(s.bufA.Bytes())
 
-	s.fillBar(s.width)
+	if termWidth > s.width {
+		s.fillBar(s.width)
+	} else {
+		s.fillBar(termWidth - prependCount - appendCount)
+	}
 	barCount := utf8.RuneCount(s.bufB.Bytes())
 	totalCount := prependCount + barCount + appendCount
 	if totalCount > termWidth {
-		shrinkWidth := termWidth - prependCount - appendCount
-		s.fillBar(shrinkWidth)
+		s.fillBar(termWidth - prependCount - appendCount)
 	}
 	s.bufA.WriteByte('\n')
 }
 
 func (s *state) fillBar(width int) {
 	s.bufB.Reset()
+	s.bufB.WriteRune(s.format[rLeft])
 	if width <= 2 {
+		s.bufB.WriteRune(s.format[rRight])
 		return
 	}
 
@@ -403,8 +408,6 @@ func (s *state) fillBar(width int) {
 	barWidth := width - 2
 
 	completedWidth := decor.CalcPercentage(s.total, s.current, barWidth)
-
-	s.bufB.WriteRune(s.format[rLeft])
 
 	if s.refill != nil {
 		till := decor.CalcPercentage(s.total, s.refill.till, barWidth)
