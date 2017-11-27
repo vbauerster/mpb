@@ -3,6 +3,7 @@ package mpb_test
 import (
 	"bytes"
 	"fmt"
+	"io/ioutil"
 	"strings"
 	"sync"
 	"testing"
@@ -45,68 +46,6 @@ func TestWithWidth(t *testing.T) {
 	}
 }
 
-func TestBarFormat(t *testing.T) {
-	var buf bytes.Buffer
-	cancel := make(chan struct{})
-	customFormat := "(#>_)"
-	p := mpb.New(
-		mpb.Output(&buf),
-		mpb.WithCancel(cancel),
-		mpb.WithFormat(customFormat),
-	)
-	bar := p.AddBar(100, mpb.BarTrim())
-
-	go func() {
-		for i := 0; i < 100; i++ {
-			time.Sleep(10 * time.Millisecond)
-			bar.Increment()
-		}
-	}()
-
-	time.Sleep(250 * time.Millisecond)
-	close(cancel)
-	p.Stop()
-
-	barAsStr := strings.Trim(buf.String(), "\n")
-
-	seen := make(map[rune]bool)
-	for _, r := range barAsStr {
-		if !seen[r] {
-			seen[r] = true
-		}
-	}
-	for _, r := range customFormat {
-		if !seen[r] {
-			t.Errorf("Rune %#U not found in bar\n", r)
-		}
-	}
-}
-
-func TestBarInvalidFormat(t *testing.T) {
-	var buf bytes.Buffer
-	customWidth := 60
-	customFormat := "(#>=_)"
-	p := mpb.New(
-		mpb.Output(&buf),
-		mpb.WithWidth(customWidth),
-		mpb.WithFormat(customFormat),
-	)
-	bar := p.AddBar(100, mpb.BarTrim())
-
-	for i := 0; i < 100; i++ {
-		time.Sleep(10 * time.Millisecond)
-		bar.Incr(1)
-	}
-
-	p.Stop()
-
-	got := buf.String()
-	want := fmt.Sprintf("[%s]", strings.Repeat("=", customWidth-2))
-	if !strings.Contains(got, want) {
-		t.Errorf("Expected format: %s, got %s\n", want, got)
-	}
-}
-
 func TestBarInProgress(t *testing.T) {
 	var buf bytes.Buffer
 	cancel := make(chan struct{})
@@ -139,8 +78,10 @@ func TestBarInProgress(t *testing.T) {
 
 func TestBarGetID(t *testing.T) {
 	var wg sync.WaitGroup
-	var buf bytes.Buffer
-	p := mpb.New(mpb.Output(&buf))
+	p := mpb.New(
+		mpb.Output(ioutil.Discard),
+		mpb.WithWaitGroup(&wg),
+	)
 
 	numBars := 3
 	wg.Add(numBars)
@@ -165,7 +106,6 @@ func TestBarGetID(t *testing.T) {
 		}
 	}
 
-	wg.Wait()
 	p.Stop()
 }
 

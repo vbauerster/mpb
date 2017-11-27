@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math/rand"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -101,7 +102,11 @@ func TestCustomFormat(t *testing.T) {
 	var buf bytes.Buffer
 	cancel := make(chan struct{})
 	customFormat := "╢▌▌░╟"
-	p := mpb.New(mpb.Output(&buf), mpb.WithCancel(cancel), mpb.WithFormat(customFormat))
+	p := mpb.New(
+		mpb.Output(&buf),
+		mpb.WithCancel(cancel),
+		mpb.WithFormat(customFormat),
+	)
 	bar := p.AddBar(100, mpb.BarTrim())
 
 	go func() {
@@ -119,5 +124,30 @@ func TestCustomFormat(t *testing.T) {
 		if !bytes.ContainsRune(buf.Bytes(), r) {
 			t.Errorf("Rune %#U not found in bar\n", r)
 		}
+	}
+}
+
+func TestInvalidFormatWidth(t *testing.T) {
+	var buf bytes.Buffer
+	customWidth := 60
+	customFormat := "(#>=_)"
+	p := mpb.New(
+		mpb.Output(&buf),
+		mpb.WithWidth(customWidth),
+		mpb.WithFormat(customFormat),
+	)
+	bar := p.AddBar(100, mpb.BarTrim())
+
+	for i := 0; i < 100; i++ {
+		time.Sleep(10 * time.Millisecond)
+		bar.Incr(1)
+	}
+
+	p.Stop()
+
+	got := buf.String()
+	want := fmt.Sprintf("[%s]", strings.Repeat("=", customWidth-2))
+	if !strings.Contains(got, want) {
+		t.Errorf("Expected format: %s, got %s\n", want, got)
 	}
 }
