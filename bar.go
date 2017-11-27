@@ -41,10 +41,6 @@ type Bar struct {
 }
 
 type (
-	refill struct {
-		char rune
-		till int64
-	}
 	state struct {
 		id               int
 		width            int
@@ -67,6 +63,10 @@ type (
 		refill           *refill
 		bufP, bufB, bufA *bytes.Buffer
 		panic            string
+	}
+	refill struct {
+		char rune
+		till int64
 	}
 	writeBuf struct {
 		buf                []byte

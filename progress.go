@@ -114,7 +114,8 @@ func (p *Progress) AddBar(total int64, options ...BarOption) *Bar {
 // RemoveBar removes bar at any time.
 func (p *Progress) RemoveBar(b *Bar) bool {
 	result := make(chan bool, 1)
-	op := func(c *pConf) {
+	select {
+	case p.ops <- func(c *pConf) {
 		var ok bool
 		for i, bar := range c.bars {
 			if bar == b {
@@ -125,9 +126,7 @@ func (p *Progress) RemoveBar(b *Bar) bool {
 			}
 		}
 		result <- ok
-	}
-	select {
-	case p.ops <- op:
+	}:
 		return <-result
 	case <-p.quit:
 		return false
@@ -137,11 +136,10 @@ func (p *Progress) RemoveBar(b *Bar) bool {
 // BarCount returns bars count
 func (p *Progress) BarCount() int {
 	result := make(chan int, 1)
-	op := func(c *pConf) {
-		result <- len(c.bars)
-	}
 	select {
-	case p.ops <- op:
+	case p.ops <- func(c *pConf) {
+		result <- len(c.bars)
+	}:
 		return <-result
 	case <-p.quit:
 		return 0
