@@ -304,7 +304,7 @@ func (b *Bar) render(tw int, prependWs, appendWs *widthSync) <-chan *writeBuf {
 				close(ch)
 			}()
 			s.draw(tw, prependWs, appendWs)
-			ch <- &writeBuf{s.toBytes(), s.isFull()}
+			ch <- &writeBuf{s.toBytes(), s.completed}
 		}:
 		case <-b.done:
 			s := b.cacheState
@@ -334,23 +334,6 @@ func (s *state) updateTimePerItemEstimate(amount int, now, next time.Time) {
 	lastItemEstimate := float64(lastBlockTime) / float64(amount)
 	s.timePerItem = time.Duration((s.etaAlpha * lastItemEstimate) + (1-s.etaAlpha)*float64(s.timePerItem))
 	s.blockStartTime = next
-}
-
-func (s *state) isFull() bool {
-	if !s.completed {
-		return false
-	}
-	bar := s.bufB.Bytes()
-	var r rune
-	var n int
-	for i := 0; len(bar) > 0; i++ {
-		r, n = utf8.DecodeLastRune(bar)
-		bar = bar[:len(bar)-n]
-		if i == 1 {
-			break
-		}
-	}
-	return r == s.format[rFill]
 }
 
 func (s *state) draw(termWidth int, prependWs, appendWs *widthSync) {
