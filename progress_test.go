@@ -8,84 +8,36 @@ import (
 	"sync"
 	"testing"
 	"time"
-	"unicode/utf8"
 
 	"github.com/vbauerster/mpb"
 	"github.com/vbauerster/mpb/decor"
 )
 
-func TestDefaultWidth(t *testing.T) {
-	var buf bytes.Buffer
-	p := mpb.New(mpb.Output(&buf))
-	bar := p.AddBar(100, mpb.BarTrim())
-
-	for i := 0; i < 100; i++ {
-		bar.Incr(1)
-	}
-	p.Stop()
-
-	wantWidth := 80
-	gotWidth := utf8.RuneCount(buf.Bytes())
-	if gotWidth != wantWidth+1 { // + 1 for new line
-		t.Errorf("Expected default width: %d, got: %d\n", wantWidth, gotWidth)
-	}
-}
-
-func TestCustomWidth(t *testing.T) {
-	wantWidth := 60
-	var buf bytes.Buffer
-	p := mpb.New(mpb.WithWidth(wantWidth), mpb.Output(&buf))
-	bar := p.AddBar(100, mpb.BarTrim())
-
-	for i := 0; i < 100; i++ {
-		bar.Incr(1)
-	}
-	p.Stop()
-
-	gotWidth := utf8.RuneCount(buf.Bytes())
-	if gotWidth != wantWidth+1 { // +1 for new line
-		t.Errorf("Expected default width: %d, got: %d\n", wantWidth, gotWidth)
-	}
-}
-
 func TestAddBar(t *testing.T) {
-	var wg sync.WaitGroup
-	var buf bytes.Buffer
-	p := mpb.New(mpb.Output(&buf), mpb.WithWaitGroup(&wg))
+	p := mpb.New()
 
 	count := p.BarCount()
 	if count != 0 {
 		t.Errorf("BarCount want: %q, got: %q\n", 0, count)
 	}
 
-	numBars := 3
-	wg.Add(numBars)
-
-	for i := 0; i < numBars; i++ {
-		name := fmt.Sprintf("Bar#%d:", i)
-		bar := p.AddBar(100, mpb.PrependDecorators(decor.StaticName(name, len(name), 0)))
-
-		go func() {
-			defer wg.Done()
-			for i := 0; i < 100; i++ {
-				bar.Incr(1)
-			}
-		}()
-	}
+	bar := p.AddBar(100)
 
 	count = p.BarCount()
-	if count != numBars {
-		t.Errorf("BarCount want: %q, got: %q\n", numBars, count)
+	if count != 1 {
+		t.Errorf("BarCount want: %q, got: %q\n", 1, count)
 	}
+
+	bar.Complete()
 	p.Stop()
 }
 
 func TestRemoveBar(t *testing.T) {
 	p := mpb.New()
 
-	b := p.AddBar(10)
+	bar := p.AddBar(10)
 
-	if !p.RemoveBar(b) {
+	if !p.RemoveBar(bar) {
 		t.Error("RemoveBar failure")
 	}
 
@@ -93,6 +45,8 @@ func TestRemoveBar(t *testing.T) {
 	if count != 0 {
 		t.Errorf("BarCount want: %q, got: %q\n", 0, count)
 	}
+
+	bar.Complete()
 	p.Stop()
 }
 
@@ -153,24 +107,16 @@ func TestCustomFormat(t *testing.T) {
 	go func() {
 		for i := 0; i < 100; i++ {
 			time.Sleep(10 * time.Millisecond)
-			bar.Incr(1)
+			bar.Increment()
 		}
 	}()
 
-	time.Sleep(250 * time.Millisecond)
+	time.Sleep(300 * time.Millisecond)
 	close(cancel)
 	p.Stop()
 
-	bytes := removeLastRune(buf.Bytes())
-
-	seen := make(map[rune]bool)
-	for _, r := range string(bytes) {
-		if !seen[r] {
-			seen[r] = true
-		}
-	}
 	for _, r := range customFormat {
-		if !seen[r] {
+		if !bytes.ContainsRune(buf.Bytes(), r) {
 			t.Errorf("Rune %#U not found in bar\n", r)
 		}
 	}

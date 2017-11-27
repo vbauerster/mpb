@@ -187,20 +187,17 @@ func TestBarIncrWithReFill(t *testing.T) {
 	bar.ResumeFill(refillChar, int64(till))
 
 	for i := 0; i < total; i++ {
-		time.Sleep(10 * time.Millisecond)
-		bar.Incr(1)
+		bar.Increment()
 	}
 
 	p.Stop()
 
-	bytes := removeLastRune(buf.Bytes())
-
-	gotBar := string(bytes[len(bytes)-width:])
 	wantBar := fmt.Sprintf("[%s%s]",
 		strings.Repeat(string(refillChar), till-1),
 		strings.Repeat("=", total-till-1))
-	if gotBar != wantBar {
-		t.Errorf("Want bar: %s, got bar: %s\n", wantBar, gotBar)
+
+	if !strings.Contains(buf.String(), wantBar) {
+		t.Errorf("Want bar: %s, got bar: %s\n", wantBar, buf.String())
 	}
 }
 
@@ -235,16 +232,9 @@ func TestBarPanics(t *testing.T) {
 
 	p.Stop()
 
-	out := bytes.Split(removeLastRune(buf.Bytes()), []byte("\n"))
-	gotPanic := out[len(out)-1]
 	wantPanic = fmt.Sprintf("b#%02d panic: %v", 2, wantPanic)
 
-	if string(gotPanic) != wantPanic {
-		t.Errorf("Want: %q, got: %q\n", wantPanic, gotPanic)
+	if !strings.Contains(buf.String(), wantPanic) {
+		t.Errorf("Want: %q, got: %q\n", wantPanic, buf.String())
 	}
-}
-
-func removeLastRune(bytes []byte) []byte {
-	_, size := utf8.DecodeLastRune(bytes)
-	return bytes[:len(bytes)-size]
 }
