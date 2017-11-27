@@ -27,7 +27,7 @@ func WithWaitGroup(wg *sync.WaitGroup) ProgressOption {
 // WithWidth overrides default width 80
 func WithWidth(w int) ProgressOption {
 	return func(c *pConf) {
-		if w > 2 {
+		if w >= 0 {
 			c.width = w
 		}
 	}
