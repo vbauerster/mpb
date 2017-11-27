@@ -13,40 +13,35 @@ import (
 	"github.com/vbauerster/mpb/decor"
 )
 
-func TestBarSetWidth(t *testing.T) {
+func TestWithWidth(t *testing.T) {
+	cases := map[string]struct{ w, expected int }{
+		"WithWidth-1": {-1, 81},
+		"WithWidth0":  {0, 3},
+		"WithWidth1":  {1, 3},
+		"WithWidth2":  {2, 3},
+		"WithWidth3":  {3, 4},
+		"WithWidth60": {60, 61},
+	}
+
 	var buf bytes.Buffer
-	// overwrite default width 80
-	customWidth := 60
-	p := mpb.New(mpb.Output(&buf), mpb.WithWidth(customWidth))
-	bar := p.AddBar(100, mpb.BarTrim())
+	for k, tc := range cases {
+		buf.Reset()
+		p := mpb.New(
+			mpb.Output(&buf),
+			mpb.WithWidth(tc.w),
+		)
+		bar := p.AddBar(10, mpb.BarTrim())
 
-	for i := 0; i < 100; i++ {
-		bar.Incr(1)
-	}
+		for i := 0; i < 10; i++ {
+			bar.Increment()
+		}
 
-	p.Stop()
+		p.Stop()
 
-	gotWidth := len(buf.Bytes())
-	if gotWidth != customWidth+1 { // +1 for new line
-		t.Errorf("Expected width: %d, got: %d\n", customWidth, gotWidth)
-	}
-}
-
-func TestBarSetInvalidWidth(t *testing.T) {
-	var buf bytes.Buffer
-	p := mpb.New(mpb.Output(&buf), mpb.WithWidth(1))
-	bar := p.AddBar(100, mpb.BarTrim())
-
-	for i := 0; i < 100; i++ {
-		bar.Incr(1)
-	}
-
-	p.Stop()
-
-	wantWidth := 80
-	gotWidth := len(buf.Bytes())
-	if gotWidth != wantWidth+1 { // +1 for new line
-		t.Errorf("Expected width: %d, got: %d\n", wantWidth, gotWidth)
+		gotWidth := len(buf.Bytes())
+		if gotWidth != tc.expected {
+			t.Errorf("%s: Expected width: %d, got: %d\n", k, tc.expected, gotWidth)
+		}
 	}
 }
 
@@ -64,7 +59,7 @@ func TestBarFormat(t *testing.T) {
 	go func() {
 		for i := 0; i < 100; i++ {
 			time.Sleep(10 * time.Millisecond)
-			bar.Incr(1)
+			bar.Increment()
 		}
 	}()
 
