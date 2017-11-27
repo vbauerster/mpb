@@ -282,6 +282,9 @@ func newWidthSync(timeout <-chan struct{}, numBars, numColumn int) *widthSync {
 }
 
 func (p *pConf) writeAndFlush(tw, numP, numA int) (err error) {
+	if numP < 0 && numA < 0 {
+		return
+	}
 	if p.beforeRender != nil {
 		p.beforeRender(p.bars)
 	}
