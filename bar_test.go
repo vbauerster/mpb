@@ -38,7 +38,7 @@ func TestWithWidth(t *testing.T) {
 
 		p.Stop()
 
-		gotWidth := len(buf.Bytes())
+		gotWidth := utf8.RuneCount(buf.Bytes())
 		if gotWidth != tc.expected {
 			t.Errorf("%s: Expected width: %d, got: %d\n", k, tc.expected, gotWidth)
 		}

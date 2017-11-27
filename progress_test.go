@@ -48,23 +48,6 @@ func TestCustomWidth(t *testing.T) {
 	}
 }
 
-func TestInvalidWidth(t *testing.T) {
-	var buf bytes.Buffer
-	p := mpb.New(mpb.WithWidth(1), mpb.Output(&buf))
-	bar := p.AddBar(100, mpb.BarTrim())
-
-	for i := 0; i < 100; i++ {
-		bar.Incr(1)
-	}
-	p.Stop()
-
-	wantWidth := 80
-	gotWidth := utf8.RuneCount(buf.Bytes())
-	if gotWidth != wantWidth+1 { // +1 for new line
-		t.Errorf("Expected width: %d, got: %d\n", wantWidth, gotWidth)
-	}
-}
-
 func TestAddBar(t *testing.T) {
 	var wg sync.WaitGroup
 	var buf bytes.Buffer
