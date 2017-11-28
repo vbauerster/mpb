@@ -217,7 +217,7 @@ func (p *Progress) server(conf pConf) {
 			}
 		case <-winch:
 			tw, _, _ := cwriter.TermSize()
-			err := conf.writeAndFlush(tw-tw/6, numP, numA)
+			err := conf.writeAndFlush(tw-tw/8, numP, numA)
 			if err != nil {
 				fmt.Fprintln(os.Stderr, err)
 			}
