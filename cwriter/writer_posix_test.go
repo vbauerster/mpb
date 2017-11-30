@@ -10,7 +10,11 @@ import (
 	"github.com/vbauerster/mpb/cwriter"
 )
 
-var clearSequence = fmt.Sprintf("%c[%dA%c[2K\r", 27, 1, 27)
+var (
+	cursorUp           = fmt.Sprintf("%c[%dA", cwriter.ESC, 1)
+	clearLine          = fmt.Sprintf("%c[2K\r", cwriter.ESC)
+	clearCursorAndLine = cursorUp + clearLine
+)
 
 // TestWriterPosix by writing and flushing many times. The output buffer
 // must contain the clearCursor and clearLine sequences.
@@ -22,8 +26,8 @@ func TestWriterPosix(t *testing.T) {
 		input, expectedOutput string
 	}{
 		{input: "foo\n", expectedOutput: "foo\n"},
-		{input: "bar\n", expectedOutput: "foo\n" + clearSequence + "bar\n"},
-		{input: "fizz\n", expectedOutput: "foo\n" + clearSequence + "bar\n" + clearSequence + "fizz\n"},
+		{input: "bar\n", expectedOutput: "foo\n" + clearCursorAndLine + "bar\n"},
+		{input: "fizz\n", expectedOutput: "foo\n" + clearCursorAndLine + "bar\n" + clearCursorAndLine + "fizz\n"},
 	} {
 		t.Run(tcase.input, func(t *testing.T) {
 			w.Write([]byte(tcase.input))
