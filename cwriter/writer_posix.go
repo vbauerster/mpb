@@ -3,14 +3,15 @@
 package cwriter
 
 import (
-	"fmt"
+	"io"
 	"strings"
 	"syscall"
 	"unsafe"
 )
 
-func (w *Writer) clearLines() {
-	fmt.Fprint(w.out, strings.Repeat(clearCursorAndLine, w.lineCount))
+func (w *Writer) clearLines() error {
+	_, err := io.WriteString(w.out, strings.Repeat(clearCursorAndLine, w.lineCount))
+	return err
 }
 
 // TermSize returns the dimensions of the given terminal.

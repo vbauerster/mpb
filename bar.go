@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"strings"
 	"sync"
 	"time"
 	"unicode/utf8"
@@ -68,9 +69,9 @@ type (
 		char rune
 		till int64
 	}
-	writeBuf struct {
-		buf                []byte
-		completeAfterFlush bool
+	bufReader struct {
+		io.Reader
+		complete bool
 	}
 )
 
@@ -286,8 +287,8 @@ func (b *Bar) server(s state, wg *sync.WaitGroup, cancel <-chan struct{}) {
 	}
 }
 
-func (b *Bar) render(tw int, prependWs, appendWs *widthSync) <-chan *writeBuf {
-	ch := make(chan *writeBuf, 1)
+func (b *Bar) render(tw int, prependWs, appendWs *widthSync) <-chan *bufReader {
+	ch := make(chan *bufReader, 1)
 
 	go func() {
 		select {
@@ -299,34 +300,28 @@ func (b *Bar) render(tw int, prependWs, appendWs *widthSync) <-chan *writeBuf {
 					s.prependFuncs = nil
 					s.appendFuncs = nil
 
-					ch <- &writeBuf{[]byte(s.panic), true}
+					ch <- &bufReader{strings.NewReader(s.panic), true}
 				}
 				close(ch)
 			}()
 			s.draw(tw, prependWs, appendWs)
-			ch <- &writeBuf{s.toBytes(), s.completed}
+			ch <- &bufReader{io.MultiReader(s.bufP, s.bufB, s.bufA), s.completed}
 		}:
 		case <-b.done:
 			s := b.cacheState
-			var buf []byte
+			var r io.Reader
 			if s.panic != "" {
-				buf = []byte(s.panic)
+				r = strings.NewReader(s.panic)
 			} else {
 				s.draw(tw, prependWs, appendWs)
-				buf = s.toBytes()
+				r = io.MultiReader(s.bufP, s.bufB, s.bufA)
 			}
-			ch <- &writeBuf{buf, false}
+			ch <- &bufReader{r, false}
 			close(ch)
 		}
 	}()
 
 	return ch
-}
-
-func (s *state) toBytes() []byte {
-	buf := make([]byte, 0, s.bufP.Len()+s.bufB.Len()+s.bufA.Len())
-	buf = concatenateBlocks(buf, s.bufP.Bytes(), s.bufB.Bytes(), s.bufA.Bytes())
-	return buf
 }
 
 func (s *state) updateTimePerItemEstimate(amount int, now, next time.Time) {
@@ -431,13 +426,6 @@ func newStatistics(s *state) *decor.Statistics {
 		TimeElapsed:         s.timeElapsed,
 		TimePerItemEstimate: s.timePerItem,
 	}
-}
-
-func concatenateBlocks(buf []byte, blocks ...[]byte) []byte {
-	for _, block := range blocks {
-		buf = append(buf, block...)
-	}
-	return buf
 }
 
 func (s *state) updateFormat(format string) {

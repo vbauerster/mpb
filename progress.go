@@ -295,19 +295,19 @@ func (p *pConf) writeAndFlush(tw, numP, numA int) (err error) {
 	prependWs := newWidthSync(wSyncTimeout, len(p.bars), numP)
 	appendWs := newWidthSync(wSyncTimeout, len(p.bars), numA)
 
-	sequence := make([]<-chan *writeBuf, len(p.bars))
+	sequence := make([]<-chan *bufReader, len(p.bars))
 	for i, b := range p.bars {
 		sequence[i] = b.render(tw, prependWs, appendWs)
 	}
 
 	var i int
-	for b := range fanIn(sequence...) {
-		_, err = p.cw.Write(b.buf)
+	for r := range fanIn(sequence...) {
+		_, err = p.cw.ReadFrom(r)
 		defer func(bar *Bar, complete bool) {
 			if complete {
 				bar.Complete()
 			}
-		}(p.bars[i], b.completeAfterFlush)
+		}(p.bars[i], r.complete)
 		i++
 	}
 
@@ -321,8 +321,8 @@ func (p *pConf) writeAndFlush(tw, numP, numA int) (err error) {
 	return
 }
 
-func fanIn(inputs ...<-chan *writeBuf) <-chan *writeBuf {
-	ch := make(chan *writeBuf)
+func fanIn(inputs ...<-chan *bufReader) <-chan *bufReader {
+	ch := make(chan *bufReader)
 
 	go func() {
 		defer close(ch)
