@@ -63,8 +63,7 @@ type Progress struct {
 // New creates new Progress instance, which orchestrates bars rendering process.
 // Accepts mpb.ProgressOption funcs for customization.
 func New(options ...ProgressOption) *Progress {
-	// defaults
-	conf := pState{
+	s := &pState{
 		bars:   make([]*Bar, 0, 3),
 		width:  pwidth,
 		format: pformat,
@@ -75,17 +74,17 @@ func New(options ...ProgressOption) *Progress {
 	}
 
 	for _, opt := range options {
-		opt(&conf)
+		opt(s)
 	}
 
 	p := &Progress{
-		ewg:  conf.ewg,
+		ewg:  s.ewg,
 		wg:   new(sync.WaitGroup),
 		done: make(chan struct{}),
 		ops:  make(chan func(*pState)),
 		quit: make(chan struct{}),
 	}
-	go p.server(conf)
+	go p.server(s)
 	return p
 }
 
@@ -94,11 +93,11 @@ func (p *Progress) AddBar(total int64, options ...BarOption) *Bar {
 	p.wg.Add(1)
 	result := make(chan *Bar, 1)
 	select {
-	case p.ops <- func(c *pState) {
-		options = append(options, barWidth(c.width), barFormat(c.format))
-		b := newBar(c.idCounter, total, p.wg, c.cancel, options...)
-		c.bars = append(c.bars, b)
-		c.idCounter++
+	case p.ops <- func(s *pState) {
+		options = append(options, barWidth(s.width), barFormat(s.format))
+		b := newBar(s.idCounter, total, p.wg, s.cancel, options...)
+		s.bars = append(s.bars, b)
+		s.idCounter++
 		result <- b
 	}:
 		return <-result
@@ -111,12 +110,12 @@ func (p *Progress) AddBar(total int64, options ...BarOption) *Bar {
 func (p *Progress) RemoveBar(b *Bar) bool {
 	result := make(chan bool, 1)
 	select {
-	case p.ops <- func(c *pState) {
+	case p.ops <- func(s *pState) {
 		var ok bool
-		for i, bar := range c.bars {
+		for i, bar := range s.bars {
 			if bar == b {
 				bar.Complete()
-				c.bars = append(c.bars[:i], c.bars[i+1:]...)
+				s.bars = append(s.bars[:i], s.bars[i+1:]...)
 				ok = true
 				break
 			}
@@ -133,8 +132,8 @@ func (p *Progress) RemoveBar(b *Bar) bool {
 func (p *Progress) BarCount() int {
 	result := make(chan int, 1)
 	select {
-	case p.ops <- func(c *pState) {
-		result <- len(c.bars)
+	case p.ops <- func(s *pState) {
+		result <- len(s.bars)
 	}:
 		return <-result
 	case <-p.quit:

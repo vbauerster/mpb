@@ -10,7 +10,7 @@ import (
 	"github.com/vbauerster/mpb/cwriter"
 )
 
-func (p *Progress) server(s pState) {
+func (p *Progress) server(s *pState) {
 	defer func() {
 		if s.shutdownNotifier != nil {
 			close(s.shutdownNotifier)
@@ -23,7 +23,7 @@ func (p *Progress) server(s pState) {
 	for {
 		select {
 		case op := <-p.ops:
-			op(&s)
+			op(s)
 		case <-s.ticker.C:
 			if len(s.bars) == 0 {
 				runtime.Gosched()

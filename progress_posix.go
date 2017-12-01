@@ -13,7 +13,7 @@ import (
 	"github.com/vbauerster/mpb/cwriter"
 )
 
-func (p *Progress) server(s pState) {
+func (p *Progress) server(s *pState) {
 	winch := make(chan os.Signal, 1)
 	signal.Notify(winch, syscall.SIGWINCH)
 
@@ -34,7 +34,7 @@ func (p *Progress) server(s pState) {
 	for {
 		select {
 		case op := <-p.ops:
-			op(&s)
+			op(s)
 		case <-s.ticker.C:
 			if len(s.bars) == 0 {
 				runtime.Gosched()
