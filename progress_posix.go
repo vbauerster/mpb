@@ -13,13 +13,13 @@ import (
 	"github.com/vbauerster/mpb/cwriter"
 )
 
-func (p *Progress) server(conf pConf) {
+func (p *Progress) server(s pState) {
 	winch := make(chan os.Signal, 1)
 	signal.Notify(winch, syscall.SIGWINCH)
 
 	defer func() {
-		if conf.shutdownNotifier != nil {
-			close(conf.shutdownNotifier)
+		if s.shutdownNotifier != nil {
+			close(s.shutdownNotifier)
 		}
 		signal.Stop(winch)
 		close(p.done)
@@ -34,13 +34,13 @@ func (p *Progress) server(conf pConf) {
 	for {
 		select {
 		case op := <-p.ops:
-			op(&conf)
-		case <-conf.ticker.C:
-			if len(conf.bars) == 0 {
+			op(&s)
+		case <-s.ticker.C:
+			if len(s.bars) == 0 {
 				runtime.Gosched()
 				break
 			}
-			b0 := conf.bars[0]
+			b0 := s.bars[0]
 			if numP == -1 {
 				numP = b0.NumOfPrependers()
 			}
@@ -48,31 +48,31 @@ func (p *Progress) server(conf pConf) {
 				numA = b0.NumOfAppenders()
 			}
 			tw, _, _ := cwriter.TermSize()
-			err := conf.writeAndFlush(tw, numP, numA)
+			err := s.writeAndFlush(tw, numP, numA)
 			if err != nil {
 				fmt.Fprintln(os.Stderr, err)
 			}
 		case <-winch:
 			tw, _, _ := cwriter.TermSize()
-			err := conf.writeAndFlush(tw-tw/8, numP, numA)
+			err := s.writeAndFlush(tw-tw/8, numP, numA)
 			if err != nil {
 				fmt.Fprintln(os.Stderr, err)
 			}
 			if timer != nil && timer.Reset(resumeDelay) {
 				break
 			}
-			conf.ticker.Stop()
+			s.ticker.Stop()
 			timer = time.NewTimer(resumeDelay)
 			resumeTicker = timer.C
 		case <-resumeTicker:
-			conf.ticker = time.NewTicker(conf.rr)
+			s.ticker = time.NewTicker(s.rr)
 			resumeTicker = nil
-		case <-conf.cancel:
-			conf.ticker.Stop()
-			conf.cancel = nil
+		case <-s.cancel:
+			s.ticker.Stop()
+			s.cancel = nil
 		case <-p.quit:
-			if conf.cancel != nil {
-				conf.ticker.Stop()
+			if s.cancel != nil {
+				s.ticker.Stop()
 			}
 			return
 		}

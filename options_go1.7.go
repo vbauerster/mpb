@@ -5,9 +5,9 @@ package mpb
 import "context"
 
 func WithContext(ctx context.Context) ProgressOption {
-	return func(c *pConf) {
+	return func(s *pState) {
 		if ctx != nil {
-			c.cancel = ctx.Done()
+			s.cancel = ctx.Done()
 		}
 	}
 }

@@ -10,10 +10,10 @@ import (
 	"github.com/vbauerster/mpb/cwriter"
 )
 
-func (p *Progress) server(conf pConf) {
+func (p *Progress) server(s pState) {
 	defer func() {
-		if conf.shutdownNotifier != nil {
-			close(conf.shutdownNotifier)
+		if s.shutdownNotifier != nil {
+			close(s.shutdownNotifier)
 		}
 		close(p.done)
 	}()
@@ -23,13 +23,13 @@ func (p *Progress) server(conf pConf) {
 	for {
 		select {
 		case op := <-p.ops:
-			op(&conf)
-		case <-conf.ticker.C:
-			if len(conf.bars) == 0 {
+			op(&s)
+		case <-s.ticker.C:
+			if len(s.bars) == 0 {
 				runtime.Gosched()
 				break
 			}
-			b0 := conf.bars[0]
+			b0 := s.bars[0]
 			if numP == -1 {
 				numP = b0.NumOfPrependers()
 			}
@@ -37,16 +37,16 @@ func (p *Progress) server(conf pConf) {
 				numA = b0.NumOfAppenders()
 			}
 			tw, _, _ := cwriter.TermSize()
-			err := conf.writeAndFlush(tw, numP, numA)
+			err := s.writeAndFlush(tw, numP, numA)
 			if err != nil {
 				fmt.Fprintln(os.Stderr, err)
 			}
-		case <-conf.cancel:
-			conf.ticker.Stop()
-			conf.cancel = nil
+		case <-s.cancel:
+			s.ticker.Stop()
+			s.cancel = nil
 		case <-p.quit:
-			if conf.cancel != nil {
-				conf.ticker.Stop()
+			if s.cancel != nil {
+				s.ticker.Stop()
 			}
 			return
 		}

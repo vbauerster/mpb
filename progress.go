@@ -18,8 +18,8 @@ type (
 		Result []chan int
 	}
 
-	// progress config, fields are adjustable by user indirectly
-	pConf struct {
+	// progress state, which may contain several bars
+	pState struct {
 		bars []*Bar
 
 		idCounter    int
@@ -57,14 +57,14 @@ type Progress struct {
 	quit chan struct{}
 	// done channel is receiveable after p.server has been quit
 	done chan struct{}
-	ops  chan func(*pConf)
+	ops  chan func(*pState)
 }
 
 // New creates new Progress instance, which orchestrates bars rendering process.
 // Accepts mpb.ProgressOption funcs for customization.
 func New(options ...ProgressOption) *Progress {
 	// defaults
-	conf := pConf{
+	conf := pState{
 		bars:   make([]*Bar, 0, 3),
 		width:  pwidth,
 		format: pformat,
@@ -82,7 +82,7 @@ func New(options ...ProgressOption) *Progress {
 		ewg:  conf.ewg,
 		wg:   new(sync.WaitGroup),
 		done: make(chan struct{}),
-		ops:  make(chan func(*pConf)),
+		ops:  make(chan func(*pState)),
 		quit: make(chan struct{}),
 	}
 	go p.server(conf)
@@ -94,7 +94,7 @@ func (p *Progress) AddBar(total int64, options ...BarOption) *Bar {
 	p.wg.Add(1)
 	result := make(chan *Bar, 1)
 	select {
-	case p.ops <- func(c *pConf) {
+	case p.ops <- func(c *pState) {
 		options = append(options, barWidth(c.width), barFormat(c.format))
 		b := newBar(c.idCounter, total, p.wg, c.cancel, options...)
 		c.bars = append(c.bars, b)
@@ -111,7 +111,7 @@ func (p *Progress) AddBar(total int64, options ...BarOption) *Bar {
 func (p *Progress) RemoveBar(b *Bar) bool {
 	result := make(chan bool, 1)
 	select {
-	case p.ops <- func(c *pConf) {
+	case p.ops <- func(c *pState) {
 		var ok bool
 		for i, bar := range c.bars {
 			if bar == b {
@@ -133,7 +133,7 @@ func (p *Progress) RemoveBar(b *Bar) bool {
 func (p *Progress) BarCount() int {
 	result := make(chan int, 1)
 	select {
-	case p.ops <- func(c *pConf) {
+	case p.ops <- func(c *pState) {
 		result <- len(c.bars)
 	}:
 		return <-result
@@ -208,43 +208,43 @@ func newWidthSync(timeout <-chan struct{}, numBars, numColumn int) *widthSync {
 	return ws
 }
 
-func (p *pConf) writeAndFlush(tw, numP, numA int) (err error) {
+func (s *pState) writeAndFlush(tw, numP, numA int) (err error) {
 	if numP < 0 && numA < 0 {
 		return
 	}
-	if p.beforeRender != nil {
-		p.beforeRender(p.bars)
+	if s.beforeRender != nil {
+		s.beforeRender(s.bars)
 	}
 
 	wSyncTimeout := make(chan struct{})
-	time.AfterFunc(p.rr, func() {
+	time.AfterFunc(s.rr, func() {
 		close(wSyncTimeout)
 	})
 
-	prependWs := newWidthSync(wSyncTimeout, len(p.bars), numP)
-	appendWs := newWidthSync(wSyncTimeout, len(p.bars), numA)
+	prependWs := newWidthSync(wSyncTimeout, len(s.bars), numP)
+	appendWs := newWidthSync(wSyncTimeout, len(s.bars), numA)
 
-	sequence := make([]<-chan *bufReader, len(p.bars))
-	for i, b := range p.bars {
+	sequence := make([]<-chan *bufReader, len(s.bars))
+	for i, b := range s.bars {
 		sequence[i] = b.render(tw, prependWs, appendWs)
 	}
 
 	var i int
 	for r := range fanIn(sequence...) {
-		_, err = p.cw.ReadFrom(r)
+		_, err = s.cw.ReadFrom(r)
 		defer func(bar *Bar, complete bool) {
 			if complete {
 				bar.Complete()
 			}
-		}(p.bars[i], r.complete)
+		}(s.bars[i], r.complete)
 		i++
 	}
 
-	for _, interceptor := range p.interceptors {
-		interceptor(p.cw)
+	for _, interceptor := range s.interceptors {
+		interceptor(s.cw)
 	}
 
-	if e := p.cw.Flush(); err == nil {
+	if e := s.cw.Flush(); err == nil {
 		err = e
 	}
 	return

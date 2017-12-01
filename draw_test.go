@@ -117,8 +117,8 @@ func TestFillBar(t *testing.T) {
 	}
 }
 
-func newTestState() *state {
-	s := &state{
+func newTestState() *bState {
+	s := &bState{
 		trimLeftSpace:  true,
 		trimRightSpace: true,
 		bufP:           new(bytes.Buffer),

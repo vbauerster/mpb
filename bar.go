@@ -33,16 +33,16 @@ type Bar struct {
 	quit chan struct{}
 	// done channel is receiveable after b.server has been quit
 	done chan struct{}
-	ops  chan func(*state)
+	ops  chan func(*bState)
 
 	// following are used after b.done is receiveable
-	cacheState state
+	cacheState bState
 
 	once sync.Once
 }
 
 type (
-	state struct {
+	bState struct {
 		id               int
 		width            int
 		format           fmtRunes
@@ -80,7 +80,7 @@ func newBar(ID int, total int64, wg *sync.WaitGroup, cancel <-chan struct{}, opt
 		total = time.Now().Unix()
 	}
 
-	s := state{
+	s := bState{
 		id:        ID,
 		total:     total,
 		etaAlpha:  etaAlpha,
@@ -98,7 +98,7 @@ func newBar(ID int, total int64, wg *sync.WaitGroup, cancel <-chan struct{}, opt
 	b := &Bar{
 		quit: make(chan struct{}),
 		done: make(chan struct{}),
-		ops:  make(chan func(*state)),
+		ops:  make(chan func(*bState)),
 	}
 
 	go b.server(s, wg, cancel)
@@ -108,7 +108,7 @@ func newBar(ID int, total int64, wg *sync.WaitGroup, cancel <-chan struct{}, opt
 // RemoveAllPrependers removes all prepend functions
 func (b *Bar) RemoveAllPrependers() {
 	select {
-	case b.ops <- func(s *state) {
+	case b.ops <- func(s *bState) {
 		s.prependFuncs = nil
 	}:
 	case <-b.quit:
@@ -118,7 +118,7 @@ func (b *Bar) RemoveAllPrependers() {
 // RemoveAllAppenders removes all append functions
 func (b *Bar) RemoveAllAppenders() {
 	select {
-	case b.ops <- func(s *state) {
+	case b.ops <- func(s *bState) {
 		s.appendFuncs = nil
 	}:
 	case <-b.quit:
@@ -141,7 +141,7 @@ func (b *Bar) Incr(n int) {
 		return
 	}
 	select {
-	case b.ops <- func(s *state) {
+	case b.ops <- func(s *bState) {
 		next := time.Now()
 		if s.current == 0 {
 			s.startTime = next
@@ -172,7 +172,7 @@ func (b *Bar) ResumeFill(r rune, till int64) {
 		return
 	}
 	select {
-	case b.ops <- func(s *state) {
+	case b.ops <- func(s *bState) {
 		s.refill = &refill{r, till}
 	}:
 	case <-b.quit:
@@ -182,7 +182,7 @@ func (b *Bar) ResumeFill(r rune, till int64) {
 func (b *Bar) NumOfAppenders() int {
 	result := make(chan int, 1)
 	select {
-	case b.ops <- func(s *state) { result <- len(s.appendFuncs) }:
+	case b.ops <- func(s *bState) { result <- len(s.appendFuncs) }:
 		return <-result
 	case <-b.done:
 		return len(b.cacheState.appendFuncs)
@@ -192,7 +192,7 @@ func (b *Bar) NumOfAppenders() int {
 func (b *Bar) NumOfPrependers() int {
 	result := make(chan int, 1)
 	select {
-	case b.ops <- func(s *state) { result <- len(s.prependFuncs) }:
+	case b.ops <- func(s *bState) { result <- len(s.prependFuncs) }:
 		return <-result
 	case <-b.done:
 		return len(b.cacheState.prependFuncs)
@@ -203,7 +203,7 @@ func (b *Bar) NumOfPrependers() int {
 func (b *Bar) ID() int {
 	result := make(chan int, 1)
 	select {
-	case b.ops <- func(s *state) { result <- s.id }:
+	case b.ops <- func(s *bState) { result <- s.id }:
 		return <-result
 	case <-b.done:
 		return b.cacheState.id
@@ -213,7 +213,7 @@ func (b *Bar) ID() int {
 func (b *Bar) Current() int64 {
 	result := make(chan int64, 1)
 	select {
-	case b.ops <- func(s *state) { result <- s.current }:
+	case b.ops <- func(s *bState) { result <- s.current }:
 		return <-result
 	case <-b.done:
 		return b.cacheState.current
@@ -223,7 +223,7 @@ func (b *Bar) Current() int64 {
 func (b *Bar) Total() int64 {
 	result := make(chan int64, 1)
 	select {
-	case b.ops <- func(s *state) { result <- s.total }:
+	case b.ops <- func(s *bState) { result <- s.total }:
 		return <-result
 	case <-b.done:
 		return b.cacheState.total
@@ -235,7 +235,7 @@ func (b *Bar) Total() int64 {
 // Also you may consider providing your drop ratio via BarDropRatio BarOption func.
 func (b *Bar) SetTotal(total int64, final bool) {
 	select {
-	case b.ops <- func(s *state) {
+	case b.ops <- func(s *bState) {
 		s.total = total
 		s.dynamic = !final
 	}:
@@ -266,7 +266,7 @@ func (b *Bar) shutdown() {
 	close(b.quit)
 }
 
-func (b *Bar) server(s state, wg *sync.WaitGroup, cancel <-chan struct{}) {
+func (b *Bar) server(s bState, wg *sync.WaitGroup, cancel <-chan struct{}) {
 	defer func() {
 		b.cacheState = s
 		close(b.done)
@@ -292,7 +292,7 @@ func (b *Bar) render(tw int, prependWs, appendWs *widthSync) <-chan *bufReader {
 
 	go func() {
 		select {
-		case b.ops <- func(s *state) {
+		case b.ops <- func(s *bState) {
 			defer func() {
 				// recovering if external decorators panic
 				if p := recover(); p != nil {
@@ -324,14 +324,14 @@ func (b *Bar) render(tw int, prependWs, appendWs *widthSync) <-chan *bufReader {
 	return ch
 }
 
-func (s *state) updateTimePerItemEstimate(amount int, now, next time.Time) {
+func (s *bState) updateTimePerItemEstimate(amount int, now, next time.Time) {
 	lastBlockTime := now.Sub(s.blockStartTime)
 	lastItemEstimate := float64(lastBlockTime) / float64(amount)
 	s.timePerItem = time.Duration((s.etaAlpha * lastItemEstimate) + (1-s.etaAlpha)*float64(s.timePerItem))
 	s.blockStartTime = next
 }
 
-func (s *state) draw(termWidth int, prependWs, appendWs *widthSync) {
+func (s *bState) draw(termWidth int, prependWs, appendWs *widthSync) {
 	if termWidth <= 0 {
 		termWidth = s.width
 	}
@@ -374,7 +374,7 @@ func (s *state) draw(termWidth int, prependWs, appendWs *widthSync) {
 	s.bufA.WriteByte('\n')
 }
 
-func (s *state) fillBar(width int) {
+func (s *bState) fillBar(width int) {
 	s.bufB.Reset()
 	s.bufB.WriteRune(s.format[rLeft])
 	if width <= 2 {
@@ -415,7 +415,7 @@ func (s *state) fillBar(width int) {
 	s.bufB.WriteRune(s.format[rRight])
 }
 
-func newStatistics(s *state) *decor.Statistics {
+func newStatistics(s *bState) *decor.Statistics {
 	return &decor.Statistics{
 		ID:                  s.id,
 		Completed:           s.completed,
@@ -428,7 +428,7 @@ func newStatistics(s *state) *decor.Statistics {
 	}
 }
 
-func (s *state) updateFormat(format string) {
+func (s *bState) updateFormat(format string) {
 	for i, n := 0, 0; len(format) > 0; i++ {
 		s.format[i], n = utf8.DecodeRuneInString(format)
 		format = format[n:]
