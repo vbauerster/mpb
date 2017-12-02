@@ -75,13 +75,13 @@ type (
 	}
 )
 
-func newBar(ID int, total int64, wg *sync.WaitGroup, cancel <-chan struct{}, options ...BarOption) *Bar {
+func newBar(id int, total int64, wg *sync.WaitGroup, cancel <-chan struct{}, options ...BarOption) *Bar {
 	if total <= 0 {
 		total = time.Now().Unix()
 	}
 
 	s := &bState{
-		id:        ID,
+		id:        id,
 		total:     total,
 		etaAlpha:  etaAlpha,
 		dropRatio: 10,
@@ -179,6 +179,7 @@ func (b *Bar) ResumeFill(r rune, till int64) {
 	}
 }
 
+// NumOfAppenders returns current number of append decorators
 func (b *Bar) NumOfAppenders() int {
 	result := make(chan int, 1)
 	select {
@@ -189,6 +190,7 @@ func (b *Bar) NumOfAppenders() int {
 	}
 }
 
+// NumOfPrependers returns current number of prepend decorators
 func (b *Bar) NumOfPrependers() int {
 	result := make(chan int, 1)
 	select {
@@ -210,6 +212,7 @@ func (b *Bar) ID() int {
 	}
 }
 
+// Current returns bar's current number, in other words sum of all increments.
 func (b *Bar) Current() int64 {
 	result := make(chan int64, 1)
 	select {
@@ -220,6 +223,7 @@ func (b *Bar) Current() int64 {
 	}
 }
 
+// Total returns bar's total number.
 func (b *Bar) Total() int64 {
 	result := make(chan int64, 1)
 	select {

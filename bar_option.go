@@ -34,7 +34,7 @@ func BarTrimRight() BarOption {
 	}
 }
 
-// BarTirm trims both left and right spaces of the bar
+// BarTrim trims both left and right spaces of the bar
 func BarTrim() BarOption {
 	return func(s *bState) {
 		s.trimLeftSpace = true
