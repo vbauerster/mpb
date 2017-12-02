@@ -36,7 +36,7 @@ type Bar struct {
 	ops  chan func(*bState)
 
 	// following are used after b.done is receiveable
-	cacheState bState
+	cacheState *bState
 
 	once sync.Once
 }
@@ -80,7 +80,7 @@ func newBar(ID int, total int64, wg *sync.WaitGroup, cancel <-chan struct{}, opt
 		total = time.Now().Unix()
 	}
 
-	s := bState{
+	s := &bState{
 		id:        ID,
 		total:     total,
 		etaAlpha:  etaAlpha,
@@ -88,7 +88,7 @@ func newBar(ID int, total int64, wg *sync.WaitGroup, cancel <-chan struct{}, opt
 	}
 
 	for _, opt := range options {
-		opt(&s)
+		opt(s)
 	}
 
 	s.bufP = bytes.NewBuffer(make([]byte, 0, s.width/2))
@@ -266,7 +266,7 @@ func (b *Bar) shutdown() {
 	close(b.quit)
 }
 
-func (b *Bar) server(s bState, wg *sync.WaitGroup, cancel <-chan struct{}) {
+func (b *Bar) server(s *bState, wg *sync.WaitGroup, cancel <-chan struct{}) {
 	defer func() {
 		b.cacheState = s
 		close(b.done)
@@ -276,7 +276,7 @@ func (b *Bar) server(s bState, wg *sync.WaitGroup, cancel <-chan struct{}) {
 	for {
 		select {
 		case op := <-b.ops:
-			op(&s)
+			op(s)
 		case <-cancel:
 			s.aborted = true
 			cancel = nil
