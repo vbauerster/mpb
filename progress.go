@@ -142,7 +142,7 @@ func (p *Progress) BarCount() int {
 }
 
 // Stop is a way to gracefully shutdown mpb's rendering goroutine.
-// It is NOT for cancelation (use mpb.WithContext for cancelation purposes).
+// It is NOT for cancellation (use mpb.WithContext for cancellation purposes).
 // If *sync.WaitGroup has been provided via mpb.WithWaitGroup(), its Wait()
 // method will be called first.
 func (p *Progress) Stop() {
