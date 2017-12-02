@@ -135,7 +135,7 @@ func (b *Bar) Increment() {
 	b.Incr(1)
 }
 
-// Incr increments progress bar
+// Incr increments progress bar by amount of n
 func (b *Bar) Incr(n int) {
 	if n < 1 {
 		return
