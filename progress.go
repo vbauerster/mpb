@@ -10,7 +10,7 @@ import (
 )
 
 type (
-	// BeforeRender is a func, which gets called before render process
+	// BeforeRender is a func, which gets called before each rendering cycle
 	BeforeRender func([]*Bar)
 
 	widthSync struct {
