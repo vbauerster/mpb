@@ -111,40 +111,26 @@ own goroutine, therefore adding multiple bars is easy and safe:
 
 ![simple.gif](examples/gifs/simple.gif)
 
-The source code: [examples/simple/main.go](examples/simple/main.go)
-
-### Cancellation
+#### [Cancellation](examples/cancel/main.go)
 
 ![cancel.gif](examples/gifs/cancel.gif)
 
-The source code: [examples/cancel/main.go](examples/cancel/main.go)
-
-### Removing bar
+#### [Removing bar](examples/remove/main.go)
 
 ![remove.gif](examples/gifs/remove.gif)
 
-The source code: [examples/remove/main.go](examples/remove/main.go)
-
-### Sorting bars by progress
+#### [Sorting bars](examples/sort/main.go)
 
 ![sort.gif](examples/gifs/sort.gif)
 
-The source code: [examples/sort/main.go](examples/sort/main.go)
-
-### Resizing bars on terminal width change
+#### [Adaptive resize](examples/prependETA/main.go)
 
 ![resize.gif](examples/gifs/resize.gif)
 
-The source code: [examples/prependETA/main.go](examples/prependETA/main.go)
+_Note:_ don't expect much, it corrupts if resizing too fast.
 
-### Multiple io
+#### [Bytes counter decorator](examples/io/multiple/main.go)
 
 ![io-multiple.gif](examples/gifs/io-multiple.gif)
 
-The source code: [examples/io/multiple/main.go](examples/io/multiple/main.go)
-
-## License
-
-[BSD 3-Clause](https://opensource.org/licenses/BSD-3-Clause)
-
-The typeface used in screen shots: [Iosevka](https://be5invis.github.io/Iosevka)
+Typeface used in screen shots: [Iosevka](https://be5invis.github.io/Iosevka)
