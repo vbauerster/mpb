@@ -68,9 +68,7 @@ Following is the simplest use case:
 	p.Stop()
 ```
 
-Running [this](examples/singleBar/main.go), will produce:
-
-![gif](examples/gifs/single.gif)
+![single.gif](examples/gifs/single.gif)
 
 However **mpb** was designed with concurrency in mind. Each new bar renders in its
 own goroutine, therefore adding multiple bars is easy and safe:
