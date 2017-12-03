@@ -68,8 +68,6 @@ Following is the simplest use case:
 	p.Stop()
 ```
 
-![single.gif](examples/gifs/single.gif)
-
 However **mpb** was designed with concurrency in mind. Each new bar renders in its
 own goroutine, therefore adding multiple bars is easy and safe:
 
@@ -106,8 +104,6 @@ own goroutine, therefore adding multiple bars is easy and safe:
 	// and shutdown mpb's rendering goroutine
 	p.Stop()
 ```
-
-![simple.gif](examples/gifs/simple.gif)
 
 #### [Cancellation](examples/cancel/main.go)
 
