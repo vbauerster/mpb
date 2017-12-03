@@ -28,8 +28,7 @@ Note: it is preferable to go get from github.com, rather than gopkg.in. See issu
 
 ## Usage
 
-Following is the simplest use case:
-
+#### [Rendering single bar](examples/singleBar/main.go)
 ```go
 	p := mpb.New(
 		// override default (80) width
@@ -68,9 +67,7 @@ Following is the simplest use case:
 	p.Stop()
 ```
 
-However **mpb** was designed with concurrency in mind. Each new bar renders in its
-own goroutine, therefore adding multiple bars is easy and safe:
-
+#### [Rendering multiple bars](examples/simple/main.go)
 ```go
 	var wg sync.WaitGroup
 	p := mpb.New(mpb.WithWaitGroup(&wg))
