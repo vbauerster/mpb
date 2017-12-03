@@ -24,7 +24,7 @@
 go get github.com/vbauerster/mpb
 ```
 
-Note: it is preferable to go get from github.com, rather than gopkg.in. See issue [#11](https://github.com/vbauerster/mpb/issues/11).
+_Note:_ it is preferable to go get from github.com, rather than gopkg.in. See issue [#11](https://github.com/vbauerster/mpb/issues/11).
 
 ## Usage
 
