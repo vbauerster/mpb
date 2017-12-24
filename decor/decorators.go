@@ -85,6 +85,11 @@ func DynamicName(nameFn func(*Statistics) string, minWidth int, conf byte) Decor
 	}
 }
 
+// CountersNoUnit returns raw counters decorator
+func CountersNoUnit(pairFormat string, minWidth int, conf byte) DecoratorFunc {
+	return Counters(pairFormat, 0, minWidth, conf)
+}
+
 // Counters provides basic counters decorator.
 // pairFormat must contain two printf compatible verbs, like "%f" or "%d".
 // First verb substituted with Current, second one with Total. For example (assuming decor.Unit_KiB used):
