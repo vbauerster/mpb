@@ -90,6 +90,18 @@ func CountersNoUnit(pairFormat string, minWidth int, conf byte) DecoratorFunc {
 	return Counters(pairFormat, 0, minWidth, conf)
 }
 
+// CountersKibiByte returns human friendly byte counters decorator, where
+// counters unit is multiple by 1024.
+func CountersKibiByte(pairFormat string, minWidth int, conf byte) DecoratorFunc {
+	return Counters(pairFormat, Unit_KiB, minWidth, conf)
+}
+
+// CountersKiloByte returns human friendly byte counters decorator, where
+// counters unit is multiple by 1000.
+func CountersKiloByte(pairFormat string, minWidth int, conf byte) DecoratorFunc {
+	return Counters(pairFormat, Unit_kB, minWidth, conf)
+}
+
 // Counters provides basic counters decorator.
 // pairFormat must contain two printf compatible verbs, like "%f" or "%d".
 // First verb substituted with Current, second one with Total. For example (assuming decor.Unit_KiB used):
