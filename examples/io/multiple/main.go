@@ -62,7 +62,7 @@ func download(wg *sync.WaitGroup, p *mpb.Progress, name, url string) {
 	bar := p.AddBar(size,
 		mpb.PrependDecorators(
 			decor.StaticName(name, 0, 0),
-			decor.Counters("%6.1f / %6.1f", decor.Unit_KiB, 18, 0),
+			decor.CountersKibiByte("%6.1f / %6.1f", 18, 0),
 		),
 		mpb.AppendDecorators(decor.ETA(5, decor.DwidthSync)),
 	)

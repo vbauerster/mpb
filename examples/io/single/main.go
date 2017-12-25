@@ -40,7 +40,7 @@ func main() {
 
 	bar := p.AddBar(size,
 		mpb.PrependDecorators(
-			decor.Counters("%3s / %3s", decor.Unit_KiB, 18, 0),
+			decor.CountersKibiByte("% 6.1f / % 6.1f", 18, 0),
 		))
 
 	// create proxy reader
