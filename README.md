@@ -102,6 +102,10 @@ _Note:_ it is preferable to go get from github.com, rather than gopkg.in. See is
 	p.Stop()
 ```
 
+#### [Dynamic Total](examples/dynTotal/main.go)
+
+![dynTotal.gif](examples/gifs/dynTotal.gif)
+
 #### [Cancellation](examples/cancel/main.go)
 
 ![cancel.gif](examples/gifs/cancel.gif)
