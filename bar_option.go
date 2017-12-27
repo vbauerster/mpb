@@ -58,12 +58,20 @@ func BarEtaAlpha(a float64) BarOption {
 	}
 }
 
-// BarDropRatio sets drop ratio, default is 10. Effective when total is dynamic.
-// If progress tip reaches total, but total is not final value yet, tip will be
-// dropped by specified ratio.
-func BarDropRatio(ratio int64) BarOption {
+// BarDynamicTotal enables dynamic total behaviour.
+func BarDynamicTotal() BarOption {
 	return func(s *bState) {
-		s.dropRatio = ratio
+		s.dynamic = true
+	}
+}
+
+// BarAutoIncrTotal auto increment total by amount, when trigger percentage remained till bar completion.
+// In other words: say you've set trigger = 10, then auto increment will start after bar reaches 90 %.
+func BarAutoIncrTotal(trigger, amount int64) BarOption {
+	return func(s *bState) {
+		s.dynamic = true
+		s.totalAutoIncrTrigger = trigger
+		s.totalAutoIncrBy = amount
 	}
 }
 

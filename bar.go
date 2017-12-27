@@ -43,27 +43,28 @@ type Bar struct {
 
 type (
 	bState struct {
-		id               int
-		width            int
-		format           fmtRunes
-		etaAlpha         float64
-		total            int64
-		current          int64
-		dropRatio        int64
-		trimLeftSpace    bool
-		trimRightSpace   bool
-		completed        bool
-		aborted          bool
-		dynamic          bool
-		startTime        time.Time
-		timeElapsed      time.Duration
-		blockStartTime   time.Time
-		timePerItem      time.Duration
-		appendFuncs      []decor.DecoratorFunc
-		prependFuncs     []decor.DecoratorFunc
-		refill           *refill
-		bufP, bufB, bufA *bytes.Buffer
-		panic            string
+		id                   int
+		width                int
+		format               fmtRunes
+		etaAlpha             float64
+		total                int64
+		current              int64
+		totalAutoIncrTrigger int64
+		totalAutoIncrBy      int64
+		trimLeftSpace        bool
+		trimRightSpace       bool
+		completed            bool
+		aborted              bool
+		dynamic              bool
+		startTime            time.Time
+		timeElapsed          time.Duration
+		blockStartTime       time.Time
+		timePerItem          time.Duration
+		appendFuncs          []decor.DecoratorFunc
+		prependFuncs         []decor.DecoratorFunc
+		refill               *refill
+		bufP, bufB, bufA     *bytes.Buffer
+		panic                string
 	}
 	refill struct {
 		char rune
@@ -81,10 +82,10 @@ func newBar(id int, total int64, wg *sync.WaitGroup, cancel <-chan struct{}, opt
 	}
 
 	s := &bState{
-		id:        id,
-		total:     total,
-		etaAlpha:  etaAlpha,
-		dropRatio: 10,
+		id:                   id,
+		total:                total,
+		etaAlpha:             etaAlpha,
+		totalAutoIncrTrigger: 10,
 	}
 
 	for _, opt := range options {
@@ -153,8 +154,9 @@ func (b *Bar) Incr(n int) {
 		}
 		s.current += int64(n)
 		if s.dynamic {
-			for s.current >= s.total {
-				s.current -= s.current * s.dropRatio / 100
+			curp := decor.CalcPercentage(s.total, s.current, 100)
+			if 100-curp <= s.totalAutoIncrTrigger {
+				s.total += s.totalAutoIncrBy
 			}
 		} else if s.current >= s.total {
 			s.current = s.total
@@ -389,30 +391,32 @@ func (s *bState) fillBar(width int) {
 	// bar s.width without leftEnd and rightEnd runes
 	barWidth := width - 2
 
-	completedWidth := decor.CalcPercentage(s.total, s.current, barWidth)
+	completedWidth := decor.CalcPercentage(s.total, s.current, int64(barWidth))
 
 	if s.refill != nil {
-		till := decor.CalcPercentage(s.total, s.refill.till, barWidth)
+		till := decor.CalcPercentage(s.total, s.refill.till, int64(barWidth))
 		// append refill rune
-		for i := 0; i < till; i++ {
+		var i int64
+		for i = 0; i < till; i++ {
 			s.bufB.WriteRune(s.refill.char)
 		}
-		for i := till; i < completedWidth; i++ {
+		for i = till; i < completedWidth; i++ {
 			s.bufB.WriteRune(s.format[rFill])
 		}
 	} else {
-		for i := 0; i < completedWidth; i++ {
+		var i int64
+		for i = 0; i < completedWidth; i++ {
 			s.bufB.WriteRune(s.format[rFill])
 		}
 	}
 
-	if completedWidth < barWidth && completedWidth > 0 {
+	if completedWidth < int64(barWidth) && completedWidth > 0 {
 		_, size := utf8.DecodeLastRune(s.bufB.Bytes())
 		s.bufB.Truncate(s.bufB.Len() - size)
 		s.bufB.WriteRune(s.format[rTip])
 	}
 
-	for i := completedWidth; i < barWidth; i++ {
+	for i := completedWidth; i < int64(barWidth); i++ {
 		s.bufB.WriteRune(s.format[rEmpty])
 	}
 

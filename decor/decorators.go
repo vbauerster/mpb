@@ -204,7 +204,7 @@ func Percentage(minWidth int, conf byte) DecoratorFunc {
 	}
 }
 
-func CalcPercentage(total, current int64, width int) int {
+func CalcPercentage(total, current, width int64) int64 {
 	if total == 0 || current > total {
 		return 0
 	}
@@ -214,7 +214,7 @@ func CalcPercentage(total, current int64, width int) int {
 	// num = 2.34 will return 2
 	// num = 2.44 will return 3
 	if math.Max(diff, 0.6) == diff {
-		return int(num)
+		return int64(num)
 	}
-	return int(ceil)
+	return int64(ceil)
 }
