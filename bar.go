@@ -237,7 +237,6 @@ func (b *Bar) Total() int64 {
 
 // SetTotal sets total dynamically. The final param indicates the very last set,
 // in other words you should set it to true when total is determined.
-// Also you may consider providing your drop ratio via BarDropRatio BarOption func.
 func (b *Bar) SetTotal(total int64, final bool) {
 	select {
 	case b.ops <- func(s *bState) {
