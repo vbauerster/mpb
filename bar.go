@@ -82,10 +82,9 @@ func newBar(id int, total int64, wg *sync.WaitGroup, cancel <-chan struct{}, opt
 	}
 
 	s := &bState{
-		id:                   id,
-		total:                total,
-		etaAlpha:             etaAlpha,
-		totalAutoIncrTrigger: 10,
+		id:       id,
+		total:    total,
+		etaAlpha: etaAlpha,
 	}
 
 	for _, opt := range options {
