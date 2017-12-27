@@ -106,18 +106,6 @@ _Note:_ it is preferable to go get from github.com, rather than gopkg.in. See is
 
 ![dynTotal.gif](examples/gifs/dynTotal.gif)
 
-#### [Cancellation](examples/cancel/main.go)
-
-![cancel.gif](examples/gifs/cancel.gif)
-
-#### [Removing bar](examples/remove/main.go)
-
-![remove.gif](examples/gifs/remove.gif)
-
-#### [Sorting bars](examples/sort/main.go)
-
-![sort.gif](examples/gifs/sort.gif)
-
 #### [Adaptive resize](examples/prependETA/main.go)
 
 ![resize.gif](examples/gifs/resize.gif)
