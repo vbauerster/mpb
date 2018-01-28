@@ -51,14 +51,6 @@ func WithRefreshRate(d time.Duration) ProgressOption {
 	}
 }
 
-// WithBeforeRenderFunc provided BeforeRender func,
-// will be called before each render cycle.
-func WithBeforeRenderFunc(f BeforeRender) ProgressOption {
-	return func(s *pState) {
-		s.beforeRender = f
-	}
-}
-
 // WithCancel provide your cancel channel,
 // which you plan to close at some point.
 func WithCancel(ch <-chan struct{}) ProgressOption {

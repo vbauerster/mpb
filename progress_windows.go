@@ -10,7 +10,7 @@ import (
 	"github.com/vbauerster/mpb/cwriter"
 )
 
-func (p *Progress) server(s *pState) {
+func (p *Progress) serve(s *pState) {
 	defer func() {
 		if s.shutdownNotifier != nil {
 			close(s.shutdownNotifier)
@@ -22,14 +22,14 @@ func (p *Progress) server(s *pState) {
 
 	for {
 		select {
-		case op := <-p.ops:
+		case op := <-p.operateState:
 			op(s)
 		case <-s.ticker.C:
-			if len(s.bars) == 0 {
+			if s.bHeap.Len() == 0 {
 				runtime.Gosched()
 				break
 			}
-			b0 := s.bars[0]
+			b0 := (*s.bHeap)[0]
 			if numP == -1 {
 				numP = b0.NumOfPrependers()
 			}

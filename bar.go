@@ -29,13 +29,15 @@ type fmtRunes [formatLen]rune
 
 // Bar represents a progress Bar
 type Bar struct {
+	priority int
+	index    int
 	// quit channel to request b.server to quit
 	quit chan struct{}
 	// done channel is receiveable after b.server has been quit
-	done chan struct{}
-	ops  chan func(*bState)
+	done         chan struct{}
+	operateState chan func(*bState)
 
-	// following are used after b.done is receiveable
+	// cacheState is used after b.done is receiveable
 	cacheState *bState
 
 	once sync.Once
@@ -72,7 +74,7 @@ type (
 	}
 	bufReader struct {
 		io.Reader
-		complete bool
+		completed bool
 	}
 )
 
@@ -96,19 +98,20 @@ func newBar(id int, total int64, wg *sync.WaitGroup, cancel <-chan struct{}, opt
 	s.bufA = bytes.NewBuffer(make([]byte, 0, s.width/2))
 
 	b := &Bar{
-		quit: make(chan struct{}),
-		done: make(chan struct{}),
-		ops:  make(chan func(*bState)),
+		priority:     id,
+		quit:         make(chan struct{}),
+		done:         make(chan struct{}),
+		operateState: make(chan func(*bState)),
 	}
 
-	go b.server(s, wg, cancel)
+	go b.serve(s, wg, cancel)
 	return b
 }
 
 // RemoveAllPrependers removes all prepend functions
 func (b *Bar) RemoveAllPrependers() {
 	select {
-	case b.ops <- func(s *bState) {
+	case b.operateState <- func(s *bState) {
 		s.prependFuncs = nil
 	}:
 	case <-b.quit:
@@ -118,7 +121,7 @@ func (b *Bar) RemoveAllPrependers() {
 // RemoveAllAppenders removes all append functions
 func (b *Bar) RemoveAllAppenders() {
 	select {
-	case b.ops <- func(s *bState) {
+	case b.operateState <- func(s *bState) {
 		s.appendFuncs = nil
 	}:
 	case <-b.quit:
@@ -141,7 +144,7 @@ func (b *Bar) Incr(n int) {
 		return
 	}
 	select {
-	case b.ops <- func(s *bState) {
+	case b.operateState <- func(s *bState) {
 		next := time.Now()
 		if s.current == 0 {
 			s.startTime = next
@@ -173,7 +176,7 @@ func (b *Bar) ResumeFill(r rune, till int64) {
 		return
 	}
 	select {
-	case b.ops <- func(s *bState) {
+	case b.operateState <- func(s *bState) {
 		s.refill = &refill{r, till}
 	}:
 	case <-b.quit:
@@ -184,7 +187,7 @@ func (b *Bar) ResumeFill(r rune, till int64) {
 func (b *Bar) NumOfAppenders() int {
 	result := make(chan int, 1)
 	select {
-	case b.ops <- func(s *bState) { result <- len(s.appendFuncs) }:
+	case b.operateState <- func(s *bState) { result <- len(s.appendFuncs) }:
 		return <-result
 	case <-b.done:
 		return len(b.cacheState.appendFuncs)
@@ -195,7 +198,7 @@ func (b *Bar) NumOfAppenders() int {
 func (b *Bar) NumOfPrependers() int {
 	result := make(chan int, 1)
 	select {
-	case b.ops <- func(s *bState) { result <- len(s.prependFuncs) }:
+	case b.operateState <- func(s *bState) { result <- len(s.prependFuncs) }:
 		return <-result
 	case <-b.done:
 		return len(b.cacheState.prependFuncs)
@@ -206,7 +209,7 @@ func (b *Bar) NumOfPrependers() int {
 func (b *Bar) ID() int {
 	result := make(chan int, 1)
 	select {
-	case b.ops <- func(s *bState) { result <- s.id }:
+	case b.operateState <- func(s *bState) { result <- s.id }:
 		return <-result
 	case <-b.done:
 		return b.cacheState.id
@@ -217,7 +220,7 @@ func (b *Bar) ID() int {
 func (b *Bar) Current() int64 {
 	result := make(chan int64, 1)
 	select {
-	case b.ops <- func(s *bState) { result <- s.current }:
+	case b.operateState <- func(s *bState) { result <- s.current }:
 		return <-result
 	case <-b.done:
 		return b.cacheState.current
@@ -228,7 +231,7 @@ func (b *Bar) Current() int64 {
 func (b *Bar) Total() int64 {
 	result := make(chan int64, 1)
 	select {
-	case b.ops <- func(s *bState) { result <- s.total }:
+	case b.operateState <- func(s *bState) { result <- s.total }:
 		return <-result
 	case <-b.done:
 		return b.cacheState.total
@@ -239,7 +242,7 @@ func (b *Bar) Total() int64 {
 // in other words you should set it to true when total is determined.
 func (b *Bar) SetTotal(total int64, final bool) {
 	select {
-	case b.ops <- func(s *bState) {
+	case b.operateState <- func(s *bState) {
 		s.total = total
 		s.dynamic = !final
 	}:
@@ -270,7 +273,7 @@ func (b *Bar) shutdown() {
 	close(b.quit)
 }
 
-func (b *Bar) server(s *bState, wg *sync.WaitGroup, cancel <-chan struct{}) {
+func (b *Bar) serve(s *bState, wg *sync.WaitGroup, cancel <-chan struct{}) {
 	defer func() {
 		b.cacheState = s
 		close(b.done)
@@ -279,7 +282,7 @@ func (b *Bar) server(s *bState, wg *sync.WaitGroup, cancel <-chan struct{}) {
 
 	for {
 		select {
-		case op := <-b.ops:
+		case op := <-b.operateState:
 			op(s)
 		case <-cancel:
 			s.aborted = true
@@ -296,7 +299,7 @@ func (b *Bar) render(tw int, prependWs, appendWs *widthSync) <-chan *bufReader {
 
 	go func() {
 		select {
-		case b.ops <- func(s *bState) {
+		case b.operateState <- func(s *bState) {
 			defer func() {
 				// recovering if external decorators panic
 				if p := recover(); p != nil {

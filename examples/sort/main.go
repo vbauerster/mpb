@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"math/rand"
-	"sort"
 	"sync"
 	"time"
 
@@ -15,31 +14,9 @@ const (
 	maxBlockSize = 12
 )
 
-type barSlice []*mpb.Bar
-
-func (bs barSlice) Len() int { return len(bs) }
-
-func (bs barSlice) Less(i, j int) bool {
-	ip := decor.CalcPercentage(bs[i].Total(), bs[i].Current(), 100)
-	jp := decor.CalcPercentage(bs[j].Total(), bs[j].Current(), 100)
-	return ip < jp
-}
-
-func (bs barSlice) Swap(i, j int) { bs[i], bs[j] = bs[j], bs[i] }
-
-func sortByProgressFunc() mpb.BeforeRender {
-	return func(bars []*mpb.Bar) {
-		sort.Sort(sort.Reverse(barSlice(bars)))
-	}
-}
-
 func main() {
-
 	var wg sync.WaitGroup
-	p := mpb.New(
-		mpb.WithWaitGroup(&wg),
-		mpb.WithBeforeRenderFunc(sortByProgressFunc()),
-	)
+	p := mpb.New(mpb.WithWaitGroup(&wg))
 	total := 100
 	numBars := 3
 	wg.Add(numBars)
@@ -52,7 +29,7 @@ func main() {
 		b := p.AddBar(int64(total),
 			mpb.PrependDecorators(
 				decor.StaticName(name, 0, decor.DwidthSync),
-				decor.Counters("%d / %d", 0, 10, decor.DSyncSpace),
+				decor.CountersNoUnit("%d / %d", 10, decor.DSyncSpace),
 			),
 			mpb.AppendDecorators(
 				decor.ETA(3, 0),
@@ -60,11 +37,14 @@ func main() {
 		)
 		go func() {
 			defer wg.Done()
-			blockSize := rand.Intn(maxBlockSize) + 1
-			for i := 0; i < total; i++ {
-				sleep(blockSize)
-				b.Incr(1)
+			for blockSize, i := 0, 0; i < total; i++ {
 				blockSize = rand.Intn(maxBlockSize) + 1
+				if i&1 == 1 {
+					priority := total - int(b.Current())
+					p.UpdateBarPriority(b, priority)
+				}
+				b.Increment()
+				sleep(blockSize)
 			}
 		}()
 	}

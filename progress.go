@@ -1,40 +1,13 @@
 package mpb
 
 import (
+	"container/heap"
 	"io"
 	"os"
 	"sync"
 	"time"
 
 	"github.com/vbauerster/mpb/cwriter"
-)
-
-type (
-	// BeforeRender is a func, which gets called before each rendering cycle
-	BeforeRender func([]*Bar)
-
-	widthSync struct {
-		Listen []chan int
-		Result []chan int
-	}
-
-	// progress state, which may contain several bars
-	pState struct {
-		bars []*Bar
-
-		idCounter    int
-		width        int
-		format       string
-		rr           time.Duration
-		ewg          *sync.WaitGroup
-		cw           *cwriter.Writer
-		ticker       *time.Ticker
-		beforeRender BeforeRender
-		interceptors []func(io.Writer)
-
-		shutdownNotifier chan struct{}
-		cancel           <-chan struct{}
-	}
 )
 
 const (
@@ -56,15 +29,43 @@ type Progress struct {
 	// quit channel to request p.server to quit
 	quit chan struct{}
 	// done channel is receiveable after p.server has been quit
-	done chan struct{}
-	ops  chan func(*pState)
+	done         chan struct{}
+	operateState chan func(*pState)
 }
+
+type (
+	// progress state, which may contain several bars
+	pState struct {
+		bHeap        *priorityQueue
+		idCounter    int
+		width        int
+		format       string
+		rr           time.Duration
+		ewg          *sync.WaitGroup
+		cw           *cwriter.Writer
+		ticker       *time.Ticker
+		interceptors []func(io.Writer)
+
+		shutdownNotifier chan struct{}
+		cancel           <-chan struct{}
+	}
+	widthSync struct {
+		Listen []chan int
+		Result []chan int
+	}
+	renderedBar struct {
+		bar  *Bar
+		pipe <-chan *bufReader
+	}
+)
 
 // New creates new Progress instance, which orchestrates bars rendering process.
 // Accepts mpb.ProgressOption funcs for customization.
 func New(options ...ProgressOption) *Progress {
+	pq := make(priorityQueue, 0)
+	heap.Init(&pq)
 	s := &pState{
-		bars:   make([]*Bar, 0, 3),
+		bHeap:  &pq,
 		width:  pwidth,
 		format: pformat,
 		cw:     cwriter.New(os.Stdout),
@@ -78,13 +79,13 @@ func New(options ...ProgressOption) *Progress {
 	}
 
 	p := &Progress{
-		ewg:  s.ewg,
-		wg:   new(sync.WaitGroup),
-		done: make(chan struct{}),
-		ops:  make(chan func(*pState)),
-		quit: make(chan struct{}),
+		ewg:          s.ewg,
+		wg:           new(sync.WaitGroup),
+		done:         make(chan struct{}),
+		operateState: make(chan func(*pState)),
+		quit:         make(chan struct{}),
 	}
-	go p.server(s)
+	go p.serve(s)
 	return p
 }
 
@@ -93,10 +94,10 @@ func (p *Progress) AddBar(total int64, options ...BarOption) *Bar {
 	p.wg.Add(1)
 	result := make(chan *Bar, 1)
 	select {
-	case p.ops <- func(s *pState) {
+	case p.operateState <- func(s *pState) {
 		options = append(options, barWidth(s.width), barFormat(s.format))
 		b := newBar(s.idCounter, total, p.wg, s.cancel, options...)
-		s.bars = append(s.bars, b)
+		heap.Push(s.bHeap, b)
 		s.idCounter++
 		result <- b
 	}:
@@ -110,17 +111,9 @@ func (p *Progress) AddBar(total int64, options ...BarOption) *Bar {
 func (p *Progress) RemoveBar(b *Bar) bool {
 	result := make(chan bool, 1)
 	select {
-	case p.ops <- func(s *pState) {
-		var ok bool
-		for i, bar := range s.bars {
-			if bar == b {
-				bar.Complete()
-				s.bars = append(s.bars[:i], s.bars[i+1:]...)
-				ok = true
-				break
-			}
-		}
-		result <- ok
+	case p.operateState <- func(s *pState) {
+		b.Complete()
+		result <- heap.Remove(s.bHeap, b.index) != nil
 	}:
 		return <-result
 	case <-p.quit:
@@ -128,12 +121,23 @@ func (p *Progress) RemoveBar(b *Bar) bool {
 	}
 }
 
+// UpdateBarPriority provides a way to change bar's order position.
+// Zero is highest priority, i.e. bar will be on top.
+func (p *Progress) UpdateBarPriority(b *Bar, priority int) {
+	select {
+	case p.operateState <- func(s *pState) {
+		s.bHeap.update(b, priority)
+	}:
+	case <-p.quit:
+	}
+}
+
 // BarCount returns bars count
 func (p *Progress) BarCount() int {
 	result := make(chan int, 1)
 	select {
-	case p.ops <- func(s *pState) {
-		result <- len(s.bars)
+	case p.operateState <- func(s *pState) {
+		result <- s.bHeap.Len()
 	}:
 		return <-result
 	case <-p.quit:
@@ -211,32 +215,21 @@ func (s *pState) writeAndFlush(tw, numP, numA int) (err error) {
 	if numP < 0 && numA < 0 {
 		return
 	}
-	if s.beforeRender != nil {
-		s.beforeRender(s.bars)
-	}
 
 	wSyncTimeout := make(chan struct{})
 	time.AfterFunc(s.rr, func() {
 		close(wSyncTimeout)
 	})
 
-	prependWs := newWidthSync(wSyncTimeout, len(s.bars), numP)
-	appendWs := newWidthSync(wSyncTimeout, len(s.bars), numA)
+	prependWs := newWidthSync(wSyncTimeout, s.bHeap.Len(), numP)
+	appendWs := newWidthSync(wSyncTimeout, s.bHeap.Len(), numA)
 
-	sequence := make([]<-chan *bufReader, len(s.bars))
-	for i, b := range s.bars {
-		sequence[i] = b.render(tw, prependWs, appendWs)
-	}
-
-	var i int
-	for r := range fanIn(sequence...) {
+	for _, b := range s.renderByPriority(tw, prependWs, appendWs) {
+		r := <-b.pipe
 		_, err = s.cw.ReadFrom(r)
-		defer func(bar *Bar, complete bool) {
-			if complete {
-				bar.Complete()
-			}
-		}(s.bars[i], r.complete)
-		i++
+		if r.completed {
+			b.bar.Complete()
+		}
 	}
 
 	for _, interceptor := range s.interceptors {
@@ -249,17 +242,17 @@ func (s *pState) writeAndFlush(tw, numP, numA int) (err error) {
 	return
 }
 
-func fanIn(inputs ...<-chan *bufReader) <-chan *bufReader {
-	ch := make(chan *bufReader)
-
-	go func() {
-		defer close(ch)
-		for _, input := range inputs {
-			ch <- <-input
-		}
-	}()
-
-	return ch
+func (s *pState) renderByPriority(tw int, prependWs, appendWs *widthSync) []*renderedBar {
+	slice := make([]*renderedBar, 0, s.bHeap.Len())
+	for s.bHeap.Len() > 0 {
+		b := heap.Pop(s.bHeap).(*Bar)
+		defer heap.Push(s.bHeap, b)
+		slice = append(slice, &renderedBar{
+			bar:  b,
+			pipe: b.render(tw, prependWs, appendWs),
+		})
+	}
+	return slice
 }
 
 func max(slice []int) int {
