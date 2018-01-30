@@ -37,6 +37,7 @@ type (
 	// progress state, which may contain several bars
 	pState struct {
 		bHeap        *priorityQueue
+		heapUpdated  bool
 		idCounter    int
 		width        int
 		format       string
@@ -98,6 +99,7 @@ func (p *Progress) AddBar(total int64, options ...BarOption) *Bar {
 		options = append(options, barWidth(s.width), barFormat(s.format))
 		b := newBar(s.idCounter, total, p.wg, s.cancel, options...)
 		heap.Push(s.bHeap, b)
+		s.heapUpdated = true
 		s.idCounter++
 		result <- b
 	}:
@@ -112,8 +114,13 @@ func (p *Progress) RemoveBar(b *Bar) bool {
 	result := make(chan bool, 1)
 	select {
 	case p.operateState <- func(s *pState) {
-		b.Complete()
-		result <- heap.Remove(s.bHeap, b.index) != nil
+		if heap.Remove(s.bHeap, b.index) != nil {
+			s.heapUpdated = true
+			b.Complete()
+			result <- true
+		} else {
+			result <- false
+		}
 	}:
 		return <-result
 	case <-p.quit:
@@ -212,10 +219,6 @@ func newWidthSync(timeout <-chan struct{}, numBars, numColumn int) *widthSync {
 }
 
 func (s *pState) writeAndFlush(tw, numP, numA int) (err error) {
-	if numP < 0 && numA < 0 {
-		return
-	}
-
 	wSyncTimeout := make(chan struct{})
 	time.AfterFunc(s.rr, func() {
 		close(wSyncTimeout)

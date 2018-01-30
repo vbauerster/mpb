@@ -25,11 +25,10 @@ func (p *Progress) serve(s *pState) {
 		close(p.done)
 	}()
 
-	numP, numA := -1, -1
-
+	var numP, numA int
 	var timer *time.Timer
 	var resumeTicker <-chan time.Time
-	resumeDelay := 300 * time.Millisecond
+	resumeDelay := 320 * time.Millisecond
 
 	for {
 		select {
@@ -40,12 +39,10 @@ func (p *Progress) serve(s *pState) {
 				runtime.Gosched()
 				break
 			}
-			b0 := (*s.bHeap)[0]
-			if numP == -1 {
-				numP = b0.NumOfPrependers()
-			}
-			if numA == -1 {
-				numA = b0.NumOfAppenders()
+			if s.heapUpdated {
+				numP = s.bHeap.maxNumP()
+				numA = s.bHeap.maxNumA()
+				s.heapUpdated = false
 			}
 			tw, _, _ := cwriter.TermSize()
 			err := s.writeAndFlush(tw, numP, numA)
