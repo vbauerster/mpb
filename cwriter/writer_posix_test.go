@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/vbauerster/mpb/cwriter"
+	"github.com/curser100500/mpb/cwriter"
 )
 
 var (

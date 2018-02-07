@@ -1,6 +1,6 @@
 package mpb
 
-import "github.com/vbauerster/mpb/decor"
+import "github.com/curser100500/mpb/decor"
 
 // BarOption is a function option which changes the default behavior of a bar,
 // if passed to p.AddBar(int64, ...BarOption)

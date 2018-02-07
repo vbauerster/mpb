@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/vbauerster/mpb/cwriter"
+	"github.com/curser100500/mpb/cwriter"
 )
 
 const (
