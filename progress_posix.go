@@ -10,7 +10,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/vbauerster/mpb/cwriter"
+	"github.com/curser100500/mpb/cwriter"
 )
 
 func (p *Progress) serve(s *pState) {

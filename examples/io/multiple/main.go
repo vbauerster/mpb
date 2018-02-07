@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/vbauerster/mpb"
-	"github.com/vbauerster/mpb/decor"
+	"github.com/curser100500/mpb"
+	"github.com/curser100500/mpb/decor"
 )
 
 func main() {

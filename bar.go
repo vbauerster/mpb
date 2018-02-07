@@ -9,7 +9,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/vbauerster/mpb/decor"
+	"github.com/curser100500/mpb/decor"
 )
 
 const (
