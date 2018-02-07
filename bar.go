@@ -133,6 +133,34 @@ func (b *Bar) ProxyReader(r io.Reader) *Reader {
 	return &Reader{r, b}
 }
 
+// Set sets current progressbar value to n
+func (b *Bar) Set(n int) {
+	select {
+	case b.operateState <- func(s *bState) {
+		next := time.Now()
+		if s.current == 0 {
+			s.startTime = next
+			s.blockStartTime = next
+		} else {
+			now := time.Now()
+			s.updateTimePerItemEstimate(n, now, next)
+			s.timeElapsed = now.Sub(s.startTime)
+		}
+		s.current = int64(n)
+		if s.dynamic {
+			curp := decor.CalcPercentage(s.total, s.current, 100)
+			if 100-curp <= s.totalAutoIncrTrigger {
+				s.total += s.totalAutoIncrBy
+			}
+		} else if s.current >= s.total {
+			s.current = s.total
+			s.completed = true
+		}
+	}:
+	case <-b.quit:
+	}
+}
+
 // Increment shorthand for b.Incr(1)
 func (b *Bar) Increment() {
 	b.Incr(1)
