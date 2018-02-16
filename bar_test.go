@@ -61,7 +61,7 @@ func TestBarInProgress(t *testing.T) {
 		defer close(stopped)
 		for bar.InProgress() {
 			time.Sleep(10 * time.Millisecond)
-			bar.Incr(1)
+			bar.Increment()
 		}
 	}()
 
@@ -94,7 +94,7 @@ func TestBarGetID(t *testing.T) {
 			defer wg.Done()
 			for i := 0; i < 100; i++ {
 				time.Sleep(10 * time.Millisecond)
-				bar.Incr(1)
+				bar.Increment()
 			}
 		}(bars[i])
 	}

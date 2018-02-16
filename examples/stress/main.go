@@ -39,7 +39,7 @@ func main() {
 			blockSize := rand.Intn(maxBlockSize) + 1
 			for i := 0; i < total; i++ {
 				sleep(blockSize)
-				bar.Incr(1)
+				bar.Increment()
 				blockSize = rand.Intn(maxBlockSize) + 1
 			}
 		}()

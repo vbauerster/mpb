@@ -140,7 +140,7 @@ func TestInvalidFormatWidth(t *testing.T) {
 
 	for i := 0; i < 100; i++ {
 		time.Sleep(10 * time.Millisecond)
-		bar.Incr(1)
+		bar.Increment()
 	}
 
 	p.Stop()

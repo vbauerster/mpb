@@ -52,7 +52,7 @@ func main() {
 				default:
 				}
 				sleep(blockSize)
-				bar.Incr(1)
+				bar.Increment()
 				blockSize = rand.Intn(maxBlockSize) + 1
 			}
 		}()

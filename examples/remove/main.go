@@ -41,7 +41,7 @@ func main() {
 			blockSize := rand.Intn(maxBlockSize) + 1
 			for i := 0; i < total; i++ {
 				sleep(blockSize)
-				b.Incr(1)
+				b.Increment()
 				blockSize = rand.Intn(maxBlockSize) + 1
 				if b.ID() == 1 && i >= 42 {
 					p.RemoveBar(b)
