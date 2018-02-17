@@ -204,10 +204,14 @@ func Percentage(minWidth int, conf byte) DecoratorFunc {
 	}
 }
 
-func CalcPercentage(total, current, width int64) int64 {
-	if total == 0 || current > total {
+func CalcPercentage(total, current, width int64) (perc int64) {
+	if total <= 0 {
 		return 0
 	}
+	if current > total {
+		current = total
+	}
+
 	num := float64(width) * float64(current) / float64(total)
 	ceil := math.Ceil(num)
 	diff := ceil - num

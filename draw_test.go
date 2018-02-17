@@ -6,113 +6,194 @@ import (
 )
 
 func TestFillBar(t *testing.T) {
-	tests := []struct {
-		termWidth int
-		barWidth  int
-		total     int64
-		current   int64
-		barRefill *refill
-		want      string
+	// key is termWidth
+	testSuite := map[int]map[string]struct {
+		total, current int64
+		barWidth       int
+		barRefill      *refill
+		want           string
 	}{
-		{
-			termWidth: 2,
-			barWidth:  100,
-			want:      "[]",
+		100: {
+			"t,c,bw{100,100,0}": {
+				total:    100,
+				current:  0,
+				barWidth: 100,
+				want:     "[--------------------------------------------------------------------------------------------------]",
+			},
+			"t,c,bw{100,1,100}": {
+				total:    100,
+				current:  1,
+				barWidth: 100,
+				want:     "[>-------------------------------------------------------------------------------------------------]",
+			},
+			"t,c,bw{100,40,100}": {
+				total:    100,
+				current:  40,
+				barWidth: 100,
+				want:     "[======================================>-----------------------------------------------------------]",
+			},
+			"t,c,bw{100,40,100}refill{'+', 32}": {
+				total:     100,
+				current:   40,
+				barWidth:  100,
+				barRefill: &refill{'+', 32},
+				want:      "[+++++++++++++++++++++++++++++++=======>-----------------------------------------------------------]",
+			},
+			"t,c,bw{100,99,100}": {
+				total:    100,
+				current:  99,
+				barWidth: 100,
+				want:     "[================================================================================================>-]",
+			},
+			"t,c,bw{100,100,100}": {
+				total:    100,
+				current:  100,
+				barWidth: 100,
+				want:     "[==================================================================================================]",
+			},
 		},
-		{
-			termWidth: 3,
-			barWidth:  100,
-			total:     100,
-			current:   20,
-			want:      "[-]",
+		2: {
+			"t,c,bw{0,0,100}": {
+				barWidth: 100,
+				want:     "[]",
+			},
+			"t,c,bw{60,20,80}": {
+				total:    60,
+				current:  20,
+				barWidth: 80,
+				want:     "[]",
+			},
 		},
-		{
-			termWidth: 5,
-			barWidth:  100,
-			total:     100,
-			current:   20,
-			want:      "[>--]",
+		3: {
+			"t,c,bw{100,20,100}": {
+				total:    100,
+				current:  20,
+				barWidth: 100,
+				want:     "[-]",
+			},
+			"t,c,bw{100,98,100}": {
+				total:    100,
+				current:  98,
+				barWidth: 100,
+				want:     "[=]",
+			},
+			"t,c,bw{100,100,100}": {
+				total:    100,
+				current:  100,
+				barWidth: 100,
+				want:     "[=]",
+			},
 		},
-		{
-			termWidth: 6,
-			barWidth:  100,
-			total:     100,
-			current:   20,
-			want:      "[>---]",
+		5: {
+			"t,c,bw{100,20,100}": {
+				total:    100,
+				current:  20,
+				barWidth: 100,
+				want:     "[>--]",
+			},
+			"t,c,bw{100,98,100}": {
+				total:    100,
+				current:  98,
+				barWidth: 100,
+				want:     "[===]",
+			},
+			"t,c,bw{100,100,100}": {
+				total:    100,
+				current:  100,
+				barWidth: 100,
+				want:     "[===]",
+			},
 		},
-		{
-			termWidth: 20,
-			barWidth:  100,
-			total:     100,
-			current:   20,
-			want:      "[===>--------------]",
+		6: {
+			"t,c,bw{100,20,100}": {
+				total:    100,
+				current:  20,
+				barWidth: 100,
+				want:     "[>---]",
+			},
+			"t,c,bw{100,98,100}": {
+				total:    100,
+				current:  98,
+				barWidth: 100,
+				want:     "[====]",
+			},
+			"t,c,bw{100,100,100}": {
+				total:    100,
+				current:  100,
+				barWidth: 100,
+				want:     "[====]",
+			},
 		},
-		{
-			termWidth: 50,
-			barWidth:  100,
-			total:     100,
-			current:   20,
-			want:      "[=========>--------------------------------------]",
+		20: {
+			"t,c,bw{100,20,100}": {
+				total:    100,
+				current:  20,
+				barWidth: 100,
+				want:     "[===>--------------]",
+			},
+			"t,c,bw{100,60,100}": {
+				total:    100,
+				current:  60,
+				barWidth: 100,
+				want:     "[==========>-------]",
+			},
+			"t,c,bw{100,98,100}": {
+				total:    100,
+				current:  98,
+				barWidth: 100,
+				want:     "[==================]",
+			},
+			"t,c,bw{100,100,100}": {
+				total:    100,
+				current:  100,
+				barWidth: 100,
+				want:     "[==================]",
+			},
 		},
-		{
-			termWidth: 100,
-			barWidth:  100,
-			total:     100,
-			current:   0,
-			want:      "[--------------------------------------------------------------------------------------------------]",
-		},
-		{
-			termWidth: 100,
-			barWidth:  100,
-			total:     100,
-			current:   1,
-			want:      "[>-------------------------------------------------------------------------------------------------]",
-		},
-		{
-			termWidth: 100,
-			barWidth:  100,
-			total:     100,
-			current:   40,
-			want:      "[======================================>-----------------------------------------------------------]",
-		},
-		{
-			termWidth: 100,
-			barWidth:  100,
-			total:     100,
-			current:   40,
-			barRefill: &refill{'+', 32},
-			want:      "[+++++++++++++++++++++++++++++++=======>-----------------------------------------------------------]",
-		},
-		{
-			termWidth: 100,
-			barWidth:  100,
-			total:     100,
-			current:   99,
-			want:      "[================================================================================================>-]",
-		},
-		{
-			termWidth: 100,
-			barWidth:  100,
-			total:     100,
-			current:   100,
-			want:      "[==================================================================================================]",
+		50: {
+			"t,c,bw{100,20,100}": {
+				total:    100,
+				current:  20,
+				barWidth: 100,
+				want:     "[=========>--------------------------------------]",
+			},
+			"t,c,bw{100,60,100}": {
+				total:    100,
+				current:  60,
+				barWidth: 100,
+				want:     "[============================>-------------------]",
+			},
+			"t,c,bw{100,98,100}": {
+				total:    100,
+				current:  98,
+				barWidth: 100,
+				want:     "[==============================================>-]",
+			},
+			"t,c,bw{100,100,100}": {
+				total:    100,
+				current:  100,
+				barWidth: 100,
+				want:     "[================================================]",
+			},
 		},
 	}
 
 	prependWs := newWidthSync(nil, 1, 0)
 	appendWs := newWidthSync(nil, 1, 0)
-	for _, test := range tests {
-		s := newTestState()
-		s.width = test.barWidth
-		s.total = test.total
-		s.current = test.current
-		if test.barRefill != nil {
-			s.refill = test.barRefill
-		}
-		s.draw(test.termWidth, prependWs, appendWs)
-		got := s.bufB.String()
-		if got != test.want {
-			t.Errorf("Want: %q, Got: %q\n", test.want, got)
+	for termWidth, cases := range testSuite {
+		for name, tc := range cases {
+			s := newTestState()
+			s.width = tc.barWidth
+			s.total = tc.total
+			s.current = tc.current
+			if tc.barRefill != nil {
+				s.refill = tc.barRefill
+			}
+			s.draw(termWidth, prependWs, appendWs)
+			got := s.bufB.String()
+			if got != tc.want {
+				t.Errorf("termWidth %d; %s: want: %s %d, got: %s %d\n", termWidth, name, tc.want, len(tc.want), got, len(got))
+			}
 		}
 	}
 }
