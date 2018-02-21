@@ -12,7 +12,7 @@ import (
 
 const (
 	// default RefreshRate
-	prr = 100 * time.Millisecond
+	prr = 120 * time.Millisecond
 	// default width
 	pwidth = 80
 	// default format
