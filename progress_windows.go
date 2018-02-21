@@ -11,12 +11,6 @@ import (
 )
 
 func (p *Progress) serve(s *pState) {
-	defer func() {
-		if s.shutdownNotifier != nil {
-			close(s.shutdownNotifier)
-		}
-		close(p.done)
-	}()
 
 	var numP, numA int
 
@@ -42,10 +36,15 @@ func (p *Progress) serve(s *pState) {
 		case <-s.cancel:
 			s.ticker.Stop()
 			s.cancel = nil
+			// don't return here, p.Stop() must be called eventually
 		case <-p.quit:
 			if s.cancel != nil {
 				s.ticker.Stop()
 			}
+			if s.shutdownNotifier != nil {
+				close(s.shutdownNotifier)
+			}
+			close(p.quit)
 			return
 		}
 	}

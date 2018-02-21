@@ -26,11 +26,9 @@ type Progress struct {
 	// External wg
 	ewg *sync.WaitGroup
 
-	// quit channel to request p.server to quit
-	quit chan struct{}
-	// done channel is receiveable after p.server has been quit
-	done         chan struct{}
 	operateState chan func(*pState)
+	quit         chan struct{}
+	once         sync.Once
 }
 
 type (
@@ -82,7 +80,6 @@ func New(options ...ProgressOption) *Progress {
 	p := &Progress{
 		ewg:          s.ewg,
 		wg:           new(sync.WaitGroup),
-		done:         make(chan struct{}),
 		operateState: make(chan func(*pState)),
 		quit:         make(chan struct{}),
 	}
@@ -160,25 +157,14 @@ func (p *Progress) Stop() {
 	if p.ewg != nil {
 		p.ewg.Wait()
 	}
-	select {
-	case <-p.quit:
-		return
-	default:
-		// wait for all bars to quit
-		p.wg.Wait()
-		// request p.server to quit
-		p.quitRequest()
-		// wait for p.server to quit
-		<-p.done
-	}
+	// wait for all bars to quit
+	p.wg.Wait()
+	p.once.Do(p.shutdown)
 }
 
-func (p *Progress) quitRequest() {
-	select {
-	case <-p.quit:
-	default:
-		close(p.quit)
-	}
+func (p *Progress) shutdown() {
+	p.quit <- struct{}{}
+	<-p.quit
 }
 
 func newWidthSync(timeout <-chan struct{}, numBars, numColumn int) *widthSync {

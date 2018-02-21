@@ -31,16 +31,13 @@ type fmtRunes [formatLen]rune
 type Bar struct {
 	priority int
 	index    int
-	// quit channel to request b.server to quit
-	quit chan struct{}
-	// done channel is receiveable after b.server has been quit
-	done         chan struct{}
+
 	operateState chan func(*bState)
+	quit         chan struct{}
+	once         sync.Once
 
 	// cacheState is used after b.done is receiveable
 	cacheState *bState
-
-	once sync.Once
 }
 
 type (
@@ -99,9 +96,8 @@ func newBar(id int, total int64, wg *sync.WaitGroup, cancel <-chan struct{}, opt
 
 	b := &Bar{
 		priority:     id,
-		quit:         make(chan struct{}),
-		done:         make(chan struct{}),
 		operateState: make(chan func(*bState)),
+		quit:         make(chan struct{}),
 	}
 
 	go b.serve(s, wg, cancel)
@@ -194,7 +190,7 @@ func (b *Bar) NumOfAppenders() int {
 	select {
 	case b.operateState <- func(s *bState) { result <- len(s.appendFuncs) }:
 		return <-result
-	case <-b.done:
+	case <-b.quit:
 		return len(b.cacheState.appendFuncs)
 	}
 }
@@ -205,7 +201,7 @@ func (b *Bar) NumOfPrependers() int {
 	select {
 	case b.operateState <- func(s *bState) { result <- len(s.prependFuncs) }:
 		return <-result
-	case <-b.done:
+	case <-b.quit:
 		return len(b.cacheState.prependFuncs)
 	}
 }
@@ -216,7 +212,7 @@ func (b *Bar) ID() int {
 	select {
 	case b.operateState <- func(s *bState) { result <- s.id }:
 		return <-result
-	case <-b.done:
+	case <-b.quit:
 		return b.cacheState.id
 	}
 }
@@ -227,7 +223,7 @@ func (b *Bar) Current() int64 {
 	select {
 	case b.operateState <- func(s *bState) { result <- s.current }:
 		return <-result
-	case <-b.done:
+	case <-b.quit:
 		return b.cacheState.current
 	}
 }
@@ -238,7 +234,7 @@ func (b *Bar) Total() int64 {
 	select {
 	case b.operateState <- func(s *bState) { result <- s.total }:
 		return <-result
-	case <-b.done:
+	case <-b.quit:
 		return b.cacheState.total
 	}
 }
@@ -275,15 +271,12 @@ func (b *Bar) Complete() {
 }
 
 func (b *Bar) shutdown() {
-	close(b.quit)
+	b.quit <- struct{}{}
+	<-b.quit
 }
 
 func (b *Bar) serve(s *bState, wg *sync.WaitGroup, cancel <-chan struct{}) {
-	defer func() {
-		b.cacheState = s
-		close(b.done)
-		wg.Done()
-	}()
+	defer wg.Done()
 
 	for {
 		select {
@@ -292,8 +285,10 @@ func (b *Bar) serve(s *bState, wg *sync.WaitGroup, cancel <-chan struct{}) {
 		case <-cancel:
 			s.aborted = true
 			cancel = nil
-			b.Complete()
+			go b.Complete()
 		case <-b.quit:
+			b.cacheState = s
+			close(b.quit)
 			return
 		}
 	}
@@ -319,7 +314,7 @@ func (b *Bar) render(tw int, prependWs, appendWs *widthSync) <-chan *bufReader {
 			s.draw(tw, prependWs, appendWs)
 			ch <- &bufReader{io.MultiReader(s.bufP, s.bufB, s.bufA), s.completed}
 		}:
-		case <-b.done:
+		case <-b.quit:
 			s := b.cacheState
 			var r io.Reader
 			if s.panic != "" {
