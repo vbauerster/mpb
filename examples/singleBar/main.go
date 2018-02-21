@@ -42,6 +42,6 @@ func main() {
 		time.Sleep(time.Duration(rand.Intn(10)+1) * time.Second / 100)
 		bar.Increment()
 	}
-
+	// Gracefully shutdown mpb's monitor goroutine
 	p.Stop()
 }

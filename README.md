@@ -63,7 +63,7 @@ _Note:_ it is preferable to go get from github.com, rather than gopkg.in. See is
 		time.Sleep(time.Duration(rand.Intn(10)+1) * time.Second / 100)
 		bar.Increment()
 	}
-
+	// Gracefully shutdown mpb's monitor goroutine
 	p.Stop()
 ```
 
