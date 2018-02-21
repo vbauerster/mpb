@@ -14,8 +14,8 @@ func main() {
 		mpb.WithWidth(100),
 		// override default "[=>-]" format
 		mpb.WithFormat("╢▌▌░╟"),
-		// override default 100ms refresh rate
-		mpb.WithRefreshRate(120*time.Millisecond),
+		// override default 120ms refresh rate
+		mpb.WithRefreshRate(100*time.Millisecond),
 	)
 
 	total := 100

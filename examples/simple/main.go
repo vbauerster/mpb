@@ -39,7 +39,6 @@ func main() {
 			}
 		}()
 	}
-	// Wait for incr loop goroutines to finish,
-	// and shutdown mpb's rendering goroutine
+	// Gracefully shutdown mpb's monitor goroutine
 	p.Stop()
 }

@@ -35,8 +35,8 @@ _Note:_ it is preferable to go get from github.com, rather than gopkg.in. See is
 		mpb.WithWidth(100),
 		// override default "[=>-]" format
 		mpb.WithFormat("╢▌▌░╟"),
-		// override default 100ms refresh rate
-		mpb.WithRefreshRate(120*time.Millisecond),
+		// override default 120ms refresh rate
+		mpb.WithRefreshRate(100*time.Millisecond),
 	)
 
 	total := 100
@@ -97,8 +97,7 @@ _Note:_ it is preferable to go get from github.com, rather than gopkg.in. See is
 			}
 		}()
 	}
-	// Wait for incr loop goroutines to finish,
-	// and shutdown mpb's rendering goroutine
+	// Gracefully shutdown mpb's monitor goroutine
 	p.Stop()
 ```
 

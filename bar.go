@@ -36,7 +36,7 @@ type Bar struct {
 	quit         chan struct{}
 	once         sync.Once
 
-	// cacheState is used after b.done is receiveable
+	// cacheState is used after quit is closed
 	cacheState *bState
 }
 
