@@ -25,14 +25,14 @@ func main() {
 	for i, url := range [...]string{url1, url2} {
 		wg.Add(1)
 		name := fmt.Sprintf("url%d:", i+1)
-		go download(&wg, p, name, url)
+		go download(&wg, p, name, url, i)
 	}
 
 	p.Stop()
 	fmt.Println("Finished")
 }
 
-func download(wg *sync.WaitGroup, p *mpb.Progress, name, url string) {
+func download(wg *sync.WaitGroup, p *mpb.Progress, name, url string, n int) {
 	defer wg.Done()
 	resp, err := http.Get(url)
 	if err != nil {
@@ -66,14 +66,16 @@ func download(wg *sync.WaitGroup, p *mpb.Progress, name, url string) {
 		),
 		mpb.AppendDecorators(decor.ETA(5, decor.DwidthSync)),
 	)
+	// Respect the order
+	p.UpdateBarPriority(bar, n)
 
 	// create proxy reader
 	reader := bar.ProxyReader(resp.Body)
 	// and copy from reader
 	_, err = io.Copy(dest, reader)
 
-	if closeErr := dest.Close(); err == nil {
-		err = closeErr
+	if e := dest.Close(); err == nil {
+		err = e
 	}
 	if err != nil {
 		log.Printf("%s: %v", name, err)
