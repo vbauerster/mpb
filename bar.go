@@ -262,22 +262,18 @@ func (b *Bar) InProgress() bool {
 	}
 }
 
-// Complete signals to the bar, that process has been completed.
-// You should call this method when total is unknown and you've reached the point
-// of process completion. If you don't call this method, it will be called
-// implicitly, upon p.Stop() call.
+// Complete stops bar's progress tracking, but not removes the bar.
+// If you need to remove, call Progress.RemoveBar(*Bar) instead.
 func (b *Bar) Complete() {
 	b.once.Do(b.shutdown)
+	<-b.quit
 }
 
 func (b *Bar) shutdown() {
 	b.quit <- struct{}{}
-	<-b.quit
 }
 
 func (b *Bar) serve(s *bState, wg *sync.WaitGroup, cancel <-chan struct{}) {
-	defer wg.Done()
-
 	for {
 		select {
 		case op := <-b.operateState:
@@ -289,6 +285,7 @@ func (b *Bar) serve(s *bState, wg *sync.WaitGroup, cancel <-chan struct{}) {
 		case <-b.quit:
 			b.cacheState = s
 			close(b.quit)
+			wg.Done()
 			return
 		}
 	}

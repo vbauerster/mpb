@@ -51,6 +51,38 @@ func TestRemoveBar(t *testing.T) {
 	p.Stop()
 }
 
+func TestRemoveBars(t *testing.T) {
+	p := mpb.New(mpb.Output(ioutil.Discard))
+
+	var wg sync.WaitGroup
+	bars := make([]*mpb.Bar, 3)
+	for i := 0; i < 3; i++ {
+		wg.Add(1)
+		b := p.AddBar(80)
+		bars[i] = b
+		go func() {
+			for i := 0; i < 80; i++ {
+				if i == 33 {
+					wg.Done()
+				}
+				b.Increment()
+				time.Sleep(randomDuration(80 * time.Millisecond))
+			}
+		}()
+	}
+
+	wg.Wait()
+	for i := 0; i < 3; i++ {
+		i := i
+		go func() {
+			if ok := p.RemoveBar(bars[i]); !ok {
+				t.Errorf("bar %d: remove failed\n", i)
+			}
+		}()
+	}
+	p.Stop()
+}
+
 func TestWithCancel(t *testing.T) {
 	var wg sync.WaitGroup
 	cancel := make(chan struct{})
@@ -79,7 +111,7 @@ func TestWithCancel(t *testing.T) {
 					return
 				default:
 				}
-				time.Sleep(time.Duration(rand.Intn(10)+1) * time.Second / 100)
+				time.Sleep(randomDuration(80 * time.Millisecond))
 				bar.Increment()
 			}
 		}()
@@ -107,16 +139,21 @@ func TestCustomFormat(t *testing.T) {
 		mpb.WithCancel(cancel),
 		mpb.WithFormat(customFormat),
 	)
-	bar := p.AddBar(100, mpb.BarTrim())
+	bar := p.AddBar(80, mpb.BarTrim())
 
+	var wg sync.WaitGroup
+	wg.Add(1)
 	go func() {
-		for i := 0; i < 100; i++ {
-			time.Sleep(10 * time.Millisecond)
+		for i := 0; i < 80; i++ {
+			if i == 33 {
+				wg.Done()
+			}
+			time.Sleep(randomDuration(80 * time.Millisecond))
 			bar.Increment()
 		}
 	}()
 
-	time.Sleep(300 * time.Millisecond)
+	wg.Wait()
 	close(cancel)
 	p.Stop()
 
@@ -139,7 +176,7 @@ func TestInvalidFormatWidth(t *testing.T) {
 	bar := p.AddBar(100, mpb.BarTrim())
 
 	for i := 0; i < 100; i++ {
-		time.Sleep(10 * time.Millisecond)
+		time.Sleep(randomDuration(40 * time.Millisecond))
 		bar.Increment()
 	}
 
@@ -150,4 +187,8 @@ func TestInvalidFormatWidth(t *testing.T) {
 	if !strings.Contains(got, want) {
 		t.Errorf("Expected format: %s, got %s\n", want, got)
 	}
+}
+
+func randomDuration(max time.Duration) time.Duration {
+	return time.Duration(rand.Intn(10)+1) * max / 10
 }

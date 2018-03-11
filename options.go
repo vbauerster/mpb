@@ -42,9 +42,12 @@ func WithFormat(format string) ProgressOption {
 	}
 }
 
-// WithRefreshRate overrides default 100ms refresh rate
+// WithRefreshRate overrides default 120ms refresh rate
 func WithRefreshRate(d time.Duration) ProgressOption {
 	return func(s *pState) {
+		if d < 10*time.Millisecond {
+			return
+		}
 		s.ticker.Stop()
 		s.ticker = time.NewTicker(d)
 		s.rr = d

@@ -38,13 +38,13 @@ func (p *Progress) serve(s *pState) {
 			s.cancel = nil
 			// don't return here, p.Stop() must be called eventually
 		case <-p.quit:
+			close(p.quit)
 			if s.cancel != nil {
 				s.ticker.Stop()
 			}
 			if s.shutdownNotifier != nil {
 				close(s.shutdownNotifier)
 			}
-			close(p.quit)
 			return
 		}
 	}

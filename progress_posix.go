@@ -61,6 +61,7 @@ func (p *Progress) serve(s *pState) {
 			s.cancel = nil
 			// don't return here, p.Stop() must be called eventually
 		case <-p.quit:
+			close(p.quit)
 			if s.cancel != nil {
 				s.ticker.Stop()
 			}
@@ -68,7 +69,6 @@ func (p *Progress) serve(s *pState) {
 				close(s.shutdownNotifier)
 			}
 			signal.Stop(winch)
-			close(p.quit)
 			return
 		}
 	}

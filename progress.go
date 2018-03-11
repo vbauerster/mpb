@@ -157,14 +157,14 @@ func (p *Progress) Stop() {
 	if p.ewg != nil {
 		p.ewg.Wait()
 	}
-	// wait for all bars to quit
+	// first wait for all bars to quit
 	p.wg.Wait()
 	p.once.Do(p.shutdown)
+	<-p.quit
 }
 
 func (p *Progress) shutdown() {
 	p.quit <- struct{}{}
-	<-p.quit
 }
 
 func newWidthSync(timeout <-chan struct{}, numBars, numColumn int) *widthSync {
@@ -206,7 +206,7 @@ func newWidthSync(timeout <-chan struct{}, numBars, numColumn int) *widthSync {
 
 func (s *pState) writeAndFlush(tw, numP, numA int) (err error) {
 	wSyncTimeout := make(chan struct{})
-	time.AfterFunc(s.rr, func() {
+	time.AfterFunc(s.rr-s.rr/12, func() {
 		close(wSyncTimeout)
 	})
 
