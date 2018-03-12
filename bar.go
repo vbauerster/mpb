@@ -264,7 +264,7 @@ func (b *Bar) InProgress() bool {
 	}
 }
 
-// Complete stops bar's progress tracking, but not removes the bar.
+// Complete stops bar's progress tracking, but doesn't remove the bar.
 // If you need to remove, call Progress.RemoveBar(*Bar) instead.
 func (b *Bar) Complete() {
 	b.once.Do(func() {
