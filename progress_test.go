@@ -14,6 +14,10 @@ import (
 	"github.com/vbauerster/mpb/decor"
 )
 
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
+
 func TestAddBar(t *testing.T) {
 	p := mpb.New()
 

@@ -17,10 +17,20 @@ func (p *Progress) serve(s *pState) {
 	winch := make(chan os.Signal, 1)
 	signal.Notify(winch, syscall.SIGWINCH)
 
+	defer func() {
+		s.ticker.Stop()
+		signal.Stop(winch)
+		p.cacheHeap = s.bHeap
+		close(p.done)
+		if s.shutdownNotifier != nil {
+			close(s.shutdownNotifier)
+		}
+	}()
+
 	var numP, numA int
 	var timer *time.Timer
 	var resumeTicker <-chan time.Time
-	resumeDelay := 320 * time.Millisecond
+	resumeDelay := 300 * time.Millisecond
 
 	for {
 		select {
@@ -57,18 +67,8 @@ func (p *Progress) serve(s *pState) {
 			s.ticker = time.NewTicker(s.rr)
 			resumeTicker = nil
 		case <-s.cancel:
-			s.ticker.Stop()
-			s.cancel = nil
-			// don't return here, p.Stop() must be called eventually
-		case <-p.quit:
-			close(p.quit)
-			if s.cancel != nil {
-				s.ticker.Stop()
-			}
-			if s.shutdownNotifier != nil {
-				close(s.shutdownNotifier)
-			}
-			signal.Stop(winch)
+			return
+		case <-p.shutdown:
 			return
 		}
 	}

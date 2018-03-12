@@ -12,6 +12,15 @@ import (
 
 func (p *Progress) serve(s *pState) {
 
+	defer func() {
+		s.ticker.Stop()
+		p.cacheHeap = s.bHeap
+		close(p.done)
+		if s.shutdownNotifier != nil {
+			close(s.shutdownNotifier)
+		}
+	}()
+
 	var numP, numA int
 
 	for {
@@ -34,17 +43,8 @@ func (p *Progress) serve(s *pState) {
 				fmt.Fprintln(os.Stderr, err)
 			}
 		case <-s.cancel:
-			s.ticker.Stop()
-			s.cancel = nil
-			// don't return here, p.Stop() must be called eventually
-		case <-p.quit:
-			close(p.quit)
-			if s.cancel != nil {
-				s.ticker.Stop()
-			}
-			if s.shutdownNotifier != nil {
-				close(s.shutdownNotifier)
-			}
+			return
+		case <-p.shutdown:
 			return
 		}
 	}

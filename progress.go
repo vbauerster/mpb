@@ -27,8 +27,11 @@ type Progress struct {
 	ewg *sync.WaitGroup
 
 	operateState chan func(*pState)
-	quit         chan struct{}
+	done         chan struct{}
+	shutdown     chan struct{}
 	once         sync.Once
+
+	cacheHeap *priorityQueue
 }
 
 type (
@@ -81,7 +84,8 @@ func New(options ...ProgressOption) *Progress {
 		ewg:          s.ewg,
 		wg:           new(sync.WaitGroup),
 		operateState: make(chan func(*pState)),
-		quit:         make(chan struct{}),
+		done:         make(chan struct{}),
+		shutdown:     make(chan struct{}),
 	}
 	go p.serve(s)
 	return p
@@ -101,8 +105,9 @@ func (p *Progress) AddBar(total int64, options ...BarOption) *Bar {
 		result <- b
 	}:
 		return <-result
-	case <-p.quit:
-		return new(Bar)
+	case <-p.done:
+		// fail early
+		return nil
 	}
 }
 
@@ -120,7 +125,7 @@ func (p *Progress) RemoveBar(b *Bar) bool {
 		}
 	}:
 		return <-result
-	case <-p.quit:
+	case <-p.done:
 		return false
 	}
 }
@@ -132,7 +137,7 @@ func (p *Progress) UpdateBarPriority(b *Bar, priority int) {
 	case p.operateState <- func(s *pState) {
 		s.bHeap.update(b, priority)
 	}:
-	case <-p.quit:
+	case <-p.done:
 	}
 }
 
@@ -144,8 +149,8 @@ func (p *Progress) BarCount() int {
 		result <- s.bHeap.Len()
 	}:
 		return <-result
-	case <-p.quit:
-		return 0
+	case <-p.done:
+		return p.cacheHeap.Len()
 	}
 }
 
@@ -159,12 +164,10 @@ func (p *Progress) Stop() {
 	}
 	// first wait for all bars to quit
 	p.wg.Wait()
-	p.once.Do(p.shutdown)
-	<-p.quit
-}
-
-func (p *Progress) shutdown() {
-	p.quit <- struct{}{}
+	p.once.Do(func() {
+		close(p.shutdown)
+	})
+	<-p.done
 }
 
 func newWidthSync(timeout <-chan struct{}, numBars, numColumn int) *widthSync {

@@ -33,10 +33,11 @@ type Bar struct {
 	index    int
 
 	operateState chan func(*bState)
-	quit         chan struct{}
+	done         chan struct{}
+	shutdown     chan struct{}
 	once         sync.Once
 
-	// cacheState is used after quit is closed
+	// cacheState is used after done is closed
 	cacheState *bState
 }
 
@@ -97,7 +98,8 @@ func newBar(id int, total int64, wg *sync.WaitGroup, cancel <-chan struct{}, opt
 	b := &Bar{
 		priority:     id,
 		operateState: make(chan func(*bState)),
-		quit:         make(chan struct{}),
+		done:         make(chan struct{}),
+		shutdown:     make(chan struct{}),
 	}
 
 	go b.serve(s, wg, cancel)
@@ -110,7 +112,7 @@ func (b *Bar) RemoveAllPrependers() {
 	case b.operateState <- func(s *bState) {
 		s.prependFuncs = nil
 	}:
-	case <-b.quit:
+	case <-b.done:
 	}
 }
 
@@ -120,7 +122,7 @@ func (b *Bar) RemoveAllAppenders() {
 	case b.operateState <- func(s *bState) {
 		s.appendFuncs = nil
 	}:
-	case <-b.quit:
+	case <-b.done:
 	}
 }
 
@@ -166,7 +168,7 @@ func (b *Bar) IncrBy(n int) {
 			s.completed = true
 		}
 	}:
-	case <-b.quit:
+	case <-b.done:
 	}
 }
 
@@ -180,7 +182,7 @@ func (b *Bar) ResumeFill(r rune, till int64) {
 	case b.operateState <- func(s *bState) {
 		s.refill = &refill{r, till}
 	}:
-	case <-b.quit:
+	case <-b.done:
 	}
 }
 
@@ -190,7 +192,7 @@ func (b *Bar) NumOfAppenders() int {
 	select {
 	case b.operateState <- func(s *bState) { result <- len(s.appendFuncs) }:
 		return <-result
-	case <-b.quit:
+	case <-b.done:
 		return len(b.cacheState.appendFuncs)
 	}
 }
@@ -201,7 +203,7 @@ func (b *Bar) NumOfPrependers() int {
 	select {
 	case b.operateState <- func(s *bState) { result <- len(s.prependFuncs) }:
 		return <-result
-	case <-b.quit:
+	case <-b.done:
 		return len(b.cacheState.prependFuncs)
 	}
 }
@@ -212,7 +214,7 @@ func (b *Bar) ID() int {
 	select {
 	case b.operateState <- func(s *bState) { result <- s.id }:
 		return <-result
-	case <-b.quit:
+	case <-b.done:
 		return b.cacheState.id
 	}
 }
@@ -223,7 +225,7 @@ func (b *Bar) Current() int64 {
 	select {
 	case b.operateState <- func(s *bState) { result <- s.current }:
 		return <-result
-	case <-b.quit:
+	case <-b.done:
 		return b.cacheState.current
 	}
 }
@@ -234,7 +236,7 @@ func (b *Bar) Total() int64 {
 	select {
 	case b.operateState <- func(s *bState) { result <- s.total }:
 		return <-result
-	case <-b.quit:
+	case <-b.done:
 		return b.cacheState.total
 	}
 }
@@ -247,7 +249,7 @@ func (b *Bar) SetTotal(total int64, final bool) {
 		s.total = total
 		s.dynamic = !final
 	}:
-	case <-b.quit:
+	case <-b.done:
 	}
 }
 
@@ -255,7 +257,7 @@ func (b *Bar) SetTotal(total int64, final bool) {
 // Can be used as condition in for loop
 func (b *Bar) InProgress() bool {
 	select {
-	case <-b.quit:
+	case <-b.done:
 		return false
 	default:
 		return true
@@ -265,27 +267,25 @@ func (b *Bar) InProgress() bool {
 // Complete stops bar's progress tracking, but not removes the bar.
 // If you need to remove, call Progress.RemoveBar(*Bar) instead.
 func (b *Bar) Complete() {
-	b.once.Do(b.shutdown)
-	<-b.quit
-}
-
-func (b *Bar) shutdown() {
-	b.quit <- struct{}{}
+	b.once.Do(func() {
+		close(b.shutdown)
+	})
 }
 
 func (b *Bar) serve(s *bState, wg *sync.WaitGroup, cancel <-chan struct{}) {
+	defer func() {
+		b.cacheState = s
+		close(b.done)
+		wg.Done()
+	}()
 	for {
 		select {
 		case op := <-b.operateState:
 			op(s)
 		case <-cancel:
 			s.aborted = true
-			cancel = nil
-			go b.Complete()
-		case <-b.quit:
-			b.cacheState = s
-			close(b.quit)
-			wg.Done()
+			return
+		case <-b.shutdown:
 			return
 		}
 	}
@@ -311,7 +311,7 @@ func (b *Bar) render(tw int, prependWs, appendWs *widthSync) <-chan *bufReader {
 			s.draw(tw, prependWs, appendWs)
 			ch <- &bufReader{io.MultiReader(s.bufP, s.bufB, s.bufA), s.completed}
 		}:
-		case <-b.quit:
+		case <-b.done:
 			s := b.cacheState
 			var r io.Reader
 			if s.panic != "" {
