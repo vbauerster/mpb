@@ -127,7 +127,7 @@ func testDecoratorConcurrently(t *testing.T, dfn decor.DecoratorFunc, testCases 
 			res[i] = make(chan string, 1)
 			go func(s step, ch chan string) {
 				defer wg.Done()
-				ch <- dfn(s.stat, ws.Listen[0], ws.Result[0])
+				ch <- dfn(s.stat, ws.Accumulator[0], ws.Distributor[0])
 			}(columnCase[i], res[i])
 		}
 		wg.Wait()

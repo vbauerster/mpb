@@ -51,9 +51,10 @@ type (
 		shutdownNotifier chan struct{}
 		cancel           <-chan struct{}
 	}
-	widthSync struct {
-		Listen []chan int
-		Result []chan int
+	widthSyncer struct {
+		// Public for easy testing
+		Accumulator []chan int
+		Distributor []chan int
 	}
 	toRenderSnapshot struct {
 		bar  *Bar
@@ -155,23 +156,23 @@ func (p *Progress) Stop() {
 	<-p.done
 }
 
-func newWidthSync(timeout <-chan struct{}, numBars, numColumn int) *widthSync {
-	ws := &widthSync{
-		Listen: make([]chan int, numColumn),
-		Result: make([]chan int, numColumn),
+func newWidthSyncer(timeout <-chan struct{}, numBars, numColumn int) *widthSyncer {
+	ws := &widthSyncer{
+		Accumulator: make([]chan int, numColumn),
+		Distributor: make([]chan int, numColumn),
 	}
 	for i := 0; i < numColumn; i++ {
-		ws.Listen[i] = make(chan int, numBars)
-		ws.Result[i] = make(chan int, numBars)
+		ws.Accumulator[i] = make(chan int, numBars)
+		ws.Distributor[i] = make(chan int, numBars)
 	}
 	for i := 0; i < numColumn; i++ {
-		go func(listenCh <-chan int, resultCh chan<- int) {
-			defer close(resultCh)
+		go func(accumulator <-chan int, discharger chan<- int) {
+			defer close(discharger)
 			widths := make([]int, 0, numBars)
 		loop:
 			for {
 				select {
-				case w := <-listenCh:
+				case w := <-accumulator:
 					widths = append(widths, w)
 					if len(widths) == numBars {
 						break loop
@@ -185,23 +186,22 @@ func newWidthSync(timeout <-chan struct{}, numBars, numColumn int) *widthSync {
 			}
 			result := max(widths)
 			for i := 0; i < len(widths); i++ {
-				resultCh <- result
+				discharger <- result
 			}
-		}(ws.Listen[i], ws.Result[i])
+		}(ws.Accumulator[i], ws.Distributor[i])
 	}
 	return ws
 }
 
 func (s *pState) writeAndFlush(tw, numP, numA int) (err error) {
-	wSyncTimeout := make(chan struct{})
+	timeout := make(chan struct{})
+	pSyncer := newWidthSyncer(timeout, s.bHeap.Len(), numP)
+	aSyncer := newWidthSyncer(timeout, s.bHeap.Len(), numA)
 	time.AfterFunc(s.rr-s.rr/12, func() {
-		close(wSyncTimeout)
+		close(timeout)
 	})
 
-	prependWs := newWidthSync(wSyncTimeout, s.bHeap.Len(), numP)
-	appendWs := newWidthSync(wSyncTimeout, s.bHeap.Len(), numA)
-
-	for _, trs := range s.renderByPriority(tw, prependWs, appendWs) {
+	for _, trs := range s.renderByPriority(tw, pSyncer, aSyncer) {
 		r := <-trs.pipe
 		_, err = s.cw.ReadFrom(r)
 		if !trs.bar.completed && r.toComplete {
@@ -223,14 +223,14 @@ func (s *pState) writeAndFlush(tw, numP, numA int) (err error) {
 	return
 }
 
-func (s *pState) renderByPriority(tw int, prependWs, appendWs *widthSync) []*toRenderSnapshot {
+func (s *pState) renderByPriority(tw int, pSyncer, aSyncer *widthSyncer) []*toRenderSnapshot {
 	slice := make([]*toRenderSnapshot, 0, s.bHeap.Len())
 	for s.bHeap.Len() > 0 {
 		b := heap.Pop(s.bHeap).(*Bar)
 		defer heap.Push(s.bHeap, b)
 		slice = append(slice, &toRenderSnapshot{
 			bar:  b,
-			pipe: b.render(tw, prependWs, appendWs),
+			pipe: b.render(tw, pSyncer, aSyncer),
 		})
 	}
 	return slice

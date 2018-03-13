@@ -9,14 +9,14 @@ type BarOption func(*bState)
 // AppendDecorators let you inject decorators to the bar's right side
 func AppendDecorators(appenders ...decor.DecoratorFunc) BarOption {
 	return func(s *bState) {
-		s.appendFuncs = append(s.appendFuncs, appenders...)
+		s.aDecorators = append(s.aDecorators, appenders...)
 	}
 }
 
 // PrependDecorators let you inject decorators to the bar's left side
 func PrependDecorators(prependers ...decor.DecoratorFunc) BarOption {
 	return func(s *bState) {
-		s.prependFuncs = append(s.prependFuncs, prependers...)
+		s.pDecorators = append(s.pDecorators, prependers...)
 	}
 }
 

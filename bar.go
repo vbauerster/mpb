@@ -62,8 +62,8 @@ type (
 		timeElapsed          time.Duration
 		blockStartTime       time.Time
 		timePerItem          time.Duration
-		appendFuncs          []decor.DecoratorFunc
-		prependFuncs         []decor.DecoratorFunc
+		aDecorators          []decor.DecoratorFunc
+		pDecorators          []decor.DecoratorFunc
 		refill               *refill
 		bufP, bufB, bufA     *bytes.Buffer
 		panicMsg             string
@@ -113,7 +113,7 @@ func newBar(id int, total int64, wg *sync.WaitGroup, cancel <-chan struct{}, opt
 func (b *Bar) RemoveAllPrependers() {
 	select {
 	case b.operateState <- func(s *bState) {
-		s.prependFuncs = nil
+		s.pDecorators = nil
 	}:
 	case <-b.done:
 	}
@@ -123,7 +123,7 @@ func (b *Bar) RemoveAllPrependers() {
 func (b *Bar) RemoveAllAppenders() {
 	select {
 	case b.operateState <- func(s *bState) {
-		s.appendFuncs = nil
+		s.aDecorators = nil
 	}:
 	case <-b.done:
 	}
@@ -196,10 +196,10 @@ func (b *Bar) ResumeFill(r rune, till int64) {
 func (b *Bar) NumOfAppenders() int {
 	result := make(chan int, 1)
 	select {
-	case b.operateState <- func(s *bState) { result <- len(s.appendFuncs) }:
+	case b.operateState <- func(s *bState) { result <- len(s.aDecorators) }:
 		return <-result
 	case <-b.done:
-		return len(b.cacheState.appendFuncs)
+		return len(b.cacheState.aDecorators)
 	}
 }
 
@@ -207,10 +207,10 @@ func (b *Bar) NumOfAppenders() int {
 func (b *Bar) NumOfPrependers() int {
 	result := make(chan int, 1)
 	select {
-	case b.operateState <- func(s *bState) { result <- len(s.prependFuncs) }:
+	case b.operateState <- func(s *bState) { result <- len(s.pDecorators) }:
 		return <-result
 	case <-b.done:
-		return len(b.cacheState.prependFuncs)
+		return len(b.cacheState.pDecorators)
 	}
 }
 
@@ -307,7 +307,7 @@ func (b *Bar) serve(s *bState, wg *sync.WaitGroup, cancel <-chan struct{}) {
 	}
 }
 
-func (b *Bar) render(tw int, prependWs, appendWs *widthSync) <-chan *toRenderReader {
+func (b *Bar) render(tw int, pSyncer, aSyncer *widthSyncer) <-chan *toRenderReader {
 	ch := make(chan *toRenderReader, 1)
 
 	go func() {
@@ -318,14 +318,14 @@ func (b *Bar) render(tw int, prependWs, appendWs *widthSync) <-chan *toRenderRea
 				// recovering if external decorators panic
 				if p := recover(); p != nil {
 					s.panicMsg = fmt.Sprintf("b#%02d panic: %v\n", s.id, p)
-					s.prependFuncs = nil
-					s.appendFuncs = nil
+					s.pDecorators = nil
+					s.aDecorators = nil
 					s.completed = true
 					r = strings.NewReader(s.panicMsg)
 				}
 				ch <- &toRenderReader{r, s.completed, s.removed}
 			}()
-			s.draw(tw, prependWs, appendWs)
+			s.draw(tw, pSyncer, aSyncer)
 			r = io.MultiReader(s.bufP, s.bufB, s.bufA)
 		}:
 		case <-b.done:
@@ -334,7 +334,7 @@ func (b *Bar) render(tw int, prependWs, appendWs *widthSync) <-chan *toRenderRea
 			if s.panicMsg != "" {
 				r = strings.NewReader(s.panicMsg)
 			} else {
-				s.draw(tw, prependWs, appendWs)
+				s.draw(tw, pSyncer, aSyncer)
 				r = io.MultiReader(s.bufP, s.bufB, s.bufA)
 			}
 			ch <- &toRenderReader{r, s.completed, s.removed}
@@ -351,7 +351,7 @@ func (s *bState) updateTimePerItemEstimate(amount int, now, next time.Time) {
 	s.blockStartTime = next
 }
 
-func (s *bState) draw(termWidth int, prependWs, appendWs *widthSync) {
+func (s *bState) draw(termWidth int, pSyncer, aSyncer *widthSyncer) {
 	if termWidth <= 0 {
 		termWidth = s.width
 	}
@@ -360,8 +360,8 @@ func (s *bState) draw(termWidth int, prependWs, appendWs *widthSync) {
 
 	// render prepend functions to the left of the bar
 	s.bufP.Reset()
-	for i, f := range s.prependFuncs {
-		s.bufP.WriteString(f(stat, prependWs.Listen[i], prependWs.Result[i]))
+	for i, f := range s.pDecorators {
+		s.bufP.WriteString(f(stat, pSyncer.Accumulator[i], pSyncer.Distributor[i]))
 	}
 
 	if !s.trimLeftSpace {
@@ -374,8 +374,8 @@ func (s *bState) draw(termWidth int, prependWs, appendWs *widthSync) {
 		s.bufA.WriteByte(' ')
 	}
 
-	for i, f := range s.appendFuncs {
-		s.bufA.WriteString(f(stat, appendWs.Listen[i], appendWs.Result[i]))
+	for i, f := range s.aDecorators {
+		s.bufA.WriteString(f(stat, aSyncer.Accumulator[i], aSyncer.Distributor[i]))
 	}
 
 	prependCount := utf8.RuneCount(s.bufP.Bytes())

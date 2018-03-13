@@ -178,8 +178,8 @@ func TestFillBar(t *testing.T) {
 		},
 	}
 
-	prependWs := newWidthSync(nil, 1, 0)
-	appendWs := newWidthSync(nil, 1, 0)
+	prependWs := newWidthSyncer(nil, 1, 0)
+	appendWs := newWidthSyncer(nil, 1, 0)
 	for termWidth, cases := range testSuite {
 		for name, tc := range cases {
 			s := newTestState()
