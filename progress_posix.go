@@ -14,18 +14,8 @@ import (
 )
 
 func (p *Progress) serve(s *pState) {
-	winch := make(chan os.Signal, 1)
+	winch := make(chan os.Signal, 2)
 	signal.Notify(winch, syscall.SIGWINCH)
-
-	defer func() {
-		s.ticker.Stop()
-		signal.Stop(winch)
-		p.cacheHeap = s.bHeap
-		close(p.done)
-		if s.shutdownNotifier != nil {
-			close(s.shutdownNotifier)
-		}
-	}()
 
 	var numP, numA int
 	var timer *time.Timer
@@ -66,9 +56,14 @@ func (p *Progress) serve(s *pState) {
 		case <-resumeTicker:
 			s.ticker = time.NewTicker(s.rr)
 			resumeTicker = nil
-		case <-s.cancel:
-			return
 		case <-p.shutdown:
+			s.ticker.Stop()
+			signal.Stop(winch)
+			p.cacheHeap = s.bHeap
+			close(p.done)
+			if s.shutdownNotifier != nil {
+				close(s.shutdownNotifier)
+			}
 			return
 		}
 	}

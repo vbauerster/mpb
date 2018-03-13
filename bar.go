@@ -32,10 +32,12 @@ type Bar struct {
 	priority int
 	index    int
 
+	// the flag is set from Progress monitor goroutine only
+	completed bool
+
 	operateState chan func(*bState)
 	done         chan struct{}
 	shutdown     chan struct{}
-	once         sync.Once
 
 	// cacheState is used after done is closed
 	cacheState *bState
@@ -54,7 +56,7 @@ type (
 		trimLeftSpace        bool
 		trimRightSpace       bool
 		completed            bool
-		aborted              bool
+		removed              bool
 		dynamic              bool
 		startTime            time.Time
 		timeElapsed          time.Duration
@@ -64,15 +66,16 @@ type (
 		prependFuncs         []decor.DecoratorFunc
 		refill               *refill
 		bufP, bufB, bufA     *bytes.Buffer
-		panic                string
+		panicMsg             string
 	}
 	refill struct {
 		char rune
 		till int64
 	}
-	bufReader struct {
+	toRenderReader struct {
 		io.Reader
-		completed bool
+		toComplete bool
+		toRemove   bool
 	}
 )
 
@@ -148,6 +151,9 @@ func (b *Bar) IncrBy(n int) {
 	}
 	select {
 	case b.operateState <- func(s *bState) {
+		if s.completed {
+			return
+		}
 		next := time.Now()
 		if s.current == 0 {
 			s.startTime = next
@@ -253,75 +259,85 @@ func (b *Bar) SetTotal(total int64, final bool) {
 	}
 }
 
-// InProgress returns true, while progress is running.
-// Can be used as condition in for loop
-func (b *Bar) InProgress() bool {
+// Completed reports whether the bar is in completed state
+func (b *Bar) Completed() bool {
+	result := make(chan bool, 1)
 	select {
+	case b.operateState <- func(s *bState) { result <- s.completed }:
+		return <-result
 	case <-b.done:
-		return false
-	default:
-		return true
+		return b.cacheState.completed
 	}
 }
 
-// Complete stops bar's progress tracking, but doesn't remove the bar.
-// If you need to remove, call Progress.RemoveBar(*Bar) instead.
+// Complete stops bar's progress tracking, but doesn't remove the bar from rendering queue.
+// If you need to remove, invoke Progress.RemoveBar(*Bar) instead.
 func (b *Bar) Complete() {
-	b.once.Do(func() {
-		close(b.shutdown)
-	})
+	b.askToComplete(false)
+}
+
+func (b *Bar) askToComplete(toRemove bool) bool {
+	result := make(chan bool, 1)
+	select {
+	case b.operateState <- func(s *bState) {
+		s.removed = toRemove
+		s.completed = true
+		result <- true
+	}:
+		return <-result
+	case <-b.done:
+		return false
+	}
 }
 
 func (b *Bar) serve(s *bState, wg *sync.WaitGroup, cancel <-chan struct{}) {
-	defer func() {
-		b.cacheState = s
-		close(b.done)
-		wg.Done()
-	}()
 	for {
 		select {
 		case op := <-b.operateState:
 			op(s)
 		case <-cancel:
-			s.aborted = true
-			return
+			s.completed = true
+			cancel = nil
 		case <-b.shutdown:
+			b.cacheState = s
+			close(b.done)
+			wg.Done()
 			return
 		}
 	}
 }
 
-func (b *Bar) render(tw int, prependWs, appendWs *widthSync) <-chan *bufReader {
-	ch := make(chan *bufReader, 1)
+func (b *Bar) render(tw int, prependWs, appendWs *widthSync) <-chan *toRenderReader {
+	ch := make(chan *toRenderReader, 1)
 
 	go func() {
 		select {
 		case b.operateState <- func(s *bState) {
+			var r io.Reader
 			defer func() {
 				// recovering if external decorators panic
 				if p := recover(); p != nil {
-					s.panic = fmt.Sprintf("b#%02d panic: %v\n", s.id, p)
+					s.panicMsg = fmt.Sprintf("b#%02d panic: %v\n", s.id, p)
 					s.prependFuncs = nil
 					s.appendFuncs = nil
-
-					ch <- &bufReader{strings.NewReader(s.panic), true}
+					s.completed = true
+					r = strings.NewReader(s.panicMsg)
 				}
-				close(ch)
+				ch <- &toRenderReader{r, s.completed, s.removed}
 			}()
 			s.draw(tw, prependWs, appendWs)
-			ch <- &bufReader{io.MultiReader(s.bufP, s.bufB, s.bufA), s.completed}
+			r = io.MultiReader(s.bufP, s.bufB, s.bufA)
 		}:
 		case <-b.done:
 			s := b.cacheState
 			var r io.Reader
-			if s.panic != "" {
-				r = strings.NewReader(s.panic)
+			if s.panicMsg != "" {
+				r = strings.NewReader(s.panicMsg)
 			} else {
 				s.draw(tw, prependWs, appendWs)
 				r = io.MultiReader(s.bufP, s.bufB, s.bufA)
 			}
-			ch <- &bufReader{r, false}
-			close(ch)
+			ch <- &toRenderReader{r, s.completed, s.removed}
 		}
 	}()
 
@@ -425,7 +441,7 @@ func newStatistics(s *bState) *decor.Statistics {
 	return &decor.Statistics{
 		ID:                  s.id,
 		Completed:           s.completed,
-		Aborted:             s.aborted,
+		Removed:             s.removed,
 		Total:               s.total,
 		Current:             s.current,
 		StartTime:           s.startTime,

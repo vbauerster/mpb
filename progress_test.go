@@ -19,39 +19,28 @@ func init() {
 }
 
 func TestAddBar(t *testing.T) {
-	p := mpb.New()
+	p := mpb.New(mpb.Output(ioutil.Discard))
 
+	var wg sync.WaitGroup
+	wg.Add(1)
+	b := p.AddBar(80)
+	go func() {
+		for i := 0; i < 80; i++ {
+			if i == 33 {
+				wg.Done()
+			}
+			b.Increment()
+			time.Sleep(randomDuration(80 * time.Millisecond))
+		}
+	}()
+
+	wg.Wait()
 	count := p.BarCount()
-	if count != 0 {
-		t.Errorf("BarCount want: %q, got: %q\n", 0, count)
-	}
-
-	bar := p.AddBar(100)
-
-	count = p.BarCount()
 	if count != 1 {
 		t.Errorf("BarCount want: %q, got: %q\n", 1, count)
 	}
 
-	bar.Complete()
-	p.Stop()
-}
-
-func TestRemoveBar(t *testing.T) {
-	p := mpb.New()
-
-	bar := p.AddBar(10)
-
-	if !p.RemoveBar(bar) {
-		t.Error("RemoveBar failure")
-	}
-
-	count := p.BarCount()
-	if count != 0 {
-		t.Errorf("BarCount want: %q, got: %q\n", 0, count)
-	}
-
-	bar.Complete()
+	b.Complete()
 	p.Stop()
 }
 
@@ -88,49 +77,55 @@ func TestRemoveBars(t *testing.T) {
 }
 
 func TestWithCancel(t *testing.T) {
-	var wg sync.WaitGroup
 	cancel := make(chan struct{})
-	shutdown := make(chan struct{})
 	p := mpb.New(
 		mpb.Output(ioutil.Discard),
 		mpb.WithCancel(cancel),
-		mpb.WithShutdownNotifier(shutdown),
-		mpb.WithWaitGroup(&wg),
 	)
 
-	total := 100
 	numBars := 3
-	wg.Add(numBars)
 
+	type sample struct {
+		id      int
+		total   int64
+		current int64
+	}
+
+	resStream := make(chan *sample, numBars)
 	for i := 0; i < numBars; i++ {
-		name := fmt.Sprintf("Bar#%d:", i)
-		bar := p.AddBar(int64(total), mpb.BarID(i),
-			mpb.PrependDecorators(decor.StaticName(name, len(name), 0)))
+		bar := p.AddBar(int64(200),
+			mpb.BarID(i),
+			mpb.PrependDecorators(
+				func(s *decor.Statistics, _ chan<- int, _ <-chan int) string {
+					if s.Completed {
+						resStream <- &sample{
+							id:      s.ID,
+							total:   s.Total,
+							current: s.Current,
+						}
+					}
+					return ""
+				},
+			))
 
 		go func() {
-			defer wg.Done()
-			for i := 0; i < total; i++ {
-				select {
-				case <-cancel:
-					return
-				default:
-				}
-				time.Sleep(randomDuration(80 * time.Millisecond))
+			for bar.InProgress() {
 				bar.Increment()
+				time.Sleep(randomDuration(80 * time.Millisecond))
 			}
 		}()
 	}
 
-	time.AfterFunc(300*time.Millisecond, func() {
+	time.AfterFunc(100*time.Millisecond, func() {
 		close(cancel)
 	})
 
 	p.Stop()
-
-	select {
-	case <-shutdown:
-	case <-time.After(300 * time.Millisecond):
-		t.Error("ProgressBar didn't stop")
+	close(resStream)
+	for res := range resStream {
+		if res.current >= res.total {
+			t.Errorf("bar %d: total = %d, current = %d\n", res.id, res.total, res.current)
+		}
 	}
 }
 

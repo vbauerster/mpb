@@ -11,18 +11,7 @@ import (
 )
 
 func (p *Progress) serve(s *pState) {
-
-	defer func() {
-		s.ticker.Stop()
-		p.cacheHeap = s.bHeap
-		close(p.done)
-		if s.shutdownNotifier != nil {
-			close(s.shutdownNotifier)
-		}
-	}()
-
 	var numP, numA int
-
 	for {
 		select {
 		case op := <-p.operateState:
@@ -42,9 +31,13 @@ func (p *Progress) serve(s *pState) {
 			if err != nil {
 				fmt.Fprintln(os.Stderr, err)
 			}
-		case <-s.cancel:
-			return
 		case <-p.shutdown:
+			s.ticker.Stop()
+			p.cacheHeap = s.bHeap
+			close(p.done)
+			if s.shutdownNotifier != nil {
+				close(s.shutdownNotifier)
+			}
 			return
 		}
 	}

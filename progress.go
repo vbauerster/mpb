@@ -55,9 +55,9 @@ type (
 		Listen []chan int
 		Result []chan int
 	}
-	renderedBar struct {
+	toRenderSnapshot struct {
 		bar  *Bar
-		pipe <-chan *bufReader
+		pipe <-chan *toRenderReader
 	}
 )
 
@@ -73,7 +73,6 @@ func New(options ...ProgressOption) *Progress {
 		cw:     cwriter.New(os.Stdout),
 		rr:     prr,
 		ticker: time.NewTicker(prr),
-		cancel: make(chan struct{}),
 	}
 
 	for _, opt := range options {
@@ -111,23 +110,9 @@ func (p *Progress) AddBar(total int64, options ...BarOption) *Bar {
 	}
 }
 
-// RemoveBar removes bar at any time.
+// RemoveBar removes the bar at next render cycle
 func (p *Progress) RemoveBar(b *Bar) bool {
-	result := make(chan bool, 1)
-	select {
-	case p.operateState <- func(s *pState) {
-		if heap.Remove(s.bHeap, b.index) != nil {
-			s.heapUpdated = true
-			b.Complete()
-			result <- true
-		} else {
-			result <- false
-		}
-	}:
-		return <-result
-	case <-p.done:
-		return false
-	}
+	return b.askToComplete(true)
 }
 
 // UpdateBarPriority provides a way to change bar's order position.
@@ -216,11 +201,15 @@ func (s *pState) writeAndFlush(tw, numP, numA int) (err error) {
 	prependWs := newWidthSync(wSyncTimeout, s.bHeap.Len(), numP)
 	appendWs := newWidthSync(wSyncTimeout, s.bHeap.Len(), numA)
 
-	for _, b := range s.renderByPriority(tw, prependWs, appendWs) {
-		r := <-b.pipe
+	for _, trs := range s.renderByPriority(tw, prependWs, appendWs) {
+		r := <-trs.pipe
 		_, err = s.cw.ReadFrom(r)
-		if r.completed {
-			b.bar.Complete()
+		if !trs.bar.completed && r.toComplete {
+			trs.bar.completed = true
+			close(trs.bar.shutdown)
+		}
+		if r.toRemove {
+			heap.Remove(s.bHeap, trs.bar.index)
 		}
 	}
 
@@ -234,12 +223,12 @@ func (s *pState) writeAndFlush(tw, numP, numA int) (err error) {
 	return
 }
 
-func (s *pState) renderByPriority(tw int, prependWs, appendWs *widthSync) []*renderedBar {
-	slice := make([]*renderedBar, 0, s.bHeap.Len())
+func (s *pState) renderByPriority(tw int, prependWs, appendWs *widthSync) []*toRenderSnapshot {
+	slice := make([]*toRenderSnapshot, 0, s.bHeap.Len())
 	for s.bHeap.Len() > 0 {
 		b := heap.Pop(s.bHeap).(*Bar)
 		defer heap.Push(s.bHeap, b)
-		slice = append(slice, &renderedBar{
+		slice = append(slice, &toRenderSnapshot{
 			bar:  b,
 			pipe: b.render(tw, prependWs, appendWs),
 		})
