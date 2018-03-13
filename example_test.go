@@ -46,11 +46,11 @@ func Example() {
 	p.Stop()
 }
 
-func ExampleBar_InProgress() {
+func ExampleBar_Completed() {
 	p := mpb.New()
 	bar := p.AddBar(100, mpb.AppendDecorators(decor.Percentage(5, 0)))
 
-	for bar.InProgress() {
+	for !bar.Completed() {
 		time.Sleep(time.Duration(rand.Intn(10)+1) * time.Second / 100)
 		bar.Increment()
 	}

@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/vbauerster/mpb"
-	"github.com/vbauerster/mpb/decor"
 )
 
 func init() {
@@ -91,27 +90,14 @@ func TestWithCancel(t *testing.T) {
 		current int64
 	}
 
-	resStream := make(chan *sample, numBars)
+	bars := make([]*mpb.Bar, 0, numBars)
 	for i := 0; i < numBars; i++ {
-		bar := p.AddBar(int64(200),
-			mpb.BarID(i),
-			mpb.PrependDecorators(
-				func(s *decor.Statistics, _ chan<- int, _ <-chan int) string {
-					if s.Completed {
-						resStream <- &sample{
-							id:      s.ID,
-							total:   s.Total,
-							current: s.Current,
-						}
-					}
-					return ""
-				},
-			))
-
+		bar := p.AddBar(int64(1000), mpb.BarID(i))
+		bars = append(bars, bar)
 		go func() {
-			for bar.InProgress() {
+			for !bar.Completed() {
+				time.Sleep(randomDuration(40 * time.Millisecond))
 				bar.Increment()
-				time.Sleep(randomDuration(80 * time.Millisecond))
 			}
 		}()
 	}
@@ -121,10 +107,9 @@ func TestWithCancel(t *testing.T) {
 	})
 
 	p.Stop()
-	close(resStream)
-	for res := range resStream {
-		if res.current >= res.total {
-			t.Errorf("bar %d: total = %d, current = %d\n", res.id, res.total, res.current)
+	for _, bar := range bars {
+		if bar.Current() >= bar.Total() {
+			t.Errorf("bar %d: total = %d, current = %d\n", bar.ID(), bar.Total(), bar.Current())
 		}
 	}
 }

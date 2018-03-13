@@ -46,67 +46,48 @@ func TestWithWidth(t *testing.T) {
 	}
 }
 
-func TestBarInProgress(t *testing.T) {
-	var buf bytes.Buffer
-	cancel := make(chan struct{})
+func TestBarCompleted(t *testing.T) {
 	p := mpb.New(
-		mpb.Output(&buf),
-		mpb.WithCancel(cancel),
+		mpb.Output(ioutil.Discard),
 	)
-	bar := p.AddBar(100, mpb.BarTrim())
+	total := 80
+	bar := p.AddBar(int64(total))
 
-	stopped := make(chan struct{})
+	var count int
+	for !bar.Completed() {
+		time.Sleep(10 * time.Millisecond)
+		bar.Increment()
+		count++
+	}
 
-	go func() {
-		defer close(stopped)
-		for bar.InProgress() {
-			time.Sleep(10 * time.Millisecond)
-			bar.Increment()
-		}
-	}()
-
-	time.Sleep(250 * time.Millisecond)
-	close(cancel)
 	p.Stop()
-
-	select {
-	case <-stopped:
-	case <-time.After(300 * time.Millisecond):
-		t.Error("bar.InProgress returns true after cancel")
+	if count != total {
+		t.Errorf("got count: %d, expected %d\n", count, total)
 	}
 }
 
-func TestBarGetID(t *testing.T) {
-	var wg sync.WaitGroup
-	p := mpb.New(
-		mpb.Output(ioutil.Discard),
-		mpb.WithWaitGroup(&wg),
-	)
+func TestBarID(t *testing.T) {
+	p := mpb.New(mpb.Output(ioutil.Discard))
 
 	numBars := 3
-	wg.Add(numBars)
-
 	bars := make([]*mpb.Bar, numBars)
 	for i := 0; i < numBars; i++ {
-		bars[i] = p.AddBar(100, mpb.BarID(i))
-
+		bars[i] = p.AddBar(80, mpb.BarID(i))
 		go func(bar *mpb.Bar) {
-			defer wg.Done()
-			for i := 0; i < 100; i++ {
+			for i := 0; i < 80; i++ {
 				time.Sleep(10 * time.Millisecond)
 				bar.Increment()
 			}
 		}(bars[i])
 	}
 
+	p.Stop()
 	for wantID, bar := range bars {
 		gotID := bar.ID()
 		if gotID != wantID {
 			t.Errorf("Expected bar id: %d, got %d\n", wantID, gotID)
 		}
 	}
-
-	p.Stop()
 }
 
 func TestBarIncrWithReFill(t *testing.T) {
@@ -128,6 +109,7 @@ func TestBarIncrWithReFill(t *testing.T) {
 
 	for i := 0; i < total; i++ {
 		bar.Increment()
+		time.Sleep(10 * time.Millisecond)
 	}
 
 	p.Stop()
