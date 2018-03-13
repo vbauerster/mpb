@@ -38,8 +38,9 @@ func main() {
 		),
 	)
 
+	max := 200 * time.Millisecond
 	for i := 0; i < total; i++ {
-		time.Sleep(time.Duration(rand.Intn(10)+1) * (200 * time.Millisecond) / 10)
+		time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
 		bar.Increment()
 	}
 	// Gracefully shutdown mpb's monitor goroutine
