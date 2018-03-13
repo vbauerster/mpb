@@ -10,6 +10,10 @@ import (
 	"github.com/vbauerster/mpb/decor"
 )
 
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
+
 func main() {
 	var wg sync.WaitGroup
 	p := mpb.New(mpb.WithWaitGroup(&wg))
@@ -28,13 +32,13 @@ func main() {
 				decor.Percentage(3, decor.DSyncSpace),
 			),
 			mpb.AppendDecorators(
-				decor.ETA(2, 0),
+				decor.ETA(3, 0),
 			),
 		)
 		go func() {
 			defer wg.Done()
 			for i := 0; i < total; i++ {
-				time.Sleep(time.Duration(rand.Intn(10)+1) * time.Second / 100)
+				time.Sleep(time.Duration(rand.Intn(10)+1) * (200 * time.Millisecond) / 10)
 				bar.Increment()
 			}
 		}()

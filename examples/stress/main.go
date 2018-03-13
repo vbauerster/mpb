@@ -11,9 +11,12 @@ import (
 )
 
 const (
-	totalBars    = 32
-	maxBlockSize = 8
+	totalBars = 32
 )
+
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
 
 func main() {
 
@@ -36,19 +39,13 @@ func main() {
 
 		go func() {
 			defer wg.Done()
-			blockSize := rand.Intn(maxBlockSize) + 1
 			for i := 0; i < total; i++ {
-				sleep(blockSize)
+				time.Sleep(time.Duration(rand.Intn(10)+1) * (200 * time.Millisecond) / 10)
 				bar.Increment()
-				blockSize = rand.Intn(maxBlockSize) + 1
 			}
 		}()
 	}
 
 	p.Stop()
 	fmt.Println("stop")
-}
-
-func sleep(blockSize int) {
-	time.Sleep(time.Duration(blockSize) * (50*time.Millisecond + time.Duration(rand.Intn(5*int(time.Millisecond)))))
 }

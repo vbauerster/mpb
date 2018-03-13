@@ -39,7 +39,7 @@ func Example() {
 	)
 
 	for i := 0; i < total; i++ {
-		time.Sleep(time.Duration(rand.Intn(10)+1) * time.Second / 100)
+		time.Sleep(time.Duration(rand.Intn(10)+1) * (200 * time.Millisecond) / 10)
 		bar.Increment()
 	}
 
@@ -51,7 +51,7 @@ func ExampleBar_Completed() {
 	bar := p.AddBar(100, mpb.AppendDecorators(decor.Percentage(5, 0)))
 
 	for !bar.Completed() {
-		time.Sleep(time.Duration(rand.Intn(10)+1) * time.Second / 100)
+		time.Sleep(time.Duration(rand.Intn(10)+1) * (200 * time.Millisecond) / 10)
 		bar.Increment()
 	}
 }
