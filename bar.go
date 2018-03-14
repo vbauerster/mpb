@@ -72,7 +72,7 @@ type (
 		char rune
 		till int64
 	}
-	toRenderReader struct {
+	renderedReader struct {
 		io.Reader
 		toComplete bool
 		toRemove   bool
@@ -307,8 +307,8 @@ func (b *Bar) serve(s *bState, wg *sync.WaitGroup, cancel <-chan struct{}) {
 	}
 }
 
-func (b *Bar) render(tw int, pSyncer, aSyncer *widthSyncer) <-chan *toRenderReader {
-	ch := make(chan *toRenderReader, 1)
+func (b *Bar) render(tw int, pSyncer, aSyncer *widthSyncer) <-chan *renderedReader {
+	ch := make(chan *renderedReader, 1)
 
 	go func() {
 		select {
@@ -323,7 +323,7 @@ func (b *Bar) render(tw int, pSyncer, aSyncer *widthSyncer) <-chan *toRenderRead
 					s.completed = true
 					r = strings.NewReader(s.panicMsg)
 				}
-				ch <- &toRenderReader{r, s.completed, s.removed}
+				ch <- &renderedReader{r, s.completed, s.removed}
 			}()
 			s.draw(tw, pSyncer, aSyncer)
 			r = io.MultiReader(s.bufP, s.bufB, s.bufA)
@@ -337,7 +337,7 @@ func (b *Bar) render(tw int, pSyncer, aSyncer *widthSyncer) <-chan *toRenderRead
 				s.draw(tw, pSyncer, aSyncer)
 				r = io.MultiReader(s.bufP, s.bufB, s.bufA)
 			}
-			ch <- &toRenderReader{r, s.completed, s.removed}
+			ch <- &renderedReader{r, s.completed, s.removed}
 		}
 	}()
 

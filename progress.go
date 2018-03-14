@@ -56,9 +56,9 @@ type (
 		Accumulator []chan int
 		Distributor []chan int
 	}
-	toRenderSnapshot struct {
-		bar  *Bar
-		pipe <-chan *toRenderReader
+	barRendering struct {
+		bar   *Bar
+		ready <-chan *renderedReader
 	}
 )
 
@@ -201,15 +201,15 @@ func (s *pState) writeAndFlush(tw, numP, numA int) (err error) {
 		close(timeout)
 	})
 
-	for _, trs := range s.renderByPriority(tw, pSyncer, aSyncer) {
-		r := <-trs.pipe
+	for _, br := range s.renderByPriority(tw, pSyncer, aSyncer) {
+		r := <-br.ready
 		_, err = s.cw.ReadFrom(r)
-		if !trs.bar.completed && r.toComplete {
-			trs.bar.completed = true
-			close(trs.bar.shutdown)
+		if !br.bar.completed && r.toComplete {
+			br.bar.completed = true
+			close(br.bar.shutdown)
 		}
 		if r.toRemove {
-			s.heapUpdated = heap.Remove(s.bHeap, trs.bar.index) != nil
+			s.heapUpdated = heap.Remove(s.bHeap, br.bar.index) != nil
 		}
 	}
 
@@ -223,14 +223,14 @@ func (s *pState) writeAndFlush(tw, numP, numA int) (err error) {
 	return
 }
 
-func (s *pState) renderByPriority(tw int, pSyncer, aSyncer *widthSyncer) []*toRenderSnapshot {
-	slice := make([]*toRenderSnapshot, 0, s.bHeap.Len())
+func (s *pState) renderByPriority(tw int, pSyncer, aSyncer *widthSyncer) []*barRendering {
+	slice := make([]*barRendering, 0, s.bHeap.Len())
 	for s.bHeap.Len() > 0 {
 		b := heap.Pop(s.bHeap).(*Bar)
 		defer heap.Push(s.bHeap, b)
-		slice = append(slice, &toRenderSnapshot{
-			bar:  b,
-			pipe: b.render(tw, pSyncer, aSyncer),
+		slice = append(slice, &barRendering{
+			bar:   b,
+			ready: b.render(tw, pSyncer, aSyncer),
 		})
 	}
 	return slice
