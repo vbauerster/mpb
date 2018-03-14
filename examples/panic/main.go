@@ -21,7 +21,7 @@ func main() {
 		name := fmt.Sprintf("b#%02d:", i)
 		bar := p.AddBar(100, mpb.BarID(i), mpb.PrependDecorators(
 			func(s *decor.Statistics, _ chan<- int, _ <-chan int) string {
-				if s.ID == 2 && s.Current >= 42 {
+				if s.ID == 2 && s.Current == 42 {
 					panic(wantPanic)
 				}
 				return name

@@ -44,8 +44,9 @@ func main() {
 
 		go func() {
 			defer wg.Done()
+			max := 200 * time.Millisecond
 			for !bar.Completed() {
-				time.Sleep(randomDuration(200 * time.Millisecond))
+				time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
 				bar.Increment()
 			}
 		}()
@@ -53,8 +54,4 @@ func main() {
 
 	p.Stop()
 	fmt.Println("stop")
-}
-
-func randomDuration(max time.Duration) time.Duration {
-	return time.Duration(rand.Intn(10)+1) * max / 10
 }
