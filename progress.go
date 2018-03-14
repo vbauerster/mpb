@@ -209,7 +209,7 @@ func (s *pState) writeAndFlush(tw, numP, numA int) (err error) {
 			close(trs.bar.shutdown)
 		}
 		if r.toRemove {
-			heap.Remove(s.bHeap, trs.bar.index)
+			s.heapUpdated = heap.Remove(s.bHeap, trs.bar.index) != nil
 		}
 	}
 
@@ -237,13 +237,15 @@ func (s *pState) renderByPriority(tw int, pSyncer, aSyncer *widthSyncer) []*toRe
 }
 
 func calcMax(slice []int) int {
-	max := slice[0]
+	if len(slice) == 0 {
+		return 0
+	}
 
+	max := slice[0]
 	for i := 1; i < len(slice); i++ {
 		if slice[i] > max {
 			max = slice[i]
 		}
 	}
-
 	return max
 }
