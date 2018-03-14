@@ -166,8 +166,8 @@ func newWidthSyncer(timeout <-chan struct{}, numBars, numColumn int) *widthSynce
 		ws.Distributor[i] = make(chan int, numBars)
 	}
 	for i := 0; i < numColumn; i++ {
-		go func(accumulator <-chan int, discharger chan<- int) {
-			defer close(discharger)
+		go func(accumulator <-chan int, distributor chan<- int) {
+			defer close(distributor)
 			widths := make([]int, 0, numBars)
 		loop:
 			for {
@@ -184,9 +184,9 @@ func newWidthSyncer(timeout <-chan struct{}, numBars, numColumn int) *widthSynce
 					break loop
 				}
 			}
-			result := max(widths)
+			maxWidth := calcMax(widths)
 			for i := 0; i < len(widths); i++ {
-				discharger <- result
+				distributor <- maxWidth
 			}
 		}(ws.Accumulator[i], ws.Distributor[i])
 	}
@@ -236,7 +236,7 @@ func (s *pState) renderByPriority(tw int, pSyncer, aSyncer *widthSyncer) []*toRe
 	return slice
 }
 
-func max(slice []int) int {
+func calcMax(slice []int) int {
 	max := slice[0]
 
 	for i := 1; i < len(slice); i++ {
