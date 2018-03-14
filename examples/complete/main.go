@@ -41,7 +41,7 @@ func main() {
 				time.Sleep(time.Duration(rand.Intn(10)+1) * (200 * time.Millisecond) / 10)
 				b.Increment()
 				if b.ID() == 1 && i == 42 {
-					p.RemoveBar(b)
+					b.Complete()
 					return
 				}
 			}
