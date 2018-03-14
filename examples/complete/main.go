@@ -39,12 +39,12 @@ func main() {
 			defer wg.Done()
 			max := 200 * time.Millisecond
 			for i := 0; i < total; i++ {
-				time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
-				b.Increment()
 				if b.ID() == 1 && i == 42 {
 					b.Complete()
 					return
 				}
+				time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
+				b.Increment()
 			}
 		}()
 	}

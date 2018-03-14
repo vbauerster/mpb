@@ -21,7 +21,9 @@ func main() {
 		name := fmt.Sprintf("b#%02d:", i)
 		bar := p.AddBar(100, mpb.BarID(i), mpb.PrependDecorators(
 			func(s *decor.Statistics, _ chan<- int, _ <-chan int) string {
-				if s.ID == 2 && s.Current == 42 {
+				// s.Current == 42 may never happen, if sleep btw increments is
+				// too short, thus using s.Current >= 42
+				if s.ID == 1 && s.Current >= 42 {
 					panic(wantPanic)
 				}
 				return name
@@ -31,7 +33,7 @@ func main() {
 		go func() {
 			defer wg.Done()
 			for i := 0; i < 100; i++ {
-				time.Sleep(10 * time.Millisecond)
+				time.Sleep(50 * time.Millisecond)
 				bar.Increment()
 			}
 		}()
