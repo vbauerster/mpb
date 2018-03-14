@@ -38,8 +38,9 @@ func Example() {
 		),
 	)
 
+	max := 200 * time.Millisecond
 	for i := 0; i < total; i++ {
-		time.Sleep(time.Duration(rand.Intn(10)+1) * (200 * time.Millisecond) / 10)
+		time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
 		bar.Increment()
 	}
 
@@ -48,10 +49,13 @@ func Example() {
 
 func ExampleBar_Completed() {
 	p := mpb.New()
-	bar := p.AddBar(100, mpb.AppendDecorators(decor.Percentage(5, 0)))
+	bar := p.AddBar(100)
 
+	max := 200 * time.Millisecond
 	for !bar.Completed() {
-		time.Sleep(time.Duration(rand.Intn(10)+1) * (200 * time.Millisecond) / 10)
+		time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
 		bar.Increment()
 	}
+
+	p.Stop()
 }
