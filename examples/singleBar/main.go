@@ -43,6 +43,6 @@ func main() {
 		time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
 		bar.Increment()
 	}
-	// Gracefully shutdown mpb's monitor goroutine
-	p.Stop()
+	// Wait for all bars to complete
+	p.Wait()
 }

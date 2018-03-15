@@ -21,35 +21,27 @@ const (
 
 // Progress represents the container that renders Progress bars
 type Progress struct {
-	// wg for internal rendering sync
-	wg *sync.WaitGroup
-	// External wg
-	ewg *sync.WaitGroup
-
 	operateState chan func(*pState)
 	done         chan struct{}
-	shutdown     chan struct{}
-	once         sync.Once
-
-	cacheHeap *priorityQueue
 }
 
 type (
 	// progress state, which may contain several bars
 	pState struct {
-		bHeap        *priorityQueue
-		heapUpdated  bool
-		idCounter    int
-		width        int
-		format       string
-		rr           time.Duration
-		ewg          *sync.WaitGroup
-		cw           *cwriter.Writer
-		ticker       *time.Ticker
-		interceptors []func(io.Writer)
+		bHeap       *priorityQueue
+		heapUpdated bool
+		idCounter   int
+		width       int
+		format      string
+		rr          time.Duration
+		cw          *cwriter.Writer
+		ticker      *time.Ticker
 
-		shutdownNotifier chan struct{}
+		// following are provided by user
+		uwg              *sync.WaitGroup
 		cancel           <-chan struct{}
+		shutdownNotifier chan struct{}
+		interceptors     []func(io.Writer)
 	}
 	widthSyncer struct {
 		// Public for easy testing
@@ -81,11 +73,8 @@ func New(options ...ProgressOption) *Progress {
 	}
 
 	p := &Progress{
-		ewg:          s.ewg,
-		wg:           new(sync.WaitGroup),
 		operateState: make(chan func(*pState)),
 		done:         make(chan struct{}),
-		shutdown:     make(chan struct{}),
 	}
 	go p.serve(s)
 	return p
@@ -93,12 +82,11 @@ func New(options ...ProgressOption) *Progress {
 
 // AddBar creates a new progress bar and adds to the container.
 func (p *Progress) AddBar(total int64, options ...BarOption) *Bar {
-	p.wg.Add(1)
 	result := make(chan *Bar, 1)
 	select {
 	case p.operateState <- func(s *pState) {
 		options = append(options, barWidth(s.width), barFormat(s.format))
-		b := newBar(s.idCounter, total, p.wg, s.cancel, options...)
+		b := newBar(s.idCounter, total, s.cancel, options...)
 		heap.Push(s.bHeap, b)
 		s.heapUpdated = true
 		s.idCounter++
@@ -136,24 +124,20 @@ func (p *Progress) BarCount() int {
 	}:
 		return <-result
 	case <-p.done:
-		return p.cacheHeap.Len()
+		return 0
 	}
 }
 
-// Stop is a way to gracefully shutdown mpb's rendering goroutine.
-// It is NOT for cancellation (use mpb.WithContext for cancellation purposes).
-// If *sync.WaitGroup has been provided via mpb.WithWaitGroup(), its Wait()
-// method will be called first.
-func (p *Progress) Stop() {
-	if p.ewg != nil {
-		p.ewg.Wait()
-	}
-	// first wait for all bars to quit
-	p.wg.Wait()
-	p.once.Do(func() {
-		close(p.shutdown)
-	})
+// Wait first waits for all bars to complete, then waits for user provided WaitGroup, if any.
+// It's optional to call, in other words if you don't call Progress.Wait(),
+// it's not guaranted that all bars will be flushed completely to the underlying io.Writer.
+func (p *Progress) Wait() {
 	<-p.done
+}
+
+// Stop deprecated, use Progress.Wait instead.
+func (p *Progress) Stop() {
+	p.Wait()
 }
 
 func newWidthSyncer(timeout <-chan struct{}, numBars, numColumn int) *widthSyncer {
@@ -205,8 +189,8 @@ func (s *pState) writeAndFlush(tw, numP, numA int) (err error) {
 		r := <-br.ready
 		_, err = s.cw.ReadFrom(r)
 		if !br.bar.completed && r.toComplete {
-			br.bar.completed = true
 			close(br.bar.shutdown)
+			br.bar.completed = true
 		}
 		if r.toRemove {
 			s.heapUpdated = heap.Remove(s.bHeap, br.bar.index) != nil
@@ -234,6 +218,16 @@ func (s *pState) renderByPriority(tw int, pSyncer, aSyncer *widthSyncer) []*barR
 		})
 	}
 	return slice
+}
+
+func (s *pState) waitAll() {
+	for s.bHeap.Len() > 0 {
+		b := heap.Pop(s.bHeap).(*Bar)
+		<-b.done
+	}
+	if s.uwg != nil {
+		s.uwg.Wait()
+	}
 }
 
 func calcMax(slice []int) int {

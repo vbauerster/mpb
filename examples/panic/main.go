@@ -39,5 +39,5 @@ func main() {
 		}()
 	}
 
-	p.Stop()
+	p.Wait()
 }

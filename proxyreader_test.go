@@ -35,7 +35,7 @@ func TestProxyReader(t *testing.T) {
 		t.Errorf("Error copying from reader: %+v\n", err)
 	}
 
-	p.Stop()
+	p.Wait()
 
 	if written != int64(total) {
 		t.Errorf("Expected written: %d, got: %d\n", total, written)

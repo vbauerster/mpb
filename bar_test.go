@@ -37,7 +37,7 @@ func TestWithWidth(t *testing.T) {
 			bar.Increment()
 		}
 
-		p.Stop()
+		p.Wait()
 
 		gotWidth := utf8.RuneCount(buf.Bytes())
 		if gotWidth != tc.expected {
@@ -60,7 +60,7 @@ func TestBarCompleted(t *testing.T) {
 		count++
 	}
 
-	p.Stop()
+	p.Wait()
 	if count != total {
 		t.Errorf("got count: %d, expected %d\n", count, total)
 	}
@@ -81,7 +81,7 @@ func TestBarID(t *testing.T) {
 		}(bars[i])
 	}
 
-	p.Stop()
+	p.Wait()
 	for wantID, bar := range bars {
 		gotID := bar.ID()
 		if gotID != wantID {
@@ -112,7 +112,7 @@ func TestBarIncrWithReFill(t *testing.T) {
 		time.Sleep(10 * time.Millisecond)
 	}
 
-	p.Stop()
+	p.Wait()
 
 	wantBar := fmt.Sprintf("[%s%s]",
 		strings.Repeat(string(refillChar), till-1),
@@ -152,7 +152,7 @@ func TestBarPanics(t *testing.T) {
 		}()
 	}
 
-	p.Stop()
+	p.Wait()
 
 	wantPanic = fmt.Sprintf("b#%02d panic: %v", 2, wantPanic)
 

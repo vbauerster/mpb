@@ -43,8 +43,8 @@ func Example() {
 		time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
 		bar.Increment()
 	}
-
-	p.Stop()
+	// Wait for all bars to complete
+	p.Wait()
 }
 
 func ExampleBar_Completed() {
@@ -57,5 +57,5 @@ func ExampleBar_Completed() {
 		bar.Increment()
 	}
 
-	p.Stop()
+	p.Wait()
 }

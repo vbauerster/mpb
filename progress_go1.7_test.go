@@ -35,7 +35,7 @@ func TestWithContext(t *testing.T) {
 
 	time.AfterFunc(100*time.Millisecond, cancel)
 
-	p.Stop()
+	p.Wait()
 	for _, bar := range bars {
 		if bar.Current() >= bar.Total() {
 			t.Errorf("bar %d: total = %d, current = %d\n", bar.ID(), bar.Total(), bar.Current())

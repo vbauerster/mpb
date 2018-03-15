@@ -52,5 +52,5 @@ func main() {
 		bar.Increment()
 	}
 
-	p.Stop()
+	p.Wait()
 }

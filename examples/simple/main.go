@@ -44,6 +44,6 @@ func main() {
 			}
 		}()
 	}
-	// Gracefully shutdown mpb's monitor goroutine
-	p.Stop()
+	// Wait for all bars to complete
+	p.Wait()
 }

@@ -31,14 +31,22 @@ func (p *Progress) serve(s *pState) {
 			if err != nil {
 				fmt.Fprintln(os.Stderr, err)
 			}
-		case <-p.shutdown:
-			s.ticker.Stop()
-			p.cacheHeap = s.bHeap
-			close(p.done)
-			if s.shutdownNotifier != nil {
-				close(s.shutdownNotifier)
+			var completed int
+			for i := 0; i < s.bHeap.Len(); i++ {
+				b := (*s.bHeap)[i]
+				if b.completed {
+					completed++
+				}
 			}
-			return
+			if completed == s.bHeap.Len() {
+				s.ticker.Stop()
+				s.waitAll()
+				if s.shutdownNotifier != nil {
+					close(s.shutdownNotifier)
+				}
+				close(p.done)
+				return
+			}
 		}
 	}
 }

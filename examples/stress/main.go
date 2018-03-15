@@ -47,6 +47,6 @@ func main() {
 		}()
 	}
 
-	p.Stop()
-	fmt.Println("stop")
+	p.Wait()
+	fmt.Println("done")
 }

@@ -28,8 +28,8 @@ func main() {
 		go download(&wg, p, name, url, i)
 	}
 
-	p.Stop()
-	fmt.Println("Finished")
+	p.Wait()
+	fmt.Println("done")
 }
 
 func download(wg *sync.WaitGroup, p *mpb.Progress, name, url string, n int) {

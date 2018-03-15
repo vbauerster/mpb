@@ -49,6 +49,6 @@ func main() {
 	// and copy from reader, ignoring errors
 	io.Copy(dest, reader)
 
-	p.Stop() // if you omit this line, rendering bars goroutine will quit early
-	fmt.Println("Finished")
+	p.Wait() // if you omit this line, rendering bars goroutine will quit early
+	fmt.Println("done")
 }

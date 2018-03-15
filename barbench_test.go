@@ -11,7 +11,7 @@ func benchmarkSingleBar(total int) {
 	for i := 0; i < total; i++ {
 		bar.Increment()
 	}
-	p.Stop()
+	p.Wait()
 }
 
 func BenchmarkSingleBar100(b *testing.B) {
@@ -38,5 +38,5 @@ func BenchmarkIncrSingleBar(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		bar.Increment()
 	}
-	p.Stop()
+	p.Wait()
 }

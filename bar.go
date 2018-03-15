@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"strings"
-	"sync"
 	"time"
 	"unicode/utf8"
 
@@ -39,7 +38,7 @@ type Bar struct {
 	done         chan struct{}
 	shutdown     chan struct{}
 
-	// cacheState is used after done is closed
+	// it's guaranted that cacheState isn't nil, after done channel is closed
 	cacheState *bState
 }
 
@@ -79,7 +78,7 @@ type (
 	}
 )
 
-func newBar(id int, total int64, wg *sync.WaitGroup, cancel <-chan struct{}, options ...BarOption) *Bar {
+func newBar(id int, total int64, cancel <-chan struct{}, options ...BarOption) *Bar {
 	if total <= 0 {
 		total = time.Now().Unix()
 	}
@@ -105,7 +104,7 @@ func newBar(id int, total int64, wg *sync.WaitGroup, cancel <-chan struct{}, opt
 		shutdown:     make(chan struct{}),
 	}
 
-	go b.serve(s, wg, cancel)
+	go b.serve(s, cancel)
 	return b
 }
 
@@ -290,7 +289,7 @@ func (b *Bar) askToComplete(toRemove bool) bool {
 	}
 }
 
-func (b *Bar) serve(s *bState, wg *sync.WaitGroup, cancel <-chan struct{}) {
+func (b *Bar) serve(s *bState, cancel <-chan struct{}) {
 	for {
 		select {
 		case op := <-b.operateState:
@@ -301,7 +300,6 @@ func (b *Bar) serve(s *bState, wg *sync.WaitGroup, cancel <-chan struct{}) {
 		case <-b.shutdown:
 			b.cacheState = s
 			close(b.done)
-			wg.Done()
 			return
 		}
 	}

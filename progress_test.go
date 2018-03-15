@@ -40,7 +40,7 @@ func TestAddBar(t *testing.T) {
 	}
 
 	b.Complete()
-	p.Stop()
+	p.Wait()
 }
 
 func TestRemoveBars(t *testing.T) {
@@ -72,7 +72,7 @@ func TestRemoveBars(t *testing.T) {
 			}
 		}()
 	}
-	p.Stop()
+	p.Wait()
 }
 
 func TestWithCancel(t *testing.T) {
@@ -101,7 +101,7 @@ func TestWithCancel(t *testing.T) {
 		close(cancel)
 	})
 
-	p.Stop()
+	p.Wait()
 	for _, bar := range bars {
 		if bar.Current() >= bar.Total() {
 			t.Errorf("bar %d: total = %d, current = %d\n", bar.ID(), bar.Total(), bar.Current())
@@ -139,7 +139,7 @@ func TestCustomFormat(t *testing.T) {
 
 	wg.Wait()
 	close(cancel)
-	p.Stop()
+	p.Wait()
 
 	for _, r := range customFormat {
 		if !bytes.ContainsRune(buf.Bytes(), r) {
@@ -164,7 +164,7 @@ func TestInvalidFormatWidth(t *testing.T) {
 		bar.Increment()
 	}
 
-	p.Stop()
+	p.Wait()
 
 	got := buf.String()
 	want := fmt.Sprintf("[%s]", strings.Repeat("=", customWidth-2))
