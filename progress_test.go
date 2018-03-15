@@ -77,19 +77,14 @@ func TestRemoveBars(t *testing.T) {
 
 func TestWithCancel(t *testing.T) {
 	cancel := make(chan struct{})
+	shutdown := make(chan struct{})
 	p := mpb.New(
 		mpb.Output(ioutil.Discard),
 		mpb.WithCancel(cancel),
+		mpb.WithShutdownNotifier(shutdown),
 	)
 
 	numBars := 3
-
-	type sample struct {
-		id      int
-		total   int64
-		current int64
-	}
-
 	bars := make([]*mpb.Bar, 0, numBars)
 	for i := 0; i < numBars; i++ {
 		bar := p.AddBar(int64(1000), mpb.BarID(i))
@@ -111,6 +106,11 @@ func TestWithCancel(t *testing.T) {
 		if bar.Current() >= bar.Total() {
 			t.Errorf("bar %d: total = %d, current = %d\n", bar.ID(), bar.Total(), bar.Current())
 		}
+	}
+	select {
+	case <-shutdown:
+	case <-time.After(100 * time.Millisecond):
+		t.Error("Progress didn't stop")
 	}
 }
 

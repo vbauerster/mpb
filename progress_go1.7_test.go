@@ -4,15 +4,11 @@ package mpb_test
 
 import (
 	"context"
-	"fmt"
 	"io/ioutil"
-	"math/rand"
-	"sync"
 	"testing"
 	"time"
 
 	"github.com/vbauerster/mpb"
-	"github.com/vbauerster/mpb/decor"
 )
 
 func TestWithContext(t *testing.T) {
@@ -24,38 +20,30 @@ func TestWithContext(t *testing.T) {
 		mpb.WithShutdownNotifier(shutdown),
 	)
 
-	var wg sync.WaitGroup
-	total := 100
 	numBars := 3
-	wg.Add(numBars)
-
+	bars := make([]*mpb.Bar, 0, numBars)
 	for i := 0; i < numBars; i++ {
-		name := fmt.Sprintf("Bar#%d:", i)
-		bar := p.AddBar(int64(total), mpb.BarID(i),
-			mpb.PrependDecorators(decor.StaticName(name, len(name), 0)))
-
+		bar := p.AddBar(int64(1000), mpb.BarID(i))
+		bars = append(bars, bar)
 		go func() {
-			defer wg.Done()
-			for i := 0; i < total; i++ {
-				select {
-				case <-ctx.Done():
-					return
-				default:
-				}
-				time.Sleep(time.Duration(rand.Intn(10)+1) * time.Second / 100)
+			for !bar.Completed() {
+				time.Sleep(randomDuration(40 * time.Millisecond))
 				bar.Increment()
 			}
 		}()
 	}
 
-	time.AfterFunc(300*time.Millisecond, cancel)
+	time.AfterFunc(100*time.Millisecond, cancel)
 
-	wg.Wait()
 	p.Stop()
-
+	for _, bar := range bars {
+		if bar.Current() >= bar.Total() {
+			t.Errorf("bar %d: total = %d, current = %d\n", bar.ID(), bar.Total(), bar.Current())
+		}
+	}
 	select {
 	case <-shutdown:
-	case <-time.After(500 * time.Millisecond):
-		t.Error("ProgressBar didn't stop")
+	case <-time.After(100 * time.Millisecond):
+		t.Error("Progress didn't stop")
 	}
 }
