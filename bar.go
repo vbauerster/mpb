@@ -38,7 +38,7 @@ type Bar struct {
 	done         chan struct{}
 	shutdown     chan struct{}
 
-	// it's guaranted that cacheState isn't nil, after done channel is closed
+	// it's guaranteed that cacheState isn't nil, after done is closed
 	cacheState *bState
 }
 

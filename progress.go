@@ -130,7 +130,7 @@ func (p *Progress) BarCount() int {
 
 // Wait first waits for all bars to complete, then waits for user provided WaitGroup, if any.
 // It's optional to call, in other words if you don't call Progress.Wait(),
-// it's not guaranted that all bars will be flushed completely to the underlying io.Writer.
+// it's not guaranteed that all bars will be flushed completely to the underlying io.Writer.
 func (p *Progress) Wait() {
 	<-p.done
 }
