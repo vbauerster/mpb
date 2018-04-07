@@ -34,17 +34,17 @@ type Unit uint
 
 type CounterKiB int64
 
-func (c CounterKiB) Format(st fmt.State, r rune) {
+func (c CounterKiB) Format(st fmt.State, verb rune) {
 	prec, ok := st.Precision()
 
-	if r == 'd' || !ok {
+	if verb == 'd' || !ok {
 		prec = 0
 	}
-	if r == 'f' && !ok {
+	if verb == 'f' && !ok {
 		prec = 6
 	}
 	// retain old beahavior if s verb used
-	if r == 's' {
+	if verb == 's' {
 		prec = 1
 	}
 
