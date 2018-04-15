@@ -111,9 +111,7 @@ func newBar(id int, total int64, cancel <-chan struct{}, options ...BarOption) *
 // RemoveAllPrependers removes all prepend functions
 func (b *Bar) RemoveAllPrependers() {
 	select {
-	case b.operateState <- func(s *bState) {
-		s.pDecorators = nil
-	}:
+	case b.operateState <- func(s *bState) { s.pDecorators = nil }:
 	case <-b.done:
 	}
 }
@@ -121,9 +119,7 @@ func (b *Bar) RemoveAllPrependers() {
 // RemoveAllAppenders removes all append functions
 func (b *Bar) RemoveAllAppenders() {
 	select {
-	case b.operateState <- func(s *bState) {
-		s.aDecorators = nil
-	}:
+	case b.operateState <- func(s *bState) { s.aDecorators = nil }:
 	case <-b.done:
 	}
 }
@@ -184,9 +180,7 @@ func (b *Bar) ResumeFill(r rune, till int64) {
 		return
 	}
 	select {
-	case b.operateState <- func(s *bState) {
-		s.refill = &refill{r, till}
-	}:
+	case b.operateState <- func(s *bState) { s.refill = &refill{r, till} }:
 	case <-b.done:
 	}
 }

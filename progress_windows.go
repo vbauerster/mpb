@@ -18,6 +18,10 @@ func (p *Progress) serve(s *pState) {
 			op(s)
 		case <-s.ticker.C:
 			if s.bHeap.Len() == 0 {
+				if s.zeroWait {
+					close(p.done)
+					return
+				}
 				runtime.Gosched()
 				break
 			}

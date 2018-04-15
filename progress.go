@@ -30,6 +30,7 @@ type (
 	pState struct {
 		bHeap       *priorityQueue
 		heapUpdated bool
+		zeroWait    bool
 		idCounter   int
 		width       int
 		format      string
@@ -108,9 +109,7 @@ func (p *Progress) RemoveBar(b *Bar) bool {
 // Zero is highest priority, i.e. bar will be on top.
 func (p *Progress) UpdateBarPriority(b *Bar, priority int) {
 	select {
-	case p.operateState <- func(s *pState) {
-		s.bHeap.update(b, priority)
-	}:
+	case p.operateState <- func(s *pState) { s.bHeap.update(b, priority) }:
 	case <-p.done:
 	}
 }
@@ -119,9 +118,7 @@ func (p *Progress) UpdateBarPriority(b *Bar, priority int) {
 func (p *Progress) BarCount() int {
 	result := make(chan int, 1)
 	select {
-	case p.operateState <- func(s *pState) {
-		result <- s.bHeap.Len()
-	}:
+	case p.operateState <- func(s *pState) { result <- s.bHeap.Len() }:
 		return <-result
 	case <-p.done:
 		return 0
@@ -132,6 +129,13 @@ func (p *Progress) BarCount() int {
 // It's optional to call, in other words if you don't call Progress.Wait(),
 // it's not guaranteed that all bars will be flushed completely to the underlying io.Writer.
 func (p *Progress) Wait() {
+	if p.BarCount() == 0 {
+		select {
+		case p.operateState <- func(s *pState) { s.zeroWait = true }:
+		case <-p.done:
+		}
+		return
+	}
 	<-p.done
 }
 
