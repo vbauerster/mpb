@@ -45,7 +45,7 @@ func (s *Statistics) Eta() time.Duration {
 }
 
 // DecoratorFunc is a function that can be prepended and appended to the progress bar
-type DecoratorFunc func(s *Statistics, myWidth chan<- int, maxWidth <-chan int) string
+type DecoratorFunc func(s *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string
 
 // Name deprecated, use StaticName instead
 func Name(name string, minWidth int, conf byte) DecoratorFunc {
@@ -71,11 +71,11 @@ func DynamicName(nameFn func(*Statistics) string, minWidth int, conf byte) Decor
 		format += "-"
 	}
 	format += "%ds"
-	return func(s *Statistics, myWidth chan<- int, maxWidth <-chan int) string {
+	return func(s *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string {
 		name := nameFn(s)
 		if (conf & DwidthSync) != 0 {
-			myWidth <- utf8.RuneCountInString(name)
-			max := <-maxWidth
+			widthAccumulator <- utf8.RuneCountInString(name)
+			max := <-widthDistributor
 			if (conf & DextraSpace) != 0 {
 				max++
 			}
@@ -113,7 +113,7 @@ func Counters(pairFormat string, unit Unit, minWidth int, conf byte) DecoratorFu
 		format += "-"
 	}
 	format += "%ds"
-	return func(s *Statistics, myWidth chan<- int, maxWidth <-chan int) string {
+	return func(s *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string {
 		var str string
 		switch unit {
 		case Unit_KiB:
@@ -124,8 +124,8 @@ func Counters(pairFormat string, unit Unit, minWidth int, conf byte) DecoratorFu
 			str = fmt.Sprintf(pairFormat, s.Current, s.Total)
 		}
 		if (conf & DwidthSync) != 0 {
-			myWidth <- utf8.RuneCountInString(str)
-			max := <-maxWidth
+			widthAccumulator <- utf8.RuneCountInString(str)
+			max := <-widthDistributor
 			if (conf & DextraSpace) != 0 {
 				max++
 			}
@@ -144,11 +144,11 @@ func ETA(minWidth int, conf byte) DecoratorFunc {
 		format += "-"
 	}
 	format += "%ds"
-	return func(s *Statistics, myWidth chan<- int, maxWidth <-chan int) string {
+	return func(s *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string {
 		str := fmt.Sprint(time.Duration(s.Eta().Seconds()) * time.Second)
 		if (conf & DwidthSync) != 0 {
-			myWidth <- utf8.RuneCountInString(str)
-			max := <-maxWidth
+			widthAccumulator <- utf8.RuneCountInString(str)
+			max := <-widthDistributor
 			if (conf & DextraSpace) != 0 {
 				max++
 			}
@@ -167,11 +167,11 @@ func Elapsed(minWidth int, conf byte) DecoratorFunc {
 		format += "-"
 	}
 	format += "%ds"
-	return func(s *Statistics, myWidth chan<- int, maxWidth <-chan int) string {
+	return func(s *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string {
 		str := fmt.Sprint(time.Duration(s.TimeElapsed.Seconds()) * time.Second)
 		if (conf & DwidthSync) != 0 {
-			myWidth <- utf8.RuneCountInString(str)
-			max := <-maxWidth
+			widthAccumulator <- utf8.RuneCountInString(str)
+			max := <-widthDistributor
 			if (conf & DextraSpace) != 0 {
 				max++
 			}
@@ -190,11 +190,11 @@ func Percentage(minWidth int, conf byte) DecoratorFunc {
 		format += "-"
 	}
 	format += "%ds"
-	return func(s *Statistics, myWidth chan<- int, maxWidth <-chan int) string {
+	return func(s *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string {
 		str := fmt.Sprintf("%d %%", CalcPercentage(s.Total, s.Current, 100))
 		if (conf & DwidthSync) != 0 {
-			myWidth <- utf8.RuneCountInString(str)
-			max := <-maxWidth
+			widthAccumulator <- utf8.RuneCountInString(str)
+			max := <-widthDistributor
 			if (conf & DextraSpace) != 0 {
 				max++
 			}
