@@ -139,11 +139,6 @@ func (p *Progress) Wait() {
 	<-p.done
 }
 
-// Stop deprecated, use Progress.Wait instead.
-func (p *Progress) Stop() {
-	p.Wait()
-}
-
 func newWidthSyncer(timeout <-chan struct{}, numBars, numColumn int) *widthSyncer {
 	ws := &widthSyncer{
 		Accumulator: make([]chan int, numColumn),

@@ -134,11 +134,6 @@ func (b *Bar) Increment() {
 	b.IncrBy(1)
 }
 
-// Incr Deprecated! Use IncrBy(int) or Increment() instead
-func (b *Bar) Incr(n int) {
-	b.IncrBy(n)
-}
-
 // IncrBy increments progress bar by amount of n
 func (b *Bar) IncrBy(n int) {
 	if n < 1 {

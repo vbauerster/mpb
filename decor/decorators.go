@@ -47,11 +47,6 @@ func (s *Statistics) Eta() time.Duration {
 // DecoratorFunc is a function that can be prepended and appended to the progress bar
 type DecoratorFunc func(s *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string
 
-// Name deprecated, use StaticName instead
-func Name(name string, minWidth int, conf byte) DecoratorFunc {
-	return StaticName(name, minWidth, conf)
-}
-
 // StaticName to be used, when there is no plan to change the name during whole
 // life of a progress rendering process
 func StaticName(name string, minWidth int, conf byte) DecoratorFunc {
