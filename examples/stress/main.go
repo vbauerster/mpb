@@ -39,7 +39,7 @@ func main() {
 
 		go func() {
 			defer wg.Done()
-			max := 300 * time.Millisecond
+			max := 100 * time.Millisecond
 			for i := 0; i < total; i++ {
 				time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
 				bar.Increment()

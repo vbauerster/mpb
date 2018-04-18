@@ -40,7 +40,7 @@ func main() {
 		bar.SetTotal(300, true)
 	}()
 
-	max := 200 * time.Millisecond
+	max := 100 * time.Millisecond
 	for i := 0; i < 300; i++ {
 		if i == 140 {
 			close(totalUpd1)

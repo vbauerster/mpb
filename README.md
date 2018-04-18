@@ -59,7 +59,7 @@ _Note:_ it is preferable to go get from github.com, rather than gopkg.in. See is
 		),
 	)
 
-	max := 200 * time.Millisecond
+	max := 100 * time.Millisecond
 	for i := 0; i < total; i++ {
 		time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
 		bar.Increment()
@@ -92,7 +92,7 @@ _Note:_ it is preferable to go get from github.com, rather than gopkg.in. See is
 		)
 		go func() {
 			defer wg.Done()
-			max := 200 * time.Millisecond
+			max := 100 * time.Millisecond
 			for i := 0; i < total; i++ {
 		        time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
 				bar.Increment()

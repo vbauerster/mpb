@@ -37,7 +37,7 @@ func main() {
 		)
 		go func() {
 			defer wg.Done()
-			max := 200 * time.Millisecond
+			max := 100 * time.Millisecond
 			for i := 0; i < total; i++ {
 				if b.ID() == 1 && i == 42 {
 					b.Complete()
