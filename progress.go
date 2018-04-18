@@ -102,7 +102,9 @@ func (p *Progress) AddBar(total int64, options ...BarOption) *Bar {
 
 // RemoveBar removes the bar at next render cycle
 func (p *Progress) RemoveBar(b *Bar) bool {
-	return b.askToComplete(true)
+	result := b.askToComplete(true)
+	<-b.done
+	return result
 }
 
 // UpdateBarPriority provides a way to change bar's order position.
@@ -186,13 +188,14 @@ func (s *pState) writeAndFlush(tw, numP, numA int) (err error) {
 
 	for _, br := range s.renderByPriority(tw, pSyncer, aSyncer) {
 		r := <-br.ready
-		_, err = s.cw.ReadFrom(r)
-		if !br.bar.completed && r.toComplete {
-			close(br.bar.shutdown)
-			br.bar.completed = true
-		}
-		if r.toRemove {
+		if !r.toRemove {
+			_, err = s.cw.ReadFrom(r)
+		} else {
 			s.heapUpdated = heap.Remove(s.bHeap, br.bar.index) != nil
+		}
+		if !br.bar.completed && r.toComplete {
+			br.bar.completed = true
+			defer close(br.bar.shutdown)
 		}
 	}
 
