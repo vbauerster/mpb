@@ -31,14 +31,15 @@ type Bar struct {
 	priority int
 	index    int
 
-	// the flag is set from Progress monitor goroutine only
+	// completed is set from master Progress goroutine only
 	completed bool
 
 	operateState chan func(*bState)
-	done         chan struct{}
-	shutdown     chan struct{}
+	// done is closed by Bar's goroutine, after cacheState is written
+	done chan struct{}
+	// shutdown is closed from master Progress goroutine only
+	shutdown chan struct{}
 
-	// it's guaranteed that cacheState isn't nil, after done is closed
 	cacheState *bState
 }
 
