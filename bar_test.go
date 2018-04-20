@@ -8,48 +8,13 @@ import (
 	"sync"
 	"testing"
 	"time"
-	"unicode/utf8"
 
 	"github.com/vbauerster/mpb"
 	"github.com/vbauerster/mpb/decor"
 )
 
-func TestWithWidth(t *testing.T) {
-	cases := map[string]struct{ w, expected int }{
-		"WithWidth-1": {-1, 81},
-		"WithWidth0":  {0, 3},
-		"WithWidth1":  {1, 3},
-		"WithWidth2":  {2, 3},
-		"WithWidth3":  {3, 4},
-		"WithWidth60": {60, 61},
-	}
-
-	var buf bytes.Buffer
-	for k, tc := range cases {
-		buf.Reset()
-		p := mpb.New(
-			mpb.Output(&buf),
-			mpb.WithWidth(tc.w),
-		)
-		bar := p.AddBar(10, mpb.BarTrim())
-
-		for i := 0; i < 10; i++ {
-			bar.Increment()
-		}
-
-		p.Wait()
-
-		gotWidth := utf8.RuneCount(buf.Bytes())
-		if gotWidth != tc.expected {
-			t.Errorf("%s: Expected width: %d, got: %d\n", k, tc.expected, gotWidth)
-		}
-	}
-}
-
 func TestBarCompleted(t *testing.T) {
-	p := mpb.New(
-		mpb.Output(ioutil.Discard),
-	)
+	p := mpb.New(mpb.Output(ioutil.Discard))
 	total := 80
 	bar := p.AddBar(int64(total))
 

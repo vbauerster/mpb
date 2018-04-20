@@ -17,19 +17,19 @@ func init() {
 	rand.Seed(time.Now().UnixNano())
 }
 
-func TestAddBar(t *testing.T) {
+func TestBarCount(t *testing.T) {
 	p := mpb.New(mpb.Output(ioutil.Discard))
 
 	var wg sync.WaitGroup
 	wg.Add(1)
-	b := p.AddBar(80)
+	b := p.AddBar(100)
 	go func() {
-		for i := 0; i < 80; i++ {
+		for i := 0; i < 100; i++ {
 			if i == 33 {
 				wg.Done()
 			}
 			b.Increment()
-			time.Sleep(randomDuration(80 * time.Millisecond))
+			time.Sleep(randomDuration(100 * time.Millisecond))
 		}
 	}()
 
@@ -39,39 +39,38 @@ func TestAddBar(t *testing.T) {
 		t.Errorf("BarCount want: %q, got: %q\n", 1, count)
 	}
 
-	b.Complete()
+	p.Abort(b)
 	p.Wait()
 }
 
-func TestRemoveBars(t *testing.T) {
+func TestBarAbort(t *testing.T) {
 	p := mpb.New(mpb.Output(ioutil.Discard))
 
 	var wg sync.WaitGroup
+	wg.Add(1)
 	bars := make([]*mpb.Bar, 3)
 	for i := 0; i < 3; i++ {
-		wg.Add(1)
-		b := p.AddBar(80)
+		b := p.AddBar(100)
 		bars[i] = b
-		go func() {
-			for i := 0; i < 80; i++ {
-				if i == 33 {
+		go func(n int) {
+			for i := 0; i < 100; i++ {
+				if n == 0 && i == 33 {
+					p.Abort(b)
 					wg.Done()
 				}
 				b.Increment()
-				time.Sleep(randomDuration(80 * time.Millisecond))
+				time.Sleep(randomDuration(100 * time.Millisecond))
 			}
-		}()
+		}(i)
 	}
 
 	wg.Wait()
-	for i := 0; i < 3; i++ {
-		i := i
-		go func() {
-			if ok := p.RemoveBar(bars[i]); !ok {
-				t.Errorf("bar %d: remove failed\n", i)
-			}
-		}()
+	count := p.BarCount()
+	if count != 2 {
+		t.Errorf("BarCount want: %q, got: %q\n", 2, count)
 	}
+	p.Abort(bars[1])
+	p.Abort(bars[2])
 	p.Wait()
 }
 
