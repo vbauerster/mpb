@@ -31,7 +31,6 @@ const (
 type Statistics struct {
 	ID                  int
 	Completed           bool
-	Removed             bool
 	Total               int64
 	Current             int64
 	StartTime           time.Time

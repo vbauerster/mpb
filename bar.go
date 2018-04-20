@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"sync"
 	"time"
 	"unicode/utf8"
 
@@ -34,6 +35,8 @@ type Bar struct {
 	// completed is set from master Progress goroutine only
 	completed bool
 
+	removeOnComplete bool
+
 	operateState chan func(*bState)
 	// done is closed by Bar's goroutine, after cacheState is written
 	done chan struct{}
@@ -55,8 +58,8 @@ type (
 		totalAutoIncrBy      int64
 		trimLeftSpace        bool
 		trimRightSpace       bool
-		completed            bool
-		removed              bool
+		toComplete           bool
+		removeOnComplete     bool
 		dynamic              bool
 		startTime            time.Time
 		timeElapsed          time.Duration
@@ -72,14 +75,14 @@ type (
 		char rune
 		till int64
 	}
-	renderedReader struct {
-		io.Reader
+	renderedState struct {
+		bar        *Bar
+		reader     io.Reader
 		toComplete bool
-		toRemove   bool
 	}
 )
 
-func newBar(id int, total int64, cancel <-chan struct{}, options ...BarOption) *Bar {
+func newBar(wg *sync.WaitGroup, id int, total int64, cancel <-chan struct{}, options ...BarOption) *Bar {
 	if total <= 0 {
 		total = time.Now().Unix()
 	}
@@ -99,13 +102,14 @@ func newBar(id int, total int64, cancel <-chan struct{}, options ...BarOption) *
 	s.bufA = bytes.NewBuffer(make([]byte, 0, s.width/2))
 
 	b := &Bar{
-		priority:     id,
-		operateState: make(chan func(*bState)),
-		done:         make(chan struct{}),
-		shutdown:     make(chan struct{}),
+		priority:         id,
+		removeOnComplete: s.removeOnComplete,
+		operateState:     make(chan func(*bState)),
+		done:             make(chan struct{}),
+		shutdown:         make(chan struct{}),
 	}
 
-	go b.serve(s, cancel)
+	go b.serve(wg, s, cancel)
 	return b
 }
 
@@ -133,40 +137,6 @@ func (b *Bar) ProxyReader(r io.Reader) *Reader {
 // Increment is a shorthand for b.IncrBy(1)
 func (b *Bar) Increment() {
 	b.IncrBy(1)
-}
-
-// IncrBy increments progress bar by amount of n
-func (b *Bar) IncrBy(n int) {
-	if n < 1 {
-		return
-	}
-	select {
-	case b.operateState <- func(s *bState) {
-		if s.completed {
-			return
-		}
-		next := time.Now()
-		if s.current == 0 {
-			s.startTime = next
-			s.blockStartTime = next
-		} else {
-			now := time.Now()
-			s.updateTimePerItemEstimate(n, now, next)
-			s.timeElapsed = now.Sub(s.startTime)
-		}
-		s.current += int64(n)
-		if s.dynamic {
-			curp := decor.CalcPercentage(s.total, s.current, 100)
-			if 100-curp <= s.totalAutoIncrTrigger {
-				s.total += s.totalAutoIncrBy
-			}
-		} else if s.current >= s.total {
-			s.current = s.total
-			s.completed = true
-		}
-	}:
-	case <-b.done:
-	}
 }
 
 // ResumeFill fills bar with different r rune,
@@ -248,44 +218,59 @@ func (b *Bar) SetTotal(total int64, final bool) {
 	}
 }
 
+// IncrBy increments progress bar by amount of n
+func (b *Bar) IncrBy(n int) {
+	if n < 1 {
+		return
+	}
+	select {
+	case b.operateState <- func(s *bState) {
+		if s.toComplete {
+			return
+		}
+		next := time.Now()
+		if s.current == 0 {
+			s.startTime = next
+			s.blockStartTime = next
+		} else {
+			now := time.Now()
+			s.updateTimePerItemEstimate(n, now, next)
+			s.timeElapsed = now.Sub(s.startTime)
+		}
+		s.current += int64(n)
+		if s.dynamic {
+			curp := decor.CalcPercentage(s.total, s.current, 100)
+			if 100-curp <= s.totalAutoIncrTrigger {
+				s.total += s.totalAutoIncrBy
+			}
+		} else if s.current >= s.total {
+			s.current = s.total
+			s.toComplete = true
+		}
+	}:
+	case <-b.done:
+	}
+}
+
 // Completed reports whether the bar is in completed state
 func (b *Bar) Completed() bool {
 	result := make(chan bool, 1)
 	select {
-	case b.operateState <- func(s *bState) { result <- s.completed }:
+	case b.operateState <- func(s *bState) { result <- s.toComplete }:
 		return <-result
 	case <-b.done:
-		return b.cacheState.completed
+		return b.cacheState.toComplete
 	}
 }
 
-// Complete stops bar's progress tracking, but doesn't remove the bar from rendering queue.
-// If you need to remove, invoke Progress.RemoveBar(*Bar) instead.
-func (b *Bar) Complete() {
-	b.askToComplete(false)
-}
-
-func (b *Bar) askToComplete(toRemove bool) bool {
-	result := make(chan bool, 1)
-	select {
-	case b.operateState <- func(s *bState) {
-		s.removed = toRemove
-		s.completed = true
-		result <- true
-	}:
-		return <-result
-	case <-b.done:
-		return false
-	}
-}
-
-func (b *Bar) serve(s *bState, cancel <-chan struct{}) {
+func (b *Bar) serve(wg *sync.WaitGroup, s *bState, cancel <-chan struct{}) {
+	defer wg.Done()
 	for {
 		select {
 		case op := <-b.operateState:
 			op(s)
 		case <-cancel:
-			s.completed = true
+			s.toComplete = true
 			cancel = nil
 		case <-b.shutdown:
 			b.cacheState = s
@@ -295,8 +280,8 @@ func (b *Bar) serve(s *bState, cancel <-chan struct{}) {
 	}
 }
 
-func (b *Bar) render(tw int, pSyncer, aSyncer *widthSyncer) <-chan *renderedReader {
-	ch := make(chan *renderedReader, 1)
+func (b *Bar) render(tw int, pSyncer, aSyncer *widthSyncer) <-chan *renderedState {
+	ch := make(chan *renderedState, 1)
 
 	go func() {
 		select {
@@ -308,13 +293,12 @@ func (b *Bar) render(tw int, pSyncer, aSyncer *widthSyncer) <-chan *renderedRead
 					s.panicMsg = fmt.Sprintf("b#%02d panic: %v\n", s.id, p)
 					s.pDecorators = nil
 					s.aDecorators = nil
-					s.completed = true
+					s.toComplete = true
 					r = strings.NewReader(s.panicMsg)
 				}
-				ch <- &renderedReader{r, s.completed, s.removed}
+				ch <- &renderedState{b, r, s.toComplete}
 			}()
-			s.draw(tw, pSyncer, aSyncer)
-			r = io.MultiReader(s.bufP, s.bufB, s.bufA)
+			r = s.draw(tw, pSyncer, aSyncer)
 		}:
 		case <-b.done:
 			s := b.cacheState
@@ -322,24 +306,16 @@ func (b *Bar) render(tw int, pSyncer, aSyncer *widthSyncer) <-chan *renderedRead
 			if s.panicMsg != "" {
 				r = strings.NewReader(s.panicMsg)
 			} else {
-				s.draw(tw, pSyncer, aSyncer)
-				r = io.MultiReader(s.bufP, s.bufB, s.bufA)
+				r = s.draw(tw, pSyncer, aSyncer)
 			}
-			ch <- &renderedReader{r, s.completed, s.removed}
+			ch <- &renderedState{b, r, s.toComplete}
 		}
 	}()
 
 	return ch
 }
 
-func (s *bState) updateTimePerItemEstimate(amount int, now, next time.Time) {
-	lastBlockTime := now.Sub(s.blockStartTime)
-	lastItemEstimate := float64(lastBlockTime) / float64(amount)
-	s.timePerItem = time.Duration((s.etaAlpha * lastItemEstimate) + (1-s.etaAlpha)*float64(s.timePerItem))
-	s.blockStartTime = next
-}
-
-func (s *bState) draw(termWidth int, pSyncer, aSyncer *widthSyncer) {
+func (s *bState) draw(termWidth int, pSyncer, aSyncer *widthSyncer) io.Reader {
 	if termWidth <= 0 {
 		termWidth = s.width
 	}
@@ -380,6 +356,15 @@ func (s *bState) draw(termWidth int, pSyncer, aSyncer *widthSyncer) {
 		s.fillBar(termWidth - prependCount - appendCount)
 	}
 	s.bufA.WriteByte('\n')
+
+	return io.MultiReader(s.bufP, s.bufB, s.bufA)
+}
+
+func (s *bState) updateTimePerItemEstimate(amount int, now, next time.Time) {
+	lastBlockTime := now.Sub(s.blockStartTime)
+	lastItemEstimate := float64(lastBlockTime) / float64(amount)
+	s.timePerItem = time.Duration((s.etaAlpha * lastItemEstimate) + (1-s.etaAlpha)*float64(s.timePerItem))
+	s.blockStartTime = next
 }
 
 func (s *bState) fillBar(width int) {
@@ -428,8 +413,7 @@ func (s *bState) fillBar(width int) {
 func newStatistics(s *bState) *decor.Statistics {
 	return &decor.Statistics{
 		ID:                  s.id,
-		Completed:           s.completed,
-		Removed:             s.removed,
+		Completed:           s.toComplete,
 		Total:               s.total,
 		Current:             s.current,
 		StartTime:           s.startTime,

@@ -75,6 +75,13 @@ func BarAutoIncrTotal(trigger, amount int64) BarOption {
 	}
 }
 
+// BarRemoveOnComplete is a flag, which tells whether the intention is to remove the bar after completion.
+func BarRemoveOnComplete() BarOption {
+	return func(s *bState) {
+		s.removeOnComplete = true
+	}
+}
+
 func barWidth(w int) BarOption {
 	return func(s *bState) {
 		s.width = w
