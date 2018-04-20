@@ -69,7 +69,9 @@ func New(options ...ProgressOption) *Progress {
 	}
 
 	for _, opt := range options {
-		opt(s)
+		if opt != nil {
+			opt(s)
+		}
 	}
 
 	p := &Progress{

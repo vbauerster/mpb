@@ -94,7 +94,9 @@ func newBar(wg *sync.WaitGroup, id int, total int64, cancel <-chan struct{}, opt
 	}
 
 	for _, opt := range options {
-		opt(s)
+		if opt != nil {
+			opt(s)
+		}
 	}
 
 	s.bufP = bytes.NewBuffer(make([]byte, 0, s.width/2))
