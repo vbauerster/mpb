@@ -6,7 +6,7 @@ import (
 )
 
 func benchmarkSingleBar(total int) {
-	p := New(Output(ioutil.Discard))
+	p := New(WithOutput(ioutil.Discard))
 	bar := p.AddBar(int64(total))
 	for i := 0; i < total; i++ {
 		bar.Increment()
@@ -33,7 +33,7 @@ func BenchmarkSingleBar10000(b *testing.B) {
 }
 
 func BenchmarkIncrSingleBar(b *testing.B) {
-	p := New(Output(ioutil.Discard))
+	p := New(WithOutput(ioutil.Discard))
 	bar := p.AddBar(int64(b.N))
 	for i := 0; i < b.N; i++ {
 		bar.Increment()

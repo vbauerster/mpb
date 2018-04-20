@@ -15,7 +15,7 @@ func TestWithContext(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	shutdown := make(chan struct{})
 	p := mpb.New(
-		mpb.Output(ioutil.Discard),
+		mpb.WithOutput(ioutil.Discard),
 		mpb.WithContext(ctx),
 		mpb.WithShutdownNotifier(shutdown),
 	)

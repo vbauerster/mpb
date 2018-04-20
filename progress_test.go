@@ -18,7 +18,7 @@ func init() {
 }
 
 func TestBarCount(t *testing.T) {
-	p := mpb.New(mpb.Output(ioutil.Discard))
+	p := mpb.New(mpb.WithOutput(ioutil.Discard))
 
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -44,7 +44,7 @@ func TestBarCount(t *testing.T) {
 }
 
 func TestBarAbort(t *testing.T) {
-	p := mpb.New(mpb.Output(ioutil.Discard))
+	p := mpb.New(mpb.WithOutput(ioutil.Discard))
 
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -78,7 +78,7 @@ func TestWithCancel(t *testing.T) {
 	cancel := make(chan struct{})
 	shutdown := make(chan struct{})
 	p := mpb.New(
-		mpb.Output(ioutil.Discard),
+		mpb.WithOutput(ioutil.Discard),
 		mpb.WithCancel(cancel),
 		mpb.WithShutdownNotifier(shutdown),
 	)
@@ -118,7 +118,7 @@ func TestCustomFormat(t *testing.T) {
 	cancel := make(chan struct{})
 	customFormat := "╢▌▌░╟"
 	p := mpb.New(
-		mpb.Output(&buf),
+		mpb.WithOutput(&buf),
 		mpb.WithCancel(cancel),
 		mpb.WithFormat(customFormat),
 	)
@@ -152,7 +152,7 @@ func TestInvalidFormatWidth(t *testing.T) {
 	customWidth := 60
 	customFormat := "(#>=_)"
 	p := mpb.New(
-		mpb.Output(&buf),
+		mpb.WithOutput(&buf),
 		mpb.WithWidth(customWidth),
 		mpb.WithFormat(customFormat),
 	)

@@ -22,7 +22,7 @@ const content = `Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed d
 
 func TestProxyReader(t *testing.T) {
 	var buf bytes.Buffer
-	p := mpb.New(mpb.Output(&buf))
+	p := mpb.New(mpb.WithOutput(&buf))
 
 	reader := strings.NewReader(content)
 
@@ -50,7 +50,7 @@ func TestProxyReader(t *testing.T) {
 
 func TestProxyReaderCloser(t *testing.T) {
 	var buf bytes.Buffer
-	p := mpb.New(mpb.Output(&buf))
+	p := mpb.New(mpb.WithOutput(&buf))
 
 	ts := setupTestHttpServer(content)
 	defer ts.Close()

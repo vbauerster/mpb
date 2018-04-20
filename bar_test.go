@@ -14,7 +14,7 @@ import (
 )
 
 func TestBarCompleted(t *testing.T) {
-	p := mpb.New(mpb.Output(ioutil.Discard))
+	p := mpb.New(mpb.WithOutput(ioutil.Discard))
 	total := 80
 	bar := p.AddBar(int64(total))
 
@@ -32,7 +32,7 @@ func TestBarCompleted(t *testing.T) {
 }
 
 func TestBarID(t *testing.T) {
-	p := mpb.New(mpb.Output(ioutil.Discard))
+	p := mpb.New(mpb.WithOutput(ioutil.Discard))
 
 	numBars := 3
 	bars := make([]*mpb.Bar, numBars)
@@ -60,7 +60,7 @@ func TestBarIncrWithReFill(t *testing.T) {
 
 	width := 100
 	p := mpb.New(
-		mpb.Output(&buf),
+		mpb.WithOutput(&buf),
 		mpb.WithWidth(width),
 	)
 
@@ -91,7 +91,7 @@ func TestBarIncrWithReFill(t *testing.T) {
 func TestBarPanics(t *testing.T) {
 	var wg sync.WaitGroup
 	var buf bytes.Buffer
-	p := mpb.New(mpb.Output(&buf), mpb.WithWaitGroup(&wg))
+	p := mpb.New(mpb.WithOutput(&buf), mpb.WithWaitGroup(&wg))
 
 	wantPanic := "Upps!!!"
 	numBars := 3
