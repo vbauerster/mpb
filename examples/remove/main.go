@@ -24,6 +24,12 @@ func main() {
 	for i := 0; i < numBars; i++ {
 		var name string
 		name = fmt.Sprintf("Bar#%d:", i)
+
+		var bOption mpb.BarOption
+		if i == 0 {
+			bOption = mpb.BarRemoveOnComplete()
+		}
+
 		b := p.AddBar(int64(total), mpb.BarID(i),
 			mpb.PrependDecorators(
 				decor.StaticName(name, 0, decor.DwidthSync|decor.DidentRight),
@@ -32,20 +38,18 @@ func main() {
 			mpb.AppendDecorators(
 				decor.Percentage(5, 0),
 			),
+			bOption,
 		)
 		go func() {
 			defer wg.Done()
 			max := 100 * time.Millisecond
 			for i := 0; i < total; i++ {
-				if b.ID() == 1 && i == 42 {
-					p.RemoveBar(b)
+				if b.ID() == 2 && i == 42 {
+					p.Abort(b)
 					return
 				}
 				time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
 				b.Increment()
-			}
-			if b.ID() == 0 {
-				p.RemoveBar(b)
 			}
 		}()
 	}
