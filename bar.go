@@ -99,9 +99,9 @@ func newBar(wg *sync.WaitGroup, id int, total int64, cancel <-chan struct{}, opt
 		}
 	}
 
-	s.bufP = bytes.NewBuffer(make([]byte, 0, s.width/2))
+	s.bufP = bytes.NewBuffer(make([]byte, 0, s.width))
 	s.bufB = bytes.NewBuffer(make([]byte, 0, s.width))
-	s.bufA = bytes.NewBuffer(make([]byte, 0, s.width/2))
+	s.bufA = bytes.NewBuffer(make([]byte, 0, s.width))
 
 	b := &Bar{
 		priority:         id,
@@ -325,7 +325,6 @@ func (s *bState) draw(termWidth int, pSyncer, aSyncer *widthSyncer) io.Reader {
 	stat := newStatistics(s)
 
 	// render prepend functions to the left of the bar
-	s.bufP.Reset()
 	for i, f := range s.pDecorators {
 		s.bufP.WriteString(f(stat, pSyncer.Accumulator[i], pSyncer.Distributor[i]))
 	}
@@ -335,7 +334,6 @@ func (s *bState) draw(termWidth int, pSyncer, aSyncer *widthSyncer) io.Reader {
 	}
 
 	// render append functions to the right of the bar
-	s.bufA.Reset()
 	if !s.trimRightSpace {
 		s.bufA.WriteByte(' ')
 	}
@@ -347,26 +345,15 @@ func (s *bState) draw(termWidth int, pSyncer, aSyncer *widthSyncer) io.Reader {
 	prependCount := utf8.RuneCount(s.bufP.Bytes())
 	appendCount := utf8.RuneCount(s.bufA.Bytes())
 
-	if termWidth > s.width {
-		s.fillBar(s.width)
-	} else {
-		s.fillBar(termWidth - prependCount - appendCount)
-	}
+	s.fillBar(s.width)
 	barCount := utf8.RuneCount(s.bufB.Bytes())
 	totalCount := prependCount + barCount + appendCount
 	if totalCount > termWidth {
 		s.fillBar(termWidth - prependCount - appendCount)
 	}
+
 	s.bufA.WriteByte('\n')
-
 	return io.MultiReader(s.bufP, s.bufB, s.bufA)
-}
-
-func (s *bState) updateTimePerItemEstimate(amount int, now, next time.Time) {
-	lastBlockTime := now.Sub(s.blockStartTime)
-	lastItemEstimate := float64(lastBlockTime) / float64(amount)
-	s.timePerItem = time.Duration((s.etaAlpha * lastItemEstimate) + (1-s.etaAlpha)*float64(s.timePerItem))
-	s.blockStartTime = next
 }
 
 func (s *bState) fillBar(width int) {
@@ -410,6 +397,13 @@ func (s *bState) fillBar(width int) {
 	}
 
 	s.bufB.WriteRune(s.format[rRight])
+}
+
+func (s *bState) updateTimePerItemEstimate(amount int, now, next time.Time) {
+	lastBlockTime := now.Sub(s.blockStartTime)
+	lastItemEstimate := float64(lastBlockTime) / float64(amount)
+	s.timePerItem = time.Duration((s.etaAlpha * lastItemEstimate) + (1-s.etaAlpha)*float64(s.timePerItem))
+	s.blockStartTime = next
 }
 
 func newStatistics(s *bState) *decor.Statistics {
