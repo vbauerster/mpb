@@ -99,7 +99,7 @@ func (p *Progress) AddBar(total int64, options ...BarOption) *Bar {
 	}:
 		return <-result
 	case <-p.done:
-		// fail early
+		p.wg.Done()
 		return nil
 	}
 }
