@@ -209,6 +209,6 @@ func newTestState() *bState {
 		bufB:           new(bytes.Buffer),
 		bufA:           new(bytes.Buffer),
 	}
-	s.runes = strToBarRunes("[=>-]")
+	s.runes = strToBarRunes(pformat)
 	return s
 }
