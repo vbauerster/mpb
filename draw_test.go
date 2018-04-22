@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestFillBar(t *testing.T) {
+func TestDraw(t *testing.T) {
 	// key is termWidth
 	testSuite := map[int]map[string]struct {
 		total, current int64
@@ -180,6 +180,7 @@ func TestFillBar(t *testing.T) {
 
 	prependWs := newWidthSyncer(nil, 1, 0)
 	appendWs := newWidthSyncer(nil, 1, 0)
+	var temp bytes.Buffer
 	for termWidth, cases := range testSuite {
 		for name, tc := range cases {
 			s := newTestState()
@@ -189,10 +190,11 @@ func TestFillBar(t *testing.T) {
 			if tc.barRefill != nil {
 				s.refill = tc.barRefill
 			}
-			s.draw(termWidth, prependWs, appendWs)
-			got := s.bufB.String()
-			if got != tc.want {
-				t.Errorf("termWidth %d; %s: want: %s %d, got: %s %d\n", termWidth, name, tc.want, len(tc.want), got, len(got))
+			temp.Reset()
+			temp.ReadFrom(s.draw(termWidth, prependWs, appendWs))
+			got := temp.String()
+			if got != tc.want+"\n" {
+				t.Errorf("termWidth %d; %s: want: %s %d, got: %s %d\n", termWidth, name, tc.want+"\n", len(tc.want), got, len(got))
 			}
 		}
 	}
@@ -206,6 +208,6 @@ func newTestState() *bState {
 		bufB:           new(bytes.Buffer),
 		bufA:           new(bytes.Buffer),
 	}
-	s.updateFormat("[=>-]")
+	s.runes = strToBarRunes("[=>-]")
 	return s
 }
