@@ -83,11 +83,8 @@ func TestWithCancel(t *testing.T) {
 		WithShutdownNotifier(shutdown),
 	)
 
-	numBars := 3
-	bars := make([]*Bar, 0, numBars)
-	for i := 0; i < numBars; i++ {
+	for i := 0; i < 2; i++ {
 		bar := p.AddBar(int64(1000), BarID(i))
-		bars = append(bars, bar)
 		go func() {
 			for !bar.Completed() {
 				time.Sleep(randomDuration(100 * time.Millisecond))
