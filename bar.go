@@ -25,7 +25,7 @@ const (
 	etaAlpha  = 0.25
 )
 
-type fmtRunes [formatLen]rune
+type barRunes [formatLen]rune
 
 // Bar represents a progress Bar
 type Bar struct {
@@ -50,7 +50,7 @@ type (
 	bState struct {
 		id                   int
 		width                int
-		format               fmtRunes
+		runes                barRunes
 		etaAlpha             float64
 		total                int64
 		current              int64
@@ -358,9 +358,9 @@ func (s *bState) draw(termWidth int, pSyncer, aSyncer *widthSyncer) io.Reader {
 
 func (s *bState) fillBar(width int) {
 	s.bufB.Reset()
-	s.bufB.WriteRune(s.format[rLeft])
+	s.bufB.WriteRune(s.runes[rLeft])
 	if width <= 2 {
-		s.bufB.WriteRune(s.format[rRight])
+		s.bufB.WriteRune(s.runes[rRight])
 		return
 	}
 
@@ -377,26 +377,26 @@ func (s *bState) fillBar(width int) {
 			s.bufB.WriteRune(s.refill.char)
 		}
 		for i = till; i < completedWidth; i++ {
-			s.bufB.WriteRune(s.format[rFill])
+			s.bufB.WriteRune(s.runes[rFill])
 		}
 	} else {
 		var i int64
 		for i = 0; i < completedWidth; i++ {
-			s.bufB.WriteRune(s.format[rFill])
+			s.bufB.WriteRune(s.runes[rFill])
 		}
 	}
 
 	if completedWidth < int64(barWidth) && completedWidth > 0 {
 		_, size := utf8.DecodeLastRune(s.bufB.Bytes())
 		s.bufB.Truncate(s.bufB.Len() - size)
-		s.bufB.WriteRune(s.format[rTip])
+		s.bufB.WriteRune(s.runes[rTip])
 	}
 
 	for i := completedWidth; i < int64(barWidth); i++ {
-		s.bufB.WriteRune(s.format[rEmpty])
+		s.bufB.WriteRune(s.runes[rEmpty])
 	}
 
-	s.bufB.WriteRune(s.format[rRight])
+	s.bufB.WriteRune(s.runes[rRight])
 }
 
 func (s *bState) updateTimePerItemEstimate(amount int, now, next time.Time) {
@@ -418,9 +418,10 @@ func newStatistics(s *bState) *decor.Statistics {
 	}
 }
 
-func (s *bState) updateFormat(format string) {
+func strToBarRunes(format string) (array barRunes) {
 	for i, n := 0, 0; len(format) > 0; i++ {
-		s.format[i], n = utf8.DecodeRuneInString(format)
+		array[i], n = utf8.DecodeRuneInString(format)
 		format = format[n:]
 	}
+	return
 }

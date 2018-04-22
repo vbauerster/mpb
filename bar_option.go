@@ -90,6 +90,6 @@ func barWidth(w int) BarOption {
 
 func barFormat(format string) BarOption {
 	return func(s *bState) {
-		s.updateFormat(format)
+		s.runes = strToBarRunes(format)
 	}
 }
