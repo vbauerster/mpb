@@ -9,12 +9,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/vbauerster/mpb"
+	. "github.com/vbauerster/mpb"
 	"github.com/vbauerster/mpb/decor"
 )
 
 func TestBarCompleted(t *testing.T) {
-	p := mpb.New(mpb.WithOutput(ioutil.Discard))
+	p := New(WithOutput(ioutil.Discard))
 	total := 80
 	bar := p.AddBar(int64(total))
 
@@ -32,13 +32,13 @@ func TestBarCompleted(t *testing.T) {
 }
 
 func TestBarID(t *testing.T) {
-	p := mpb.New(mpb.WithOutput(ioutil.Discard))
+	p := New(WithOutput(ioutil.Discard))
 
 	numBars := 3
-	bars := make([]*mpb.Bar, numBars)
+	bars := make([]*Bar, numBars)
 	for i := 0; i < numBars; i++ {
-		bars[i] = p.AddBar(80, mpb.BarID(i))
-		go func(bar *mpb.Bar) {
+		bars[i] = p.AddBar(80, BarID(i))
+		go func(bar *Bar) {
 			for i := 0; i < 80; i++ {
 				time.Sleep(10 * time.Millisecond)
 				bar.Increment()
@@ -59,16 +59,13 @@ func TestBarIncrWithReFill(t *testing.T) {
 	var buf bytes.Buffer
 
 	width := 100
-	p := mpb.New(
-		mpb.WithOutput(&buf),
-		mpb.WithWidth(width),
-	)
+	p := New(WithOutput(&buf), WithWidth(width))
 
 	total := 100
 	till := 30
 	refillChar := '+'
 
-	bar := p.AddBar(100, mpb.BarTrim())
+	bar := p.AddBar(100, BarTrim())
 
 	bar.ResumeFill(refillChar, int64(till))
 
@@ -91,7 +88,7 @@ func TestBarIncrWithReFill(t *testing.T) {
 func TestBarPanics(t *testing.T) {
 	var wg sync.WaitGroup
 	var buf bytes.Buffer
-	p := mpb.New(mpb.WithOutput(&buf), mpb.WithWaitGroup(&wg))
+	p := New(WithOutput(&buf), WithWaitGroup(&wg))
 
 	wantPanic := "Upps!!!"
 	numBars := 3
@@ -99,7 +96,7 @@ func TestBarPanics(t *testing.T) {
 
 	for i := 0; i < numBars; i++ {
 		name := fmt.Sprintf("b#%02d:", i)
-		bar := p.AddBar(100, mpb.BarID(i), mpb.PrependDecorators(
+		bar := p.AddBar(100, BarID(i), PrependDecorators(
 			func(s *decor.Statistics, _ chan<- int, _ <-chan int) string {
 				if s.ID == 2 && s.Current >= 42 {
 					panic(wantPanic)
