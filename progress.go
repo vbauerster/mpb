@@ -139,7 +139,7 @@ func (p *Progress) BarCount() int {
 }
 
 // Wait first waits for user provided *sync.WaitGroup, if any,
-// then waits far all bars to camplete and finally shutdowns master goroutine.
+// then waits far all bars to complete and finally shutdowns master goroutine.
 // After this method has been called, there is no way to reuse *Progress instance.
 func (p *Progress) Wait() {
 	if p.uwg != nil {
