@@ -180,7 +180,7 @@ func TestDraw(t *testing.T) {
 
 	prependWs := newWidthSyncer(nil, 1, 0)
 	appendWs := newWidthSyncer(nil, 1, 0)
-	var temp bytes.Buffer
+	var tmpBuf bytes.Buffer
 	for termWidth, cases := range testSuite {
 		for name, tc := range cases {
 			s := newTestState()
@@ -190,11 +190,12 @@ func TestDraw(t *testing.T) {
 			if tc.barRefill != nil {
 				s.refill = tc.barRefill
 			}
-			temp.Reset()
-			temp.ReadFrom(s.draw(termWidth, prependWs, appendWs))
-			got := temp.String()
-			if got != tc.want+"\n" {
-				t.Errorf("termWidth %d; %s: want: %s %d, got: %s %d\n", termWidth, name, tc.want+"\n", len(tc.want), got, len(got))
+			tmpBuf.Reset()
+			tmpBuf.ReadFrom(s.draw(termWidth, prependWs, appendWs))
+			got := tmpBuf.String()
+			want := tc.want + "\n"
+			if got != want {
+				t.Errorf("termWidth %d; %s: want: %s %d, got: %s %d\n", termWidth, name, want, len(want), got, len(got))
 			}
 		}
 	}
