@@ -138,9 +138,9 @@ func (p *Progress) BarCount() int {
 	}
 }
 
-// Wait first waits for all bars to complete, then waits for user provided WaitGroup, if any.
-// It's optional to call, in other words if you don't call Progress.Wait(),
-// it's not guaranteed that all bars will be flushed completely to the underlying io.Writer.
+// Wait first waits for user provided *sync.WaitGroup, if any,
+// then waits far all bars to camplete and finally shutdowns master goroutine.
+// After this method has been called, there is no way to reuse *Progress instance.
 func (p *Progress) Wait() {
 	if p.uwg != nil {
 		p.uwg.Wait()
