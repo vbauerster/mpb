@@ -59,7 +59,6 @@ type (
 		trimLeftSpace        bool
 		trimRightSpace       bool
 		toComplete           bool
-		removeOnComplete     bool
 		dynamic              bool
 		startTime            time.Time
 		timeElapsed          time.Duration
@@ -70,6 +69,10 @@ type (
 		refill               *refill
 		bufP, bufB, bufA     *bytes.Buffer
 		panicMsg             string
+
+		// following options are assigned to the *Bar
+		priority         int
+		removeOnComplete bool
 	}
 	refill struct {
 		char rune
@@ -89,6 +92,7 @@ func newBar(wg *sync.WaitGroup, id int, total int64, cancel <-chan struct{}, opt
 
 	s := &bState{
 		id:       id,
+		priority: id,
 		total:    total,
 		etaAlpha: etaAlpha,
 	}
@@ -104,7 +108,7 @@ func newBar(wg *sync.WaitGroup, id int, total int64, cancel <-chan struct{}, opt
 	s.bufA = bytes.NewBuffer(make([]byte, 0, s.width))
 
 	b := &Bar{
-		priority:         id,
+		priority:         s.priority,
 		removeOnComplete: s.removeOnComplete,
 		operateState:     make(chan func(*bState)),
 		done:             make(chan struct{}),

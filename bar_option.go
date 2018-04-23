@@ -82,6 +82,14 @@ func BarRemoveOnComplete() BarOption {
 	}
 }
 
+// BarPriority sets bar's priority.
+// Zero is highest priority, i.e. bar will be on top.
+func BarPriority(priority int) BarOption {
+	return func(s *bState) {
+		s.priority = priority
+	}
+}
+
 func barWidth(w int) BarOption {
 	return func(s *bState) {
 		s.width = w
