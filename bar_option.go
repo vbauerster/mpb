@@ -1,6 +1,8 @@
 package mpb
 
-import "github.com/vbauerster/mpb/decor"
+import (
+	"github.com/vbauerster/mpb/decor"
+)
 
 // BarOption is a function option which changes the default behavior of a bar,
 // if passed to p.AddBar(int64, ...BarOption)
@@ -75,7 +77,7 @@ func BarAutoIncrTotal(trigger, amount int64) BarOption {
 	}
 }
 
-// BarRemoveOnComplete is a flag, which tells whether the intention is to remove the bar after completion.
+// BarRemoveOnComplete is a flag, which will trigger bar auto remove on completion event.
 func BarRemoveOnComplete() BarOption {
 	return func(s *bState) {
 		s.removeOnComplete = true
@@ -84,9 +86,24 @@ func BarRemoveOnComplete() BarOption {
 
 // BarPriority sets bar's priority.
 // Zero is highest priority, i.e. bar will be on top.
+// If `BarReplaceOnComplete` option is supplied, this option is ignored.
 func BarPriority(priority int) BarOption {
 	return func(s *bState) {
 		s.priority = priority
+	}
+}
+
+// BarReplaceOnComplete provided `b` is usually already running bar which this bar should replace.
+func BarReplaceOnComplete(b *Bar) BarOption {
+	return func(s *bState) {
+		s.waitBar = b
+	}
+}
+
+// BarClearOnComplete clears the bar section on complete event.
+func BarClearOnComplete() BarOption {
+	return func(s *bState) {
+		s.noBarOnComplete = true
 	}
 }
 

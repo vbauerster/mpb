@@ -32,6 +32,9 @@ type Bar struct {
 	priority int
 	index    int
 
+	// pointer to running bar, which this bar should replace
+	waitBar *Bar
+
 	// completed is set from master Progress goroutine only
 	completed bool
 
@@ -60,6 +63,7 @@ type (
 		trimRightSpace       bool
 		toComplete           bool
 		dynamic              bool
+		noBarOnComplete      bool
 		startTime            time.Time
 		timeElapsed          time.Duration
 		blockStartTime       time.Time
@@ -73,6 +77,7 @@ type (
 		// following options are assigned to the *Bar
 		priority         int
 		removeOnComplete bool
+		waitBar          *Bar
 	}
 	refill struct {
 		char rune
@@ -110,9 +115,14 @@ func newBar(wg *sync.WaitGroup, id int, total int64, cancel <-chan struct{}, opt
 	b := &Bar{
 		priority:         s.priority,
 		removeOnComplete: s.removeOnComplete,
+		waitBar:          s.waitBar,
 		operateState:     make(chan func(*bState)),
 		done:             make(chan struct{}),
 		shutdown:         make(chan struct{}),
+	}
+
+	if b.waitBar != nil {
+		b.priority = b.waitBar.priority
 	}
 
 	go b.serve(wg, s, cancel)
@@ -322,6 +332,8 @@ func (b *Bar) render(tw int, pSyncer, aSyncer *widthSyncer) <-chan *renderedStat
 }
 
 func (s *bState) draw(termWidth int, pSyncer, aSyncer *widthSyncer) io.Reader {
+	defer s.bufA.WriteByte('\n')
+
 	if termWidth <= 0 {
 		termWidth = s.width
 	}
@@ -333,21 +345,16 @@ func (s *bState) draw(termWidth int, pSyncer, aSyncer *widthSyncer) io.Reader {
 		s.bufP.WriteString(f(stat, pSyncer.Accumulator[i], pSyncer.Distributor[i]))
 	}
 
-	if !s.trimLeftSpace {
-		s.bufP.WriteByte(' ')
-	}
-
-	// render append functions to the right of the bar
-	if !s.trimRightSpace {
-		s.bufA.WriteByte(' ')
-	}
-
 	for i, f := range s.aDecorators {
 		s.bufA.WriteString(f(stat, aSyncer.Accumulator[i], aSyncer.Distributor[i]))
 	}
 
 	prependCount := utf8.RuneCount(s.bufP.Bytes())
 	appendCount := utf8.RuneCount(s.bufA.Bytes())
+
+	if s.toComplete && s.noBarOnComplete {
+		return io.MultiReader(s.bufP, s.bufA)
+	}
 
 	s.fillBar(s.width)
 	barCount := utf8.RuneCount(s.bufB.Bytes())
@@ -356,12 +363,19 @@ func (s *bState) draw(termWidth int, pSyncer, aSyncer *widthSyncer) io.Reader {
 		s.fillBar(termWidth - prependCount - appendCount)
 	}
 
-	s.bufA.WriteByte('\n')
 	return io.MultiReader(s.bufP, s.bufB, s.bufA)
 }
 
 func (s *bState) fillBar(width int) {
+	defer func() {
+		if !s.trimRightSpace {
+			s.bufB.WriteByte(' ')
+		}
+	}()
 	s.bufB.Reset()
+	if !s.trimLeftSpace {
+		s.bufB.WriteByte(' ')
+	}
 	s.bufB.WriteRune(s.runes[rLeft])
 	if width <= 2 {
 		s.bufB.WriteRune(s.runes[rRight])

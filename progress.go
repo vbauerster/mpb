@@ -46,6 +46,7 @@ type (
 		cancel           <-chan struct{}
 		shutdownNotifier chan struct{}
 		interceptors     []func(io.Writer)
+		waitBars         map[*Bar]*Bar
 	}
 	widthSyncer struct {
 		// Public for easy testing
@@ -60,12 +61,13 @@ func New(options ...ProgressOption) *Progress {
 	pq := make(priorityQueue, 0)
 	heap.Init(&pq)
 	s := &pState{
-		bHeap:  &pq,
-		width:  pwidth,
-		format: pformat,
-		cw:     cwriter.New(os.Stdout),
-		rr:     prr,
-		ticker: time.NewTicker(prr),
+		bHeap:    &pq,
+		width:    pwidth,
+		format:   pformat,
+		cw:       cwriter.New(os.Stdout),
+		rr:       prr,
+		ticker:   time.NewTicker(prr),
+		waitBars: make(map[*Bar]*Bar),
 	}
 
 	for _, opt := range options {
@@ -92,8 +94,12 @@ func (p *Progress) AddBar(total int64, options ...BarOption) *Bar {
 	case p.operateState <- func(s *pState) {
 		options = append(options, barWidth(s.width), barFormat(s.format))
 		b := newBar(p.wg, s.idCounter, total, s.cancel, options...)
-		heap.Push(s.bHeap, b)
-		s.heapUpdated = true
+		if b.waitBar != nil {
+			s.waitBars[b.waitBar] = b
+		} else {
+			heap.Push(s.bHeap, b)
+			s.heapUpdated = true
+		}
 		s.idCounter++
 		result <- b
 	}:
@@ -207,6 +213,11 @@ func (s *pState) writeAndFlush(tw, numP, numA int) (err error) {
 			rs.bar.completed = true
 			if rs.bar.removeOnComplete {
 				s.heapUpdated = heap.Remove(s.bHeap, rs.bar.index) != nil
+			}
+			if replacementBar, ok := s.waitBars[rs.bar]; ok {
+				heap.Push(s.bHeap, replacementBar)
+				s.heapUpdated = true
+				delete(s.waitBars, rs.bar)
 			}
 			defer func() {
 				s.shutdownPending = append(s.shutdownPending, rs.bar)
