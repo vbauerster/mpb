@@ -103,7 +103,7 @@ _Note:_ it is preferable to go get from github.com, rather than gopkg.in. See is
 	p.Wait()
 ```
 
-#### [Dynamic Total](examples/dynTotal/main.go)
+#### [Dynamic total](examples/dynTotal/main.go)
 
 ![dynTotal.gif](examples/gifs/dynTotal.gif)
 
