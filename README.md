@@ -11,9 +11,7 @@
 
 * __Multiple Bars__: Multiple progress bars are supported
 * __Dynamic Total__: [Set total](https://github.com/vbauerster/mpb/issues/9#issuecomment-344448984) while bar is running
-* __Dynamic Addition__: Additional bar could be added at later time
-* __Dynamic Removal__: Remove particular bar, before or after completion
-* __Dynamic Resize__: Adaptive bar resize (doesn't work inside tmux)
+* __Dynamic Add/Remove__: Dynamically add or remove bars
 * __Cancellation__: Cancel whole rendering process
 * __Predefined Decorators__: Elapsed time, [Ewmaest](https://github.com/dgryski/trifles/tree/master/ewmaest) based ETA, Percentage, Bytes counter
 * __Decorator's width sync__:  Synchronized decorator's width among multiple bars
