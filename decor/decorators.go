@@ -119,7 +119,7 @@ func CountersKibiByte(pairFormat string, minWidth, conf int) DecoratorFunc {
 // counters unit is multiple by 1000.
 // `pairFormat` must contain two printf compatible verbs, like "%f" or "%d".
 // First verb substituted with Current, second one with Total.
-// Example: `"%.1f / %.1f" = "1.0MiB / 12.0MiB"` or `"% .1f / % .1f" = "1.0 MiB / 12.0 MiB"`.
+// Example: `"%.1f / %.1f" = "1.0MB / 12.0MB"` or `"% .1f / % .1f" = "1.0 MB / 12.0 MB"`.
 // If you set `DwidthSync` bit in `conf` param, `minWidth` param is ignored.
 // `DwidthSync` is effective with multiple bars only, if set decorator will participate
 // in width synchronization process with other decorators in the same column group.

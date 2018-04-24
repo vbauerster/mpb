@@ -33,7 +33,7 @@ type Bar struct {
 	index    int
 
 	// pointer to running bar, which this bar should replace
-	waitBar *Bar
+	runningBar *Bar
 
 	// completed is set from master Progress goroutine only
 	completed bool
@@ -77,7 +77,7 @@ type (
 		// following options are assigned to the *Bar
 		priority         int
 		removeOnComplete bool
-		waitBar          *Bar
+		runningBar       *Bar
 	}
 	refill struct {
 		char rune
@@ -115,14 +115,14 @@ func newBar(wg *sync.WaitGroup, id int, total int64, cancel <-chan struct{}, opt
 	b := &Bar{
 		priority:         s.priority,
 		removeOnComplete: s.removeOnComplete,
-		waitBar:          s.waitBar,
+		runningBar:       s.runningBar,
 		operateState:     make(chan func(*bState)),
 		done:             make(chan struct{}),
 		shutdown:         make(chan struct{}),
 	}
 
-	if b.waitBar != nil {
-		b.priority = b.waitBar.priority
+	if b.runningBar != nil {
+		b.priority = b.runningBar.priority
 	}
 
 	go b.serve(wg, s, cancel)

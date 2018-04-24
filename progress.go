@@ -94,8 +94,8 @@ func (p *Progress) AddBar(total int64, options ...BarOption) *Bar {
 	case p.operateState <- func(s *pState) {
 		options = append(options, barWidth(s.width), barFormat(s.format))
 		b := newBar(p.wg, s.idCounter, total, s.cancel, options...)
-		if b.waitBar != nil {
-			s.waitBars[b.waitBar] = b
+		if b.runningBar != nil {
+			s.waitBars[b.runningBar] = b
 		} else {
 			heap.Push(s.bHeap, b)
 			s.heapUpdated = true

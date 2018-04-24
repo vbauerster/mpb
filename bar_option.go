@@ -84,19 +84,11 @@ func BarRemoveOnComplete() BarOption {
 	}
 }
 
-// BarPriority sets bar's priority.
-// Zero is highest priority, i.e. bar will be on top.
-// If `BarReplaceOnComplete` option is supplied, this option is ignored.
-func BarPriority(priority int) BarOption {
+// BarReplaceOnComplete is indicator for delayed bar start, after the `runningBar` is complete.
+// To achive bar replacement effect, `runningBar` should has its `BarRemoveOnComplete` option set.
+func BarReplaceOnComplete(runningBar *Bar) BarOption {
 	return func(s *bState) {
-		s.priority = priority
-	}
-}
-
-// BarReplaceOnComplete provided `b` is usually already running bar which this bar should replace.
-func BarReplaceOnComplete(b *Bar) BarOption {
-	return func(s *bState) {
-		s.waitBar = b
+		s.runningBar = runningBar
 	}
 }
 
@@ -104,6 +96,15 @@ func BarReplaceOnComplete(b *Bar) BarOption {
 func BarClearOnComplete() BarOption {
 	return func(s *bState) {
 		s.noBarOnComplete = true
+	}
+}
+
+// BarPriority sets bar's priority.
+// Zero is highest priority, i.e. bar will be on top.
+// If `BarReplaceOnComplete` option is supplied, this option is ignored.
+func BarPriority(priority int) BarOption {
+	return func(s *bState) {
+		s.priority = priority
 	}
 }
 
