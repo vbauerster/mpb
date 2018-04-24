@@ -359,8 +359,14 @@ func (s *bState) draw(termWidth int, pSyncer, aSyncer *widthSyncer) io.Reader {
 	s.fillBar(s.width)
 	barCount := utf8.RuneCount(s.bufB.Bytes())
 	totalCount := prependCount + barCount + appendCount
-	if totalCount > termWidth {
-		s.fillBar(termWidth - prependCount - appendCount)
+	if spaceCount := 0; totalCount > termWidth {
+		if !s.trimLeftSpace {
+			spaceCount++
+		}
+		if !s.trimRightSpace {
+			spaceCount++
+		}
+		s.fillBar(termWidth - prependCount - appendCount - spaceCount)
 	}
 
 	return io.MultiReader(s.bufP, s.bufB, s.bufA)
