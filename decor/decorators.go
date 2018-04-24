@@ -51,11 +51,11 @@ type DecoratorFunc func(s *Statistics, widthAccumulator chan<- int, widthDistrib
 //
 //	`fn` DecoratorFunc to wrap
 //
-//	`minWidth` minimum width to apply, if `DwidthSync` bit is not set
+//	`width` width to apply, if `DwidthSync` bit is not set
 //
 //	`conf` bit set config, [DidentRight|DwidthSync|DextraSpace]
-func OnComplete(fn DecoratorFunc, message string, minWidth, conf int) DecoratorFunc {
-	msgDecorator := StaticName(message, minWidth, conf)
+func OnComplete(fn DecoratorFunc, message string, width, conf int) DecoratorFunc {
+	msgDecorator := StaticName(message, width, conf)
 	return func(s *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string {
 		if s.Completed {
 			return msgDecorator(s, widthAccumulator, widthDistributor)
@@ -68,24 +68,24 @@ func OnComplete(fn DecoratorFunc, message string, minWidth, conf int) DecoratorF
 //
 //	`name` string to display
 //
-//	`minWidth` minimum width to apply, if `DwidthSync` bit is not set
+//	`width` width to apply, if `DwidthSync` bit is not set
 //
 //	`conf` bit set config, [DidentRight|DwidthSync|DextraSpace]
-func StaticName(name string, minWidth, conf int) DecoratorFunc {
+func StaticName(name string, width, conf int) DecoratorFunc {
 	nameFn := func(*Statistics) string {
 		return name
 	}
-	return DynamicName(nameFn, minWidth, conf)
+	return DynamicName(nameFn, width, conf)
 }
 
 // DynamicName returns dynamic name/message decorator.
 //
 //	`messageFn` callback function to get dynamic string message
 //
-//	`minWidth` minimum width to apply, if `DwidthSync` bit is not set
+//	`width` width to apply, if `DwidthSync` bit is not set
 //
 //	`conf` bit set config, [DidentRight|DwidthSync|DextraSpace]
-func DynamicName(messageFn func(*Statistics) string, minWidth, conf int) DecoratorFunc {
+func DynamicName(messageFn func(*Statistics) string, width, conf int) DecoratorFunc {
 	format := "%%"
 	if (conf & DidentRight) != 0 {
 		format += "-"
@@ -101,7 +101,7 @@ func DynamicName(messageFn func(*Statistics) string, minWidth, conf int) Decorat
 			}
 			return fmt.Sprintf(fmt.Sprintf(format, max), name)
 		}
-		return fmt.Sprintf(fmt.Sprintf(format, minWidth), name)
+		return fmt.Sprintf(fmt.Sprintf(format, width), name)
 	}
 }
 
@@ -109,44 +109,44 @@ func DynamicName(messageFn func(*Statistics) string, minWidth, conf int) Decorat
 //
 //	`pairFormat` printf compatible verbs for current and total, like "%f" or "%d"
 //
-//	`minWidth` minimum width to apply, if `DwidthSync` bit is not set
+//	`width` width to apply, if `DwidthSync` bit is not set
 //
 //	`conf` bit set config, [DidentRight|DwidthSync|DextraSpace]
-func CountersNoUnit(pairFormat string, minWidth, conf int) DecoratorFunc {
-	return counters(pairFormat, 0, minWidth, conf)
+func CountersNoUnit(pairFormat string, width, conf int) DecoratorFunc {
+	return counters(pairFormat, 0, width, conf)
 }
 
 // CountersKibiByte returns human friendly byte counters decorator, where counters unit is multiple by 1024.
 //
 //	`pairFormat` printf compatible verbs for current and total, like "%f" or "%d"
 //
-//	`minWidth` minimum width to apply, if `DwidthSync` bit is not set
+//	`width` width to apply, if `DwidthSync` bit is not set
 //
 //	`conf` bit set config, [DidentRight|DwidthSync|DextraSpace]
 //
 // pairFormat example:
 //
 //	"%.1f / %.1f" = "1.0MiB / 12.0MiB" or "% .1f / % .1f" = "1.0 MiB / 12.0 MiB"
-func CountersKibiByte(pairFormat string, minWidth, conf int) DecoratorFunc {
-	return counters(pairFormat, unitKiB, minWidth, conf)
+func CountersKibiByte(pairFormat string, width, conf int) DecoratorFunc {
+	return counters(pairFormat, unitKiB, width, conf)
 }
 
 // CountersKiloByte returns human friendly byte counters decorator, where counters unit is multiple by 1000.
 //
 //	`pairFormat` printf compatible verbs for current and total, like "%f" or "%d"
 //
-//	`minWidth` minimum width to apply, if `DwidthSync` bit is not set
+//	`width` width to apply, if `DwidthSync` bit is not set
 //
 //	`conf` bit set config, [DidentRight|DwidthSync|DextraSpace]
 //
 // pairFormat example:
 //
 //	"%.1f / %.1f" = "1.0MB / 12.0MB" or "% .1f / % .1f" = "1.0 MB / 12.0 MB"
-func CountersKiloByte(pairFormat string, minWidth, conf int) DecoratorFunc {
-	return counters(pairFormat, unitKB, minWidth, conf)
+func CountersKiloByte(pairFormat string, width, conf int) DecoratorFunc {
+	return counters(pairFormat, unitKB, width, conf)
 }
 
-func counters(pairFormat string, unit counterUnit, minWidth, conf int) DecoratorFunc {
+func counters(pairFormat string, unit counterUnit, width, conf int) DecoratorFunc {
 	format := "%%"
 	if (conf & DidentRight) != 0 {
 		format += "-"
@@ -170,16 +170,16 @@ func counters(pairFormat string, unit counterUnit, minWidth, conf int) Decorator
 			}
 			return fmt.Sprintf(fmt.Sprintf(format, max), str)
 		}
-		return fmt.Sprintf(fmt.Sprintf(format, minWidth), str)
+		return fmt.Sprintf(fmt.Sprintf(format, width), str)
 	}
 }
 
 // ETA returns exponential-weighted-moving-average ETA decorator.
 //
-//	`minWidth` minimum width to apply, if `DwidthSync` bit is not set
+//	`width` width to apply, if `DwidthSync` bit is not set
 //
 //	`conf` bit set config, [DidentRight|DwidthSync|DextraSpace]
-func ETA(minWidth, conf int) DecoratorFunc {
+func ETA(width, conf int) DecoratorFunc {
 	format := "%%"
 	if (conf & DidentRight) != 0 {
 		format += "-"
@@ -195,16 +195,16 @@ func ETA(minWidth, conf int) DecoratorFunc {
 			}
 			return fmt.Sprintf(fmt.Sprintf(format, max), str)
 		}
-		return fmt.Sprintf(fmt.Sprintf(format, minWidth), str)
+		return fmt.Sprintf(fmt.Sprintf(format, width), str)
 	}
 }
 
 // Elapsed returns elapsed time decorator.
 //
-//	`minWidth` minimum width to apply, if `DwidthSync` bit is not set
+//	`width` width to apply, if `DwidthSync` bit is not set
 //
 //	`conf` bit set config, [DidentRight|DwidthSync|DextraSpace]
-func Elapsed(minWidth, conf int) DecoratorFunc {
+func Elapsed(width, conf int) DecoratorFunc {
 	format := "%%"
 	if (conf & DidentRight) != 0 {
 		format += "-"
@@ -220,16 +220,16 @@ func Elapsed(minWidth, conf int) DecoratorFunc {
 			}
 			return fmt.Sprintf(fmt.Sprintf(format, max), str)
 		}
-		return fmt.Sprintf(fmt.Sprintf(format, minWidth), str)
+		return fmt.Sprintf(fmt.Sprintf(format, width), str)
 	}
 }
 
 // Percentage returns percentage decorator.
 //
-//	`minWidth` minimum width to apply, if `DwidthSync` bit is not set
+//	`width` width to apply, if `DwidthSync` bit is not set
 //
 //	`conf` bit set config, [DidentRight|DwidthSync|DextraSpace]
-func Percentage(minWidth, conf int) DecoratorFunc {
+func Percentage(width, conf int) DecoratorFunc {
 	format := "%%"
 	if (conf & DidentRight) != 0 {
 		format += "-"
@@ -245,7 +245,7 @@ func Percentage(minWidth, conf int) DecoratorFunc {
 			}
 			return fmt.Sprintf(fmt.Sprintf(format, max), str)
 		}
-		return fmt.Sprintf(fmt.Sprintf(format, minWidth), str)
+		return fmt.Sprintf(fmt.Sprintf(format, width), str)
 	}
 }
 
