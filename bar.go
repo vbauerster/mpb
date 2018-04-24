@@ -376,17 +376,18 @@ func (s *bState) draw(termWidth int, pSyncer, aSyncer *widthSyncer) io.Reader {
 
 func (s *bState) fillBar(width int) {
 	defer func() {
+		s.bufB.WriteRune(s.runes[rRight])
 		if !s.trimRightSpace {
 			s.bufB.WriteByte(' ')
 		}
 	}()
+
 	s.bufB.Reset()
 	if !s.trimLeftSpace {
 		s.bufB.WriteByte(' ')
 	}
 	s.bufB.WriteRune(s.runes[rLeft])
 	if width <= 2 {
-		s.bufB.WriteRune(s.runes[rRight])
 		return
 	}
 
@@ -421,8 +422,6 @@ func (s *bState) fillBar(width int) {
 	for i := completedWidth; i < int64(barWidth); i++ {
 		s.bufB.WriteRune(s.runes[rEmpty])
 	}
-
-	s.bufB.WriteRune(s.runes[rRight])
 }
 
 func (s *bState) updateTimePerItemEstimate(amount int, now, next time.Time) {
