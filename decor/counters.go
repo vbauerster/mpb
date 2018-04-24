@@ -24,13 +24,11 @@ const (
 
 const (
 	_ = iota
-	// Unit_KiB Kibibyte = 1024 b
-	Unit_KiB
-	// Unit_kB Kilobyte = 1000 b
-	Unit_kB
+	unitKiB
+	unitKB
 )
 
-type Unit uint
+type counterUnit uint
 
 type CounterKiB int64
 

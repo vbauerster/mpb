@@ -96,11 +96,14 @@ func DynamicName(messageFn func(*Statistics) string, minWidth, conf int) Decorat
 }
 
 // CountersNoUnit returns raw counters decorator
-// If you set `DwidthSync` bit in `conf` param, `minWidth` param is ignored.
-// `DwidthSync` is effective with multiple bars only, if set decorator will participate
-// in width synchronization process with other decorators in the same column group.
+//
+//	`pairFormat` printf compatible verbs for current and total, like "%f" or "%d".
+//
+//	`minWidth` minimum width to apply, if `DwidthSync` bit is not set.
+//
+//	`conf` bit set config, [DidentRight|DwidthSync|DextraSpace]
 func CountersNoUnit(pairFormat string, minWidth, conf int) DecoratorFunc {
-	return Counters(pairFormat, 0, minWidth, conf)
+	return counters(pairFormat, 0, minWidth, conf)
 }
 
 // CountersKibiByte returns human friendly byte counters decorator, where counters unit is multiple by 1024.
@@ -113,32 +116,27 @@ func CountersNoUnit(pairFormat string, minWidth, conf int) DecoratorFunc {
 //
 // pairFormat example:
 //
-//	`"%.1f / %.1f" = "1.0MiB / 12.0MiB"` or `"% .1f / % .1f" = "1.0 MiB / 12.0 MiB"`.
+//	"%.1f / %.1f" = "1.0MiB / 12.0MiB" or "% .1f / % .1f" = "1.0 MiB / 12.0 MiB"
 func CountersKibiByte(pairFormat string, minWidth, conf int) DecoratorFunc {
-	return Counters(pairFormat, Unit_KiB, minWidth, conf)
+	return counters(pairFormat, unitKiB, minWidth, conf)
 }
 
-// CountersKiloByte returns human friendly byte counters decorator, where
-// counters unit is multiple by 1000.
-// `pairFormat` must contain two printf compatible verbs, like "%f" or "%d".
-// First verb substituted with Current, second one with Total.
-// Example: `"%.1f / %.1f" = "1.0MB / 12.0MB"` or `"% .1f / % .1f" = "1.0 MB / 12.0 MB"`.
-// If you set `DwidthSync` bit in `conf` param, `minWidth` param is ignored.
-// `DwidthSync` is effective with multiple bars only, if set decorator will participate
-// in width synchronization process with other decorators in the same column group.
+// CountersKiloByte returns human friendly byte counters decorator, where counters unit is multiple by 1000.
+//
+//	`pairFormat` printf compatible verbs for current and total, like "%f" or "%d".
+//
+//	`minWidth` minimum width to apply, if `DwidthSync` bit is not set.
+//
+//	`conf` bit set config, [DidentRight|DwidthSync|DextraSpace]
+//
+// pairFormat example:
+//
+//	"%.1f / %.1f" = "1.0MB / 12.0MB" or "% .1f / % .1f" = "1.0 MB / 12.0 MB"
 func CountersKiloByte(pairFormat string, minWidth, conf int) DecoratorFunc {
-	return Counters(pairFormat, Unit_kB, minWidth, conf)
+	return counters(pairFormat, unitKB, minWidth, conf)
 }
 
-// Counters provides basic counters decorator.
-// `pairFormat` must contain two printf compatible verbs, like "%f" or "%d".
-// First verb substituted with Current, second one with Total.
-// Example: `"%.1f / %.1f" = "1.0MiB / 12.0MiB"` or `"% .1f / % .1f" = "1.0 MiB / 12.0 MiB"`.
-// `unit` is one of decor.Unit_KiB/decor.Unit_kB or just zero if you need raw unitless numbers.
-// If you set `DwidthSync` bit in `conf` param, `minWidth` param is ignored.
-// `DwidthSync` is effective with multiple bars only, if set decorator will participate
-// in width synchronization process with other decorators in the same column group.
-func Counters(pairFormat string, unit Unit, minWidth, conf int) DecoratorFunc {
+func counters(pairFormat string, unit counterUnit, minWidth, conf int) DecoratorFunc {
 	format := "%%"
 	if (conf & DidentRight) != 0 {
 		format += "-"
@@ -147,9 +145,9 @@ func Counters(pairFormat string, unit Unit, minWidth, conf int) DecoratorFunc {
 	return func(s *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string {
 		var str string
 		switch unit {
-		case Unit_KiB:
+		case unitKiB:
 			str = fmt.Sprintf(pairFormat, CounterKiB(s.Current), CounterKiB(s.Total))
-		case Unit_kB:
+		case unitKB:
 			str = fmt.Sprintf(pairFormat, CounterKB(s.Current), CounterKB(s.Total))
 		default:
 			str = fmt.Sprintf(pairFormat, s.Current, s.Total)
