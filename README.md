@@ -107,11 +107,9 @@ _Note:_ it is preferable to go get from github.com, rather than gopkg.in. See is
 
 ![dynTotal.gif](examples/gifs/dynTotal.gif)
 
-#### [Adaptive resize](examples/prependETA/main.go)
+#### [Complex example](examples/complex/main.go)
 
-![resize.gif](examples/gifs/resize.gif)
-
-_Note:_ don't expect much, it corrupts if resizing too fast.
+![complex.gif](examples/gifs/complex.gif)
 
 #### [Bytes counter decorator](examples/io/multiple/main.go)
 

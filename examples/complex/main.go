@@ -15,7 +15,7 @@ func init() {
 }
 
 func main() {
-	p := mpb.New()
+	p := mpb.New(mpb.WithWidth(64))
 	total := 200
 	numBars := 3
 
