@@ -88,7 +88,7 @@ func TestBarIncrWithReFill(t *testing.T) {
 func TestBarPanics(t *testing.T) {
 	var wg sync.WaitGroup
 	var buf bytes.Buffer
-	p := New(WithOutput(&buf), WithWaitGroup(&wg))
+	p := New(WithDebugOutput(&buf), WithOutput(nil), WithWaitGroup(&wg))
 
 	wantPanic := "Upps!!!"
 	numBars := 1
@@ -117,9 +117,9 @@ func TestBarPanics(t *testing.T) {
 	p.Wait()
 
 	wantPanic = fmt.Sprintf("panic: %s", wantPanic)
-	lastLine := getLastLine(buf.Bytes())
 
-	if string(lastLine) != wantPanic {
-		t.Errorf("Want: %q, got: %q\n", wantPanic, string(lastLine))
+	debugStr := buf.String()
+	if !strings.Contains(debugStr, wantPanic) {
+		t.Errorf("%q doesn't contain %q\n", debugStr, wantPanic)
 	}
 }
