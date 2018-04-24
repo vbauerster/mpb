@@ -46,10 +46,14 @@ func (s *Statistics) Eta() time.Duration {
 // DecoratorFunc is a function that can be prepended and appended to the progress bar
 type DecoratorFunc func(s *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string
 
-// OnComplete wraps provided decorator `fn` with on complete event `message`.
-// If you set `DwidthSync` bit in `conf` param, `minWidth` is ignored.
-// `DwidthSync` is effective with multiple bars only, if set decorator will participate
-// in width synchronization process with other decorators in the same column group.
+// OnComplete returns decorator, which wraps provided `fn` decorator, with sole
+// purpose to display final on cemplete message.
+//
+//	`fn` DecoratorFunc to wrap
+//
+//	`minWidth` minimum width to apply, if `DwidthSync` bit is not set
+//
+//	`conf` bit set config, [DidentRight|DwidthSync|DextraSpace]
 func OnComplete(fn DecoratorFunc, message string, minWidth, conf int) DecoratorFunc {
 	msgDecorator := StaticName(message, minWidth, conf)
 	return func(s *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string {
@@ -60,10 +64,13 @@ func OnComplete(fn DecoratorFunc, message string, minWidth, conf int) DecoratorF
 	}
 }
 
-// StaticName is a simple name/message decorator.
-// If you set `DwidthSync` bit in `conf` param, `minWidth` is ignored.
-// `DwidthSync` is effective with multiple bars only, if set decorator will participate
-// in width synchronization process with other decorators in the same column group.
+// StaticName returns static name/message decorator.
+//
+//	`name` string to display
+//
+//	`minWidth` minimum width to apply, if `DwidthSync` bit is not set
+//
+//	`conf` bit set config, [DidentRight|DwidthSync|DextraSpace]
 func StaticName(name string, minWidth, conf int) DecoratorFunc {
 	nameFn := func(*Statistics) string {
 		return name
@@ -71,10 +78,13 @@ func StaticName(name string, minWidth, conf int) DecoratorFunc {
 	return DynamicName(nameFn, minWidth, conf)
 }
 
-// DynamicName is a name/message decorator, with ability to change message via provided `messageFn`.
-// If you set `DwidthSync` bit in `conf` param, `minWidth` param is ignored.
-// `DwidthSync` is effective with multiple bars only, if set decorator will participate
-// in width synchronization process with other decorators in the same column group.
+// DynamicName returns dynamic name/message decorator.
+//
+//	`messageFn` callback function to get dynamic string message
+//
+//	`minWidth` minimum width to apply, if `DwidthSync` bit is not set
+//
+//	`conf` bit set config, [DidentRight|DwidthSync|DextraSpace]
 func DynamicName(messageFn func(*Statistics) string, minWidth, conf int) DecoratorFunc {
 	format := "%%"
 	if (conf & DidentRight) != 0 {
@@ -97,9 +107,9 @@ func DynamicName(messageFn func(*Statistics) string, minWidth, conf int) Decorat
 
 // CountersNoUnit returns raw counters decorator
 //
-//	`pairFormat` printf compatible verbs for current and total, like "%f" or "%d".
+//	`pairFormat` printf compatible verbs for current and total, like "%f" or "%d"
 //
-//	`minWidth` minimum width to apply, if `DwidthSync` bit is not set.
+//	`minWidth` minimum width to apply, if `DwidthSync` bit is not set
 //
 //	`conf` bit set config, [DidentRight|DwidthSync|DextraSpace]
 func CountersNoUnit(pairFormat string, minWidth, conf int) DecoratorFunc {
@@ -108,9 +118,9 @@ func CountersNoUnit(pairFormat string, minWidth, conf int) DecoratorFunc {
 
 // CountersKibiByte returns human friendly byte counters decorator, where counters unit is multiple by 1024.
 //
-//	`pairFormat` printf compatible verbs for current and total, like "%f" or "%d".
+//	`pairFormat` printf compatible verbs for current and total, like "%f" or "%d"
 //
-//	`minWidth` minimum width to apply, if `DwidthSync` bit is not set.
+//	`minWidth` minimum width to apply, if `DwidthSync` bit is not set
 //
 //	`conf` bit set config, [DidentRight|DwidthSync|DextraSpace]
 //
@@ -123,9 +133,9 @@ func CountersKibiByte(pairFormat string, minWidth, conf int) DecoratorFunc {
 
 // CountersKiloByte returns human friendly byte counters decorator, where counters unit is multiple by 1000.
 //
-//	`pairFormat` printf compatible verbs for current and total, like "%f" or "%d".
+//	`pairFormat` printf compatible verbs for current and total, like "%f" or "%d"
 //
-//	`minWidth` minimum width to apply, if `DwidthSync` bit is not set.
+//	`minWidth` minimum width to apply, if `DwidthSync` bit is not set
 //
 //	`conf` bit set config, [DidentRight|DwidthSync|DextraSpace]
 //
@@ -164,10 +174,11 @@ func counters(pairFormat string, unit counterUnit, minWidth, conf int) Decorator
 	}
 }
 
-// ETA provides exponential-weighted-moving-average ETA decorator.
-// If you set `DwidthSync` bit in `conf` param, `minWidth` param is ignored.
-// `DwidthSync` is effective with multiple bars only, if set decorator will participate
-// in width synchronization process with other decorators in the same column group.
+// ETA returns exponential-weighted-moving-average ETA decorator.
+//
+//	`minWidth` minimum width to apply, if `DwidthSync` bit is not set
+//
+//	`conf` bit set config, [DidentRight|DwidthSync|DextraSpace]
 func ETA(minWidth, conf int) DecoratorFunc {
 	format := "%%"
 	if (conf & DidentRight) != 0 {
@@ -188,10 +199,11 @@ func ETA(minWidth, conf int) DecoratorFunc {
 	}
 }
 
-// Elapsed provides elapsed time decorator.
-// If you set `DwidthSync` bit in `conf` param, `minWidth` param is ignored.
-// `DwidthSync` is effective with multiple bars only, if set decorator will participate
-// in width synchronization process with other decorators in the same column group.
+// Elapsed returns elapsed time decorator.
+//
+//	`minWidth` minimum width to apply, if `DwidthSync` bit is not set
+//
+//	`conf` bit set config, [DidentRight|DwidthSync|DextraSpace]
 func Elapsed(minWidth, conf int) DecoratorFunc {
 	format := "%%"
 	if (conf & DidentRight) != 0 {
@@ -212,10 +224,11 @@ func Elapsed(minWidth, conf int) DecoratorFunc {
 	}
 }
 
-// Percentage provides percentage decorator.
-// If you set `DwidthSync` bit in `conf` param, `minWidth` param is ignored.
-// `DwidthSync` is effective with multiple bars only, if set decorator will participate
-// in width synchronization process with other decorators in the same column group.
+// Percentage returns percentage decorator.
+//
+//	`minWidth` minimum width to apply, if `DwidthSync` bit is not set
+//
+//	`conf` bit set config, [DidentRight|DwidthSync|DextraSpace]
 func Percentage(minWidth, conf int) DecoratorFunc {
 	format := "%%"
 	if (conf & DidentRight) != 0 {
@@ -236,6 +249,7 @@ func Percentage(minWidth, conf int) DecoratorFunc {
 	}
 }
 
+// CalcPercentage is a helper function, to calculate percentage.
 func CalcPercentage(total, current, width int64) (perc int64) {
 	if total <= 0 {
 		return 0
