@@ -3,6 +3,7 @@ package mpb
 import (
 	"container/heap"
 	"io"
+	"io/ioutil"
 	"os"
 	"sync"
 	"time"
@@ -47,6 +48,7 @@ type (
 		shutdownNotifier chan struct{}
 		interceptors     []func(io.Writer)
 		waitBars         map[*Bar]*Bar
+		debugOut         io.Writer
 	}
 	widthSyncer struct {
 		// Public for easy testing
@@ -68,6 +70,7 @@ func New(options ...ProgressOption) *Progress {
 		rr:       prr,
 		ticker:   time.NewTicker(prr),
 		waitBars: make(map[*Bar]*Bar),
+		debugOut: ioutil.Discard,
 	}
 
 	for _, opt := range options {
@@ -245,7 +248,7 @@ func (s *pState) renderByPriority(tw int, pSyncer, aSyncer *widthSyncer) []<-cha
 	for s.bHeap.Len() > 0 {
 		b := heap.Pop(s.bHeap).(*Bar)
 		defer heap.Push(s.bHeap, b)
-		pp = append(pp, b.render(tw, pSyncer, aSyncer))
+		pp = append(pp, b.render(s.debugOut, tw, pSyncer, aSyncer))
 	}
 	return pp
 }

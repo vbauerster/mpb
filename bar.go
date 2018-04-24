@@ -296,7 +296,7 @@ func (b *Bar) serve(wg *sync.WaitGroup, s *bState, cancel <-chan struct{}) {
 	}
 }
 
-func (b *Bar) render(tw int, pSyncer, aSyncer *widthSyncer) <-chan *renderedState {
+func (b *Bar) render(debugOut io.Writer, tw int, pSyncer, aSyncer *widthSyncer) <-chan *renderedState {
 	ch := make(chan *renderedState, 1)
 
 	go func() {
@@ -306,11 +306,13 @@ func (b *Bar) render(tw int, pSyncer, aSyncer *widthSyncer) <-chan *renderedStat
 			defer func() {
 				// recovering if external decorators panic
 				if p := recover(); p != nil {
-					s.panicMsg = fmt.Sprintf("b#%02d panic: %v\n", s.id, p)
+					s.panicMsg = fmt.Sprintf("panic: %v", p)
 					s.pDecorators = nil
 					s.aDecorators = nil
 					s.toComplete = true
-					r = strings.NewReader(s.panicMsg)
+					// truncate panic msg to one tw line, if necessary
+					r = strings.NewReader(fmt.Sprintf(fmt.Sprintf("%%.%ds\n", tw-1), s.panicMsg))
+					fmt.Fprintf(debugOut, "%s %s bar id %02d %v\n", "[mpb]", time.Now(), s.id, s.panicMsg)
 				}
 				ch <- &renderedState{b, r, s.toComplete}
 			}()
@@ -320,7 +322,7 @@ func (b *Bar) render(tw int, pSyncer, aSyncer *widthSyncer) <-chan *renderedStat
 			s := b.cacheState
 			var r io.Reader
 			if s.panicMsg != "" {
-				r = strings.NewReader(s.panicMsg)
+				r = strings.NewReader(fmt.Sprintf(fmt.Sprintf("%%.%ds\n", tw-1), s.panicMsg))
 			} else {
 				r = s.draw(tw, pSyncer, aSyncer)
 			}

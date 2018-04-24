@@ -79,6 +79,16 @@ func WithOutput(w io.Writer) ProgressOption {
 	}
 }
 
+// WithDebugOutput sets debug output.
+func WithDebugOutput(w io.Writer) ProgressOption {
+	return func(s *pState) {
+		if w == nil {
+			w = ioutil.Discard
+		}
+		s.debugOut = w
+	}
+}
+
 // WithInterceptors provides a way to write to the underlying progress pool's
 // writer. Could be useful if you want to output something below the bars, while
 // they're rendering.

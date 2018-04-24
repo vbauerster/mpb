@@ -4,7 +4,7 @@ package mpb
 
 import (
 	"fmt"
-	"os"
+	"time"
 
 	"github.com/vbauerster/mpb/cwriter"
 )
@@ -32,7 +32,7 @@ func (p *Progress) serve(s *pState) {
 			tw, _, _ := cwriter.TermSize()
 			err := s.writeAndFlush(tw, numP, numA)
 			if err != nil {
-				fmt.Fprintln(os.Stderr, err)
+				fmt.Fprintf(s.debugOut, "%s %s %v\n", "[mpb]", time.Now(), err)
 			}
 		}
 	}

@@ -43,7 +43,7 @@ func (p *Progress) serve(s *pState) {
 			tw, _, _ := cwriter.TermSize()
 			err := s.writeAndFlush(tw, numP, numA)
 			if err != nil {
-				fmt.Fprintln(os.Stderr, err)
+				fmt.Fprintf(s.debugOut, "%s %s %v\n", "[mpb]", time.Now(), err)
 			}
 		case <-winch:
 			if s.heapUpdated {
@@ -54,7 +54,7 @@ func (p *Progress) serve(s *pState) {
 			tw, _, _ := cwriter.TermSize()
 			err := s.writeAndFlush(tw-tw/8, numP, numA)
 			if err != nil {
-				fmt.Fprintln(os.Stderr, err)
+				fmt.Fprintf(s.debugOut, "%s %s %v\n", "[mpb]", time.Now(), err)
 			}
 			if timer != nil && timer.Reset(resumeDelay) {
 				break

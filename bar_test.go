@@ -91,14 +91,14 @@ func TestBarPanics(t *testing.T) {
 	p := New(WithOutput(&buf), WithWaitGroup(&wg))
 
 	wantPanic := "Upps!!!"
-	numBars := 3
+	numBars := 1
 	wg.Add(numBars)
 
 	for i := 0; i < numBars; i++ {
 		name := fmt.Sprintf("b#%02d:", i)
-		bar := p.AddBar(100, BarID(i), PrependDecorators(
+		bar := p.AddBar(100, PrependDecorators(
 			func(s *decor.Statistics, _ chan<- int, _ <-chan int) string {
-				if s.ID == 2 && s.Current >= 42 {
+				if s.Current >= 42 {
 					panic(wantPanic)
 				}
 				return name
@@ -116,9 +116,10 @@ func TestBarPanics(t *testing.T) {
 
 	p.Wait()
 
-	wantPanic = fmt.Sprintf("b#%02d panic: %v", 2, wantPanic)
+	wantPanic = fmt.Sprintf("panic: %s", wantPanic)
+	lastLine := getLastLine(buf.Bytes())
 
-	if !strings.Contains(buf.String(), wantPanic) {
+	if string(lastLine) != wantPanic {
 		t.Errorf("Want: %q, got: %q\n", wantPanic, buf.String())
 	}
 }

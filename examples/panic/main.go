@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"sync"
 	"time"
 
@@ -11,9 +12,9 @@ import (
 
 func main() {
 	var wg sync.WaitGroup
-	p := mpb.New(mpb.WithWaitGroup(&wg))
+	p := mpb.New(mpb.WithWaitGroup(&wg), mpb.WithDebugOutput(os.Stderr))
 
-	wantPanic := "Upps!!!"
+	wantPanic := "Some realy long panic panic panic panic panic panic panic, really it is very long"
 	numBars := 3
 	wg.Add(numBars)
 
