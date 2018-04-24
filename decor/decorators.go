@@ -47,7 +47,7 @@ func (s *Statistics) Eta() time.Duration {
 type DecoratorFunc func(s *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string
 
 // OnComplete returns decorator, which wraps provided `fn` decorator, with sole
-// purpose to display final on cemplete message.
+// purpose to display final on complete message.
 //
 //	`fn` DecoratorFunc to wrap
 //
