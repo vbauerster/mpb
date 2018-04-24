@@ -120,6 +120,6 @@ func TestBarPanics(t *testing.T) {
 	lastLine := getLastLine(buf.Bytes())
 
 	if string(lastLine) != wantPanic {
-		t.Errorf("Want: %q, got: %q\n", wantPanic, buf.String())
+		t.Errorf("Want: %q, got: %q\n", wantPanic, string(lastLine))
 	}
 }

@@ -311,7 +311,7 @@ func (b *Bar) render(debugOut io.Writer, tw int, pSyncer, aSyncer *widthSyncer) 
 					s.aDecorators = nil
 					s.toComplete = true
 					// truncate panic msg to one tw line, if necessary
-					r = strings.NewReader(fmt.Sprintf(fmt.Sprintf("%%.%ds\n", tw-1), s.panicMsg))
+					r = strings.NewReader(fmt.Sprintf(fmt.Sprintf("%%.%ds\n", tw), s.panicMsg))
 					fmt.Fprintf(debugOut, "%s %s bar id %02d %v\n", "[mpb]", time.Now(), s.id, s.panicMsg)
 				}
 				ch <- &renderedState{b, r, s.toComplete}
@@ -322,7 +322,7 @@ func (b *Bar) render(debugOut io.Writer, tw int, pSyncer, aSyncer *widthSyncer) 
 			s := b.cacheState
 			var r io.Reader
 			if s.panicMsg != "" {
-				r = strings.NewReader(fmt.Sprintf(fmt.Sprintf("%%.%ds\n", tw-1), s.panicMsg))
+				r = strings.NewReader(fmt.Sprintf(fmt.Sprintf("%%.%ds\n", tw), s.panicMsg))
 			} else {
 				r = s.draw(tw, pSyncer, aSyncer)
 			}
