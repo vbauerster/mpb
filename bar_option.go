@@ -85,7 +85,7 @@ func BarRemoveOnComplete() BarOption {
 }
 
 // BarReplaceOnComplete is indicator for delayed bar start, after the `runningBar` is complete.
-// To achive bar replacement effect, `runningBar` should has its `BarRemoveOnComplete` option set.
+// To achieve bar replacement effect, `runningBar` should has its `BarRemoveOnComplete` option set.
 func BarReplaceOnComplete(runningBar *Bar) BarOption {
 	return func(s *bState) {
 		s.runningBar = runningBar
