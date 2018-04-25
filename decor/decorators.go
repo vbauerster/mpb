@@ -54,7 +54,7 @@ type DecoratorFunc func(s *Statistics, widthAccumulator chan<- int, widthDistrib
 //
 //	`fn` DecoratorFunc to wrap
 //
-//	`width` width to apply, if `DwidthSync` bit is not set
+//	`width` width reservation to apply, ignored if `DwidthSync` bit is set
 //
 //	`conf` bit set config, [DidentRight|DwidthSync|DextraSpace]
 func OnComplete(fn DecoratorFunc, message string, width, conf int) DecoratorFunc {
@@ -71,7 +71,7 @@ func OnComplete(fn DecoratorFunc, message string, width, conf int) DecoratorFunc
 //
 //	`name` string to display
 //
-//	`width` width to apply, if `DwidthSync` bit is not set
+//	`width` width reservation to apply, ignored if `DwidthSync` bit is set
 //
 //	`conf` bit set config, [DidentRight|DwidthSync|DextraSpace]
 func StaticName(name string, width, conf int) DecoratorFunc {
@@ -85,7 +85,7 @@ func StaticName(name string, width, conf int) DecoratorFunc {
 //
 //	`messageFn` callback function to get dynamic string message
 //
-//	`width` width to apply, if `DwidthSync` bit is not set
+//	`width` width reservation to apply, ignored if `DwidthSync` bit is set
 //
 //	`conf` bit set config, [DidentRight|DwidthSync|DextraSpace]
 func DynamicName(messageFn func(*Statistics) string, width, conf int) DecoratorFunc {
@@ -112,7 +112,7 @@ func DynamicName(messageFn func(*Statistics) string, width, conf int) DecoratorF
 //
 //	`pairFormat` printf compatible verbs for current and total, like "%f" or "%d"
 //
-//	`width` width to apply, if `DwidthSync` bit is not set
+//	`width` width reservation to apply, ignored if `DwidthSync` bit is set
 //
 //	`conf` bit set config, [DidentRight|DwidthSync|DextraSpace]
 func CountersNoUnit(pairFormat string, width, conf int) DecoratorFunc {
@@ -123,7 +123,7 @@ func CountersNoUnit(pairFormat string, width, conf int) DecoratorFunc {
 //
 //	`pairFormat` printf compatible verbs for current and total, like "%f" or "%d"
 //
-//	`width` width to apply, if `DwidthSync` bit is not set
+//	`width` width reservation to apply, ignored if `DwidthSync` bit is set
 //
 //	`conf` bit set config, [DidentRight|DwidthSync|DextraSpace]
 //
@@ -138,7 +138,7 @@ func CountersKibiByte(pairFormat string, width, conf int) DecoratorFunc {
 //
 //	`pairFormat` printf compatible verbs for current and total, like "%f" or "%d"
 //
-//	`width` width to apply, if `DwidthSync` bit is not set
+//	`width` width reservation to apply, ignored if `DwidthSync` bit is set
 //
 //	`conf` bit set config, [DidentRight|DwidthSync|DextraSpace]
 //
@@ -179,7 +179,7 @@ func counters(pairFormat string, unit counterUnit, width, conf int) DecoratorFun
 
 // ETA returns exponential-weighted-moving-average ETA decorator.
 //
-//	`width` width to apply, if `DwidthSync` bit is not set
+//	`width` width reservation to apply, ignored if `DwidthSync` bit is set
 //
 //	`conf` bit set config, [DidentRight|DwidthSync|DextraSpace]
 func ETA(width, conf int) DecoratorFunc {
@@ -204,7 +204,7 @@ func ETA(width, conf int) DecoratorFunc {
 
 // Elapsed returns elapsed time decorator.
 //
-//	`width` width to apply, if `DwidthSync` bit is not set
+//	`width` width reservation to apply, ignored if `DwidthSync` bit is set
 //
 //	`conf` bit set config, [DidentRight|DwidthSync|DextraSpace]
 func Elapsed(width, conf int) DecoratorFunc {
@@ -229,7 +229,7 @@ func Elapsed(width, conf int) DecoratorFunc {
 
 // Percentage returns percentage decorator.
 //
-//	`width` width to apply, if `DwidthSync` bit is not set
+//	`width` width reservation to apply, ignored if `DwidthSync` bit is set
 //
 //	`conf` bit set config, [DidentRight|DwidthSync|DextraSpace]
 func Percentage(width, conf int) DecoratorFunc {
