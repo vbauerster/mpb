@@ -13,8 +13,8 @@ const (
 	// |   foo|     b| Without DidentRight
 	DidentRight = 1 << iota
 
-	// DwidthSync will auto sync max width.
-	// Makes sense when there're more than one bar
+	// DwidthSync same column width sync participation bit.
+	// Effective on multiple bars only.
 	DwidthSync
 
 	// DextraSpace adds extra space, makes sense with DwidthSync only.
@@ -24,6 +24,9 @@ const (
 
 	// DSyncSpace is shortcut for DwidthSync|DextraSpace
 	DSyncSpace = DwidthSync | DextraSpace
+
+	// DSyncSpace is shortcut for DwidthSync|DextraSpace|DidentRight
+	DSyncSpaceR = DwidthSync | DextraSpace | DidentRight
 )
 
 // Statistics represents statistics of the progress bar.
