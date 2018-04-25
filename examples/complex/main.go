@@ -30,8 +30,8 @@ func main() {
 		b := p.AddBar(int64(total), mpb.BarRemoveOnComplete(),
 			mpb.PrependDecorators(
 				decor.StaticName(task, len(task)+1, decor.DidentRight),
-				decor.StaticName(job, 0, decor.DwidthSync),
-				decor.CountersNoUnit("%d / %d", 0, decor.DSyncSpace),
+				decor.StaticName(job, 0, decor.DSyncSpaceR),
+				decor.CountersNoUnit("%d / %d", 0, decor.DwidthSync),
 			),
 			mpb.AppendDecorators(decor.Percentage(5, 0)),
 		)
@@ -52,8 +52,8 @@ func main() {
 			b := p.AddBar(int64(total), mpb.BarReplaceOnComplete(bars[i]), mpb.BarClearOnComplete(),
 				mpb.PrependDecorators(
 					decor.StaticName(task, len(task)+1, decor.DidentRight),
-					decor.OnComplete(decor.StaticName(job, 0, decor.DwidthSync), "done!", 0, decor.DwidthSync),
-					decor.OnComplete(decor.ETA(0, decor.DSyncSpace), "", 0, decor.DSyncSpace),
+					decor.OnComplete(decor.StaticName(job, 0, decor.DSyncSpaceR), "done!", 0, decor.DSyncSpaceR),
+					decor.OnComplete(decor.ETA(0, decor.DwidthSync), "", 0, decor.DwidthSync),
 				),
 				mpb.AppendDecorators(
 					decor.OnComplete(decor.Percentage(5, 0), "", 0, 0),
