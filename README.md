@@ -80,8 +80,8 @@ _Note:_ it is preferable to go get from github.com, rather than gopkg.in. See is
 			mpb.PrependDecorators(
 				decor.StaticName(name, 0, 0),
 				// DSyncSpace is shortcut for DwidthSync|DextraSpace
-				// means sync the width of respective decorator's column
-				// and prepend one extra space.
+                // DwidthSync bit enables same column width synchronization
+                // DextraSpace bit prepends decorator's output with exactly one space
 				decor.Percentage(3, decor.DSyncSpace),
 			),
 			mpb.AppendDecorators(
