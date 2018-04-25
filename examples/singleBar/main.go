@@ -25,15 +25,14 @@ func main() {
 	bar := p.AddBar(int64(total),
 		// Prepending decorators
 		mpb.PrependDecorators(
-			// StaticName decorator with minWidth and no extra config
-			// If you need to change name while rendering, use DynamicName
-			decor.StaticName(name, len(name), 0),
-			// ETA decorator with minWidth and no extra config
-			decor.ETA(4, 0),
+			// StaticName decorator with one extra space on right
+			decor.StaticName(name, len(name)+1, decor.DidentRight),
+			// ETA decorator with width reservation of 3 runes
+			decor.ETA(3, 0),
 		),
 		// Appending decorators
 		mpb.AppendDecorators(
-			// Percentage decorator with minWidth and no extra config
+			// Percentage decorator with width reservation of 5 runes
 			decor.Percentage(5, 0),
 		),
 	)
