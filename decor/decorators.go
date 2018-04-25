@@ -13,7 +13,7 @@ const (
 	// |   foo|     b| Without DidentRight
 	DidentRight = 1 << iota
 
-	// DwidthSync same column width sync participation bit.
+	// DwidthSync bit enables same column width synchronization.
 	// Effective on multiple bars only.
 	DwidthSync
 
