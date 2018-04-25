@@ -80,8 +80,8 @@ _Note:_ it is preferable to go get from github.com, rather than gopkg.in. See is
 			mpb.PrependDecorators(
 				decor.StaticName(name, 0, 0),
 				// DSyncSpace is shortcut for DwidthSync|DextraSpace
-                // DwidthSync bit enables same column width synchronization
-                // DextraSpace bit prepends decorator's output with exactly one space
+				// DwidthSync bit enables same column width synchronization
+				// DextraSpace bit prepends decorator's output with exactly one space
 				decor.Percentage(3, decor.DSyncSpace),
 			),
 			mpb.AppendDecorators(
@@ -92,7 +92,7 @@ _Note:_ it is preferable to go get from github.com, rather than gopkg.in. See is
 			defer wg.Done()
 			max := 100 * time.Millisecond
 			for i := 0; i < total; i++ {
-		        time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
+				time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
 				bar.Increment()
 			}
 		}()
