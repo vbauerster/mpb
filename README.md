@@ -111,7 +111,3 @@ _Note:_ it is preferable to go get from github.com, rather than gopkg.in. See is
 #### [Bytes counters](examples/io/multiple/main.go)
 
 ![byte counters](examples/gifs/ZsrT3r0ecrFwoarnplQz4UeL4.svg)
-
-### License
-
-[BSD 3-Clause](https://opensource.org/licenses/BSD-3-Clause)
