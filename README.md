@@ -102,14 +102,16 @@ _Note:_ it is preferable to go get from github.com, rather than gopkg.in. See is
 
 #### [Dynamic total](examples/dynTotal/main.go)
 
-![dynTotal.gif](examples/gifs/dynTotal.gif)
+![dynamic total](examples/gifs/dyn-total.svg)
 
 #### [Complex example](examples/complex/main.go)
 
-![complex.gif](examples/gifs/complex.gif)
+![complex](examples/gifs/complex.svg)
 
-#### [Bytes counter decorator](examples/io/multiple/main.go)
+#### [Bytes counters](examples/io/multiple/main.go)
 
-![io-multiple.gif](examples/gifs/io-multiple.gif)
+![byte counters](examples/gifs/byte-counters.svg)
 
-Typeface used in screen shots: [Iosevka](https://be5invis.github.io/Iosevka)
+## License
+
+[BSD 3-Clause](https://opensource.org/licenses/BSD-3-Clause)
