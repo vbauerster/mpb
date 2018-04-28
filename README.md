@@ -102,17 +102,15 @@ _Note:_ it is preferable to go get from github.com, rather than gopkg.in. See is
 
 #### [Dynamic total](examples/dynTotal/main.go)
 
-<p align="center">
-  <img width="720" src="https://github.com/vbauerster/mpb/raw/master/examples/gifs/dyn-total.svg">
-</p>
+![dynamic total](examples/gifs/1LuTsBJUAm4yV6PpT5OJSmJYw.svg)
 
 #### [Complex example](examples/complex/main.go)
 
-![complex](examples/gifs/complex.svg)
+![complex](examples/gifs/SCGwREOIyf7zbeOY84Etfd1Xo.svg)
 
 #### [Bytes counters](examples/io/multiple/main.go)
 
-![byte counters](examples/gifs/byte-counters.svg)
+![byte counters](examples/gifs/ZsrT3r0ecrFwoarnplQz4UeL4.svg)
 
 ## License
 
