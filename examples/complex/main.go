@@ -53,7 +53,7 @@ func main() {
 				mpb.PrependDecorators(
 					decor.StaticName(task, len(task)+1, decor.DidentRight),
 					decor.OnComplete(decor.StaticName(job, 0, decor.DSyncSpaceR), "done!", 0, decor.DSyncSpaceR),
-					decor.OnComplete(decor.ETA(0, decor.DwidthSync), "", 0, decor.DwidthSync),
+					decor.OnComplete(decor.ETA(0, decor.DwidthSync|decor.DslowMotion), "", 0, decor.DwidthSync),
 				),
 				mpb.AppendDecorators(
 					decor.OnComplete(decor.Percentage(5, 0), "", 0, 0),

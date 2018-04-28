@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	// DidentRight specifies identation direction.
+	// DidentRight bit specifies identation direction.
 	// |foo   |b     | With DidentRight
 	// |   foo|     b| Without DidentRight
 	DidentRight = 1 << iota
@@ -17,10 +17,15 @@ const (
 	// Effective on multiple bars only.
 	DwidthSync
 
-	// DextraSpace adds extra space, makes sense with DwidthSync only.
+	// DextraSpace bit adds extra space, makes sense with DwidthSync only.
 	// When DidentRight bit set, the space will be added to the right,
 	// otherwise to the left.
 	DextraSpace
+
+	// DslowMotion bit instructs decorator to skip refreshing its output
+	// every second tick. Normally not necessary, but if flickering is too fast,
+	// you may try it out.
+	DslowMotion
 
 	// DSyncSpace is shortcut for DwidthSync|DextraSpace
 	DSyncSpace = DwidthSync | DextraSpace
@@ -94,17 +99,26 @@ func DynamicName(messageFn func(*Statistics) string, width, conf int) DecoratorF
 		format += "-"
 	}
 	format += "%ds"
+	count, times := 0, 1
+	if (conf & DslowMotion) != 0 {
+		times++
+	}
+	var out string
 	return func(s *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string {
-		name := messageFn(s)
+		if count == 0 || s.Completed {
+			count = times
+			out = messageFn(s)
+		}
+		count--
 		if (conf & DwidthSync) != 0 {
-			widthAccumulator <- utf8.RuneCountInString(name)
+			widthAccumulator <- utf8.RuneCountInString(out)
 			max := <-widthDistributor
 			if (conf & DextraSpace) != 0 {
 				max++
 			}
-			return fmt.Sprintf(fmt.Sprintf(format, max), name)
+			return fmt.Sprintf(fmt.Sprintf(format, max), out)
 		}
-		return fmt.Sprintf(fmt.Sprintf(format, width), name)
+		return fmt.Sprintf(fmt.Sprintf(format, width), out)
 	}
 }
 
@@ -155,25 +169,33 @@ func counters(pairFormat string, unit counterUnit, width, conf int) DecoratorFun
 		format += "-"
 	}
 	format += "%ds"
+	count, times := 0, 1
+	if (conf & DslowMotion) != 0 {
+		times++
+	}
+	var out string
 	return func(s *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string {
-		var str string
-		switch unit {
-		case unitKiB:
-			str = fmt.Sprintf(pairFormat, CounterKiB(s.Current), CounterKiB(s.Total))
-		case unitKB:
-			str = fmt.Sprintf(pairFormat, CounterKB(s.Current), CounterKB(s.Total))
-		default:
-			str = fmt.Sprintf(pairFormat, s.Current, s.Total)
+		if count == 0 || s.Completed {
+			count = times
+			switch unit {
+			case unitKiB:
+				out = fmt.Sprintf(pairFormat, CounterKiB(s.Current), CounterKiB(s.Total))
+			case unitKB:
+				out = fmt.Sprintf(pairFormat, CounterKB(s.Current), CounterKB(s.Total))
+			default:
+				out = fmt.Sprintf(pairFormat, s.Current, s.Total)
+			}
 		}
+		count--
 		if (conf & DwidthSync) != 0 {
-			widthAccumulator <- utf8.RuneCountInString(str)
+			widthAccumulator <- utf8.RuneCountInString(out)
 			max := <-widthDistributor
 			if (conf & DextraSpace) != 0 {
 				max++
 			}
-			return fmt.Sprintf(fmt.Sprintf(format, max), str)
+			return fmt.Sprintf(fmt.Sprintf(format, max), out)
 		}
-		return fmt.Sprintf(fmt.Sprintf(format, width), str)
+		return fmt.Sprintf(fmt.Sprintf(format, width), out)
 	}
 }
 
@@ -188,17 +210,26 @@ func ETA(width, conf int) DecoratorFunc {
 		format += "-"
 	}
 	format += "%ds"
+	count, times := 0, 1
+	if (conf & DslowMotion) != 0 {
+		times++
+	}
+	var out string
 	return func(s *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string {
-		str := fmt.Sprint(time.Duration(s.Eta().Seconds()) * time.Second)
+		if count == 0 || s.Completed {
+			count = times
+			out = fmt.Sprint(time.Duration(s.Eta().Seconds()) * time.Second)
+		}
+		count--
 		if (conf & DwidthSync) != 0 {
-			widthAccumulator <- utf8.RuneCountInString(str)
+			widthAccumulator <- utf8.RuneCountInString(out)
 			max := <-widthDistributor
 			if (conf & DextraSpace) != 0 {
 				max++
 			}
-			return fmt.Sprintf(fmt.Sprintf(format, max), str)
+			return fmt.Sprintf(fmt.Sprintf(format, max), out)
 		}
-		return fmt.Sprintf(fmt.Sprintf(format, width), str)
+		return fmt.Sprintf(fmt.Sprintf(format, width), out)
 	}
 }
 
@@ -213,17 +244,26 @@ func Elapsed(width, conf int) DecoratorFunc {
 		format += "-"
 	}
 	format += "%ds"
+	count, times := 0, 1
+	if (conf & DslowMotion) != 0 {
+		times++
+	}
+	var out string
 	return func(s *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string {
-		str := fmt.Sprint(time.Duration(s.TimeElapsed.Seconds()) * time.Second)
+		if count == 0 || s.Completed {
+			count = times
+			out = fmt.Sprint(time.Duration(s.TimeElapsed.Seconds()) * time.Second)
+		}
+		count--
 		if (conf & DwidthSync) != 0 {
-			widthAccumulator <- utf8.RuneCountInString(str)
+			widthAccumulator <- utf8.RuneCountInString(out)
 			max := <-widthDistributor
 			if (conf & DextraSpace) != 0 {
 				max++
 			}
-			return fmt.Sprintf(fmt.Sprintf(format, max), str)
+			return fmt.Sprintf(fmt.Sprintf(format, max), out)
 		}
-		return fmt.Sprintf(fmt.Sprintf(format, width), str)
+		return fmt.Sprintf(fmt.Sprintf(format, width), out)
 	}
 }
 
@@ -238,17 +278,26 @@ func Percentage(width, conf int) DecoratorFunc {
 		format += "-"
 	}
 	format += "%ds"
+	count, times := 0, 1
+	if (conf & DslowMotion) != 0 {
+		times++
+	}
+	var out string
 	return func(s *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string {
-		str := fmt.Sprintf("%d %%", CalcPercentage(s.Total, s.Current, 100))
+		if count == 0 || s.Completed {
+			count = times
+			out = fmt.Sprintf("%d %%", CalcPercentage(s.Total, s.Current, 100))
+		}
+		count--
 		if (conf & DwidthSync) != 0 {
-			widthAccumulator <- utf8.RuneCountInString(str)
+			widthAccumulator <- utf8.RuneCountInString(out)
 			max := <-widthDistributor
 			if (conf & DextraSpace) != 0 {
 				max++
 			}
-			return fmt.Sprintf(fmt.Sprintf(format, max), str)
+			return fmt.Sprintf(fmt.Sprintf(format, max), out)
 		}
-		return fmt.Sprintf(fmt.Sprintf(format, width), str)
+		return fmt.Sprintf(fmt.Sprintf(format, width), out)
 	}
 }
 
