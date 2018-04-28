@@ -13,7 +13,7 @@ func init() {
 }
 
 func main() {
-	p := mpb.New()
+	p := mpb.New(mpb.WithWidth(64))
 
 	// initialize bar with dynamic total and initial total guess = 80
 	bar := p.AddBar(80,
@@ -25,7 +25,7 @@ func main() {
 			decor.CountersNoUnit("%d / %d", 12, 0),
 		),
 		mpb.AppendDecorators(
-			decor.Percentage(5, 0),
+			decor.Percentage(4, 0),
 		),
 	)
 
