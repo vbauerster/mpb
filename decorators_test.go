@@ -42,6 +42,7 @@ func TestStaticName(t *testing.T) {
 
 type step struct {
 	stat *decor.Statistics
+	dfn  decor.DecoratorFunc
 	want string
 }
 
@@ -49,66 +50,135 @@ func TestPercentageDwidthSync(t *testing.T) {
 
 	testCases := [][]step{
 		[]step{
-			{&decor.Statistics{Total: 100, Current: 8}, "8 %"},
-			{&decor.Statistics{Total: 100, Current: 9}, "9 %"},
+			{
+				&decor.Statistics{Total: 100, Current: 8},
+				decor.Percentage(0, decor.DwidthSync),
+				"8 %",
+			},
+			{
+				&decor.Statistics{Total: 100, Current: 9},
+				decor.Percentage(0, decor.DwidthSync),
+				"9 %",
+			},
 		},
 		[]step{
-			{&decor.Statistics{Total: 100, Current: 9}, " 9 %"},
-			{&decor.Statistics{Total: 100, Current: 10}, "10 %"},
+			{
+				&decor.Statistics{Total: 100, Current: 9},
+				decor.Percentage(0, decor.DwidthSync),
+				" 9 %",
+			},
+			{
+				&decor.Statistics{Total: 100, Current: 10},
+				decor.Percentage(0, decor.DwidthSync),
+				"10 %",
+			},
 		},
 		[]step{
-			{&decor.Statistics{Total: 100, Current: 9}, "  9 %"},
-			{&decor.Statistics{Total: 100, Current: 100}, "100 %"},
+			{
+				&decor.Statistics{Total: 100, Current: 9},
+				decor.Percentage(0, decor.DwidthSync),
+				"  9 %",
+			},
+			{
+				&decor.Statistics{Total: 100, Current: 100},
+				decor.Percentage(0, decor.DwidthSync),
+				"100 %",
+			},
 		},
 	}
 
-	dfn := decor.Percentage(3, decor.DwidthSync)
-	testDecoratorConcurrently(t, dfn, testCases)
+	testDecoratorConcurrently(t, testCases)
 }
 
 func TestPercentageDwidthSyncDidentRight(t *testing.T) {
 
 	testCases := [][]step{
 		[]step{
-			{&decor.Statistics{Total: 100, Current: 8}, "8 %"},
-			{&decor.Statistics{Total: 100, Current: 9}, "9 %"},
+			{
+				&decor.Statistics{Total: 100, Current: 8},
+				decor.Percentage(3, decor.DwidthSync|decor.DidentRight),
+				"8 %",
+			},
+			{
+				&decor.Statistics{Total: 100, Current: 9},
+				decor.Percentage(3, decor.DwidthSync|decor.DidentRight),
+				"9 %",
+			},
 		},
 		[]step{
-			{&decor.Statistics{Total: 100, Current: 9}, "9 % "},
-			{&decor.Statistics{Total: 100, Current: 10}, "10 %"},
+			{
+				&decor.Statistics{Total: 100, Current: 9},
+				decor.Percentage(3, decor.DwidthSync|decor.DidentRight),
+				"9 % ",
+			},
+			{
+				&decor.Statistics{Total: 100, Current: 10},
+				decor.Percentage(3, decor.DwidthSync|decor.DidentRight),
+				"10 %",
+			},
 		},
 		[]step{
-			{&decor.Statistics{Total: 100, Current: 9}, "9 %  "},
-			{&decor.Statistics{Total: 100, Current: 100}, "100 %"},
+			{
+				&decor.Statistics{Total: 100, Current: 9},
+				decor.Percentage(3, decor.DwidthSync|decor.DidentRight),
+				"9 %  ",
+			},
+			{
+				&decor.Statistics{Total: 100, Current: 100},
+				decor.Percentage(3, decor.DwidthSync|decor.DidentRight),
+				"100 %",
+			},
 		},
 	}
 
-	dfn := decor.Percentage(3, decor.DwidthSync|decor.DidentRight)
-	testDecoratorConcurrently(t, dfn, testCases)
+	testDecoratorConcurrently(t, testCases)
 }
 
 func TestPercentageDSyncSpace(t *testing.T) {
 
 	testCases := [][]step{
 		[]step{
-			{&decor.Statistics{Total: 100, Current: 8}, " 8 %"},
-			{&decor.Statistics{Total: 100, Current: 9}, " 9 %"},
+			{
+				&decor.Statistics{Total: 100, Current: 8},
+				decor.Percentage(3, decor.DSyncSpace),
+				" 8 %",
+			},
+			{
+				&decor.Statistics{Total: 100, Current: 9},
+				decor.Percentage(3, decor.DSyncSpace),
+				" 9 %",
+			},
 		},
 		[]step{
-			{&decor.Statistics{Total: 100, Current: 9}, "  9 %"},
-			{&decor.Statistics{Total: 100, Current: 10}, " 10 %"},
+			{
+				&decor.Statistics{Total: 100, Current: 9},
+				decor.Percentage(3, decor.DSyncSpace),
+				"  9 %",
+			},
+			{
+				&decor.Statistics{Total: 100, Current: 10},
+				decor.Percentage(3, decor.DSyncSpace),
+				" 10 %",
+			},
 		},
 		[]step{
-			{&decor.Statistics{Total: 100, Current: 9}, "   9 %"},
-			{&decor.Statistics{Total: 100, Current: 100}, " 100 %"},
+			{
+				&decor.Statistics{Total: 100, Current: 9},
+				decor.Percentage(3, decor.DSyncSpace),
+				"   9 %",
+			},
+			{
+				&decor.Statistics{Total: 100, Current: 100},
+				decor.Percentage(3, decor.DSyncSpace),
+				" 100 %",
+			},
 		},
 	}
 
-	dfn := decor.Percentage(3, decor.DSyncSpace)
-	testDecoratorConcurrently(t, dfn, testCases)
+	testDecoratorConcurrently(t, testCases)
 }
 
-func testDecoratorConcurrently(t *testing.T, dfn decor.DecoratorFunc, testCases [][]step) {
+func testDecoratorConcurrently(t *testing.T, testCases [][]step) {
 	if len(testCases) == 0 {
 		t.Fail()
 	}
@@ -127,7 +197,7 @@ func testDecoratorConcurrently(t *testing.T, dfn decor.DecoratorFunc, testCases 
 			res[i] = make(chan string, 1)
 			go func(s step, ch chan string) {
 				defer wg.Done()
-				ch <- dfn(s.stat, ws.Accumulator[0], ws.Distributor[0])
+				ch <- s.dfn(s.stat, ws.Accumulator[0], ws.Distributor[0])
 			}(columnCase[i], res[i])
 		}
 		wg.Wait()
