@@ -239,18 +239,17 @@ func (b *Bar) IncrBy(n int) {
 	if n < 1 {
 		return
 	}
+	now := time.Now()
 	select {
 	case b.operateState <- func(s *bState) {
 		if s.toComplete {
 			return
 		}
-		next := time.Now()
 		if s.current == 0 {
-			s.startTime = next
-			s.blockStartTime = next
+			s.startTime = now
+			s.blockStartTime = now
 		} else {
-			now := time.Now()
-			s.updateTimePerItemEstimate(n, now, next)
+			s.updateTimePerItemEstimate(n, now)
 			s.timeElapsed = now.Sub(s.startTime)
 		}
 		s.current += int64(n)
@@ -424,11 +423,11 @@ func (s *bState) fillBar(width int) {
 	}
 }
 
-func (s *bState) updateTimePerItemEstimate(amount int, now, next time.Time) {
+func (s *bState) updateTimePerItemEstimate(amount int, now time.Time) {
 	lastBlockTime := now.Sub(s.blockStartTime)
 	lastItemEstimate := float64(lastBlockTime) / float64(amount)
 	s.timePerItem = time.Duration((s.etaAlpha * lastItemEstimate) + (1-s.etaAlpha)*float64(s.timePerItem))
-	s.blockStartTime = next
+	s.blockStartTime = now
 }
 
 func newStatistics(s *bState) *decor.Statistics {
