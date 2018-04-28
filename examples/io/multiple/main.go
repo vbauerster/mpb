@@ -59,15 +59,13 @@ func download(wg *sync.WaitGroup, p *mpb.Progress, name, url string, n int) {
 	}
 
 	// create bar with appropriate decorators
-	bar := p.AddBar(size,
+	bar := p.AddBar(size, mpb.BarPriority(n),
 		mpb.PrependDecorators(
-			decor.StaticName(name, 0, 0),
-			decor.CountersKibiByte("%6.1f / %6.1f", 18, 0),
+			decor.StaticName(name, len(name)+1, decor.DidentRight),
+			decor.CountersKibiByte("%6.1f / %6.1f", 0, decor.DwidthSync),
 		),
-		mpb.AppendDecorators(decor.ETA(5, decor.DwidthSync)),
+		mpb.AppendDecorators(decor.ETA(3, 0)),
 	)
-	// Respect the order
-	p.UpdateBarPriority(bar, n)
 
 	// create proxy reader
 	reader := bar.ProxyReader(resp.Body)
