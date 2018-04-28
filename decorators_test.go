@@ -96,36 +96,36 @@ func TestPercentageDwidthSyncDidentRight(t *testing.T) {
 		[]step{
 			{
 				&decor.Statistics{Total: 100, Current: 8},
-				decor.Percentage(3, decor.DwidthSync|decor.DidentRight),
+				decor.Percentage(0, decor.DwidthSync|decor.DidentRight),
 				"8 %",
 			},
 			{
 				&decor.Statistics{Total: 100, Current: 9},
-				decor.Percentage(3, decor.DwidthSync|decor.DidentRight),
+				decor.Percentage(0, decor.DwidthSync|decor.DidentRight),
 				"9 %",
 			},
 		},
 		[]step{
 			{
 				&decor.Statistics{Total: 100, Current: 9},
-				decor.Percentage(3, decor.DwidthSync|decor.DidentRight),
+				decor.Percentage(0, decor.DwidthSync|decor.DidentRight),
 				"9 % ",
 			},
 			{
 				&decor.Statistics{Total: 100, Current: 10},
-				decor.Percentage(3, decor.DwidthSync|decor.DidentRight),
+				decor.Percentage(0, decor.DwidthSync|decor.DidentRight),
 				"10 %",
 			},
 		},
 		[]step{
 			{
 				&decor.Statistics{Total: 100, Current: 9},
-				decor.Percentage(3, decor.DwidthSync|decor.DidentRight),
+				decor.Percentage(0, decor.DwidthSync|decor.DidentRight),
 				"9 %  ",
 			},
 			{
 				&decor.Statistics{Total: 100, Current: 100},
-				decor.Percentage(3, decor.DwidthSync|decor.DidentRight),
+				decor.Percentage(0, decor.DwidthSync|decor.DidentRight),
 				"100 %",
 			},
 		},
@@ -140,36 +140,36 @@ func TestPercentageDSyncSpace(t *testing.T) {
 		[]step{
 			{
 				&decor.Statistics{Total: 100, Current: 8},
-				decor.Percentage(3, decor.DSyncSpace),
+				decor.Percentage(0, decor.DSyncSpace),
 				" 8 %",
 			},
 			{
 				&decor.Statistics{Total: 100, Current: 9},
-				decor.Percentage(3, decor.DSyncSpace),
+				decor.Percentage(0, decor.DSyncSpace),
 				" 9 %",
 			},
 		},
 		[]step{
 			{
 				&decor.Statistics{Total: 100, Current: 9},
-				decor.Percentage(3, decor.DSyncSpace),
+				decor.Percentage(0, decor.DSyncSpace),
 				"  9 %",
 			},
 			{
 				&decor.Statistics{Total: 100, Current: 10},
-				decor.Percentage(3, decor.DSyncSpace),
+				decor.Percentage(0, decor.DSyncSpace),
 				" 10 %",
 			},
 		},
 		[]step{
 			{
 				&decor.Statistics{Total: 100, Current: 9},
-				decor.Percentage(3, decor.DSyncSpace),
+				decor.Percentage(0, decor.DSyncSpace),
 				"   9 %",
 			},
 			{
 				&decor.Statistics{Total: 100, Current: 100},
-				decor.Percentage(3, decor.DSyncSpace),
+				decor.Percentage(0, decor.DSyncSpace),
 				" 100 %",
 			},
 		},
