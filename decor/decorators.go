@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	// DidentRight specifies identation direction.
+	// DidentRight bit specifies identation direction.
 	// |foo   |b     | With DidentRight
 	// |   foo|     b| Without DidentRight
 	DidentRight = 1 << iota
@@ -17,7 +17,7 @@ const (
 	// Effective on multiple bars only.
 	DwidthSync
 
-	// DextraSpace adds extra space, makes sense with DwidthSync only.
+	// DextraSpace bit adds extra space, makes sense with DwidthSync only.
 	// When DidentRight bit set, the space will be added to the right,
 	// otherwise to the left.
 	DextraSpace
