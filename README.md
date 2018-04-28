@@ -102,7 +102,9 @@ _Note:_ it is preferable to go get from github.com, rather than gopkg.in. See is
 
 #### [Dynamic total](examples/dynTotal/main.go)
 
-![dynamic total](examples/gifs/dyn-total.svg)
+<p align="center">
+  <img width="720" src="https://github.com/vbauerster/mpb/raw/master/examples/gifs/dyn-total.svg">
+</p>
 
 #### [Complex example](examples/complex/main.go)
 
