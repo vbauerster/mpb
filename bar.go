@@ -83,7 +83,7 @@ type (
 		char rune
 		till int64
 	}
-	renderedState struct {
+	bFrame struct {
 		bar        *Bar
 		reader     io.Reader
 		toComplete bool
@@ -295,8 +295,8 @@ func (b *Bar) serve(wg *sync.WaitGroup, s *bState, cancel <-chan struct{}) {
 	}
 }
 
-func (b *Bar) render(debugOut io.Writer, tw int, pSyncer, aSyncer *widthSyncer) <-chan *renderedState {
-	ch := make(chan *renderedState, 1)
+func (b *Bar) render(debugOut io.Writer, tw int, pSyncer, aSyncer *widthSyncer) <-chan *bFrame {
+	ch := make(chan *bFrame, 1)
 
 	go func() {
 		select {
@@ -313,7 +313,7 @@ func (b *Bar) render(debugOut io.Writer, tw int, pSyncer, aSyncer *widthSyncer) 
 					r = strings.NewReader(fmt.Sprintf(fmt.Sprintf("%%.%ds\n", tw), s.panicMsg))
 					fmt.Fprintf(debugOut, "%s %s bar id %02d %v\n", "[mpb]", time.Now(), s.id, s.panicMsg)
 				}
-				ch <- &renderedState{b, r, s.toComplete}
+				ch <- &bFrame{b, r, s.toComplete}
 			}()
 			r = s.draw(tw, pSyncer, aSyncer)
 		}:
@@ -325,7 +325,7 @@ func (b *Bar) render(debugOut io.Writer, tw int, pSyncer, aSyncer *widthSyncer) 
 			} else {
 				r = s.draw(tw, pSyncer, aSyncer)
 			}
-			ch <- &renderedState{b, r, s.toComplete}
+			ch <- &bFrame{b, r, s.toComplete}
 		}
 	}()
 

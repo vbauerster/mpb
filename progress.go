@@ -210,20 +210,20 @@ func (s *pState) writeAndFlush(tw, numP, numA int) (err error) {
 	})
 
 	for _, ch := range s.renderByPriority(tw, pSyncer, aSyncer) {
-		rs := <-ch
-		_, err = s.cw.ReadFrom(rs.reader)
-		if !rs.bar.completed && rs.toComplete {
-			rs.bar.completed = true
-			if rs.bar.removeOnComplete {
-				s.heapUpdated = heap.Remove(s.bHeap, rs.bar.index) != nil
+		bf := <-ch
+		_, err = s.cw.ReadFrom(bf.reader)
+		if !bf.bar.completed && bf.toComplete {
+			bf.bar.completed = true
+			if bf.bar.removeOnComplete {
+				s.heapUpdated = heap.Remove(s.bHeap, bf.bar.index) != nil
 			}
-			if replacementBar, ok := s.waitBars[rs.bar]; ok {
+			if replacementBar, ok := s.waitBars[bf.bar]; ok {
 				heap.Push(s.bHeap, replacementBar)
 				s.heapUpdated = true
-				delete(s.waitBars, rs.bar)
+				delete(s.waitBars, bf.bar)
 			}
 			defer func() {
-				s.shutdownPending = append(s.shutdownPending, rs.bar)
+				s.shutdownPending = append(s.shutdownPending, bf.bar)
 			}()
 		}
 	}
@@ -243,8 +243,8 @@ func (s *pState) writeAndFlush(tw, numP, numA int) (err error) {
 	return
 }
 
-func (s *pState) renderByPriority(tw int, pSyncer, aSyncer *widthSyncer) []<-chan *renderedState {
-	pp := make([]<-chan *renderedState, 0, s.bHeap.Len())
+func (s *pState) renderByPriority(tw int, pSyncer, aSyncer *widthSyncer) []<-chan *bFrame {
+	pp := make([]<-chan *bFrame, 0, s.bHeap.Len())
 	for s.bHeap.Len() > 0 {
 		b := heap.Pop(s.bHeap).(*Bar)
 		defer heap.Push(s.bHeap, b)
