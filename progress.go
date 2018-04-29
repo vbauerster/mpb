@@ -244,13 +244,13 @@ func (s *pState) writeAndFlush(tw, numP, numA int) (err error) {
 }
 
 func (s *pState) renderByPriority(tw int, pSyncer, aSyncer *widthSyncer) []<-chan *bFrame {
-	pp := make([]<-chan *bFrame, 0, s.bHeap.Len())
+	bff := make([]<-chan *bFrame, 0, s.bHeap.Len())
 	for s.bHeap.Len() > 0 {
 		b := heap.Pop(s.bHeap).(*Bar)
 		defer heap.Push(s.bHeap, b)
-		pp = append(pp, b.render(s.debugOut, tw, pSyncer, aSyncer))
+		bff = append(bff, b.render(s.debugOut, tw, pSyncer, aSyncer))
 	}
-	return pp
+	return bff
 }
 
 func calcMax(slice []int) int {
