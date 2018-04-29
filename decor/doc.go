@@ -12,10 +12,10 @@
 
  Don't:
 
-	  p := mpb.New()
-	  eta := decor.ETA(0, 0)
-	  p.AddBar(100, mpb.AppendDecorators(eta))
-	  p.AddBar(100, mpb.AppendDecorators(eta))
+	 p := mpb.New()
+	 eta := decor.ETA(0, 0)
+	 p.AddBar(100, mpb.AppendDecorators(eta))
+	 p.AddBar(100, mpb.AppendDecorators(eta))
 
  Do:
 
