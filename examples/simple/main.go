@@ -30,11 +30,11 @@ func main() {
 				decor.Percentage(0, decor.DwidthSync),
 			),
 			mpb.AppendDecorators(
-				// Replace our ETA decorator with "done!", on bar completion event
+				// replace our ETA decorator with "done!", on bar completion event
 				decor.OnComplete(decor.ETA(3, 0), "done!", 0, 0),
 			),
 		)
-		// Simulating some work
+		// simulating some work
 		go func() {
 			defer wg.Done()
 			max := 100 * time.Millisecond
@@ -44,7 +44,7 @@ func main() {
 			}
 		}()
 	}
-	// First wait for provided wg,
-	// then wait for all bars to complete and flush.
+	// first wait for provided wg, then
+	// wait for all bars to complete and flush
 	p.Wait()
 }

@@ -1,7 +1,9 @@
 package mpb_test
 
 import (
+	"io"
 	"math/rand"
+	"net/http"
 	"time"
 
 	"github.com/vbauerster/mpb"
@@ -20,30 +22,28 @@ func Example() {
 
 	total := 100
 	name := "Single Bar:"
-	// Add a bar
-	// You're not limited to just a single bar, add as many as you need
+	// adding a single bar
 	bar := p.AddBar(int64(total),
-		// Prepending decorators
 		mpb.PrependDecorators(
-			// StaticName decorator with minWidth and no extra config
-			// If you need to change name while rendering, use DynamicName
-			decor.StaticName(name, len(name), 0),
-			// ETA decorator with minWidth and no extra config
-			decor.ETA(4, 0),
+			// Display our static name with one space on the right
+			decor.StaticName(name, len(name)+1, decor.DidentRight),
+			// ETA decorator with width reservation of 3 runes
+			decor.ETA(3, 0),
 		),
-		// Appending decorators
 		mpb.AppendDecorators(
-			// Percentage decorator with minWidth and no extra config
+			// Percentage decorator with width reservation of 5 runes
 			decor.Percentage(5, 0),
 		),
 	)
 
+	// simulating some work
 	max := 100 * time.Millisecond
 	for i := 0; i < total; i++ {
 		time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
+		// increment by 1 (there is bar.IncrBy(int) method, if needed)
 		bar.Increment()
 	}
-	// Wait for all bars to complete
+	// wait for our bar to complete and flush
 	p.Wait()
 }
 
@@ -56,6 +56,29 @@ func ExampleBar_Completed() {
 		time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
 		bar.Increment()
 	}
+
+	p.Wait()
+}
+
+func ExampleBar_ProxyReader() {
+	p := mpb.New()
+	// make http get request
+	resp, _ := http.Get(url)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	// Assuming ContentLength > 0
+	bar := p.AddBar(resp.ContentLength,
+		decor.CountersKibiByte("%6.1f / %6.1f", 12, 0),
+	)
+
+	// create proxy reader
+	reader := bar.ProxyReader(resp.Body)
+
+	// and copy from reader, ignoring errors
+	io.Copy(dest, reader)
 
 	p.Wait()
 }

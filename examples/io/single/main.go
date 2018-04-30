@@ -41,7 +41,8 @@ func main() {
 	bar := p.AddBar(size,
 		mpb.PrependDecorators(
 			decor.CountersKibiByte("% 6.1f / % 6.1f", 18, 0),
-		))
+		),
+	)
 
 	// create proxy reader
 	reader := bar.ProxyReader(resp.Body)
@@ -49,6 +50,5 @@ func main() {
 	// and copy from reader, ignoring errors
 	io.Copy(dest, reader)
 
-	p.Wait() // if you omit this line, rendering bars goroutine will quit early
-	fmt.Println("done")
+	p.Wait()
 }

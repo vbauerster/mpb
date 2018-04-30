@@ -39,7 +39,7 @@ _Note:_ it is preferable to go get from github.com, rather than gopkg.in. See is
 
 	total := 100
 	name := "Single Bar:"
-	// Adding a single bar
+	// adding a single bar
 	bar := p.AddBar(int64(total),
 		mpb.PrependDecorators(
 			// Display our static name with one space on the right
@@ -53,14 +53,14 @@ _Note:_ it is preferable to go get from github.com, rather than gopkg.in. See is
 		),
 	)
 
-	// Simulating some work
+	// simulating some work
 	max := 100 * time.Millisecond
 	for i := 0; i < total; i++ {
 		time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
-		// Increment by 1 (there is bar.IncrBy(int) method, if needed)
+		// increment by 1 (there is bar.IncrBy(int) method, if needed)
 		bar.Increment()
 	}
-	// Wait for our bar to complete and flush
+	// wait for our bar to complete and flush
 	p.Wait()
 ```
 
@@ -85,7 +85,7 @@ _Note:_ it is preferable to go get from github.com, rather than gopkg.in. See is
 				decor.OnComplete(decor.ETA(3, 0), "done!", 0, 0),
 			),
 		)
-		// Simulating some work
+		// simulating some work
 		go func() {
 			defer wg.Done()
 			max := 100 * time.Millisecond
@@ -95,8 +95,8 @@ _Note:_ it is preferable to go get from github.com, rather than gopkg.in. See is
 			}
 		}()
 	}
-	// First wait for provided wg,
-	// then wait for all bars to complete and flush.
+	// first wait for provided wg, then
+	// wait for all bars to complete and flush
 	p.Wait()
 ```
 

@@ -20,7 +20,7 @@ func main() {
 
 	total := 100
 	name := "Single Bar:"
-	// Adding a single bar
+	// adding a single bar
 	bar := p.AddBar(int64(total),
 		mpb.PrependDecorators(
 			// Display our static name with one space on the right
@@ -34,13 +34,13 @@ func main() {
 		),
 	)
 
-	// Simulating some work
+	// simulating some work
 	max := 100 * time.Millisecond
 	for i := 0; i < total; i++ {
 		time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
 		// Increment by 1 (there is bar.IncrBy(int) method, if needed)
 		bar.Increment()
 	}
-	// Wait for our bar to complete and flush
+	// wait for our bar to complete and flush
 	p.Wait()
 }
