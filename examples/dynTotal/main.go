@@ -41,7 +41,7 @@ func main() {
 	}()
 
 	max := 100 * time.Millisecond
-	for i := 0; i < 300; i++ {
+	for i := 0; !bar.Completed(); i++ {
 		if i == 140 {
 			totalUpd <- 190
 		}
