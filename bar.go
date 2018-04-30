@@ -227,7 +227,9 @@ func (b *Bar) Total() int64 {
 func (b *Bar) SetTotal(total int64, final bool) {
 	select {
 	case b.operateState <- func(s *bState) {
-		s.total = total
+		if total != 0 {
+			s.total = total
+		}
 		s.dynamic = !final
 	}:
 	case <-b.done:
