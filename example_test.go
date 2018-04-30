@@ -2,6 +2,7 @@ package mpb_test
 
 import (
 	"io"
+	"io/ioutil"
 	"math/rand"
 	"net/http"
 	"time"
@@ -62,11 +63,8 @@ func ExampleBar_Completed() {
 
 func ExampleBar_ProxyReader() {
 	p := mpb.New()
-	// make http get request
-	resp, err := http.Get(url)
-	if err != nil {
-		return err
-	}
+	// make http get request, ignoring errors
+	resp, _ := http.Get("https://homebrew.bintray.com/bottles/libtiff-4.0.7.sierra.bottle.tar.gz")
 	defer resp.Body.Close()
 
 	// Assuming ContentLength > 0
@@ -80,7 +78,7 @@ func ExampleBar_ProxyReader() {
 	reader := bar.ProxyReader(resp.Body)
 
 	// and copy from reader, ignoring errors
-	io.Copy(dest, reader)
+	io.Copy(ioutil.Discard, reader)
 
 	p.Wait()
 }
