@@ -71,7 +71,9 @@ func ExampleBar_ProxyReader() {
 
 	// Assuming ContentLength > 0
 	bar := p.AddBar(resp.ContentLength,
-		decor.CountersKibiByte("%6.1f / %6.1f", 12, 0),
+		mpb.AppendDecorators(
+			decor.CountersKibiByte("%6.1f / %6.1f", 12, 0),
+		),
 	)
 
 	// create proxy reader
