@@ -11,37 +11,36 @@ import (
 func main() {
 	p := mpb.New(
 		// override default (80) width
-		mpb.WithWidth(100),
+		mpb.WithWidth(64),
 		// override default "[=>-]" format
 		mpb.WithFormat("╢▌▌░╟"),
 		// override default 120ms refresh rate
-		mpb.WithRefreshRate(100*time.Millisecond),
+		mpb.WithRefreshRate(180*time.Millisecond),
 	)
 
 	total := 100
 	name := "Single Bar:"
-	// Add a bar
-	// You're not limited to just a single bar, add as many as you need
+	// Adding a single bar
 	bar := p.AddBar(int64(total),
-		// Prepending decorators
 		mpb.PrependDecorators(
-			// StaticName decorator with one extra space on right
+			// Display our static name with one space on the right
 			decor.StaticName(name, len(name)+1, decor.DidentRight),
 			// ETA decorator with width reservation of 3 runes
 			decor.ETA(3, 0),
 		),
-		// Appending decorators
 		mpb.AppendDecorators(
 			// Percentage decorator with width reservation of 5 runes
 			decor.Percentage(5, 0),
 		),
 	)
 
+	// Simulating some work
 	max := 100 * time.Millisecond
 	for i := 0; i < total; i++ {
 		time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
+		// Increment by 1 (there is bar.IncrBy(int) method, if needed)
 		bar.Increment()
 	}
-	// Wait for all bars to complete
+	// Wait for our bar to complete and flush
 	p.Wait()
 }
