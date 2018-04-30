@@ -106,7 +106,7 @@ _Note:_ it is preferable to go get from github.com, rather than gopkg.in. See is
 
 #### [Complex example](examples/complex/main.go)
 
-![complex](examples/gifs/SCGwREOIyf7zbeOY84Etfd1Xo.svg)
+![complex](examples/gifs/ln3qeyH5iXUoesLYfw7zHDn6u.svg)
 
 #### [Bytes counters](examples/io/multiple/main.go)
 

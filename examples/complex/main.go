@@ -15,19 +15,19 @@ func init() {
 }
 
 func main() {
-	p := mpb.New(mpb.WithWidth(64))
-	total := 200
+	doneWg := new(sync.WaitGroup)
+	p := mpb.New(mpb.WithWidth(64), mpb.WithWaitGroup(doneWg))
 	numBars := 3
 
 	var bars []*mpb.Bar
-	var downloadGroup []*sync.WaitGroup
+	var downloadWgg []*sync.WaitGroup
 	for i := 0; i < numBars; i++ {
 		wg := new(sync.WaitGroup)
 		wg.Add(1)
-		downloadGroup = append(downloadGroup, wg)
+		downloadWgg = append(downloadWgg, wg)
 		task := fmt.Sprintf("Task#%02d:", i)
 		job := "downloading"
-		b := p.AddBar(int64(total), mpb.BarRemoveOnComplete(),
+		b := p.AddBar(rand.Int63n(201)+100, mpb.BarRemoveOnComplete(),
 			mpb.PrependDecorators(
 				decor.StaticName(task, len(task)+1, decor.DidentRight),
 				decor.StaticName(job, 0, decor.DSyncSpaceR),
@@ -39,17 +39,14 @@ func main() {
 		bars = append(bars, b)
 	}
 
-	var installGroup []*sync.WaitGroup
 	for i := 0; i < numBars; i++ {
-		wg := new(sync.WaitGroup)
-		wg.Add(1)
-		installGroup = append(installGroup, wg)
+		doneWg.Add(1)
 		i := i
 		go func() {
 			task := fmt.Sprintf("Task#%02d:", i)
 			job := "installing"
 			// preparing delayed bars
-			b := p.AddBar(int64(total), mpb.BarReplaceOnComplete(bars[i]), mpb.BarClearOnComplete(),
+			b := p.AddBar(rand.Int63n(101)+100, mpb.BarReplaceOnComplete(bars[i]), mpb.BarClearOnComplete(),
 				mpb.PrependDecorators(
 					decor.StaticName(task, len(task)+1, decor.DidentRight),
 					decor.OnComplete(decor.StaticName(job, 0, decor.DSyncSpaceR), "done!", 0, decor.DSyncSpaceR),
@@ -60,14 +57,9 @@ func main() {
 				),
 			)
 			// waiting for download to complete, before starting install job
-			downloadGroup[i].Wait()
-			go newTask(wg, b, numBars-i)
+			downloadWgg[i].Wait()
+			go newTask(doneWg, b, numBars-i)
 		}()
-	}
-
-	// this wait loop may be skipped, but not recommended
-	for _, wg := range installGroup {
-		wg.Wait()
 	}
 
 	p.Wait()
