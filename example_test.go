@@ -63,7 +63,7 @@ func ExampleBar_Completed() {
 func ExampleBar_ProxyReader() {
 	p := mpb.New()
 	// make http get request
-	resp, _ := http.Get(url)
+	resp, err := http.Get(url)
 	if err != nil {
 		return err
 	}
