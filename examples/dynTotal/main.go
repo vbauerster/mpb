@@ -29,24 +29,26 @@ func main() {
 		),
 	)
 
-	totalUpd1 := make(chan struct{})
-	totalUpd2 := make(chan struct{})
+	totalUpd := make(chan int64)
 	go func() {
-		<-totalUpd1
-		// intermediate not final total update
-		bar.SetTotal(200, false)
-		<-totalUpd2
-		// final total update
-		bar.SetTotal(300, true)
+		for {
+			total, ok := <-totalUpd
+			bar.SetTotal(total, !ok)
+			if !ok {
+				break
+			}
+		}
 	}()
 
 	max := 100 * time.Millisecond
 	for i := 0; i < 300; i++ {
 		if i == 140 {
-			close(totalUpd1)
+			totalUpd <- 190
 		}
 		if i == 250 {
-			close(totalUpd2)
+			totalUpd <- 300
+			// final upd, so closing channel
+			close(totalUpd)
 		}
 		time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
 		bar.Increment()
