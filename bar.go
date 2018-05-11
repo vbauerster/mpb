@@ -92,7 +92,8 @@ type (
 )
 
 func newBar(wg *sync.WaitGroup, id int, total int64, cancel <-chan struct{}, options ...BarOption) *Bar {
-	if total <= 0 {
+	dynamic := total <= 0
+	if dynamic {
 		total = time.Now().Unix()
 	}
 
@@ -101,6 +102,7 @@ func newBar(wg *sync.WaitGroup, id int, total int64, cancel <-chan struct{}, opt
 		priority: id,
 		total:    total,
 		etaAlpha: etaAlpha,
+		dynamic:  dynamic,
 	}
 
 	for _, opt := range options {
