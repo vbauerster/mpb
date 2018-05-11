@@ -231,6 +231,7 @@ func (b *Bar) SetTotal(total int64, final bool) {
 			s.total = total
 		}
 		s.dynamic = !final
+		s.toComplete = final
 	}:
 	case <-b.done:
 	}
@@ -244,9 +245,6 @@ func (b *Bar) IncrBy(n int) {
 	now := time.Now()
 	select {
 	case b.operateState <- func(s *bState) {
-		if s.toComplete {
-			return
-		}
 		if s.current == 0 {
 			s.startTime = now
 			s.blockStartTime = now
