@@ -65,9 +65,10 @@ type (
 		dynamic              bool
 		noBarOnComplete      bool
 		startTime            time.Time
-		timeElapsed          time.Duration
 		blockStartTime       time.Time
-		timePerItem          time.Duration
+		timeElapsed          time.Duration
+		timePerItemEstimate  time.Duration
+		timeRemaining        time.Duration
 		aDecorators          []decor.DecoratorFunc
 		pDecorators          []decor.DecoratorFunc
 		refill               *refill
@@ -249,7 +250,7 @@ func (b *Bar) IncrBy(n int) {
 			s.startTime = now
 			s.blockStartTime = now
 		} else {
-			s.updateTimePerItemEstimate(n, now)
+			s.updateETA(int64(n), now)
 			s.timeElapsed = now.Sub(s.startTime)
 		}
 		s.current += int64(n)
@@ -423,10 +424,11 @@ func (s *bState) fillBar(width int) {
 	}
 }
 
-func (s *bState) updateTimePerItemEstimate(amount int, now time.Time) {
+func (s *bState) updateETA(amount int64, now time.Time) {
 	lastBlockTime := now.Sub(s.blockStartTime)
 	lastItemEstimate := float64(lastBlockTime) / float64(amount)
-	s.timePerItem = time.Duration((s.etaAlpha * lastItemEstimate) + (1-s.etaAlpha)*float64(s.timePerItem))
+	s.timePerItemEstimate = time.Duration((s.etaAlpha * lastItemEstimate) + (1-s.etaAlpha)*float64(s.timePerItemEstimate))
+	s.timeRemaining = time.Duration(s.total-s.current+amount) * s.timePerItemEstimate
 	s.blockStartTime = now
 }
 
@@ -438,7 +440,8 @@ func newStatistics(s *bState) *decor.Statistics {
 		Current:             s.current,
 		StartTime:           s.startTime,
 		TimeElapsed:         s.timeElapsed,
-		TimePerItemEstimate: s.timePerItem,
+		TimeRemaining:       s.timeRemaining,
+		TimePerItemEstimate: s.timePerItemEstimate,
 	}
 }
 

@@ -38,12 +38,8 @@ type Statistics struct {
 	Current             int64
 	StartTime           time.Time
 	TimeElapsed         time.Duration
+	TimeRemaining       time.Duration
 	TimePerItemEstimate time.Duration
-}
-
-// Eta returns exponential-weighted-moving-average ETA estimator
-func (s *Statistics) Eta() time.Duration {
-	return time.Duration(s.Total-s.Current) * s.TimePerItemEstimate
 }
 
 // DecoratorFunc is a function that can be prepended and appended to the progress bar
@@ -189,7 +185,7 @@ func ETA(width, conf int) DecoratorFunc {
 	}
 	format += "%ds"
 	return func(s *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string {
-		str := fmt.Sprint(time.Duration(s.Eta().Seconds()) * time.Second)
+		str := fmt.Sprint(time.Duration(s.TimeRemaining.Seconds()) * time.Second)
 		if (conf & DwidthSync) != 0 {
 			widthAccumulator <- utf8.RuneCountInString(str)
 			max := <-widthDistributor
