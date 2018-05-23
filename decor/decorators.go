@@ -32,7 +32,7 @@ const (
 )
 
 // Statistics represents statistics of the progress bar.
-// Cantains: Total, Current, TimeElapsed, TimePerItemEstimate
+// Contains: Total, Current, TimeElapsed, TimePerItemEstimate
 type Statistics struct {
 	ID                  int
 	Completed           bool
