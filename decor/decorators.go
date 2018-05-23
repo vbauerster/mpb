@@ -3,6 +3,8 @@ package decor
 import (
 	"fmt"
 	"math"
+	"sort"
+	"sync"
 	"time"
 	"unicode/utf8"
 )
@@ -266,4 +268,121 @@ func CalcPercentage(total, current, width int64) (perc int64) {
 		return int64(num)
 	}
 	return int64(ceil)
+}
+
+// SpeedNoUnit returns raw I/O operation speed decorator.
+// If you set `DwidthSync` bit in `conf` param, `minWidth` param is ignored.
+// `DwidthSync` is effective with multiple bars only, if set decorator will participate
+// in width synchronization process with other decorators in the same column group.
+func SpeedNoUnit(unitFormat string, minWidth, conf int) DecoratorFunc {
+	return Speed(unitFormat, 0, minWidth, conf)
+}
+
+// SpeedKibiByte returns human friendly I/O operation speed decorator,
+// where counters unit is multiple by 1024.
+// `unitFormat` must contain one printf compatible verb, like "%f" or "%d".
+// Example: `"%.1f" = "1.0MiB/s"` or `"% .1f" = "1.0 MiB/s"`.
+// If you set `DwidthSync` bit in `conf` param, `minWidth` param is ignored.
+// `DwidthSync` is effective with multiple bars only, if set decorator will participate
+// in width synchronization process with other decorators in the same column group.
+func SpeedKibiByte(unitFormat string, minWidth, conf int) DecoratorFunc {
+	return Speed(unitFormat, unitKiB, minWidth, conf)
+}
+
+// SpeedKiloByte returns human friendly I/O operation speed decorator,
+// where counters unit is multiple by 1000.
+// `unitFormat` must contain one printf compatible verb, like "%f" or "%d".
+// Example: `"%.1f" = "1.0MiB/s"` or `"% .1f" = "1.0 MiB/s"`.
+// If you set `DwidthSync` bit in `conf` param, `minWidth` param is ignored.
+// `DwidthSync` is effective with multiple bars only, if set decorator will participate
+// in width synchronization process with other decorators in the same column group.
+func SpeedKiloByte(unitFormat string, minWidth, conf int) DecoratorFunc {
+	return Speed(unitFormat, unitKB, minWidth, conf)
+}
+
+// Speed provides basic I/O operation speed decorator.
+// `unitFormat` must contain one printf compatible verb, like "%f" or "%d".
+// Example: `"%.1f" = "1.0MiB/s"` or `"% .1f" = "1.0 MiB/s"`.
+// If you set `DwidthSync` bit in `conf` param, `minWidth` param is ignored.
+// `DwidthSync` is effective with multiple bars only, if set decorator will participate
+// in width synchronization process with other decorators in the same column group.
+func Speed(unitFormat string, unit, minWidth, conf int) DecoratorFunc {
+	format := "%%"
+	if (conf & DidentRight) != 0 {
+		format += "-"
+	}
+	format += "%ds"
+
+	metricsMu := sync.RWMutex{}
+	metrics := make(map[int]*pbSpeedMetrics)
+
+	return func(s *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string {
+		var str string
+
+		metricsMu.RLock()
+		barMetrics, present := metrics[s.ID]
+		metricsMu.RUnlock()
+		if !present {
+			barMetrics = new(pbSpeedMetrics)
+			metricsMu.Lock()
+			metrics[s.ID] = barMetrics
+			metricsMu.Unlock()
+		}
+
+		if !s.Completed {
+			// here we use integrated speed instead of instantaneous speed to make value oscillations more smooth
+			// also we dropping "invalid" measurements like NaN, +Inf, -Inf
+			instantSpeed := float64(s.Current-barMetrics.prevCount) / (s.TimeElapsed - barMetrics.prevDuration).Seconds() // bytes per second
+			if !math.IsNaN(instantSpeed) && !math.IsInf(instantSpeed, 1) && !math.IsInf(instantSpeed, -1) {
+				barMetrics.PutSpeed(instantSpeed)
+			}
+			barMetrics.prevCount = s.Current
+			barMetrics.prevDuration = s.TimeElapsed
+		}
+		speed := barMetrics.SpeedMedian()
+
+		switch unit {
+		case unitKiB:
+			str = fmt.Sprintf(unitFormat, SpeedKiB(speed))
+		case unitKB:
+			str = fmt.Sprintf(unitFormat, SpeedKB(speed))
+		default:
+			str = fmt.Sprintf(unitFormat, speed)
+		}
+		if (conf & DwidthSync) != 0 {
+			widthAccumulator <- utf8.RuneCountInString(str)
+			max := <-widthDistributor
+			if (conf & DextraSpace) != 0 {
+				max++
+			}
+			return fmt.Sprintf(fmt.Sprintf(format, max), str)
+		}
+		return fmt.Sprintf(fmt.Sprintf(format, minWidth), str)
+	}
+}
+
+const speedWindowSize = 3
+
+type pbSpeedMetrics struct {
+	prevCount    int64
+	prevDuration time.Duration
+	speedWindow  [speedWindowSize]float64
+}
+
+func (p *pbSpeedMetrics) PutSpeed(speed float64) {
+	for i := 0; i < len(p.speedWindow)-1; i++ {
+		p.speedWindow[i] = p.speedWindow[i+1]
+	}
+	p.speedWindow[len(p.speedWindow)-1] = speed
+}
+
+func (p *pbSpeedMetrics) SpeedMedian() float64 {
+	var temp [speedWindowSize]float64
+	copy(temp[:], p.speedWindow[:])
+	sort.Float64s(temp[:])
+	if l := len(temp) % 2; l != 0 {
+		return temp[l]
+	} else {
+		return (temp[l] + temp[l+1]) / 2
+	}
 }
