@@ -42,6 +42,9 @@ func main() {
 		mpb.PrependDecorators(
 			decor.CountersKibiByte("% 6.1f / % 6.1f", 18, 0),
 		),
+		mpb.AppendDecorators(
+			decor.SpeedKibiByte("% 6.1f", 18, 0),
+		),
 	)
 
 	// create proxy reader
