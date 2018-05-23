@@ -63,7 +63,10 @@ func download(wg *sync.WaitGroup, p *mpb.Progress, name, url string, n int) {
 			decor.StaticName(name, len(name)+1, decor.DidentRight),
 			decor.CountersKibiByte("%6.1f / %6.1f", 0, decor.DwidthSync),
 		),
-		mpb.AppendDecorators(decor.ETA(0, decor.DwidthSync)),
+		mpb.AppendDecorators(
+			decor.ETA(0, decor.DwidthSync),
+			decor.SpeedKibiByte("%6.1f", 18, 0),
+		),
 	)
 
 	// create proxy reader
