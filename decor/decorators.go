@@ -266,3 +266,84 @@ func CalcPercentage(total, current, width int64) (perc int64) {
 	}
 	return int64(ceil)
 }
+
+// SpeedNoUnit returns raw I/O operation speed decorator.
+//
+//	`unitFormat` printf compatible verb for value, like "%f" or "%d"
+//
+//	`width` width reservation to apply, ignored if `DwidthSync` bit is set
+//
+//	`conf` bit set config, [DidentRight|DwidthSync|DextraSpace]
+//
+// unitFormat example:
+//
+//	"%.1f" = "1.0" or "% .1f" = "1.0"
+func SpeedNoUnit(unitFormat string, width, conf int) DecoratorFunc {
+	return speed(unitFormat, 0, width, conf)
+}
+
+// SpeedKibiByte returns human friendly I/O operation speed decorator,
+//
+//	`unitFormat` printf compatible verb for value, like "%f" or "%d"
+//
+//	`width` width reservation to apply, ignored if `DwidthSync` bit is set
+//
+//	`conf` bit set config, [DidentRight|DwidthSync|DextraSpace]
+//
+// unitFormat example:
+//
+//	"%.1f" = "1.0MiB/s" or "% .1f" = "1.0 MiB/s"
+func SpeedKibiByte(unitFormat string, width, conf int) DecoratorFunc {
+	return speed(unitFormat, unitKiB, width, conf)
+}
+
+// SpeedKiloByte returns human friendly I/O operation speed decorator,
+//
+//	`unitFormat` printf compatible verb for value, like "%f" or "%d"
+//
+//	`width` width reservation to apply, ignored if `DwidthSync` bit is set
+//
+//	`conf` bit set config, [DidentRight|DwidthSync|DextraSpace]
+//
+// unitFormat example:
+//
+//	"%.1f" = "1.0MB/s" or "% .1f" = "1.0 MB/s"
+func SpeedKiloByte(unitFormat string, width, conf int) DecoratorFunc {
+	return speed(unitFormat, unitKB, width, conf)
+}
+
+func speed(unitFormat string, unit, width, conf int) DecoratorFunc {
+	format := "%%"
+	if (conf & DidentRight) != 0 {
+		format += "-"
+	}
+	format += "%ds"
+
+	return func(s *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string {
+		var str string
+
+		speed := float64(s.Current) / s.TimeElapsed.Seconds()
+
+		if math.IsNaN(speed) || math.IsInf(speed, 0) {
+			speed = .0
+		}
+
+		switch unit {
+		case unitKiB:
+			str = fmt.Sprintf(unitFormat, SpeedKiB(speed))
+		case unitKB:
+			str = fmt.Sprintf(unitFormat, SpeedKB(speed))
+		default:
+			str = fmt.Sprintf(unitFormat, speed)
+		}
+		if (conf & DwidthSync) != 0 {
+			widthAccumulator <- utf8.RuneCountInString(str)
+			max := <-widthDistributor
+			if (conf & DextraSpace) != 0 {
+				max++
+			}
+			return fmt.Sprintf(fmt.Sprintf(format, max), str)
+		}
+		return fmt.Sprintf(fmt.Sprintf(format, width), str)
+	}
+}
