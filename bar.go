@@ -57,6 +57,7 @@ type (
 		etaAlpha             float64
 		total                int64
 		current              int64
+		lastIncrement        int64
 		totalAutoIncrTrigger int64
 		totalAutoIncrBy      int64
 		trimLeftSpace        bool
@@ -250,12 +251,13 @@ func (b *Bar) IncrBy(n int) {
 	case b.operateState <- func(s *bState) {
 		if s.current == 0 {
 			s.startTime = now
-			s.blockStartTime = now
 		} else {
-			s.updateETA(int64(n), now)
+			s.updateETA(now.Sub(s.blockStartTime))
 			s.timeElapsed = now.Sub(s.startTime)
 		}
-		s.current += int64(n)
+		s.blockStartTime = now
+		s.lastIncrement = int64(n)
+		s.current += s.lastIncrement
 		if s.dynamic {
 			curp := decor.CalcPercentage(s.total, s.current, 100)
 			if 100-curp <= s.totalAutoIncrTrigger {
@@ -291,6 +293,7 @@ func (b *Bar) serve(wg *sync.WaitGroup, s *bState, cancel <-chan struct{}) {
 			s.toComplete = true
 			cancel = nil
 		case <-b.shutdown:
+			s.updateETA(time.Since(s.blockStartTime))
 			b.cacheState = s
 			close(b.done)
 			return
@@ -426,12 +429,10 @@ func (s *bState) fillBar(width int) {
 	}
 }
 
-func (s *bState) updateETA(amount int64, now time.Time) {
-	lastBlockTime := now.Sub(s.blockStartTime)
-	lastItemEstimate := float64(lastBlockTime) / float64(amount)
+func (s *bState) updateETA(lastBlockTime time.Duration) {
+	lastItemEstimate := float64(lastBlockTime) / float64(s.lastIncrement)
 	s.timePerItemEstimate = time.Duration((s.etaAlpha * lastItemEstimate) + (1-s.etaAlpha)*float64(s.timePerItemEstimate))
-	s.timeRemaining = time.Duration(s.total-s.current+amount) * s.timePerItemEstimate
-	s.blockStartTime = now
+	s.timeRemaining = time.Duration(s.total-s.current) * s.timePerItemEstimate
 }
 
 func newStatistics(s *bState) *decor.Statistics {
