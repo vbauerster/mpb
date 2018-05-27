@@ -29,8 +29,7 @@ const (
 	DSyncSpaceR = DwidthSync | DextraSpace | DidentRight
 )
 
-// Statistics represents statistics of the progress bar.
-// Cantains: Total, Current, TimeElapsed, TimePerItemEstimate
+// Statistics contains values useful for implementing a DecoratorFunc.
 type Statistics struct {
 	ID                  int
 	Completed           bool
