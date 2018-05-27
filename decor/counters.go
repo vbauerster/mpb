@@ -28,8 +28,6 @@ const (
 	unitKB
 )
 
-type counterUnit uint
-
 type CounterKiB int64
 
 func (c CounterKiB) Format(st fmt.State, verb rune) {

@@ -145,7 +145,7 @@ func CountersKiloByte(pairFormat string, width, conf int) DecoratorFunc {
 	return counters(pairFormat, unitKB, width, conf)
 }
 
-func counters(pairFormat string, unit counterUnit, width, conf int) DecoratorFunc {
+func counters(pairFormat string, unit, width, conf int) DecoratorFunc {
 	format := "%%"
 	if (conf & DidentRight) != 0 {
 		format += "-"
