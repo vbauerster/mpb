@@ -39,6 +39,7 @@ func main() {
 			defer wg.Done()
 			max := 100 * time.Millisecond
 			for i := 0; i < total; i++ {
+				b.StartBlock()
 				time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
 				b.Increment()
 			}

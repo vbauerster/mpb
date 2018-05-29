@@ -41,6 +41,7 @@ func main() {
 			defer wg.Done()
 			max := 100 * time.Millisecond
 			for i := 0; i < total; i++ {
+				bar.StartBlock()
 				time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
 				bar.Increment()
 			}
@@ -48,5 +49,4 @@ func main() {
 	}
 
 	p.Wait()
-	fmt.Println("done")
 }

@@ -177,6 +177,9 @@ func counters(pairFormat string, unit, width, conf int) DecoratorFunc {
 //	`width` width reservation to apply, ignored if `DwidthSync` bit is set
 //
 //	`conf` bit set config, [DidentRight|DwidthSync|DextraSpace]
+//
+// To correctly estimate non io progress, *Bar.StartBlock should be called,
+// before each increment block.
 func ETA(width, conf int) DecoratorFunc {
 	format := "%%"
 	if (conf & DidentRight) != 0 {

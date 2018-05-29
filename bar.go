@@ -57,7 +57,6 @@ type (
 		etaAlpha             float64
 		total                int64
 		current              int64
-		lastIncrement        int64
 		totalAutoIncrTrigger int64
 		totalAutoIncrBy      int64
 		trimLeftSpace        bool
@@ -241,23 +240,29 @@ func (b *Bar) SetTotal(total int64, final bool) {
 	}
 }
 
+// StartBlock updates start timestamp of the current increment block.
+// It is optional to call, unless ETA decorator is used.
+// If *bar.ProxyReader is used, it will be called implicitly.
+func (b *Bar) StartBlock() {
+	now := time.Now()
+	select {
+	case b.operateState <- func(s *bState) { s.blockStartTime = now }:
+	case <-b.done:
+	}
+}
+
 // IncrBy increments progress bar by amount of n
 func (b *Bar) IncrBy(n int) {
-	if n < 1 {
-		return
-	}
 	now := time.Now()
 	select {
 	case b.operateState <- func(s *bState) {
 		if s.current == 0 {
 			s.startTime = now
 		} else {
-			s.updateETA(now.Sub(s.blockStartTime))
 			s.timeElapsed = now.Sub(s.startTime)
 		}
-		s.blockStartTime = now
-		s.lastIncrement = int64(n)
-		s.current += s.lastIncrement
+		s.current += int64(n)
+		s.updateETA(n, now.Sub(s.blockStartTime))
 		if s.dynamic {
 			curp := decor.CalcPercentage(s.total, s.current, 100)
 			if 100-curp <= s.totalAutoIncrTrigger {
@@ -293,7 +298,6 @@ func (b *Bar) serve(wg *sync.WaitGroup, s *bState, cancel <-chan struct{}) {
 			s.toComplete = true
 			cancel = nil
 		case <-b.shutdown:
-			s.updateETA(time.Since(s.blockStartTime))
 			b.cacheState = s
 			close(b.done)
 			return
@@ -429,8 +433,8 @@ func (s *bState) fillBar(width int) {
 	}
 }
 
-func (s *bState) updateETA(lastBlockTime time.Duration) {
-	lastItemEstimate := float64(lastBlockTime) / float64(s.lastIncrement)
+func (s *bState) updateETA(n int, lastBlockTime time.Duration) {
+	lastItemEstimate := float64(lastBlockTime) / float64(n)
 	s.timePerItemEstimate = time.Duration((s.etaAlpha * lastItemEstimate) + (1-s.etaAlpha)*float64(s.timePerItemEstimate))
 	s.timeRemaining = time.Duration(s.total-s.current) * s.timePerItemEstimate
 }

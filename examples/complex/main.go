@@ -69,6 +69,7 @@ func newTask(wg *sync.WaitGroup, b *mpb.Bar, incrBy int) {
 	defer wg.Done()
 	max := 100 * time.Millisecond
 	for !b.Completed() {
+		b.StartBlock()
 		time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
 		b.IncrBy(incrBy)
 	}

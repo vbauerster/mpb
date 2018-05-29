@@ -39,6 +39,7 @@ func main() {
 			defer wg.Done()
 			max := 100 * time.Millisecond
 			for i := 0; i < total; i++ {
+				b.StartBlock()
 				time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
 				if i&1 == 1 {
 					priority := total - int(b.Current())
@@ -50,5 +51,4 @@ func main() {
 	}
 
 	p.Wait()
-	fmt.Println("done")
 }

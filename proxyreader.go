@@ -9,6 +9,7 @@ type Reader struct {
 }
 
 func (r *Reader) Read(p []byte) (int, error) {
+	r.bar.StartBlock()
 	n, err := r.Reader.Read(p)
 	r.bar.IncrBy(n)
 	return n, err

@@ -44,6 +44,7 @@ func main() {
 			defer wg.Done()
 			max := 100 * time.Millisecond
 			for i := 0; i < total; i++ {
+				b.StartBlock()
 				if b.ID() == 2 && i == 42 {
 					p.Abort(b)
 					return
@@ -55,5 +56,4 @@ func main() {
 	}
 
 	p.Wait()
-	fmt.Println("done")
 }

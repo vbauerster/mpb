@@ -47,5 +47,4 @@ func main() {
 	}
 
 	p.Wait()
-	fmt.Println("done")
 }
