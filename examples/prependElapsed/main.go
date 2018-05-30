@@ -15,7 +15,6 @@ func init() {
 }
 
 func main() {
-
 	var wg sync.WaitGroup
 	p := mpb.New(mpb.WithWaitGroup(&wg))
 	total := 100

@@ -22,7 +22,7 @@ const (
 
 const (
 	formatLen = 5
-	etaAlpha  = 0.25
+	etaAlpha  = 0.12
 )
 
 type barRunes [formatLen]rune
@@ -256,13 +256,9 @@ func (b *Bar) IncrBy(n int) {
 	now := time.Now()
 	select {
 	case b.operateState <- func(s *bState) {
-		if s.current == 0 {
-			s.startTime = now
-		} else {
-			s.timeElapsed = now.Sub(s.startTime)
-		}
 		s.current += int64(n)
-		s.updateETA(n, now.Sub(s.blockStartTime))
+		s.timeElapsed = now.Sub(s.startTime)
+		s.timeRemaining = s.calcETA(n, now.Sub(s.blockStartTime))
 		if s.dynamic {
 			curp := decor.CalcPercentage(s.total, s.current, 100)
 			if 100-curp <= s.totalAutoIncrTrigger {
@@ -290,6 +286,8 @@ func (b *Bar) Completed() bool {
 
 func (b *Bar) serve(wg *sync.WaitGroup, s *bState, cancel <-chan struct{}) {
 	defer wg.Done()
+	s.startTime = time.Now()
+	s.blockStartTime = s.startTime
 	for {
 		select {
 		case op := <-b.operateState:
@@ -433,10 +431,10 @@ func (s *bState) fillBar(width int) {
 	}
 }
 
-func (s *bState) updateETA(n int, lastBlockTime time.Duration) {
+func (s *bState) calcETA(n int, lastBlockTime time.Duration) time.Duration {
 	lastItemEstimate := float64(lastBlockTime) / float64(n)
 	s.timePerItemEstimate = time.Duration((s.etaAlpha * lastItemEstimate) + (1-s.etaAlpha)*float64(s.timePerItemEstimate))
-	s.timeRemaining = time.Duration(s.total-s.current) * s.timePerItemEstimate
+	return time.Duration(s.total-s.current) * s.timePerItemEstimate
 }
 
 func newStatistics(s *bState) *decor.Statistics {

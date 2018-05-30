@@ -53,7 +53,7 @@ func BarID(id int) BarOption {
 
 // BarEtaAlpha option is a way to adjust ETA behavior.
 // You can play with it, if you're not satisfied with default behavior.
-// Default value is 0.25.
+// Default value is 0.12
 func BarEtaAlpha(a float64) BarOption {
 	return func(s *bState) {
 		s.etaAlpha = a
