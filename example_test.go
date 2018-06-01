@@ -40,6 +40,7 @@ func Example() {
 	// simulating some work
 	max := 100 * time.Millisecond
 	for i := 0; i < total; i++ {
+		bar.StartBlock() // optional call, required for ETA
 		time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
 		// increment by 1 (there is bar.IncrBy(int) method, if needed)
 		bar.Increment()
