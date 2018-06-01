@@ -27,7 +27,8 @@ func main() {
 		downloadWgg = append(downloadWgg, wg)
 		task := fmt.Sprintf("Task#%02d:", i)
 		job := "downloading"
-		b := p.AddBar(rand.Int63n(201)+100, mpb.BarRemoveOnComplete(),
+		b := p.AddBar(rand.Int63n(201)+100,
+			mpb.BarRemoveOnComplete(),
 			mpb.PrependDecorators(
 				decor.StaticName(task, len(task)+1, decor.DidentRight),
 				decor.StaticName(job, 0, decor.DSyncSpaceR),
@@ -46,7 +47,9 @@ func main() {
 			task := fmt.Sprintf("Task#%02d:", i)
 			job := "installing"
 			// preparing delayed bars
-			b := p.AddBar(rand.Int63n(101)+100, mpb.BarReplaceOnComplete(bars[i]), mpb.BarClearOnComplete(),
+			b := p.AddBar(rand.Int63n(101)+100,
+				mpb.BarReplaceOnComplete(bars[i]),
+				mpb.BarClearOnComplete(),
 				mpb.PrependDecorators(
 					decor.StaticName(task, len(task)+1, decor.DidentRight),
 					decor.OnComplete(decor.StaticName(job, 0, decor.DSyncSpaceR), "done!", 0, decor.DSyncSpaceR),
