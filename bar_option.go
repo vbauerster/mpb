@@ -60,24 +60,27 @@ func BarEtaAlpha(a float64) BarOption {
 	}
 }
 
-// BarDynamicTotal enables dynamic total behaviour.
+// BarDynamicTotal is a flag, if set enables dynamic total behaviour.
+// If provided total <= 0, it is set implicitly.
 func BarDynamicTotal() BarOption {
 	return func(s *bState) {
 		s.dynamic = true
 	}
 }
 
-// BarAutoIncrTotal auto increment total by amount, when trigger percentage remained till bar completion.
+// BarAutoIncrTotal auto increment total by n, when trigger percentage remained till bar completion.
 // In other words: say you've set trigger = 10, then auto increment will start after bar reaches 90 %.
-func BarAutoIncrTotal(trigger, amount int64) BarOption {
+// Effective only if BarDynamicTotal option is set.
+func BarAutoIncrTotal(trigger, n int64) BarOption {
 	return func(s *bState) {
-		s.dynamic = true
 		s.totalAutoIncrTrigger = trigger
-		s.totalAutoIncrBy = amount
+		s.totalAutoIncrBy = n
 	}
 }
 
-// BarRemoveOnComplete is a flag, which will trigger bar auto remove on completion event.
+// BarRemoveOnComplete is a flag, if set whole bar line will be removed on complete event.
+// If both BarRemoveOnComplete and BarClearOnComplete are set, first bar section gets cleared
+// and then whole bar line gets removed completely.
 func BarRemoveOnComplete() BarOption {
 	return func(s *bState) {
 		s.removeOnComplete = true
@@ -92,10 +95,11 @@ func BarReplaceOnComplete(runningBar *Bar) BarOption {
 	}
 }
 
-// BarClearOnComplete clears the bar section on complete event.
+// BarClearOnComplete is a flag, if set will clear bar section on complete event.
+// If you need to remove a whole bar line, refer to BarRemoveOnComplete.
 func BarClearOnComplete() BarOption {
 	return func(s *bState) {
-		s.noBarOnComplete = true
+		s.barClearOnComplete = true
 	}
 }
 

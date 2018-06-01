@@ -63,7 +63,8 @@ type (
 		trimRightSpace       bool
 		toComplete           bool
 		dynamic              bool
-		noBarOnComplete      bool
+		barClearOnComplete   bool
+		completeFlushed      bool
 		startTime            time.Time
 		blockStartTime       time.Time
 		timeElapsed          time.Duration
@@ -321,7 +322,8 @@ func (b *Bar) render(debugOut io.Writer, tw int, pSyncer, aSyncer *widthSyncer) 
 					r = strings.NewReader(fmt.Sprintf(fmt.Sprintf("%%.%ds\n", tw), s.panicMsg))
 					fmt.Fprintf(debugOut, "%s %s bar id %02d %v\n", "[mpb]", time.Now(), s.id, s.panicMsg)
 				}
-				ch <- &bFrame{b, r, s.toComplete}
+				ch <- &bFrame{b, r, s.toComplete && !(s.barClearOnComplete && !s.completeFlushed)}
+				s.completeFlushed = s.toComplete
 			}()
 			r = s.draw(tw, pSyncer, aSyncer)
 		}:
@@ -333,7 +335,7 @@ func (b *Bar) render(debugOut io.Writer, tw int, pSyncer, aSyncer *widthSyncer) 
 			} else {
 				r = s.draw(tw, pSyncer, aSyncer)
 			}
-			ch <- &bFrame{b, r, s.toComplete}
+			ch <- &bFrame{b, r, true}
 		}
 	}()
 
@@ -361,7 +363,7 @@ func (s *bState) draw(termWidth int, pSyncer, aSyncer *widthSyncer) io.Reader {
 	prependCount := utf8.RuneCount(s.bufP.Bytes())
 	appendCount := utf8.RuneCount(s.bufA.Bytes())
 
-	if s.toComplete && s.noBarOnComplete {
+	if s.barClearOnComplete && s.completeFlushed {
 		return io.MultiReader(s.bufP, s.bufA)
 	}
 
@@ -440,7 +442,7 @@ func (s *bState) calcETA(n int, lastBlockTime time.Duration) time.Duration {
 func newStatistics(s *bState) *decor.Statistics {
 	return &decor.Statistics{
 		ID:                  s.id,
-		Completed:           s.toComplete,
+		Completed:           s.completeFlushed,
 		Total:               s.total,
 		Current:             s.current,
 		StartTime:           s.startTime,
