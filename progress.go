@@ -216,7 +216,12 @@ func (s *pState) writeAndFlush(tw, numP, numA int) (err error) {
 		bf := <-ch
 		_, err = s.cw.ReadFrom(bf.reader)
 		if !bf.bar.completed && bf.toComplete {
-			bf.bar.completed = true
+			// shutdown at next flush, in other words decrement underlying WaitGroup
+			// only after the bar with completed state has been flushed.
+			// this ensures no bar ends up with less than 100% rendered.
+			defer func() {
+				s.shutdownPending = append(s.shutdownPending, bf.bar)
+			}()
 			if bf.bar.removeOnComplete {
 				s.heapUpdated = heap.Remove(s.bHeap, bf.bar.index) != nil
 			}
@@ -225,10 +230,7 @@ func (s *pState) writeAndFlush(tw, numP, numA int) (err error) {
 				s.heapUpdated = true
 				delete(s.waitBars, bf.bar)
 			}
-			// defer is required to make removeOnComplete visually happen
-			defer func() {
-				s.shutdownPending = append(s.shutdownPending, bf.bar)
-			}()
+			bf.bar.completed = true
 		}
 	}
 
