@@ -120,6 +120,9 @@ func (p *Progress) AddBar(total int64, options ...BarOption) *Bar {
 func (p *Progress) Abort(b *Bar) {
 	select {
 	case p.operateState <- func(s *pState) {
+		if b.index < 0 {
+			return
+		}
 		s.heapUpdated = heap.Remove(s.bHeap, b.index) != nil
 		s.shutdownPending = append(s.shutdownPending, b)
 	}:
@@ -222,6 +225,7 @@ func (s *pState) writeAndFlush(tw, numP, numA int) (err error) {
 				s.heapUpdated = true
 				delete(s.waitBars, bf.bar)
 			}
+			// defer is required to make removeOnComplete visually happen
 			defer func() {
 				s.shutdownPending = append(s.shutdownPending, bf.bar)
 			}()
