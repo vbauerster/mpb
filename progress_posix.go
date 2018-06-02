@@ -3,7 +3,6 @@
 package mpb
 
 import (
-	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -41,10 +40,7 @@ func (p *Progress) serve(s *pState) {
 				s.heapUpdated = false
 			}
 			tw, _, _ := cwriter.TermSize()
-			err := s.writeAndFlush(tw, numP, numA)
-			if err != nil {
-				fmt.Fprintf(s.debugOut, "%s %s %v\n", "[mpb]", time.Now(), err)
-			}
+			s.render(tw, numP, numA)
 		case <-winch:
 			if s.heapUpdated {
 				numP = s.bHeap.maxNumP()
@@ -52,10 +48,7 @@ func (p *Progress) serve(s *pState) {
 				s.heapUpdated = false
 			}
 			tw, _, _ := cwriter.TermSize()
-			err := s.writeAndFlush(tw-tw/8, numP, numA)
-			if err != nil {
-				fmt.Fprintf(s.debugOut, "%s %s %v\n", "[mpb]", time.Now(), err)
-			}
+			s.render(tw-tw/8, numP, numA)
 			if timer != nil && timer.Reset(resumeDelay) {
 				break
 			}

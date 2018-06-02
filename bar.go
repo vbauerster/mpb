@@ -32,21 +32,15 @@ type Bar struct {
 	priority int
 	index    int
 
-	// pointer to running bar, which this bar should replace
-	runningBar *Bar
+	runningBar    *Bar
+	cacheState    *bState
+	operateState  chan func(*bState)
+	frameReaderCh chan io.Reader
 
-	// completed is set from master Progress goroutine only
-	completed bool
-
-	removeOnComplete bool
-
-	operateState chan func(*bState)
 	// done is closed by Bar's goroutine, after cacheState is written
 	done chan struct{}
 	// shutdown is closed from master Progress goroutine only
 	shutdown chan struct{}
-
-	cacheState *bState
 }
 
 type (
@@ -63,6 +57,7 @@ type (
 		trimRightSpace       bool
 		toComplete           bool
 		dynamic              bool
+		removeOnComplete     bool
 		barClearOnComplete   bool
 		completeFlushed      bool
 		startTime            time.Time
@@ -77,18 +72,17 @@ type (
 		panicMsg             string
 
 		// following options are assigned to the *Bar
-		priority         int
-		removeOnComplete bool
-		runningBar       *Bar
+		priority   int
+		runningBar *Bar
 	}
 	refill struct {
 		char rune
 		till int64
 	}
-	bFrame struct {
-		bar        *Bar
-		reader     io.Reader
-		toComplete bool
+	frameReader struct {
+		io.Reader
+		toShutdown       bool
+		removeOnComplete bool
 	}
 )
 
@@ -117,12 +111,12 @@ func newBar(wg *sync.WaitGroup, id int, total int64, cancel <-chan struct{}, opt
 	s.bufA = bytes.NewBuffer(make([]byte, 0, s.width))
 
 	b := &Bar{
-		priority:         s.priority,
-		removeOnComplete: s.removeOnComplete,
-		runningBar:       s.runningBar,
-		operateState:     make(chan func(*bState)),
-		done:             make(chan struct{}),
-		shutdown:         make(chan struct{}),
+		priority:      s.priority,
+		runningBar:    s.runningBar,
+		operateState:  make(chan func(*bState)),
+		frameReaderCh: make(chan io.Reader, 1),
+		done:          make(chan struct{}),
+		shutdown:      make(chan struct{}),
 	}
 
 	if b.runningBar != nil {
@@ -173,7 +167,7 @@ func (b *Bar) ResumeFill(r rune, till int64) {
 
 // NumOfAppenders returns current number of append decorators
 func (b *Bar) NumOfAppenders() int {
-	result := make(chan int, 1)
+	result := make(chan int)
 	select {
 	case b.operateState <- func(s *bState) { result <- len(s.aDecorators) }:
 		return <-result
@@ -184,7 +178,7 @@ func (b *Bar) NumOfAppenders() int {
 
 // NumOfPrependers returns current number of prepend decorators
 func (b *Bar) NumOfPrependers() int {
-	result := make(chan int, 1)
+	result := make(chan int)
 	select {
 	case b.operateState <- func(s *bState) { result <- len(s.pDecorators) }:
 		return <-result
@@ -195,7 +189,7 @@ func (b *Bar) NumOfPrependers() int {
 
 // ID returs id of the bar
 func (b *Bar) ID() int {
-	result := make(chan int, 1)
+	result := make(chan int)
 	select {
 	case b.operateState <- func(s *bState) { result <- s.id }:
 		return <-result
@@ -206,7 +200,7 @@ func (b *Bar) ID() int {
 
 // Current returns bar's current number, in other words sum of all increments.
 func (b *Bar) Current() int64 {
-	result := make(chan int64, 1)
+	result := make(chan int64)
 	select {
 	case b.operateState <- func(s *bState) { result <- s.current }:
 		return <-result
@@ -217,7 +211,7 @@ func (b *Bar) Current() int64 {
 
 // Total returns bar's total number.
 func (b *Bar) Total() int64 {
-	result := make(chan int64, 1)
+	result := make(chan int64)
 	select {
 	case b.operateState <- func(s *bState) { result <- s.total }:
 		return <-result
@@ -247,7 +241,12 @@ func (b *Bar) SetTotal(total int64, final bool) {
 func (b *Bar) StartBlock() {
 	now := time.Now()
 	select {
-	case b.operateState <- func(s *bState) { s.blockStartTime = now }:
+	case b.operateState <- func(s *bState) {
+		if s.current == 0 {
+			s.startTime = now
+		}
+		s.blockStartTime = now
+	}:
 	case <-b.done:
 	}
 }
@@ -276,7 +275,7 @@ func (b *Bar) IncrBy(n int) {
 
 // Completed reports whether the bar is in completed state
 func (b *Bar) Completed() bool {
-	result := make(chan bool, 1)
+	result := make(chan bool)
 	select {
 	case b.operateState <- func(s *bState) { result <- s.toComplete }:
 		return <-result
@@ -304,42 +303,41 @@ func (b *Bar) serve(wg *sync.WaitGroup, s *bState, cancel <-chan struct{}) {
 	}
 }
 
-func (b *Bar) render(debugOut io.Writer, tw int, pSyncer, aSyncer *widthSyncer) <-chan *bFrame {
-	ch := make(chan *bFrame, 1)
-
-	go func() {
-		select {
-		case b.operateState <- func(s *bState) {
-			var r io.Reader
-			defer func() {
-				// recovering if external decorators panic
-				if p := recover(); p != nil {
-					s.panicMsg = fmt.Sprintf("panic: %v", p)
-					s.pDecorators = nil
-					s.aDecorators = nil
-					s.toComplete = true
-					// truncate panic msg to one tw line, if necessary
-					r = strings.NewReader(fmt.Sprintf(fmt.Sprintf("%%.%ds\n", tw), s.panicMsg))
-					fmt.Fprintf(debugOut, "%s %s bar id %02d %v\n", "[mpb]", time.Now(), s.id, s.panicMsg)
-				}
-				ch <- &bFrame{b, r, s.toComplete && !(s.barClearOnComplete && !s.completeFlushed)}
-				s.completeFlushed = s.toComplete
-			}()
-			r = s.draw(tw, pSyncer, aSyncer)
-		}:
-		case <-b.done:
-			s := b.cacheState
-			var r io.Reader
-			if s.panicMsg != "" {
+func (b *Bar) render(debugOut io.Writer, tw int, pSyncer, aSyncer *widthSyncer) {
+	var r io.Reader
+	select {
+	case b.operateState <- func(s *bState) {
+		defer func() {
+			// recovering if external decorators panic
+			if p := recover(); p != nil {
+				s.panicMsg = fmt.Sprintf("panic: %v", p)
+				s.pDecorators = nil
+				s.aDecorators = nil
+				s.toComplete = true
+				// truncate panic msg to one tw line, if necessary
 				r = strings.NewReader(fmt.Sprintf(fmt.Sprintf("%%.%ds\n", tw), s.panicMsg))
-			} else {
-				r = s.draw(tw, pSyncer, aSyncer)
+				fmt.Fprintf(debugOut, "%s %s bar id %02d %v\n", "[mpb]", time.Now(), s.id, s.panicMsg)
 			}
-			ch <- &bFrame{b, r, true}
+			b.frameReaderCh <- &frameReader{
+				Reader:           r,
+				toShutdown:       s.toComplete && !s.completeFlushed,
+				removeOnComplete: s.removeOnComplete,
+			}
+			s.completeFlushed = s.toComplete
+		}()
+		r = s.draw(tw, pSyncer, aSyncer)
+	}:
+	case <-b.done:
+		s := b.cacheState
+		if s.panicMsg != "" {
+			r = strings.NewReader(fmt.Sprintf(fmt.Sprintf("%%.%ds\n", tw), s.panicMsg))
+		} else {
+			r = s.draw(tw, pSyncer, aSyncer)
 		}
-	}()
-
-	return ch
+		b.frameReaderCh <- &frameReader{
+			Reader: r,
+		}
+	}
 }
 
 func (s *bState) draw(termWidth int, pSyncer, aSyncer *widthSyncer) io.Reader {

@@ -2,6 +2,7 @@ package mpb
 
 import (
 	"container/heap"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -204,7 +205,7 @@ func newWidthSyncer(timeout <-chan struct{}, numBars, numColumn int) *widthSynce
 	return ws
 }
 
-func (s *pState) writeAndFlush(tw, numP, numA int) (err error) {
+func (s *pState) render(tw, numP, numA int) {
 	timeout := make(chan struct{})
 	pSyncer := newWidthSyncer(timeout, s.bHeap.Len(), numP)
 	aSyncer := newWidthSyncer(timeout, s.bHeap.Len(), numA)
@@ -212,26 +213,40 @@ func (s *pState) writeAndFlush(tw, numP, numA int) (err error) {
 		close(timeout)
 	})
 
-	for _, ch := range s.renderByPriority(tw, pSyncer, aSyncer) {
-		bf := <-ch
-		_, err = s.cw.ReadFrom(bf.reader)
-		if !bf.bar.completed && bf.toComplete {
-			// shutdown at next flush, in other words decrement underlying WaitGroup
-			// only after the bar with completed state has been flushed.
-			// this ensures no bar ends up with less than 100% rendered.
-			defer func() {
-				s.shutdownPending = append(s.shutdownPending, bf.bar)
-			}()
-			if bf.bar.removeOnComplete {
-				s.heapUpdated = heap.Remove(s.bHeap, bf.bar.index) != nil
+	for i := 0; i < s.bHeap.Len(); i++ {
+		bar := (*s.bHeap)[i]
+		go bar.render(s.debugOut, tw, pSyncer, aSyncer)
+	}
+
+	if err := s.flush(); err != nil {
+		fmt.Fprintf(s.debugOut, "%s %s %v\n", "[mpb]", time.Now(), err)
+	}
+}
+
+func (s *pState) flush() (err error) {
+	for s.bHeap.Len() > 0 {
+		bar := heap.Pop(s.bHeap).(*Bar)
+		reader := <-bar.frameReaderCh
+		_, err = s.cw.ReadFrom(reader)
+		frame := reader.(*frameReader)
+		defer func() {
+			if frame.toShutdown {
+				// shutdown at next flush, in other words decrement underlying WaitGroup
+				// only after the bar with completed state has been flushed.
+				// this ensures no bar ends up with less than 100% rendered.
+				s.shutdownPending = append(s.shutdownPending, bar)
+				if replacementBar, ok := s.waitBars[bar]; ok {
+					heap.Push(s.bHeap, replacementBar)
+					s.heapUpdated = true
+					delete(s.waitBars, bar)
+				}
+				if frame.removeOnComplete {
+					s.heapUpdated = true
+					return
+				}
 			}
-			if replacementBar, ok := s.waitBars[bf.bar]; ok {
-				heap.Push(s.bHeap, replacementBar)
-				s.heapUpdated = true
-				delete(s.waitBars, bf.bar)
-			}
-			bf.bar.completed = true
-		}
+			heap.Push(s.bHeap, bar)
+		}()
 	}
 
 	for _, interceptor := range s.interceptors {
@@ -247,16 +262,6 @@ func (s *pState) writeAndFlush(tw, numP, numA int) (err error) {
 		s.shutdownPending = s.shutdownPending[:i]
 	}
 	return
-}
-
-func (s *pState) renderByPriority(tw int, pSyncer, aSyncer *widthSyncer) []<-chan *bFrame {
-	bff := make([]<-chan *bFrame, 0, s.bHeap.Len())
-	for s.bHeap.Len() > 0 {
-		b := heap.Pop(s.bHeap).(*Bar)
-		defer heap.Push(s.bHeap, b)
-		bff = append(bff, b.render(s.debugOut, tw, pSyncer, aSyncer))
-	}
-	return bff
 }
 
 func calcMax(slice []int) int {
