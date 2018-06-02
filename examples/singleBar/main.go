@@ -26,7 +26,8 @@ func main() {
 			// Display our static name with one space on the right
 			decor.StaticName(name, len(name)+1, decor.DidentRight),
 			// ETA decorator with width reservation of 3 runes
-			decor.ETA(3, 0),
+			// decor.ETA(3, 0),
+			decor.OnComplete(decor.ETA(4, 0), "done", 0, 0),
 		),
 		mpb.AppendDecorators(
 			// Percentage decorator with width reservation of 5 runes

@@ -17,7 +17,7 @@ func init() {
 func main() {
 	doneWg := new(sync.WaitGroup)
 	p := mpb.New(mpb.WithWidth(64), mpb.WithWaitGroup(doneWg))
-	numBars := 3
+	numBars := 4
 
 	var bars []*mpb.Bar
 	var downloadWgg []*sync.WaitGroup
