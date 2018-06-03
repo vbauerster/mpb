@@ -228,9 +228,8 @@ func (s *pState) flush() (err error) {
 		bar := heap.Pop(s.bHeap).(*Bar)
 		reader := <-bar.frameReaderCh
 		_, err = s.cw.ReadFrom(reader)
-		frame := reader.(*frameReader)
 		defer func() {
-			if frame.toShutdown {
+			if frame, ok := reader.(*frameReader); ok && frame.toShutdown {
 				// shutdown at next flush, in other words decrement underlying WaitGroup
 				// only after the bar with completed state has been flushed.
 				// this ensures no bar ends up with less than 100% rendered.
