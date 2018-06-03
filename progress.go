@@ -227,7 +227,9 @@ func (s *pState) flush() (err error) {
 	for s.bHeap.Len() > 0 {
 		bar := heap.Pop(s.bHeap).(*Bar)
 		reader := <-bar.frameReaderCh
-		_, err = s.cw.ReadFrom(reader)
+		if _, e := s.cw.ReadFrom(reader); e != nil {
+			err = e
+		}
 		defer func() {
 			if frame, ok := reader.(*frameReader); ok && frame.toShutdown {
 				// shutdown at next flush, in other words decrement underlying WaitGroup
