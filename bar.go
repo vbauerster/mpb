@@ -229,7 +229,6 @@ func (b *Bar) SetTotal(total int64, final bool) {
 			s.total = total
 		}
 		s.dynamic = !final
-		s.toComplete = final
 	}:
 	case <-b.done:
 	}
