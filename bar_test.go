@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -33,26 +32,24 @@ func TestBarCompleted(t *testing.T) {
 
 func TestBarID(t *testing.T) {
 	p := New(WithOutput(ioutil.Discard))
+	total := 80
+	wantID := 11
+	bar := p.AddBar(int64(total), BarID(wantID))
 
-	numBars := 3
-	bars := make([]*Bar, numBars)
-	for i := 0; i < numBars; i++ {
-		bars[i] = p.AddBar(80, BarID(i))
-		go func(bar *Bar) {
-			for i := 0; i < 80; i++ {
-				time.Sleep(10 * time.Millisecond)
-				bar.Increment()
-			}
-		}(bars[i])
-	}
-
-	p.Wait()
-	for wantID, bar := range bars {
-		gotID := bar.ID()
-		if gotID != wantID {
-			t.Errorf("Expected bar id: %d, got %d\n", wantID, gotID)
+	go func() {
+		for i := 0; i < total; i++ {
+			time.Sleep(50 * time.Millisecond)
+			bar.Increment()
 		}
+	}()
+
+	gotID := bar.ID()
+	if gotID != wantID {
+		t.Errorf("Expected bar id: %d, got %d\n", wantID, gotID)
 	}
+
+	p.Abort(bar)
+	p.Wait()
 }
 
 func TestBarIncrWithReFill(t *testing.T) {
@@ -65,7 +62,7 @@ func TestBarIncrWithReFill(t *testing.T) {
 	till := 30
 	refillChar := '+'
 
-	bar := p.AddBar(100, BarTrim())
+	bar := p.AddBar(int64(total), BarTrim())
 
 	bar.ResumeFill(refillChar, int64(till))
 
@@ -86,38 +83,31 @@ func TestBarIncrWithReFill(t *testing.T) {
 }
 
 func TestBarPanics(t *testing.T) {
-	var wg sync.WaitGroup
 	var buf bytes.Buffer
-	p := New(WithDebugOutput(&buf), WithOutput(nil), WithWaitGroup(&wg))
+	p := New(WithDebugOutput(&buf), WithOutput(ioutil.Discard))
 
 	wantPanic := "Upps!!!"
-	numBars := 1
-	wg.Add(numBars)
+	total := 100
 
-	for i := 0; i < numBars; i++ {
-		name := fmt.Sprintf("b#%02d:", i)
-		bar := p.AddBar(100, PrependDecorators(
-			func(s *decor.Statistics, _ chan<- int, _ <-chan int) string {
-				if s.Current >= 42 {
-					panic(wantPanic)
-				}
-				return name
-			},
-		))
-
-		go func() {
-			defer wg.Done()
-			for i := 0; i < 100; i++ {
-				time.Sleep(10 * time.Millisecond)
-				bar.Increment()
+	bar := p.AddBar(int64(total), PrependDecorators(
+		func(s *decor.Statistics, _ chan<- int, _ <-chan int) string {
+			if s.Current >= 42 {
+				panic(wantPanic)
 			}
-		}()
-	}
+			return "test"
+		},
+	))
+
+	go func() {
+		for i := 0; i < 100; i++ {
+			time.Sleep(10 * time.Millisecond)
+			bar.Increment()
+		}
+	}()
 
 	p.Wait()
 
 	wantPanic = fmt.Sprintf("panic: %s", wantPanic)
-
 	debugStr := buf.String()
 	if !strings.Contains(debugStr, wantPanic) {
 		t.Errorf("%q doesn't contain %q\n", debugStr, wantPanic)
