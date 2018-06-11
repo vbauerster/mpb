@@ -26,7 +26,7 @@ func main() {
 
 	for i := 0; i < totalBars; i++ {
 		name := fmt.Sprintf("Bar#%02d: ", i)
-		total := rand.Intn(120) + 10
+		total := rand.Intn(320) + 10
 		startBlock := make(chan time.Time)
 		bar := p.AddBar(int64(total),
 			mpb.PrependDecorators(
@@ -41,7 +41,7 @@ func main() {
 		go func() {
 			defer wg.Done()
 			max := 100 * time.Millisecond
-			for i := 0; i < total; i++ {
+			for !bar.Completed() {
 				startBlock <- time.Now()
 				time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
 				bar.Increment()
