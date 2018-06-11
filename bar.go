@@ -270,12 +270,8 @@ func (b *Bar) IncrBy(n int) {
 // Completed reports whether the bar is in completed state
 func (b *Bar) Completed() bool {
 	result := make(chan bool)
-	select {
-	case b.operateState <- func(s *bState) { result <- s.toComplete }:
-		return <-result
-	case <-b.done:
-		return b.cacheState.toComplete
-	}
+	b.operateState <- func(s *bState) { result <- s.toComplete }
+	return <-result
 }
 
 func (b *Bar) serve(wg *sync.WaitGroup, s *bState, cancel <-chan struct{}) {
