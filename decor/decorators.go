@@ -212,7 +212,7 @@ func counters(pairFormat string, unit int, wc ...WC) Decorator {
 
 // ETA returns exponential-weighted-moving-average ETA decorator.
 //
-//	`style` onfe of [ET_STYLE_GO|ET_STYLE_HHMMSS|ET_STYLE_HHMM|ET_STYLE_MMSS]
+//	`style` one of [ET_STYLE_GO|ET_STYLE_HHMMSS|ET_STYLE_HHMM|ET_STYLE_MMSS]
 //
 //	`age` is a decay factor alpha for underlying ewma.
 //	 General rule of thumb, for the best value:
@@ -288,7 +288,7 @@ func (s *EwmaETA) OnComplete(msg string, wc ...WC) {
 
 // Elapsed returns elapsed time decorator.
 //
-//	`style` onfe of [ET_STYLE_GO|ET_STYLE_HHMMSS|ET_STYLE_HHMM|ET_STYLE_MMSS]
+//	`style` one of [ET_STYLE_GO|ET_STYLE_HHMMSS|ET_STYLE_HHMM|ET_STYLE_MMSS]
 //
 //	`wc` optional WC config
 func Elapsed(style int, wc ...WC) Decorator {
