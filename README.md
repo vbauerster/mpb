@@ -13,7 +13,7 @@
 * __Dynamic Total__: [Set total](https://github.com/vbauerster/mpb/issues/9#issuecomment-344448984) while bar is running
 * __Dynamic Add/Remove__: Dynamically add or remove bars
 * __Cancellation__: Cancel whole rendering process
-* __Predefined Decorators__: Elapsed time, [Ewmaest](https://github.com/dgryski/trifles/tree/master/ewmaest) based ETA, Percentage, Bytes counter
+* __Predefined Decorators__: Elapsed time, [ewma](https://github.com/VividCortex/ewma) based ETA, Percentage, Bytes counter
 * __Decorator's width sync__:  Synchronized decorator's width among multiple bars
 
 ## Installation
@@ -39,26 +39,31 @@ _Note:_ it is preferable to go get from github.com, rather than gopkg.in. See is
 
 	total := 100
 	name := "Single Bar:"
+	startBlock := make(chan time.Time)
 	// adding a single bar
 	bar := p.AddBar(int64(total),
 		mpb.PrependDecorators(
-			// Display our static name with one space on the right
-			decor.StaticName(name, len(name)+1, decor.DidentRight),
-			// ETA decorator with width reservation of 3 runes
-			decor.ETA(3, 0),
+			// Display our name with one space on the right
+			decor.Name(name, decor.WC{W: len(name) + 1, C: decor.DidentRight}),
+			// Replace ETA decorator with message, OnComplete event
+			decor.OnComplete(
+				// ETA decorator with default eta age, and width reservation of 4
+				decor.ETA(decor.ET_STYLE_GO, 0, startBlock, decor.WC{W: 4}),
+				"done",
+			),
 		),
 		mpb.AppendDecorators(
-			// Percentage decorator with width reservation of 5 runes
-			decor.Percentage(5, 0),
+			decor.Percentage(),
 		),
 	)
 
 	// simulating some work
 	max := 100 * time.Millisecond
 	for i := 0; i < total; i++ {
-		bar.StartBlock() // optional call, required for ETA
+		// update start block time, required for ETA calculation
+		startBlock <- time.Now()
 		time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
-		// increment by 1 (there is bar.IncrBy(int) method, if needed)
+		// Increment by 1 (there is bar.IncrBy(int) method, if needed)
 		bar.Increment()
 	}
 	// wait for our bar to complete and flush
@@ -74,16 +79,21 @@ _Note:_ it is preferable to go get from github.com, rather than gopkg.in. See is
 
 	for i := 0; i < numBars; i++ {
 		name := fmt.Sprintf("Bar#%d:", i)
+		startBlock := make(chan time.Time)
 		bar := p.AddBar(int64(total),
 			mpb.PrependDecorators(
-				// Display our static name with one space on the right
-				decor.StaticName(name, len(name)+1, decor.DidentRight),
-				// DwidthSync bit enables same column width synchronization
-				decor.Percentage(0, decor.DwidthSync),
+				// Display our name with one space on the right
+				decor.Name(name, decor.WC{W: len(name) + 1, C: decor.DidentRight}),
+				// decor.DSyncWidth bit enables same column width synchronization
+				decor.Percentage(decor.WCSyncWidth),
 			),
 			mpb.AppendDecorators(
-				// Replace our ETA decorator with "done!", on bar completion event
-				decor.OnComplete(decor.ETA(3, 0), "done!", 0, 0),
+				// Replace ETA decorator with message, OnComplete event
+				decor.OnComplete(
+					// ETA decorator with default eta age, and width reservation of 3
+					decor.ETA(decor.ET_STYLE_GO, 0, startBlock, decor.WC{W: 3}),
+					"done!",
+				),
 			),
 		)
 		// simulating some work
@@ -91,13 +101,12 @@ _Note:_ it is preferable to go get from github.com, rather than gopkg.in. See is
 			defer wg.Done()
 			max := 100 * time.Millisecond
 			for i := 0; i < total; i++ {
-				bar.StartBlock()
+				startBlock <- time.Now()
 				time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
 				bar.Increment()
 			}
 		}()
 	}
-	// first wait for provided wg, then
 	// wait for all bars to complete and flush
 	p.Wait()
 ```
