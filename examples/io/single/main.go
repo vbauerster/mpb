@@ -6,13 +6,14 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/vbauerster/mpb"
 	"github.com/vbauerster/mpb/decor"
 )
 
 func main() {
-	url := "https://homebrew.bintray.com/bottles/libtiff-4.0.7.sierra.bottle.tar.gz"
+	url := "https://github.com/onivim/oni/releases/download/v0.3.4/Oni-0.3.4-osx.dmg"
 
 	resp, err := http.Get(url)
 	if err != nil {
@@ -38,18 +39,19 @@ func main() {
 
 	p := mpb.New(mpb.WithWidth(64))
 
+	startBlock := make(chan time.Time)
 	bar := p.AddBar(size,
 		mpb.PrependDecorators(
-			decor.CountersKibiByte("% 6.1f / % 6.1f", 18, 0),
+			decor.CountersKibiByte("% 6.1f / % 6.1f", decor.WC{W: 18}),
 		),
 		mpb.AppendDecorators(
-			decor.ETA(0, 0),
-			decor.SpeedKibiByte("% 6.1f", 18, 0),
+			decor.ETA(decor.ET_STYLE_HHMMSS, 900, startBlock),
+			decor.SpeedKibiByte("% 6.1f", decor.WC{W: 14}),
 		),
 	)
 
 	// create proxy reader
-	reader := bar.ProxyReader(resp.Body)
+	reader := bar.ProxyReader(resp.Body, startBlock)
 
 	// and copy from reader, ignoring errors
 	io.Copy(dest, reader)

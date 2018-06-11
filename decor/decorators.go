@@ -5,6 +5,8 @@ import (
 	"math"
 	"time"
 	"unicode/utf8"
+
+	"github.com/VividCortex/ewma"
 )
 
 const (
@@ -13,144 +15,188 @@ const (
 	// |   foo|     b| Without DidentRight
 	DidentRight = 1 << iota
 
-	// DwidthSync bit enables same column width synchronization.
-	// Effective on multiple bars only.
-	DwidthSync
-
-	// DextraSpace bit adds extra space, makes sense with DwidthSync only.
+	// DextraSpace bit adds extra space, makes sense with DSyncWidth only.
 	// When DidentRight bit set, the space will be added to the right,
 	// otherwise to the left.
 	DextraSpace
 
-	// DSyncSpace is shortcut for DwidthSync|DextraSpace
-	DSyncSpace = DwidthSync | DextraSpace
+	// DSyncWidth bit enables same column width synchronization.
+	// Effective with multiple bars only.
+	DSyncWidth
 
-	// DSyncSpaceR is shortcut for DwidthSync|DextraSpace|DidentRight
-	DSyncSpaceR = DwidthSync | DextraSpace | DidentRight
+	// DSyncWidthR is shortcut for DSyncWidth|DidentRight
+	DSyncWidthR = DSyncWidth | DidentRight
+
+	// DSyncSpace is shortcut for DSyncWidth|DextraSpace
+	DSyncSpace = DSyncWidth | DextraSpace
+
+	// DSyncSpaceR is shortcut for DSyncWidth|DextraSpace|DidentRight
+	DSyncSpaceR = DSyncWidth | DextraSpace | DidentRight
+)
+
+const (
+	ET_STYLE_GO = iota
+	ET_STYLE_HHMMSS
+	ET_STYLE_HHMM
+	ET_STYLE_MMSS
 )
 
 // Statistics contains values useful for implementing a DecoratorFunc.
 type Statistics struct {
-	ID                  int
-	Completed           bool
-	Total               int64
-	Current             int64
-	StartTime           time.Time
-	TimeElapsed         time.Duration
-	TimeRemaining       time.Duration
-	TimePerItemEstimate time.Duration
+	ID          int
+	Completed   bool
+	Total       int64
+	Current     int64
+	StartTime   time.Time
+	TimeElapsed time.Duration
 }
 
-// DecoratorFunc is a function that can be prepended and appended to the progress bar
+type Decorator interface {
+	Decor(s *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string
+}
+
+type CompleteMessenger interface {
+	OnComplete(string, ...WC)
+}
+
+// DecoratorFunc is an adapter for Decorator interface
 type DecoratorFunc func(s *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string
 
-// OnComplete returns decorator, which wraps provided `fn` decorator, with sole
-// purpose to display final on complete message.
-//
-//	`fn` DecoratorFunc to wrap
-//
-//	`width` width reservation to apply, ignored if `DwidthSync` bit is set
-//
-//	`conf` bit set config, [DidentRight|DwidthSync|DextraSpace]
-func OnComplete(fn DecoratorFunc, message string, width, conf int) DecoratorFunc {
-	msgDecorator := StaticName(message, width, conf)
-	return func(s *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string {
-		if s.Completed {
-			return msgDecorator(s, widthAccumulator, widthDistributor)
-		}
-		return fn(s, widthAccumulator, widthDistributor)
-	}
+func (f DecoratorFunc) Decor(s *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string {
+	return f(s, widthAccumulator, widthDistributor)
 }
 
-// StaticName returns static name/message decorator.
+// WC is a struct with two public fields W and C, both of int type.
+// W represents width and C represents bit set of width related config.
+type WC struct {
+	W      int
+	C      int
+	format string
+}
+
+func (wc WC) formatMsg(msg string, widthAccumulator chan<- int, widthDistributor <-chan int) string {
+	format := wc.buildFormat()
+	if (wc.C & DSyncWidth) != 0 {
+		widthAccumulator <- utf8.RuneCountInString(msg)
+		max := <-widthDistributor
+		if max == 0 {
+			max = wc.W
+		}
+		if (wc.C & DextraSpace) != 0 {
+			max++
+		}
+		return fmt.Sprintf(fmt.Sprintf(format, max), msg)
+	}
+	return fmt.Sprintf(fmt.Sprintf(format, wc.W), msg)
+}
+
+func (wc *WC) buildFormat() string {
+	if wc.format != "" {
+		return wc.format
+	}
+	wc.format = "%%"
+	if (wc.C & DidentRight) != 0 {
+		wc.format += "-"
+	}
+	wc.format += "%ds"
+	return wc.format
+}
+
+// Global convenience shortcuts
+var (
+	WCSyncWidth  = WC{C: DSyncWidth}
+	WCSyncWidthR = WC{C: DSyncWidthR}
+	WCSyncSpace  = WC{C: DSyncSpace}
+	WCSyncSpaceR = WC{C: DSyncSpaceR}
+)
+
+// OnComplete returns decorator, which wraps provided decorator, with sole
+// purpose to display provided message on complete event.
+//
+//	`decorator` Decorator to wrap
+//
+//	`message` message to display on complete event
+//
+//	`wc` optional WC config
+func OnComplete(decorator Decorator, message string, wc ...WC) Decorator {
+	if cm, ok := decorator.(CompleteMessenger); ok {
+		cm.OnComplete(message, wc...)
+		return decorator
+	}
+	msgDecorator := Name(message, wc...)
+	return DecoratorFunc(func(s *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string {
+		if s.Completed {
+			return msgDecorator.Decor(s, widthAccumulator, widthDistributor)
+		}
+		return decorator.Decor(s, widthAccumulator, widthDistributor)
+	})
+}
+
+// StaticName returns name decorator.
 //
 //	`name` string to display
 //
-//	`width` width reservation to apply, ignored if `DwidthSync` bit is set
-//
-//	`conf` bit set config, [DidentRight|DwidthSync|DextraSpace]
-func StaticName(name string, width, conf int) DecoratorFunc {
-	nameFn := func(*Statistics) string {
-		return name
-	}
-	return DynamicName(nameFn, width, conf)
+//	`wc` optional WC config
+func StaticName(name string, wc ...WC) Decorator {
+	return Name(name, wc...)
 }
 
-// DynamicName returns dynamic name/message decorator.
+// Name returns name decorator.
 //
-//	`messageFn` callback function to get dynamic string message
+//	`name` string to display
 //
-//	`width` width reservation to apply, ignored if `DwidthSync` bit is set
-//
-//	`conf` bit set config, [DidentRight|DwidthSync|DextraSpace]
-func DynamicName(messageFn func(*Statistics) string, width, conf int) DecoratorFunc {
-	format := "%%"
-	if (conf & DidentRight) != 0 {
-		format += "-"
+//	`wc` optional WC config
+func Name(name string, wc ...WC) Decorator {
+	var wc0 WC
+	if len(wc) > 0 {
+		wc0 = wc[0]
 	}
-	format += "%ds"
-	return func(s *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string {
-		name := messageFn(s)
-		if (conf & DwidthSync) != 0 {
-			widthAccumulator <- utf8.RuneCountInString(name)
-			max := <-widthDistributor
-			if (conf & DextraSpace) != 0 {
-				max++
-			}
-			return fmt.Sprintf(fmt.Sprintf(format, max), name)
-		}
-		return fmt.Sprintf(fmt.Sprintf(format, width), name)
-	}
+	return DecoratorFunc(func(s *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string {
+		return wc0.formatMsg(name, widthAccumulator, widthDistributor)
+	})
 }
 
 // CountersNoUnit returns raw counters decorator
 //
 //	`pairFormat` printf compatible verbs for current and total, like "%f" or "%d"
 //
-//	`width` width reservation to apply, ignored if `DwidthSync` bit is set
-//
-//	`conf` bit set config, [DidentRight|DwidthSync|DextraSpace]
-func CountersNoUnit(pairFormat string, width, conf int) DecoratorFunc {
-	return counters(pairFormat, 0, width, conf)
+//	`wc` optional WC config
+func CountersNoUnit(pairFormat string, wc ...WC) Decorator {
+	return counters(pairFormat, 0, wc...)
 }
 
 // CountersKibiByte returns human friendly byte counters decorator, where counters unit is multiple by 1024.
 //
 //	`pairFormat` printf compatible verbs for current and total, like "%f" or "%d"
 //
-//	`width` width reservation to apply, ignored if `DwidthSync` bit is set
-//
-//	`conf` bit set config, [DidentRight|DwidthSync|DextraSpace]
+//	`wc` optional WC config
 //
 // pairFormat example:
 //
 //	"%.1f / %.1f" = "1.0MiB / 12.0MiB" or "% .1f / % .1f" = "1.0 MiB / 12.0 MiB"
-func CountersKibiByte(pairFormat string, width, conf int) DecoratorFunc {
-	return counters(pairFormat, unitKiB, width, conf)
+func CountersKibiByte(pairFormat string, wc ...WC) Decorator {
+	return counters(pairFormat, unitKiB, wc...)
 }
 
 // CountersKiloByte returns human friendly byte counters decorator, where counters unit is multiple by 1000.
 //
 //	`pairFormat` printf compatible verbs for current and total, like "%f" or "%d"
 //
-//	`width` width reservation to apply, ignored if `DwidthSync` bit is set
-//
-//	`conf` bit set config, [DidentRight|DwidthSync|DextraSpace]
+//	`wc` optional WC config
 //
 // pairFormat example:
 //
 //	"%.1f / %.1f" = "1.0MB / 12.0MB" or "% .1f / % .1f" = "1.0 MB / 12.0 MB"
-func CountersKiloByte(pairFormat string, width, conf int) DecoratorFunc {
-	return counters(pairFormat, unitKB, width, conf)
+func CountersKiloByte(pairFormat string, wc ...WC) Decorator {
+	return counters(pairFormat, unitKB, wc...)
 }
 
-func counters(pairFormat string, unit, width, conf int) DecoratorFunc {
-	format := "%%"
-	if (conf & DidentRight) != 0 {
-		format += "-"
+func counters(pairFormat string, unit int, wc ...WC) Decorator {
+	var wc0 WC
+	if len(wc) > 0 {
+		wc0 = wc[0]
 	}
-	format += "%ds"
-	return func(s *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string {
+	return DecoratorFunc(func(s *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string {
 		var str string
 		switch unit {
 		case unitKiB:
@@ -160,94 +206,128 @@ func counters(pairFormat string, unit, width, conf int) DecoratorFunc {
 		default:
 			str = fmt.Sprintf(pairFormat, s.Current, s.Total)
 		}
-		if (conf & DwidthSync) != 0 {
-			widthAccumulator <- utf8.RuneCountInString(str)
-			max := <-widthDistributor
-			if (conf & DextraSpace) != 0 {
-				max++
-			}
-			return fmt.Sprintf(fmt.Sprintf(format, max), str)
-		}
-		return fmt.Sprintf(fmt.Sprintf(format, width), str)
-	}
+		return wc0.formatMsg(str, widthAccumulator, widthDistributor)
+	})
 }
 
 // ETA returns exponential-weighted-moving-average ETA decorator.
 //
-//	`width` width reservation to apply, ignored if `DwidthSync` bit is set
+//	`style` onfe of [ET_STYLE_GO|ET_STYLE_HHMMSS|ET_STYLE_HHMM|ET_STYLE_MMSS]
 //
-//	`conf` bit set config, [DidentRight|DwidthSync|DextraSpace]
+//	`age` is a decay factor alpha for underlying ewma.
+//	 General rule of thumb, for the best value:
+//	 expected progress time in seconds divided by two.
+//	 For example expected progress duration is one hour.
+//	 age = 3600 / 2
 //
-// To correctly estimate non io progress, *Bar.StartBlock should be called,
-// before each increment block.
-func ETA(width, conf int) DecoratorFunc {
-	format := "%%"
-	if (conf & DidentRight) != 0 {
-		format += "-"
+//	 `startBlock` is channel, user suppose to send time.Now() on each iteration of block start.
+//
+//	 `wc` optional WC config
+func ETA(style int, age float64, startBlock chan time.Time, wc ...WC) Decorator {
+	var wc0 WC
+	if len(wc) > 0 {
+		wc0 = wc[0]
 	}
-	format += "%ds"
-	return func(s *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string {
-		str := fmt.Sprint(time.Duration(s.TimeRemaining.Seconds()) * time.Second)
-		if (conf & DwidthSync) != 0 {
-			widthAccumulator <- utf8.RuneCountInString(str)
-			max := <-widthDistributor
-			if (conf & DextraSpace) != 0 {
-				max++
-			}
-			return fmt.Sprintf(fmt.Sprintf(format, max), str)
-		}
-		return fmt.Sprintf(fmt.Sprintf(format, width), str)
+	if age == .0 {
+		age = ewma.AVG_METRIC_AGE
 	}
+	return &EwmaETA{
+		MovingAverage: ewma.NewMovingAverage(age),
+		StartBlockCh:  startBlock,
+		style:         style,
+		wc:            wc0,
+	}
+}
+
+type EwmaETA struct {
+	ewma.MovingAverage
+	StartBlockCh chan time.Time
+	style        int
+	wc           WC
+	onComplete   *struct {
+		msg string
+		wc  WC
+	}
+}
+
+func (s *EwmaETA) Decor(st *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string {
+	if st.Completed && s.onComplete != nil {
+		return s.onComplete.wc.formatMsg(s.onComplete.msg, widthAccumulator, widthDistributor)
+	}
+
+	var str string
+	timeRemaining := time.Duration(float64(st.Total-st.Current) * s.MovingAverage.Value())
+	hours := int64((timeRemaining / time.Hour) % 60)
+	minutes := int64((timeRemaining / time.Minute) % 60)
+	seconds := int64((timeRemaining / time.Second) % 60)
+
+	switch s.style {
+	case ET_STYLE_GO:
+		str = fmt.Sprint(time.Duration(timeRemaining.Seconds()) * time.Second)
+	case ET_STYLE_HHMMSS:
+		str = fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
+	case ET_STYLE_HHMM:
+		str = fmt.Sprintf("%02d:%02d", hours, minutes)
+	case ET_STYLE_MMSS:
+		str = fmt.Sprintf("%02d:%02d", minutes, seconds)
+	}
+
+	return s.wc.formatMsg(str, widthAccumulator, widthDistributor)
+}
+
+func (s *EwmaETA) OnComplete(msg string, wc ...WC) {
+	var wc0 WC
+	if len(wc) > 0 {
+		wc0 = wc[0]
+	}
+	s.onComplete = &struct {
+		msg string
+		wc  WC
+	}{msg, wc0}
 }
 
 // Elapsed returns elapsed time decorator.
 //
-//	`width` width reservation to apply, ignored if `DwidthSync` bit is set
+//	`style` onfe of [ET_STYLE_GO|ET_STYLE_HHMMSS|ET_STYLE_HHMM|ET_STYLE_MMSS]
 //
-//	`conf` bit set config, [DidentRight|DwidthSync|DextraSpace]
-func Elapsed(width, conf int) DecoratorFunc {
-	format := "%%"
-	if (conf & DidentRight) != 0 {
-		format += "-"
+//	`wc` optional WC config
+func Elapsed(style int, wc ...WC) Decorator {
+	var wc0 WC
+	if len(wc) > 0 {
+		wc0 = wc[0]
 	}
-	format += "%ds"
-	return func(s *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string {
-		str := fmt.Sprint(time.Duration(s.TimeElapsed.Seconds()) * time.Second)
-		if (conf & DwidthSync) != 0 {
-			widthAccumulator <- utf8.RuneCountInString(str)
-			max := <-widthDistributor
-			if (conf & DextraSpace) != 0 {
-				max++
-			}
-			return fmt.Sprintf(fmt.Sprintf(format, max), str)
+	return DecoratorFunc(func(s *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string {
+		var str string
+		hours := int64((s.TimeElapsed / time.Hour) % 60)
+		minutes := int64((s.TimeElapsed / time.Minute) % 60)
+		seconds := int64((s.TimeElapsed / time.Second) % 60)
+
+		switch style {
+		case ET_STYLE_GO:
+			str = fmt.Sprint(time.Duration(s.TimeElapsed.Seconds()) * time.Second)
+		case ET_STYLE_HHMMSS:
+			str = fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
+		case ET_STYLE_HHMM:
+			str = fmt.Sprintf("%02d:%02d", hours, minutes)
+		case ET_STYLE_MMSS:
+			str = fmt.Sprintf("%02d:%02d", minutes, seconds)
 		}
-		return fmt.Sprintf(fmt.Sprintf(format, width), str)
-	}
+		return wc0.formatMsg(str, widthAccumulator, widthDistributor)
+	})
 }
 
 // Percentage returns percentage decorator.
 //
-//	`width` width reservation to apply, ignored if `DwidthSync` bit is set
-//
-//	`conf` bit set config, [DidentRight|DwidthSync|DextraSpace]
-func Percentage(width, conf int) DecoratorFunc {
-	format := "%%"
-	if (conf & DidentRight) != 0 {
-		format += "-"
+//	`wc` optional WC config
+func Percentage(wc ...WC) Decorator {
+	var wc0 WC
+	if len(wc) > 0 {
+		wc0 = wc[0]
 	}
-	format += "%ds"
-	return func(s *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string {
+	return DecoratorFunc(func(s *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string {
 		str := fmt.Sprintf("%d %%", CalcPercentage(s.Total, s.Current, 100))
-		if (conf & DwidthSync) != 0 {
-			widthAccumulator <- utf8.RuneCountInString(str)
-			max := <-widthDistributor
-			if (conf & DextraSpace) != 0 {
-				max++
-			}
-			return fmt.Sprintf(fmt.Sprintf(format, max), str)
-		}
-		return fmt.Sprintf(fmt.Sprintf(format, width), str)
-	}
+		return wc0.formatMsg(str, widthAccumulator, widthDistributor)
+	})
 }
 
 // CalcPercentage is a helper function, to calculate percentage.
@@ -274,59 +354,49 @@ func CalcPercentage(total, current, width int64) (perc int64) {
 //
 //	`unitFormat` printf compatible verb for value, like "%f" or "%d"
 //
-//	`width` width reservation to apply, ignored if `DwidthSync` bit is set
-//
-//	`conf` bit set config, [DidentRight|DwidthSync|DextraSpace]
+//	`wc` optional WC config
 //
 // unitFormat example:
 //
 //	"%.1f" = "1.0" or "% .1f" = "1.0"
-func SpeedNoUnit(unitFormat string, width, conf int) DecoratorFunc {
-	return speed(unitFormat, 0, width, conf)
+func SpeedNoUnit(unitFormat string, wc ...WC) Decorator {
+	return speed(unitFormat, 0, wc...)
 }
 
 // SpeedKibiByte returns human friendly I/O operation speed decorator,
 //
 //	`unitFormat` printf compatible verb for value, like "%f" or "%d"
 //
-//	`width` width reservation to apply, ignored if `DwidthSync` bit is set
-//
-//	`conf` bit set config, [DidentRight|DwidthSync|DextraSpace]
+//	`wc` optional WC config
 //
 // unitFormat example:
 //
 //	"%.1f" = "1.0MiB/s" or "% .1f" = "1.0 MiB/s"
-func SpeedKibiByte(unitFormat string, width, conf int) DecoratorFunc {
-	return speed(unitFormat, unitKiB, width, conf)
+func SpeedKibiByte(unitFormat string, wc ...WC) Decorator {
+	return speed(unitFormat, unitKiB, wc...)
 }
 
 // SpeedKiloByte returns human friendly I/O operation speed decorator,
 //
 //	`unitFormat` printf compatible verb for value, like "%f" or "%d"
 //
-//	`width` width reservation to apply, ignored if `DwidthSync` bit is set
-//
-//	`conf` bit set config, [DidentRight|DwidthSync|DextraSpace]
+//	`wc` optional WC config
 //
 // unitFormat example:
 //
 //	"%.1f" = "1.0MB/s" or "% .1f" = "1.0 MB/s"
-func SpeedKiloByte(unitFormat string, width, conf int) DecoratorFunc {
-	return speed(unitFormat, unitKB, width, conf)
+func SpeedKiloByte(unitFormat string, wc ...WC) Decorator {
+	return speed(unitFormat, unitKB, wc...)
 }
 
-func speed(unitFormat string, unit, width, conf int) DecoratorFunc {
-	format := "%%"
-	if (conf & DidentRight) != 0 {
-		format += "-"
+func speed(unitFormat string, unit int, wc ...WC) Decorator {
+	var wc0 WC
+	if len(wc) > 0 {
+		wc0 = wc[0]
 	}
-	format += "%ds"
-
-	return func(s *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string {
+	return DecoratorFunc(func(s *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string {
 		var str string
-
 		speed := float64(s.Current) / s.TimeElapsed.Seconds()
-
 		if math.IsNaN(speed) || math.IsInf(speed, 0) {
 			speed = .0
 		}
@@ -339,14 +409,6 @@ func speed(unitFormat string, unit, width, conf int) DecoratorFunc {
 		default:
 			str = fmt.Sprintf(unitFormat, speed)
 		}
-		if (conf & DwidthSync) != 0 {
-			widthAccumulator <- utf8.RuneCountInString(str)
-			max := <-widthDistributor
-			if (conf & DextraSpace) != 0 {
-				max++
-			}
-			return fmt.Sprintf(fmt.Sprintf(format, max), str)
-		}
-		return fmt.Sprintf(fmt.Sprintf(format, width), str)
-	}
+		return wc0.formatMsg(str, widthAccumulator, widthDistributor)
+	})
 }

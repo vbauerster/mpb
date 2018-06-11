@@ -30,13 +30,13 @@ func main() {
 		b := p.AddBar(rand.Int63n(201)+100,
 			mpb.BarRemoveOnComplete(),
 			mpb.PrependDecorators(
-				decor.StaticName(task, len(task)+1, decor.DidentRight),
-				decor.StaticName(job, 0, decor.DSyncSpaceR),
-				decor.CountersNoUnit("%d / %d", 0, decor.DwidthSync),
+				decor.Name(task, decor.WC{W: len(task) + 1, C: decor.DidentRight}),
+				decor.Name(job, decor.WCSyncSpaceR),
+				decor.CountersNoUnit("%d / %d", decor.WCSyncWidth),
 			),
-			mpb.AppendDecorators(decor.Percentage(5, 0)),
+			mpb.AppendDecorators(decor.Percentage(decor.WC{W: 5})),
 		)
-		go newTask(wg, b, i+1)
+		go newTask(wg, b, i+1, nil)
 		bars = append(bars, b)
 	}
 
@@ -44,6 +44,7 @@ func main() {
 		doneWg.Add(1)
 		i := i
 		go func() {
+			startBlock := make(chan time.Time)
 			task := fmt.Sprintf("Task#%02d:", i)
 			job := "installing"
 			// preparing delayed bars
@@ -51,28 +52,34 @@ func main() {
 				mpb.BarReplaceOnComplete(bars[i]),
 				mpb.BarClearOnComplete(),
 				mpb.PrependDecorators(
-					decor.StaticName(task, len(task)+1, decor.DidentRight),
-					decor.OnComplete(decor.StaticName(job, 0, decor.DSyncSpaceR), "done!", 0, decor.DSyncSpaceR),
-					decor.OnComplete(decor.ETA(0, decor.DwidthSync), "", 0, decor.DwidthSync),
+					decor.Name(task, decor.WC{W: len(task) + 1, C: decor.DidentRight}),
+					decor.OnComplete(decor.Name(job, decor.WCSyncSpaceR), "done!", decor.WCSyncSpaceR),
+					decor.OnComplete(
+						decor.ETA(decor.ET_STYLE_GO, 0, startBlock, decor.WCSyncWidth),
+						"",
+						decor.WCSyncSpace,
+					),
 				),
 				mpb.AppendDecorators(
-					decor.OnComplete(decor.Percentage(5, 0), "", 0, 0),
+					decor.OnComplete(decor.Percentage(decor.WC{W: 5}), ""),
 				),
 			)
 			// waiting for download to complete, before starting install job
 			downloadWgg[i].Wait()
-			go newTask(doneWg, b, numBars-i)
+			go newTask(doneWg, b, numBars-i, startBlock)
 		}()
 	}
 
 	p.Wait()
 }
 
-func newTask(wg *sync.WaitGroup, b *mpb.Bar, incrBy int) {
+func newTask(wg *sync.WaitGroup, b *mpb.Bar, incrBy int, startBlock chan<- time.Time) {
 	defer wg.Done()
 	max := 100 * time.Millisecond
 	for !b.Completed() {
-		b.StartBlock()
+		if startBlock != nil {
+			startBlock <- time.Now()
+		}
 		time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
 		b.IncrBy(incrBy)
 	}

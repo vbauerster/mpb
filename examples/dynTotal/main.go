@@ -22,10 +22,10 @@ func main() {
 		// trigger total auto increment by 1, when 18 % remains till bar completion
 		mpb.BarAutoIncrTotal(18, 1),
 		mpb.PrependDecorators(
-			decor.CountersNoUnit("%d / %d", 12, 0),
+			decor.CountersNoUnit("%d / %d", decor.WC{W: 12}),
 		),
 		mpb.AppendDecorators(
-			decor.Percentage(4, 0),
+			decor.Percentage(),
 		),
 	)
 

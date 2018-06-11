@@ -90,12 +90,12 @@ func TestBarPanics(t *testing.T) {
 	total := 100
 
 	bar := p.AddBar(int64(total), PrependDecorators(
-		func(s *decor.Statistics, _ chan<- int, _ <-chan int) string {
+		decor.DecoratorFunc(func(s *decor.Statistics, _ chan<- int, _ <-chan int) string {
 			if s.Current >= 42 {
 				panic(wantPanic)
 			}
 			return "test"
-		},
+		}),
 	))
 
 	go func() {

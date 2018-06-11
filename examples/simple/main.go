@@ -22,16 +22,21 @@ func main() {
 
 	for i := 0; i < numBars; i++ {
 		name := fmt.Sprintf("Bar#%d:", i)
+		startBlock := make(chan time.Time)
 		bar := p.AddBar(int64(total),
 			mpb.PrependDecorators(
-				// Display our static name with one space on the right
-				decor.StaticName(name, len(name)+1, decor.DidentRight),
-				// DwidthSync bit enables same column width synchronization
-				decor.Percentage(0, decor.DwidthSync),
+				// Display our name with one space on the right
+				decor.Name(name, decor.WC{W: len(name) + 1, C: decor.DidentRight}),
+				// decor.DSyncWidth bit enables same column width synchronization
+				decor.Percentage(decor.WCSyncWidth),
 			),
 			mpb.AppendDecorators(
-				// replace our ETA decorator with "done!", on bar completion event
-				decor.OnComplete(decor.ETA(3, 0), "done!", 0, 0),
+				// Replace ETA decorator with message, OnComplete event
+				decor.OnComplete(
+					// ETA decorator with default eta age, and width reservation of 3
+					decor.ETA(decor.ET_STYLE_GO, 0, startBlock, decor.WC{W: 3}),
+					"done!",
+				),
 			),
 		)
 		// simulating some work
@@ -39,13 +44,12 @@ func main() {
 			defer wg.Done()
 			max := 100 * time.Millisecond
 			for i := 0; i < total; i++ {
-				bar.StartBlock()
+				startBlock <- time.Now()
 				time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
 				bar.Increment()
 			}
 		}()
 	}
-	// first wait for provided wg, then
 	// wait for all bars to complete and flush
 	p.Wait()
 }

@@ -21,14 +21,14 @@ func main() {
 	for i := 0; i < numBars; i++ {
 		name := fmt.Sprintf("b#%02d:", i)
 		bar := p.AddBar(100, mpb.BarID(i), mpb.PrependDecorators(
-			func(s *decor.Statistics, _ chan<- int, _ <-chan int) string {
+			decor.DecoratorFunc(func(s *decor.Statistics, _ chan<- int, _ <-chan int) string {
 				// s.Current == 42 may never happen, if sleep btw increments is
 				// too short, thus using s.Current >= 42
 				if s.ID == 1 && s.Current >= 42 {
 					panic(wantPanic)
 				}
 				return name
-			},
+			}),
 		))
 
 		go func() {

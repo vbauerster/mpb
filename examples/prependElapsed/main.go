@@ -28,11 +28,11 @@ func main() {
 		}
 		b := p.AddBar(int64(total),
 			mpb.PrependDecorators(
-				decor.StaticName(name, 0, decor.DwidthSync|decor.DidentRight),
-				decor.Elapsed(3, decor.DSyncSpace),
+				decor.Name(name, decor.WCSyncWidthR),
+				decor.Elapsed(decor.ET_STYLE_GO, decor.WCSyncSpace),
 			),
 			mpb.AppendDecorators(
-				decor.Percentage(5, 0),
+				decor.Percentage(decor.WC{W: 5}),
 			),
 		)
 		go func() {

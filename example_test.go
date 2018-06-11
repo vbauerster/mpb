@@ -14,35 +14,40 @@ import (
 func Example() {
 	p := mpb.New(
 		// override default (80) width
-		mpb.WithWidth(100),
+		mpb.WithWidth(64),
 		// override default "[=>-]" format
 		mpb.WithFormat("╢▌▌░╟"),
 		// override default 120ms refresh rate
-		mpb.WithRefreshRate(100*time.Millisecond),
+		mpb.WithRefreshRate(180*time.Millisecond),
 	)
 
 	total := 100
 	name := "Single Bar:"
+	startBlock := make(chan time.Time)
 	// adding a single bar
 	bar := p.AddBar(int64(total),
 		mpb.PrependDecorators(
-			// Display our static name with one space on the right
-			decor.StaticName(name, len(name)+1, decor.DidentRight),
-			// ETA decorator with width reservation of 3 runes
-			decor.ETA(3, 0),
+			// Display our name with one space on the right
+			decor.Name(name, decor.WC{W: len(name) + 1, C: decor.DidentRight}),
+			// Replace ETA decorator with message, OnComplete event
+			decor.OnComplete(
+				// ETA decorator with default eta age, and width reservation of 4
+				decor.ETA(decor.ET_STYLE_GO, 0, startBlock, decor.WC{W: 4}),
+				"done",
+			),
 		),
 		mpb.AppendDecorators(
-			// Percentage decorator with width reservation of 5 runes
-			decor.Percentage(5, 0),
+			decor.Percentage(),
 		),
 	)
 
 	// simulating some work
 	max := 100 * time.Millisecond
 	for i := 0; i < total; i++ {
-		bar.StartBlock() // optional call, required for ETA
+		// update start block time, required for ETA calculation
+		startBlock <- time.Now()
 		time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
-		// increment by 1 (there is bar.IncrBy(int) method, if needed)
+		// Increment by 1 (there is bar.IncrBy(int) method, if needed)
 		bar.Increment()
 	}
 	// wait for our bar to complete and flush
@@ -71,7 +76,7 @@ func ExampleBar_ProxyReader() {
 	// Assuming ContentLength > 0
 	bar := p.AddBar(resp.ContentLength,
 		mpb.AppendDecorators(
-			decor.CountersKibiByte("%6.1f / %6.1f", 12, 0),
+			decor.CountersKibiByte("%6.1f / %6.1f"),
 		),
 	)
 

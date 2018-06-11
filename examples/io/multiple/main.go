@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/vbauerster/mpb"
 	"github.com/vbauerster/mpb/decor"
@@ -57,20 +58,22 @@ func download(wg *sync.WaitGroup, p *mpb.Progress, name, url string, n int) {
 		return
 	}
 
+	startBlock := make(chan time.Time)
+
 	// create bar with appropriate decorators
 	bar := p.AddBar(size, mpb.BarPriority(n),
 		mpb.PrependDecorators(
-			decor.StaticName(name, len(name)+1, decor.DidentRight),
-			decor.CountersKibiByte("%6.1f / %6.1f", 0, decor.DwidthSync),
+			decor.Name(name, decor.WC{W: len(name) + 1, C: decor.DidentRight}),
+			decor.CountersKibiByte("%6.1f / %6.1f", decor.WCSyncWidth),
 		),
 		mpb.AppendDecorators(
-			decor.ETA(0, decor.DwidthSync),
-			decor.SpeedKibiByte("%6.1f", 18, 0),
+			decor.ETA(decor.ET_STYLE_HHMMSS, 60, startBlock, decor.WCSyncWidth),
+			decor.SpeedKibiByte("%6.1f", decor.WCSyncSpace),
 		),
 	)
 
 	// create proxy reader
-	reader := bar.ProxyReader(resp.Body)
+	reader := bar.ProxyReader(resp.Body, startBlock)
 	// and copy from reader
 	_, err = io.Copy(dest, reader)
 

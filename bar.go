@@ -9,6 +9,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/VividCortex/ewma"
 	"github.com/vbauerster/mpb/decor"
 )
 
@@ -22,7 +23,6 @@ const (
 
 const (
 	formatLen = 5
-	etaAlpha  = 0.12
 )
 
 type barRunes [formatLen]rune
@@ -36,6 +36,7 @@ type Bar struct {
 	cacheState    *bState
 	operateState  chan func(*bState)
 	frameReaderCh chan io.Reader
+	startBlockCh  <-chan time.Time
 
 	// done is closed by Bar's goroutine, after cacheState is written
 	done chan struct{}
@@ -48,7 +49,6 @@ type (
 		id                   int
 		width                int
 		runes                barRunes
-		etaAlpha             float64
 		total                int64
 		current              int64
 		totalAutoIncrTrigger int64
@@ -63,17 +63,18 @@ type (
 		startTime            time.Time
 		blockStartTime       time.Time
 		timeElapsed          time.Duration
-		timePerItemEstimate  time.Duration
-		timeRemaining        time.Duration
-		aDecorators          []decor.DecoratorFunc
-		pDecorators          []decor.DecoratorFunc
+		aDecorators          []decor.Decorator
+		pDecorators          []decor.Decorator
 		refill               *refill
 		bufP, bufB, bufA     *bytes.Buffer
 		panicMsg             string
 
+		ewmAverage ewma.MovingAverage
+
 		// following options are assigned to the *Bar
-		priority   int
-		runningBar *Bar
+		priority     int
+		runningBar   *Bar
+		startBlockCh chan time.Time
 	}
 	refill struct {
 		char rune
@@ -96,7 +97,6 @@ func newBar(wg *sync.WaitGroup, id int, total int64, cancel <-chan struct{}, opt
 		id:       id,
 		priority: id,
 		total:    total,
-		etaAlpha: etaAlpha,
 		dynamic:  dynamic,
 	}
 
@@ -113,11 +113,14 @@ func newBar(wg *sync.WaitGroup, id int, total int64, cancel <-chan struct{}, opt
 	b := &Bar{
 		priority:      s.priority,
 		runningBar:    s.runningBar,
+		startBlockCh:  s.startBlockCh,
 		operateState:  make(chan func(*bState)),
 		frameReaderCh: make(chan io.Reader, 1),
 		done:          make(chan struct{}),
 		shutdown:      make(chan struct{}),
 	}
+
+	s.startBlockCh = nil
 
 	if b.runningBar != nil {
 		b.priority = b.runningBar.priority
@@ -144,8 +147,15 @@ func (b *Bar) RemoveAllAppenders() {
 }
 
 // ProxyReader wrapper for io operations, like io.Copy
-func (b *Bar) ProxyReader(r io.Reader) *Reader {
-	return &Reader{r, b}
+func (b *Bar) ProxyReader(r io.Reader, startBlock ...chan<- time.Time) *Reader {
+	proxyReader := &Reader{
+		Reader: r,
+		bar:    b,
+	}
+	if len(startBlock) > 0 {
+		proxyReader.startBlockCh = startBlock[0]
+	}
+	return proxyReader
 }
 
 // Increment is a shorthand for b.IncrBy(1)
@@ -223,30 +233,11 @@ func (b *Bar) Total() int64 {
 // SetTotal sets total dynamically. The final param indicates the very last set,
 // in other words you should set it to true when total is determined.
 func (b *Bar) SetTotal(total int64, final bool) {
-	select {
-	case b.operateState <- func(s *bState) {
+	b.operateState <- func(s *bState) {
 		if total != 0 {
 			s.total = total
 		}
 		s.dynamic = !final
-	}:
-	case <-b.done:
-	}
-}
-
-// StartBlock updates start timestamp of the current increment block.
-// It is optional to call, unless ETA decorator is used.
-// If *bar.ProxyReader is used, it will be called implicitly.
-func (b *Bar) StartBlock() {
-	now := time.Now()
-	select {
-	case b.operateState <- func(s *bState) {
-		if s.current == 0 {
-			s.startTime = now
-		}
-		s.blockStartTime = now
-	}:
-	case <-b.done:
 	}
 }
 
@@ -257,7 +248,11 @@ func (b *Bar) IncrBy(n int) {
 	case b.operateState <- func(s *bState) {
 		s.current += int64(n)
 		s.timeElapsed = now.Sub(s.startTime)
-		s.timeRemaining = s.calcETA(n, now.Sub(s.blockStartTime))
+		if s.ewmAverage != nil {
+			lastBlockTime := now.Sub(s.blockStartTime)
+			lastItemEstimate := float64(lastBlockTime) / float64(n)
+			s.ewmAverage.Add(lastItemEstimate)
+		}
 		if s.dynamic {
 			curp := decor.CalcPercentage(s.total, s.current, 100)
 			if 100-curp <= s.totalAutoIncrTrigger {
@@ -286,11 +281,12 @@ func (b *Bar) Completed() bool {
 func (b *Bar) serve(wg *sync.WaitGroup, s *bState, cancel <-chan struct{}) {
 	defer wg.Done()
 	s.startTime = time.Now()
-	s.blockStartTime = s.startTime
 	for {
 		select {
 		case op := <-b.operateState:
 			op(s)
+		case now := <-b.startBlockCh:
+			s.blockStartTime = now
 		case <-cancel:
 			s.toComplete = true
 			cancel = nil
@@ -349,12 +345,12 @@ func (s *bState) draw(termWidth int, pSyncer, aSyncer *widthSyncer) io.Reader {
 	stat := newStatistics(s)
 
 	// render prepend functions to the left of the bar
-	for i, f := range s.pDecorators {
-		s.bufP.WriteString(f(stat, pSyncer.Accumulator[i], pSyncer.Distributor[i]))
+	for i, d := range s.pDecorators {
+		s.bufP.WriteString(d.Decor(stat, pSyncer.Accumulator[i], pSyncer.Distributor[i]))
 	}
 
-	for i, f := range s.aDecorators {
-		s.bufA.WriteString(f(stat, aSyncer.Accumulator[i], aSyncer.Distributor[i]))
+	for i, d := range s.aDecorators {
+		s.bufA.WriteString(d.Decor(stat, aSyncer.Accumulator[i], aSyncer.Distributor[i]))
 	}
 
 	prependCount := utf8.RuneCount(s.bufP.Bytes())
@@ -430,22 +426,14 @@ func (s *bState) fillBar(width int) {
 	}
 }
 
-func (s *bState) calcETA(n int, lastBlockTime time.Duration) time.Duration {
-	lastItemEstimate := float64(lastBlockTime) / float64(n)
-	s.timePerItemEstimate = time.Duration((s.etaAlpha * lastItemEstimate) + (1-s.etaAlpha)*float64(s.timePerItemEstimate))
-	return time.Duration(s.total-s.current) * s.timePerItemEstimate
-}
-
 func newStatistics(s *bState) *decor.Statistics {
 	return &decor.Statistics{
-		ID:                  s.id,
-		Completed:           s.completeFlushed,
-		Total:               s.total,
-		Current:             s.current,
-		StartTime:           s.startTime,
-		TimeElapsed:         s.timeElapsed,
-		TimeRemaining:       s.timeRemaining,
-		TimePerItemEstimate: s.timePerItemEstimate,
+		ID:          s.id,
+		Completed:   s.completeFlushed,
+		Total:       s.total,
+		Current:     s.current,
+		StartTime:   s.startTime,
+		TimeElapsed: s.timeElapsed,
 	}
 }
 

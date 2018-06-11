@@ -9,16 +9,28 @@ import (
 type BarOption func(*bState)
 
 // AppendDecorators let you inject decorators to the bar's right side
-func AppendDecorators(appenders ...decor.DecoratorFunc) BarOption {
+func AppendDecorators(appenders ...decor.Decorator) BarOption {
 	return func(s *bState) {
-		s.aDecorators = append(s.aDecorators, appenders...)
+		for _, decorator := range appenders {
+			if t, ok := decorator.(*decor.EwmaETA); ok {
+				s.ewmAverage = t
+				s.startBlockCh = t.StartBlockCh
+			}
+			s.aDecorators = append(s.aDecorators, decorator)
+		}
 	}
 }
 
 // PrependDecorators let you inject decorators to the bar's left side
-func PrependDecorators(prependers ...decor.DecoratorFunc) BarOption {
+func PrependDecorators(prependers ...decor.Decorator) BarOption {
 	return func(s *bState) {
-		s.pDecorators = append(s.pDecorators, prependers...)
+		for _, decorator := range prependers {
+			if t, ok := decorator.(*decor.EwmaETA); ok {
+				s.ewmAverage = t
+				s.startBlockCh = t.StartBlockCh
+			}
+			s.pDecorators = append(s.pDecorators, decorator)
+		}
 	}
 }
 
@@ -48,15 +60,6 @@ func BarTrim() BarOption {
 func BarID(id int) BarOption {
 	return func(s *bState) {
 		s.id = id
-	}
-}
-
-// BarEtaAlpha option is a way to adjust ETA behavior.
-// You can play with it, if you're not satisfied with default behavior.
-// Default value is 0.12
-func BarEtaAlpha(a float64) BarOption {
-	return func(s *bState) {
-		s.etaAlpha = a
 	}
 }
 

@@ -32,13 +32,14 @@ func main() {
 
 	for i := 0; i < numBars; i++ {
 		name := fmt.Sprintf("Bar#%d:", i)
+		startBlock := make(chan time.Time)
 		bar := p.AddBar(int64(total),
 			mpb.PrependDecorators(
-				decor.StaticName(name, 0, decor.DwidthSync|decor.DidentRight),
-				decor.ETA(4, decor.DSyncSpace),
+				decor.Name(name),
+				decor.ETA(decor.ET_STYLE_GO, 0, startBlock, decor.WCSyncSpace),
 			),
 			mpb.AppendDecorators(
-				decor.Percentage(5, 0),
+				decor.Percentage(decor.WC{W: 5}),
 			),
 		)
 
@@ -46,7 +47,7 @@ func main() {
 			defer wg.Done()
 			max := 100 * time.Millisecond
 			for !bar.Completed() {
-				bar.StartBlock()
+				startBlock <- time.Now()
 				time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
 				bar.Increment()
 			}

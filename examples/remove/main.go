@@ -22,29 +22,29 @@ func main() {
 	wg.Add(numBars)
 
 	for i := 0; i < numBars; i++ {
-		var name string
-		name = fmt.Sprintf("Bar#%d:", i)
+		name := fmt.Sprintf("Bar#%d:", i)
 
 		var bOption mpb.BarOption
 		if i == 0 {
 			bOption = mpb.BarRemoveOnComplete()
 		}
 
+		startBlock := make(chan time.Time)
 		b := p.AddBar(int64(total), mpb.BarID(i),
 			bOption,
 			mpb.PrependDecorators(
-				decor.StaticName(name, 0, decor.DwidthSync|decor.DidentRight),
-				decor.ETA(4, decor.DSyncSpace),
+				decor.Name(name),
+				decor.ETA(decor.ET_STYLE_GO, 0, startBlock, decor.WCSyncSpace),
 			),
 			mpb.AppendDecorators(
-				decor.Percentage(5, 0),
+				decor.Percentage(),
 			),
 		)
 		go func() {
 			defer wg.Done()
 			max := 100 * time.Millisecond
 			for i := 0; i < total; i++ {
-				b.StartBlock()
+				startBlock <- time.Now()
 				if b.ID() == 2 && i == 42 {
 					p.Abort(b)
 					return
