@@ -26,11 +26,10 @@ func main() {
 		mpb.PrependDecorators(
 			// Display our name with one space on the right
 			decor.Name(name, decor.WC{W: len(name) + 1, C: decor.DidentRight}),
-			// Replace ETA decorator with message, OnComplete event
+			// Replace ETA decorator with "done" message, OnComplete event
 			decor.OnComplete(
 				// ETA decorator with default eta age, and width reservation of 4
-				decor.ETA(decor.ET_STYLE_GO, 0, startBlock, decor.WC{W: 4}),
-				"done",
+				decor.ETA(decor.ET_STYLE_GO, 0, startBlock, decor.WC{W: 4}), "done",
 			),
 		),
 		mpb.AppendDecorators(

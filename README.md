@@ -45,11 +45,10 @@ _Note:_ it is preferable to go get from github.com, rather than gopkg.in. See is
         mpb.PrependDecorators(
             // Display our name with one space on the right
             decor.Name(name, decor.WC{W: len(name) + 1, C: decor.DidentRight}),
-            // Replace ETA decorator with message, OnComplete event
+            // Replace ETA decorator with "done" message, OnComplete event
             decor.OnComplete(
                 // ETA decorator with default eta age, and width reservation of 4
-                decor.ETA(decor.ET_STYLE_GO, 0, startBlock, decor.WC{W: 4}),
-                "done",
+                decor.ETA(decor.ET_STYLE_GO, 0, startBlock, decor.WC{W: 4}), "done",
             ),
         ),
         mpb.AppendDecorators(
@@ -88,10 +87,10 @@ _Note:_ it is preferable to go get from github.com, rather than gopkg.in. See is
                 decor.Percentage(decor.WCSyncWidth),
             ),
             mpb.AppendDecorators(
-                // Replace ETA decorator with message, OnComplete event
+				// Replace ETA decorator with "done" message, OnComplete event
                 decor.OnComplete(
                     // ETA decorator with default eta age, and width reservation of 3
-                    decor.ETA(decor.ET_STYLE_GO, 0, startBlock, decor.WC{W: 3}), "done!",
+                    decor.ETA(decor.ET_STYLE_GO, 0, startBlock, decor.WC{W: 3}), "done",
                 ),
             ),
         )
