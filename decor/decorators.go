@@ -220,9 +220,9 @@ func counters(pairFormat string, unit int, wc ...WC) Decorator {
 //	 For example expected progress duration is one hour.
 //	 age = 3600 / 2
 //
-//	 `startBlock` is channel, user suppose to send time.Now() on each iteration of block start.
+//	`startBlock` is channel, user suppose to send time.Now() on each iteration of block start.
 //
-//	 `wc` optional WC config
+//	`wc` optional WC config
 func ETA(style int, age float64, startBlock chan time.Time, wc ...WC) Decorator {
 	var wc0 WC
 	if len(wc) > 0 {
