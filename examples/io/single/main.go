@@ -45,7 +45,7 @@ func main() {
 			decor.CountersKibiByte("% 6.1f / % 6.1f", decor.WC{W: 18}),
 		),
 		mpb.AppendDecorators(
-			decor.ETA(decor.ET_STYLE_HHMMSS, 60, startBlock),
+			decor.ETA(decor.ET_STYLE_HHMMSS, 120, startBlock),
 			decor.SpeedKibiByte("% 6.1f", decor.WC{W: 14}),
 		),
 	)

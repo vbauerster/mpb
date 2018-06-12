@@ -31,7 +31,7 @@ func main() {
 			mpb.PrependDecorators(
 				decor.Name(name, decor.WCSyncWidth),
 				decor.OnComplete(
-					decor.ETA(decor.ET_STYLE_MMSS, 0, startBlock, decor.WC{W: 6}),
+					decor.ETA(decor.ET_STYLE_MMSS, 60, startBlock, decor.WC{W: 6}),
 					"Done",
 					decor.WCSyncSpace,
 				),

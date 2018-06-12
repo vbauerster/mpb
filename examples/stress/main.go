@@ -31,7 +31,7 @@ func main() {
 		bar := p.AddBar(int64(total),
 			mpb.PrependDecorators(
 				decor.Name(name),
-				decor.ETA(decor.ET_STYLE_GO, 0, startBlock, decor.WCSyncSpace),
+				decor.ETA(decor.ET_STYLE_GO, 60, startBlock, decor.WCSyncSpace),
 			),
 			mpb.AppendDecorators(
 				decor.Percentage(decor.WC{W: 5}),
