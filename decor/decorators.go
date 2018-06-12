@@ -270,7 +270,7 @@ func (s *EwmaETA) Decor(st *Statistics, widthAccumulator chan<- int, widthDistri
 	}
 
 	var str string
-	timeRemaining := time.Duration(st.Total-st.Current) * time.Duration(math.Round(s.Value()))
+	timeRemaining := time.Duration(st.Total-st.Current) * time.Duration(round(s.Value()))
 	hours := int64((timeRemaining / time.Hour) % 60)
 	minutes := int64((timeRemaining / time.Minute) % 60)
 	seconds := int64((timeRemaining / time.Second) % 60)
@@ -354,7 +354,7 @@ func CalcPercentage(total, current, width int64) int64 {
 	}
 
 	p := float64(width) * float64(current) / float64(total)
-	return int64(math.Round(p))
+	return int64(round(p))
 }
 
 // SpeedNoUnit returns raw I/O operation speed decorator.
