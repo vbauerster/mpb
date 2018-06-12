@@ -349,11 +349,7 @@ func CalcPercentage(total, current, width int64) int64 {
 	if total <= 0 {
 		return 0
 	}
-	if current > total {
-		current = total
-	}
-
-	p := float64(width) * float64(current) / float64(total)
+	p := float64(width*current) / float64(total)
 	return int64(round(p))
 }
 
