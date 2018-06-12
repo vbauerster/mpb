@@ -16,9 +16,9 @@ import (
 //	 the previous N samples to average over. If zero value provided, it defaults to 30.
 //
 //	`startBlock` is a time.Time receive channel. User suppose to send time.Now()
-//   to this channel on each iteration of block start, right before actual job.
-//   The channel will be closed automatically on bar shutdown event, so there is
-//   no need to close from user side.
+//	 to this channel on each iteration of block start, right before actual job.
+//	 The channel will be closed automatically on bar shutdown event, so there is
+//	 no need to close from user side.
 //
 //	`wc` optional WC config
 func ETA(style int, age float64, startBlock chan time.Time, wc ...WC) Decorator {
