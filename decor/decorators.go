@@ -224,11 +224,9 @@ func counters(pairFormat string, unit int, wc ...WC) Decorator {
 //
 //	`style` one of [ET_STYLE_GO|ET_STYLE_HHMMSS|ET_STYLE_HHMM|ET_STYLE_MMSS]
 //
-//	`age` is a decay factor alpha for underlying ewma.
-//	 General rule of thumb, for the best value:
-//	 expected progress time in seconds divided by two.
-//	 For example expected progress duration is one hour.
-//	 age = 3600 / 2
+//	`age` is related to the decay factor alpha by the formula given for the DECAY constant.
+//	 It signifies the average age of the samples as time goes to infinity. Basically age is
+//	 the previous N samples to average over. If zero value provided, it defaults to 30.
 //
 //	`startBlock` is channel, user suppose to send time.Now() on each iteration of block start.
 //
