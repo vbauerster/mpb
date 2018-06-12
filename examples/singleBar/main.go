@@ -32,9 +32,7 @@ func main() {
 				decor.ETA(decor.ET_STYLE_GO, 0, startBlock, decor.WC{W: 4}), "done",
 			),
 		),
-		mpb.AppendDecorators(
-			decor.Percentage(),
-		),
+		mpb.AppendDecorators(decor.Percentage()),
 	)
 
 	// simulating some work

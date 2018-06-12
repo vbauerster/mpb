@@ -51,9 +51,7 @@ _Note:_ it is preferable to go get from github.com, rather than gopkg.in. See is
                 decor.ETA(decor.ET_STYLE_GO, 0, startBlock, decor.WC{W: 4}), "done",
             ),
         ),
-        mpb.AppendDecorators(
-            decor.Percentage(),
-        ),
+        mpb.AppendDecorators(decor.Percentage()),
     )
 
     // simulating some work
