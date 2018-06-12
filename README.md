@@ -87,7 +87,7 @@ _Note:_ it is preferable to go get from github.com, rather than gopkg.in. See is
                 decor.Percentage(decor.WCSyncWidth),
             ),
             mpb.AppendDecorators(
-				// Replace ETA decorator with "done" message, OnComplete event
+                // Replace ETA decorator with "done" message, OnComplete event
                 decor.OnComplete(
                     // ETA decorator with default eta age, and width reservation of 3
                     decor.ETA(decor.ET_STYLE_GO, 0, startBlock, decor.WC{W: 3}), "done",
