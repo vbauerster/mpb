@@ -51,6 +51,9 @@ type Statistics struct {
 	TimeElapsed time.Duration
 }
 
+// Decorator is an interface with one method:
+// Decor(st *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string
+// All decorators in this package implement this interface.
 type Decorator interface {
 	Decor(*Statistics, chan<- int, <-chan int) string
 }
