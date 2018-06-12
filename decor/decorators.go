@@ -41,7 +41,7 @@ const (
 	ET_STYLE_MMSS
 )
 
-// Statistics contains values useful for implementing a DecoratorFunc.
+// Statistics is a struct, which Decorator interface depends upon.
 type Statistics struct {
 	ID          int
 	Completed   bool
