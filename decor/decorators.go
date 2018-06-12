@@ -256,7 +256,7 @@ func (s *EwmaETA) Decor(st *Statistics, widthAccumulator chan<- int, widthDistri
 	}
 
 	var str string
-	timeRemaining := time.Duration(float64(st.Total-st.Current) * s.MovingAverage.Value())
+	timeRemaining := time.Duration(float64(st.Total-st.Current) * s.Value())
 	hours := int64((timeRemaining / time.Hour) % 60)
 	minutes := int64((timeRemaining / time.Minute) % 60)
 	seconds := int64((timeRemaining / time.Second) % 60)
