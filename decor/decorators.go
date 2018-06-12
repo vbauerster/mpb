@@ -52,7 +52,7 @@ type Statistics struct {
 }
 
 type Decorator interface {
-	Decor(s *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string
+	Decor(*Statistics, chan<- int, <-chan int) string
 }
 
 type CompleteMessenger interface {
@@ -60,7 +60,7 @@ type CompleteMessenger interface {
 }
 
 // DecoratorFunc is an adapter for Decorator interface
-type DecoratorFunc func(s *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string
+type DecoratorFunc func(*Statistics, chan<- int, <-chan int) string
 
 func (f DecoratorFunc) Decor(s *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string {
 	return f(s, widthAccumulator, widthDistributor)
