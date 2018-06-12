@@ -41,7 +41,7 @@ const (
 	ET_STYLE_MMSS
 )
 
-// Statistics is a struct, which Decorator interface depends upon.
+// Statistics is a struct, which gets passed to a Decorator.
 type Statistics struct {
 	ID          int
 	Completed   bool
