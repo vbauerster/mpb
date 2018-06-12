@@ -12,9 +12,11 @@ type BarOption func(*bState)
 func AppendDecorators(appenders ...decor.Decorator) BarOption {
 	return func(s *bState) {
 		for _, decorator := range appenders {
-			if t, ok := decorator.(*decor.EwmaETA); ok {
-				s.ewmAverage = t
-				s.startBlockCh = t.StartBlockCh
+			if ar, ok := decorator.(decor.AmountReceiver); ok {
+				s.amountReceivers = append(s.amountReceivers, ar)
+			}
+			if sl, ok := decorator.(decor.ShutdownListener); ok {
+				s.shutdownListeners = append(s.shutdownListeners, sl)
 			}
 			s.aDecorators = append(s.aDecorators, decorator)
 		}
@@ -25,9 +27,11 @@ func AppendDecorators(appenders ...decor.Decorator) BarOption {
 func PrependDecorators(prependers ...decor.Decorator) BarOption {
 	return func(s *bState) {
 		for _, decorator := range prependers {
-			if t, ok := decorator.(*decor.EwmaETA); ok {
-				s.ewmAverage = t
-				s.startBlockCh = t.StartBlockCh
+			if ar, ok := decorator.(decor.AmountReceiver); ok {
+				s.amountReceivers = append(s.amountReceivers, ar)
+			}
+			if sl, ok := decorator.(decor.ShutdownListener); ok {
+				s.shutdownListeners = append(s.shutdownListeners, sl)
 			}
 			s.pDecorators = append(s.pDecorators, decorator)
 		}

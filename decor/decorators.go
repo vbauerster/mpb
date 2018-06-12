@@ -5,8 +5,6 @@ import (
 	"math"
 	"time"
 	"unicode/utf8"
-
-	"github.com/VividCortex/ewma"
 )
 
 const (
@@ -60,13 +58,21 @@ type Decorator interface {
 	Decor(*Statistics, chan<- int, <-chan int) string
 }
 
-// CompleteMessenger is an interface with one method:
+// OnCompleteMessenger is an interface with one method:
 //
-//	OnComplete(message string, wc ...WC)
+//	OnCompleteMessage(message string, wc ...WC)
 //
 // Decorators implementing this interface suppose to return provided string on complete event.
-type CompleteMessenger interface {
-	OnComplete(string, ...WC)
+type OnCompleteMessenger interface {
+	OnCompleteMessage(string, ...WC)
+}
+
+type AmountReceiver interface {
+	NextAmount(int)
+}
+
+type ShutdownListener interface {
+	Shutdown()
 }
 
 // DecoratorFunc is an adapter for Decorator interface
@@ -129,8 +135,8 @@ var (
 //
 //	`wc` optional WC config
 func OnComplete(decorator Decorator, message string, wc ...WC) Decorator {
-	if cm, ok := decorator.(CompleteMessenger); ok {
-		cm.OnComplete(message, wc...)
+	if cm, ok := decorator.(OnCompleteMessenger); ok {
+		cm.OnCompleteMessage(message, wc...)
 		return decorator
 	}
 	msgDecorator := Name(message, wc...)
@@ -218,84 +224,6 @@ func counters(pairFormat string, unit int, wc ...WC) Decorator {
 		}
 		return wc0.formatMsg(str, widthAccumulator, widthDistributor)
 	})
-}
-
-// ETA returns exponential-weighted-moving-average ETA decorator.
-//
-//	`style` one of [ET_STYLE_GO|ET_STYLE_HHMMSS|ET_STYLE_HHMM|ET_STYLE_MMSS]
-//
-//	`age` is related to the decay factor alpha by the formula given for the DECAY constant.
-//	 It signifies the average age of the samples as time goes to infinity. Basically age is
-//	 the previous N samples to average over. If zero value provided, it defaults to 30.
-//
-//	`startBlock` is channel, user suppose to send time.Now() on each iteration of block start.
-//
-//	`wc` optional WC config
-func ETA(style int, age float64, startBlock chan time.Time, wc ...WC) Decorator {
-	var wc0 WC
-	if len(wc) > 0 {
-		wc0 = wc[0]
-	}
-	if age == .0 {
-		age = ewma.AVG_METRIC_AGE
-	}
-	return &EwmaETA{
-		MovingAverage: ewma.NewMovingAverage(age),
-		StartBlockCh:  startBlock,
-		style:         style,
-		wc:            wc0,
-	}
-}
-
-// EwmaETA is a struct, which implements ewma based ETA decorator.
-// Normally should not be used directly, use helper func instead:
-//
-//	decor.ETA(int, float64, chan time.Time, ...decor.WC)
-type EwmaETA struct {
-	ewma.MovingAverage
-	StartBlockCh chan time.Time
-	style        int
-	wc           WC
-	onComplete   *struct {
-		msg string
-		wc  WC
-	}
-}
-
-func (s *EwmaETA) Decor(st *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string {
-	if st.Completed && s.onComplete != nil {
-		return s.onComplete.wc.formatMsg(s.onComplete.msg, widthAccumulator, widthDistributor)
-	}
-
-	var str string
-	timeRemaining := time.Duration(st.Total-st.Current) * time.Duration(round(s.Value()))
-	hours := int64((timeRemaining / time.Hour) % 60)
-	minutes := int64((timeRemaining / time.Minute) % 60)
-	seconds := int64((timeRemaining / time.Second) % 60)
-
-	switch s.style {
-	case ET_STYLE_GO:
-		str = fmt.Sprint(time.Duration(timeRemaining.Seconds()) * time.Second)
-	case ET_STYLE_HHMMSS:
-		str = fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
-	case ET_STYLE_HHMM:
-		str = fmt.Sprintf("%02d:%02d", hours, minutes)
-	case ET_STYLE_MMSS:
-		str = fmt.Sprintf("%02d:%02d", minutes, seconds)
-	}
-
-	return s.wc.formatMsg(str, widthAccumulator, widthDistributor)
-}
-
-func (s *EwmaETA) OnComplete(msg string, wc ...WC) {
-	var wc0 WC
-	if len(wc) > 0 {
-		wc0 = wc[0]
-	}
-	s.onComplete = &struct {
-		msg string
-		wc  WC
-	}{msg, wc0}
 }
 
 // Elapsed returns elapsed time decorator.

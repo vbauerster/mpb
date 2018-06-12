@@ -9,7 +9,6 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/VividCortex/ewma"
 	"github.com/vbauerster/mpb/decor"
 )
 
@@ -36,7 +35,6 @@ type Bar struct {
 	cacheState    *bState
 	operateState  chan func(*bState)
 	frameReaderCh chan io.Reader
-	startBlockCh  <-chan time.Time
 
 	// done is closed by Bar's goroutine, after cacheState is written
 	done chan struct{}
@@ -65,16 +63,15 @@ type (
 		timeElapsed          time.Duration
 		aDecorators          []decor.Decorator
 		pDecorators          []decor.Decorator
+		amountReceivers      []decor.AmountReceiver
+		shutdownListeners    []decor.ShutdownListener
 		refill               *refill
 		bufP, bufB, bufA     *bytes.Buffer
 		panicMsg             string
 
-		ewmAverage ewma.MovingAverage
-
 		// following options are assigned to the *Bar
-		priority     int
-		runningBar   *Bar
-		startBlockCh chan time.Time
+		priority   int
+		runningBar *Bar
 	}
 	refill struct {
 		char rune
@@ -113,14 +110,11 @@ func newBar(wg *sync.WaitGroup, id int, total int64, cancel <-chan struct{}, opt
 	b := &Bar{
 		priority:      s.priority,
 		runningBar:    s.runningBar,
-		startBlockCh:  s.startBlockCh,
 		operateState:  make(chan func(*bState)),
 		frameReaderCh: make(chan io.Reader, 1),
 		done:          make(chan struct{}),
 		shutdown:      make(chan struct{}),
 	}
-
-	s.startBlockCh = nil
 
 	if b.runningBar != nil {
 		b.priority = b.runningBar.priority
@@ -156,11 +150,6 @@ func (b *Bar) ProxyReader(r io.Reader, startBlock ...chan<- time.Time) *Reader {
 		proxyReader.startBlockCh = startBlock[0]
 	}
 	return proxyReader
-}
-
-// Increment is a shorthand for b.IncrBy(1)
-func (b *Bar) Increment() {
-	b.IncrBy(1)
 }
 
 // ResumeFill fills bar with different r rune,
@@ -241,18 +230,16 @@ func (b *Bar) SetTotal(total int64, final bool) {
 	}
 }
 
+// Increment is a shorthand for b.IncrBy(1)
+func (b *Bar) Increment() {
+	b.IncrBy(1)
+}
+
 // IncrBy increments progress bar by amount of n
 func (b *Bar) IncrBy(n int) {
-	now := time.Now()
 	select {
 	case b.operateState <- func(s *bState) {
 		s.current += int64(n)
-		s.timeElapsed = now.Sub(s.startTime)
-		if s.ewmAverage != nil {
-			lastBlockTime := now.Sub(s.blockStartTime)
-			lastItemEstimate := float64(lastBlockTime) / float64(n)
-			s.ewmAverage.Add(lastItemEstimate)
-		}
 		if s.dynamic {
 			curp := decor.CalcPercentage(s.total, s.current, 100)
 			if 100-curp <= s.totalAutoIncrTrigger {
@@ -262,6 +249,10 @@ func (b *Bar) IncrBy(n int) {
 			s.current = s.total
 			s.toComplete = true
 		}
+		for _, ar := range s.amountReceivers {
+			ar.NextAmount(n)
+		}
+		s.timeElapsed = time.Since(s.startTime)
 	}:
 	case <-b.done:
 	}
@@ -281,14 +272,15 @@ func (b *Bar) serve(wg *sync.WaitGroup, s *bState, cancel <-chan struct{}) {
 		select {
 		case op := <-b.operateState:
 			op(s)
-		case now := <-b.startBlockCh:
-			s.blockStartTime = now
 		case <-cancel:
 			s.toComplete = true
 			cancel = nil
 		case <-b.shutdown:
 			b.cacheState = s
 			close(b.done)
+			for _, sl := range s.shutdownListeners {
+				sl.Shutdown()
+			}
 			return
 		}
 	}
