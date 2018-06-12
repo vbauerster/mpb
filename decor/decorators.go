@@ -62,7 +62,7 @@ type Decorator interface {
 
 // CompleteMessenger is an interface with one method:
 //
-//	OnComplete(string, ...WC)
+//	OnComplete(message string, wc ...WC)
 //
 // Decorators implementing this interface suppose to return provided string on complete event.
 type CompleteMessenger interface {
