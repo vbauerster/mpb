@@ -43,9 +43,9 @@ _Note:_ it is preferable to go get from github.com, rather than gopkg.in. See is
     // adding a single bar
     bar := p.AddBar(int64(total),
         mpb.PrependDecorators(
-            // Display our name with one space on the right
+            // display our name with one space on the right
             decor.Name(name, decor.WC{W: len(name) + 1, C: decor.DidentRight}),
-            // Replace ETA decorator with "done" message, OnComplete event
+            // replace ETA decorator with "done" message, OnComplete event
             decor.OnComplete(
                 // ETA decorator with default eta age, and width reservation of 4
                 decor.ETA(decor.ET_STYLE_GO, 0, startBlock, decor.WC{W: 4}), "done",
@@ -60,7 +60,7 @@ _Note:_ it is preferable to go get from github.com, rather than gopkg.in. See is
         // update start block time, required for ETA calculation
         startBlock <- time.Now()
         time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
-        // Increment by 1 (there is bar.IncrBy(int) method, if needed)
+        // increment by 1 (there is bar.IncrBy(int) method, if needed)
         bar.Increment()
     }
     // wait for our bar to complete and flush
@@ -79,13 +79,13 @@ _Note:_ it is preferable to go get from github.com, rather than gopkg.in. See is
         startBlock := make(chan time.Time)
         bar := p.AddBar(int64(total),
             mpb.PrependDecorators(
-                // Display our name with one space on the right
+                // display our name with one space on the right
                 decor.Name(name, decor.WC{W: len(name) + 1, C: decor.DidentRight}),
                 // decor.DSyncWidth bit enables same column width synchronization
                 decor.Percentage(decor.WCSyncWidth),
             ),
             mpb.AppendDecorators(
-                // Replace ETA decorator with "done" message, OnComplete event
+                // replace ETA decorator with "done" message, OnComplete event
                 decor.OnComplete(
                     // ETA decorator with default eta age, and width reservation of 3
                     decor.ETA(decor.ET_STYLE_GO, 0, startBlock, decor.WC{W: 3}), "done",
