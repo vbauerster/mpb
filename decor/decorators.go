@@ -239,6 +239,9 @@ func ETA(style int, age float64, startBlock chan time.Time, wc ...WC) Decorator 
 	}
 }
 
+// EwmaETA is a struct, which implements ewma based ETA decorator.
+// Should not be used directly, use ETA(int, float64, chan time.Time, ...WC)
+// func helper instead.
 type EwmaETA struct {
 	ewma.MovingAverage
 	StartBlockCh chan time.Time
