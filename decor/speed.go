@@ -182,6 +182,9 @@ func SpeedKiloByte(unitFormat string, age float64, sbCh chan time.Time, wcc ...W
 }
 
 func speed(unit int, unitFormat string, age float64, sbCh chan time.Time, wcc ...WC) Decorator {
+	if sbCh == nil {
+		panic("start block channel must not be nil")
+	}
 	var wc WC
 	for _, widthConf := range wcc {
 		wc = widthConf
