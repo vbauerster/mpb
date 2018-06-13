@@ -223,7 +223,7 @@ func (s *ewmaSpeed) Decor(st *Statistics, widthAccumulator chan<- int, widthDist
 		return s.onComplete.wc.FormatMsg(s.onComplete.msg, widthAccumulator, widthDistributor)
 	}
 	var str string
-	speed := round(s.mAverage.Value())
+	speed := s.mAverage.Value()
 	switch s.unit {
 	case unitKiB:
 		str = fmt.Sprintf(s.unitFormat, SpeedKiB(speed))
