@@ -26,6 +26,7 @@ func ETA(style int, age float64, startBlock chan time.Time, wc ...WC) Decorator 
 	if len(wc) > 0 {
 		wc0 = wc[0]
 	}
+	wc0.BuildFormat()
 	if age == .0 {
 		age = ewma.AVG_METRIC_AGE
 	}
@@ -54,7 +55,7 @@ type ewmaETA struct {
 
 func (s *ewmaETA) Decor(st *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string {
 	if st.Completed && s.onComplete != nil {
-		return s.onComplete.wc.formatMsg(s.onComplete.msg, widthAccumulator, widthDistributor)
+		return s.onComplete.wc.FormatMsg(s.onComplete.msg, widthAccumulator, widthDistributor)
 	}
 
 	var str string
@@ -74,7 +75,7 @@ func (s *ewmaETA) Decor(st *Statistics, widthAccumulator chan<- int, widthDistri
 		str = fmt.Sprintf("%02d:%02d", minutes, seconds)
 	}
 
-	return s.wc.formatMsg(str, widthAccumulator, widthDistributor)
+	return s.wc.FormatMsg(str, widthAccumulator, widthDistributor)
 }
 
 func (s *ewmaETA) NextAmount(n int) {
@@ -89,6 +90,7 @@ func (s *ewmaETA) OnCompleteMessage(msg string, wc ...WC) {
 	if len(wc) > 0 {
 		wc0 = wc[0]
 	}
+	wc0.BuildFormat()
 	s.onComplete = &struct {
 		msg string
 		wc  WC

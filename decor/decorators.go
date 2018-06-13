@@ -90,8 +90,9 @@ type WC struct {
 	format string
 }
 
-func (wc WC) formatMsg(msg string, widthAccumulator chan<- int, widthDistributor <-chan int) string {
-	format := wc.buildFormat()
+// FormatMsg formats final message according to WC.W and WC.C.
+// Should be called by any Decorator implementation.
+func (wc WC) FormatMsg(msg string, widthAccumulator chan<- int, widthDistributor <-chan int) string {
 	if (wc.C & DSyncWidth) != 0 {
 		widthAccumulator <- utf8.RuneCountInString(msg)
 		max := <-widthDistributor
@@ -101,21 +102,18 @@ func (wc WC) formatMsg(msg string, widthAccumulator chan<- int, widthDistributor
 		if (wc.C & DextraSpace) != 0 {
 			max++
 		}
-		return fmt.Sprintf(fmt.Sprintf(format, max), msg)
+		return fmt.Sprintf(fmt.Sprintf(wc.format, max), msg)
 	}
-	return fmt.Sprintf(fmt.Sprintf(format, wc.W), msg)
+	return fmt.Sprintf(fmt.Sprintf(wc.format, wc.W), msg)
 }
 
-func (wc *WC) buildFormat() string {
-	if wc.format != "" {
-		return wc.format
-	}
+// BuildFormat builds initial format according to WC.C
+func (wc *WC) BuildFormat() {
 	wc.format = "%%"
 	if (wc.C & DidentRight) != 0 {
 		wc.format += "-"
 	}
 	wc.format += "%ds"
-	return wc.format
 }
 
 // Global convenience shortcuts
@@ -167,8 +165,9 @@ func Name(name string, wc ...WC) Decorator {
 	if len(wc) > 0 {
 		wc0 = wc[0]
 	}
+	wc0.BuildFormat()
 	return DecoratorFunc(func(s *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string {
-		return wc0.formatMsg(name, widthAccumulator, widthDistributor)
+		return wc0.FormatMsg(name, widthAccumulator, widthDistributor)
 	})
 }
 
@@ -212,6 +211,7 @@ func counters(pairFormat string, unit int, wc ...WC) Decorator {
 	if len(wc) > 0 {
 		wc0 = wc[0]
 	}
+	wc0.BuildFormat()
 	return DecoratorFunc(func(s *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string {
 		var str string
 		switch unit {
@@ -222,7 +222,7 @@ func counters(pairFormat string, unit int, wc ...WC) Decorator {
 		default:
 			str = fmt.Sprintf(pairFormat, s.Current, s.Total)
 		}
-		return wc0.formatMsg(str, widthAccumulator, widthDistributor)
+		return wc0.FormatMsg(str, widthAccumulator, widthDistributor)
 	})
 }
 
@@ -236,6 +236,7 @@ func Elapsed(style int, wc ...WC) Decorator {
 	if len(wc) > 0 {
 		wc0 = wc[0]
 	}
+	wc0.BuildFormat()
 	return DecoratorFunc(func(s *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string {
 		var str string
 		hours := int64((s.TimeElapsed / time.Hour) % 60)
@@ -252,7 +253,7 @@ func Elapsed(style int, wc ...WC) Decorator {
 		case ET_STYLE_MMSS:
 			str = fmt.Sprintf("%02d:%02d", minutes, seconds)
 		}
-		return wc0.formatMsg(str, widthAccumulator, widthDistributor)
+		return wc0.FormatMsg(str, widthAccumulator, widthDistributor)
 	})
 }
 
@@ -264,9 +265,10 @@ func Percentage(wc ...WC) Decorator {
 	if len(wc) > 0 {
 		wc0 = wc[0]
 	}
+	wc0.BuildFormat()
 	return DecoratorFunc(func(s *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string {
 		str := fmt.Sprintf("%d %%", CalcPercentage(s.Total, s.Current, 100))
-		return wc0.formatMsg(str, widthAccumulator, widthDistributor)
+		return wc0.FormatMsg(str, widthAccumulator, widthDistributor)
 	})
 }
 
@@ -323,6 +325,7 @@ func speed(unitFormat string, unit int, wc ...WC) Decorator {
 	if len(wc) > 0 {
 		wc0 = wc[0]
 	}
+	wc0.BuildFormat()
 	return DecoratorFunc(func(s *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string {
 		var str string
 		speed := float64(s.Current) / s.TimeElapsed.Seconds()
@@ -338,6 +341,6 @@ func speed(unitFormat string, unit int, wc ...WC) Decorator {
 		default:
 			str = fmt.Sprintf(unitFormat, speed)
 		}
-		return wc0.formatMsg(str, widthAccumulator, widthDistributor)
+		return wc0.FormatMsg(str, widthAccumulator, widthDistributor)
 	})
 }
