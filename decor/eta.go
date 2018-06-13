@@ -11,43 +11,42 @@ import (
 //
 //	`style` one of [ET_STYLE_GO|ET_STYLE_HHMMSS|ET_STYLE_HHMM|ET_STYLE_MMSS]
 //
-//	`age` is related to the decay factor alpha by the formula given for the DECAY constant.
-//	 It signifies the average age of the samples as time goes to infinity. Basically age is
-//	 the previous N samples to average over. If zero value provided, it defaults to 30.
+//	`age` is the previous N samples to average over.
+//	 If zero value provided, it defaults to 30.
 //
-//	`startBlock` is a time.Time receive channel. User suppose to send time.Now()
-//	 to this channel on each iteration of block start, right before actual job.
-//	 The channel will be closed automatically on bar shutdown event, so there is
-//	 no need to close from user side.
+//	`sbCh` is a start block receive channel. User suppose to send time.Now()
+//	 to this channel on each iteration of a start block, right before actual job.
+//	 The channel will be auto closed on bar shutdown event, so there is no need
+//	 to close from user side.
 //
-//	`wc` optional WC config
-func ETA(style int, age float64, startBlock chan time.Time, wc ...WC) Decorator {
-	var wc0 WC
-	if len(wc) > 0 {
-		wc0 = wc[0]
+//	`wcc` optional WC config
+func ETA(style int, age float64, sbCh chan time.Time, wcc ...WC) Decorator {
+	var wc WC
+	for _, widthConf := range wcc {
+		wc = widthConf
 	}
-	wc0.BuildFormat()
+	wc.BuildFormat()
 	if age == .0 {
 		age = ewma.AVG_METRIC_AGE
 	}
-	eta := &ewmaETA{
-		mAverage:           ewma.NewMovingAverage(age),
-		startBlockReceiver: startBlock,
-		startBlockStreamer: make(chan time.Time),
-		style:              style,
-		wc:                 wc0,
+	d := &ewmaETA{
+		style:      style,
+		wc:         wc,
+		mAverage:   ewma.NewMovingAverage(age),
+		sbReceiver: sbCh,
+		sbStreamer: make(chan time.Time),
 	}
-	go eta.serve()
-	return eta
+	go d.serve()
+	return d
 }
 
 type ewmaETA struct {
-	mAverage           ewma.MovingAverage
-	startBlockReceiver chan time.Time
-	startBlockStreamer chan time.Time
-	style              int
-	wc                 WC
-	onComplete         *struct {
+	style      int
+	wc         WC
+	mAverage   ewma.MovingAverage
+	sbReceiver chan time.Time
+	sbStreamer chan time.Time
+	onComplete *struct {
 		msg string
 		wc  WC
 	}
@@ -79,30 +78,30 @@ func (s *ewmaETA) Decor(st *Statistics, widthAccumulator chan<- int, widthDistri
 }
 
 func (s *ewmaETA) NextAmount(n int) {
-	sb := <-s.startBlockStreamer
+	sb := <-s.sbStreamer
 	lastBlockTime := time.Since(sb)
 	lastItemEstimate := float64(lastBlockTime) / float64(n)
 	s.mAverage.Add(lastItemEstimate)
 }
 
-func (s *ewmaETA) OnCompleteMessage(msg string, wc ...WC) {
-	var wc0 WC
-	if len(wc) > 0 {
-		wc0 = wc[0]
+func (s *ewmaETA) OnCompleteMessage(msg string, wcc ...WC) {
+	var wc WC
+	for _, widthConf := range wcc {
+		wc = widthConf
 	}
-	wc0.BuildFormat()
+	wc.BuildFormat()
 	s.onComplete = &struct {
 		msg string
 		wc  WC
-	}{msg, wc0}
+	}{msg, wc}
 }
 
 func (s *ewmaETA) Shutdown() {
-	close(s.startBlockReceiver)
+	close(s.sbReceiver)
 }
 
 func (s *ewmaETA) serve() {
-	for now := range s.startBlockReceiver {
-		s.startBlockStreamer <- now
+	for now := range s.sbReceiver {
+		s.sbStreamer <- now
 	}
 }

@@ -135,3 +135,58 @@ func (c CounterKB) Format(st fmt.State, verb rune) {
 
 	io.WriteString(st, res)
 }
+
+// CountersNoUnit returns raw counters decorator
+//
+//	`pairFormat` printf compatible verbs for current and total, like "%f" or "%d"
+//
+//	`wcc` optional WC config
+func CountersNoUnit(pairFormat string, wcc ...WC) Decorator {
+	return counters(0, pairFormat, wcc...)
+}
+
+// CountersKibiByte returns human friendly byte counters decorator, where counters unit is multiple by 1024.
+//
+//	`pairFormat` printf compatible verbs for current and total, like "%f" or "%d"
+//
+//	`wcc` optional WC config
+//
+// pairFormat example:
+//
+//	"%.1f / %.1f" = "1.0MiB / 12.0MiB" or "% .1f / % .1f" = "1.0 MiB / 12.0 MiB"
+func CountersKibiByte(pairFormat string, wcc ...WC) Decorator {
+	return counters(unitKiB, pairFormat, wcc...)
+}
+
+// CountersKiloByte returns human friendly byte counters decorator, where counters unit is multiple by 1000.
+//
+//	`pairFormat` printf compatible verbs for current and total, like "%f" or "%d"
+//
+//	`wcc` optional WC config
+//
+// pairFormat example:
+//
+//	"%.1f / %.1f" = "1.0MB / 12.0MB" or "% .1f / % .1f" = "1.0 MB / 12.0 MB"
+func CountersKiloByte(pairFormat string, wcc ...WC) Decorator {
+	return counters(unitKB, pairFormat, wcc...)
+}
+
+func counters(unit int, pairFormat string, wcc ...WC) Decorator {
+	var wc WC
+	for _, widthConf := range wcc {
+		wc = widthConf
+	}
+	wc.BuildFormat()
+	return DecoratorFunc(func(s *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string {
+		var str string
+		switch unit {
+		case unitKiB:
+			str = fmt.Sprintf(pairFormat, CounterKiB(s.Current), CounterKiB(s.Total))
+		case unitKB:
+			str = fmt.Sprintf(pairFormat, CounterKB(s.Current), CounterKB(s.Total))
+		default:
+			str = fmt.Sprintf(pairFormat, s.Current, s.Total)
+		}
+		return wc.FormatMsg(str, widthAccumulator, widthDistributor)
+	})
+}

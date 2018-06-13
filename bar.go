@@ -58,8 +58,6 @@ type (
 		removeOnComplete     bool
 		barClearOnComplete   bool
 		completeFlushed      bool
-		startTime            time.Time
-		timeElapsed          time.Duration
 		aDecorators          []decor.Decorator
 		pDecorators          []decor.Decorator
 		amountReceivers      []decor.AmountReceiver
@@ -140,13 +138,15 @@ func (b *Bar) RemoveAllAppenders() {
 }
 
 // ProxyReader wrapper for io operations, like io.Copy
-func (b *Bar) ProxyReader(r io.Reader, startBlock ...chan<- time.Time) *Reader {
+//
+//	`r` io.Reader to be wrapped
+//
+//	`sbChannels` optional start block channels
+func (b *Bar) ProxyReader(r io.Reader, sbChannels ...chan<- time.Time) *Reader {
 	proxyReader := &Reader{
-		Reader: r,
-		bar:    b,
-	}
-	if len(startBlock) > 0 {
-		proxyReader.startBlockCh = startBlock[0]
+		Reader:     r,
+		bar:        b,
+		sbChannels: sbChannels,
 	}
 	return proxyReader
 }
@@ -251,7 +251,6 @@ func (b *Bar) IncrBy(n int) {
 		for _, ar := range s.amountReceivers {
 			ar.NextAmount(n)
 		}
-		s.timeElapsed = time.Since(s.startTime)
 	}:
 	case <-b.done:
 	}
@@ -266,7 +265,6 @@ func (b *Bar) Completed() bool {
 
 func (b *Bar) serve(wg *sync.WaitGroup, s *bState, cancel <-chan struct{}) {
 	defer wg.Done()
-	s.startTime = time.Now()
 	for {
 		select {
 		case op := <-b.operateState:
@@ -415,12 +413,10 @@ func (s *bState) fillBar(width int) {
 
 func newStatistics(s *bState) *decor.Statistics {
 	return &decor.Statistics{
-		ID:          s.id,
-		Completed:   s.completeFlushed,
-		Total:       s.total,
-		Current:     s.current,
-		StartTime:   s.startTime,
-		TimeElapsed: s.timeElapsed,
+		ID:        s.id,
+		Completed: s.completeFlushed,
+		Total:     s.total,
+		Current:   s.current,
 	}
 }
 

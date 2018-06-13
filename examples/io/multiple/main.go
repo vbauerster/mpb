@@ -58,8 +58,8 @@ func download(wg *sync.WaitGroup, p *mpb.Progress, name, url string, n int) {
 		return
 	}
 
-	startBlock := make(chan time.Time)
-
+	sbEta := make(chan time.Time)
+	sbSpeed := make(chan time.Time)
 	// create bar with appropriate decorators
 	bar := p.AddBar(size, mpb.BarPriority(n),
 		mpb.PrependDecorators(
@@ -67,13 +67,13 @@ func download(wg *sync.WaitGroup, p *mpb.Progress, name, url string, n int) {
 			decor.CountersKibiByte("%6.1f / %6.1f", decor.WCSyncWidth),
 		),
 		mpb.AppendDecorators(
-			decor.ETA(decor.ET_STYLE_HHMMSS, 60, startBlock, decor.WCSyncWidth),
-			decor.SpeedKibiByte("%6.1f", decor.WCSyncSpace),
+			decor.ETA(decor.ET_STYLE_HHMMSS, 60, sbEta, decor.WCSyncWidth),
+			decor.SpeedKibiByte("% .2f", 60, sbSpeed, decor.WCSyncSpace),
 		),
 	)
 
 	// create proxy reader
-	reader := bar.ProxyReader(resp.Body, startBlock)
+	reader := bar.ProxyReader(resp.Body, sbEta, sbSpeed)
 	// and copy from reader
 	_, err = io.Copy(dest, reader)
 
