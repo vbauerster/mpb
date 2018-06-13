@@ -59,7 +59,6 @@ type (
 		barClearOnComplete   bool
 		completeFlushed      bool
 		startTime            time.Time
-		blockStartTime       time.Time
 		timeElapsed          time.Duration
 		aDecorators          []decor.Decorator
 		pDecorators          []decor.Decorator
