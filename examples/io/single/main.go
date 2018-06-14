@@ -13,7 +13,7 @@ import (
 )
 
 func main() {
-	url := "https://github.com/onivim/oni/releases/download/v0.3.4/Oni-0.3.4-osx.dmg"
+	url := "https://github.com/onivim/oni/releases/download/v0.3.4/Oni-0.3.4-amd64-linux.deb"
 
 	resp, err := http.Get(url)
 	if err != nil {
@@ -37,7 +37,7 @@ func main() {
 	}
 	defer dest.Close()
 
-	p := mpb.New(mpb.WithWidth(64))
+	p := mpb.New(mpb.WithWidth(60), mpb.WithRefreshRate(180*time.Millisecond))
 
 	sbEta := make(chan time.Time)
 	sbSpeed := make(chan time.Time)
@@ -46,8 +46,10 @@ func main() {
 			decor.CountersKibiByte("% 6.1f / % 6.1f", decor.WC{W: 18}),
 		),
 		mpb.AppendDecorators(
-			decor.ETA(decor.ET_STYLE_HHMMSS, 120, sbEta),
-			decor.SpeedKibiByte("% .2f", 120, sbSpeed, decor.WC{W: 14}),
+			decor.Name("["),
+			decor.ETA(decor.ET_STYLE_MMSS, 60, sbEta),
+			decor.Name("] "),
+			decor.SpeedKibiByte("% .2f", 60, sbSpeed),
 		),
 	)
 
