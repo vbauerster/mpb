@@ -1,10 +1,10 @@
-package decor
+package internal
 
 import (
 	"testing"
 )
 
-func TestCalcPercentage(t *testing.T) {
+func TestPercentage(t *testing.T) {
 	// key is barWidth
 	testSuite := map[int64]map[string]struct {
 		total, current, expected int64
@@ -65,7 +65,7 @@ func TestCalcPercentage(t *testing.T) {
 
 	for width, cases := range testSuite {
 		for name, tc := range cases {
-			got := CalcPercentage(tc.total, tc.current, width)
+			got := Percentage(tc.total, tc.current, width)
 			if got != tc.expected {
 				t.Errorf("width %d; %s: Expected: %d, got: %d\n", width, name, tc.expected, got)
 			}

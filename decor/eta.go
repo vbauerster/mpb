@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/VividCortex/ewma"
+	"github.com/vbauerster/mpb/internal"
 )
 
 // ETA returns exponential-weighted-moving-average ETA decorator.
@@ -61,7 +62,7 @@ func (s *ewmaETA) Decor(st *Statistics, widthAccumulator chan<- int, widthDistri
 		return s.onComplete.wc.FormatMsg(s.onComplete.msg, widthAccumulator, widthDistributor)
 	}
 
-	v := round(s.mAverage.Value())
+	v := internal.Round(s.mAverage.Value())
 	if math.IsInf(v, 0) || math.IsNaN(v) {
 		v = .0
 	}

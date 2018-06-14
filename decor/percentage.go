@@ -1,6 +1,10 @@
 package decor
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/vbauerster/mpb/internal"
+)
 
 // Percentage returns percentage decorator.
 //
@@ -12,16 +16,7 @@ func Percentage(wcc ...WC) Decorator {
 	}
 	wc.BuildFormat()
 	return DecoratorFunc(func(s *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string {
-		str := fmt.Sprintf("%d %%", CalcPercentage(s.Total, s.Current, 100))
+		str := fmt.Sprintf("%d %%", internal.Percentage(s.Total, s.Current, 100))
 		return wc.FormatMsg(str, widthAccumulator, widthDistributor)
 	})
-}
-
-// CalcPercentage is a helper function, to calculate percentage.
-func CalcPercentage(total, current, width int64) int64 {
-	if total <= 0 {
-		return 0
-	}
-	p := float64(width*current) / float64(total)
-	return int64(round(p))
 }

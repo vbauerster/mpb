@@ -10,6 +10,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/vbauerster/mpb/decor"
+	"github.com/vbauerster/mpb/internal"
 )
 
 const (
@@ -240,7 +241,7 @@ func (b *Bar) IncrBy(n int) {
 	case b.operateState <- func(s *bState) {
 		s.current += int64(n)
 		if s.dynamic {
-			curp := decor.CalcPercentage(s.total, s.current, 100)
+			curp := internal.Percentage(s.total, s.current, 100)
 			if 100-curp <= s.totalAutoIncrTrigger {
 				s.total += s.totalAutoIncrBy
 			}
@@ -381,10 +382,10 @@ func (s *bState) fillBar(width int) {
 	// bar s.width without leftEnd and rightEnd runes
 	barWidth := width - 2
 
-	completedWidth := decor.CalcPercentage(s.total, s.current, int64(barWidth))
+	completedWidth := internal.Percentage(s.total, s.current, int64(barWidth))
 
 	if s.refill != nil {
-		till := decor.CalcPercentage(s.total, s.refill.till, int64(barWidth))
+		till := internal.Percentage(s.total, s.refill.till, int64(barWidth))
 		// append refill rune
 		var i int64
 		for i = 0; i < till; i++ {

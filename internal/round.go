@@ -1,4 +1,4 @@
-package decor
+package internal
 
 import "math"
 
@@ -11,13 +11,13 @@ const (
 	fracMask = 1<<shift - 1
 )
 
-// round returns the nearest integer, rounding half away from zero.
+// Round returns the nearest integer, rounding half away from zero.
 //
 // Special cases are:
 //	Round(±0) = ±0
 //	Round(±Inf) = ±Inf
 //	Round(NaN) = NaN
-func round(x float64) float64 {
+func Round(x float64) float64 {
 	// Round is a faster implementation of:
 	//
 	// func Round(x float64) float64 {
