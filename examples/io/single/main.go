@@ -37,7 +37,11 @@ func main() {
 	}
 	defer dest.Close()
 
-	p := mpb.New(mpb.WithWidth(60), mpb.WithRefreshRate(180*time.Millisecond))
+	p := mpb.New(
+		mpb.WithWidth(60),
+		mpb.WithFormat("[=>-|"),
+		mpb.WithRefreshRate(180*time.Millisecond),
+	)
 
 	sbEta := make(chan time.Time)
 	sbSpeed := make(chan time.Time)
@@ -46,9 +50,8 @@ func main() {
 			decor.CountersKibiByte("% 6.1f / % 6.1f"),
 		),
 		mpb.AppendDecorators(
-			decor.Name("["),
 			decor.ETA(decor.ET_STYLE_MMSS, 60, sbEta),
-			decor.Name("] "),
+			decor.Name(" ] "),
 			decor.SpeedKibiByte("% .2f", 60, sbSpeed),
 		),
 	)
