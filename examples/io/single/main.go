@@ -50,9 +50,9 @@ func main() {
 			decor.CountersKibiByte("% 6.1f / % 6.1f"),
 		),
 		mpb.AppendDecorators(
-			decor.ETA(decor.ET_STYLE_MMSS, 60, sbEta),
+			decor.ETA(decor.ET_STYLE_MMSS, 600, sbEta),
 			decor.Name(" ] "),
-			decor.SpeedKibiByte("% .2f", 60, sbSpeed),
+			decor.SpeedKibiByte("% .2f", 600, sbSpeed),
 		),
 	)
 

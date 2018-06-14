@@ -117,4 +117,4 @@ _Note:_ it is preferable to go get from github.com, rather than gopkg.in. See is
 
 #### [Bytes counters](examples/io/single/main.go)
 
-![byte counters](examples/gifs/EORqARXuqUTM8rSTgkiUy2IiD.svg)
+![byte counters](examples/gifs/hIpTa3A5rQz65ssiVuRJu87X6.svg)
