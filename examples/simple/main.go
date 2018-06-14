@@ -22,7 +22,7 @@ func main() {
 
 	for i := 0; i < numBars; i++ {
 		name := fmt.Sprintf("Bar#%d:", i)
-		startBlock := make(chan time.Time)
+		sbEta := make(chan time.Time)
 		bar := p.AddBar(int64(total),
 			mpb.PrependDecorators(
 				// display our name with one space on the right
@@ -34,7 +34,7 @@ func main() {
 				// replace ETA decorator with "done" message, OnComplete event
 				decor.OnComplete(
 					// ETA decorator with default eta age, and width reservation of 3
-					decor.ETA(decor.ET_STYLE_GO, 0, startBlock, decor.WC{W: 3}), "done",
+					decor.ETA(decor.ET_STYLE_GO, 0, sbEta, decor.WC{W: 3}), "done",
 				),
 			),
 		)
@@ -43,7 +43,7 @@ func main() {
 			defer wg.Done()
 			max := 100 * time.Millisecond
 			for i := 0; i < total; i++ {
-				startBlock <- time.Now()
+				sbEta <- time.Now()
 				time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
 				bar.Increment()
 			}
