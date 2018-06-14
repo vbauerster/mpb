@@ -43,7 +43,7 @@ func main() {
 	sbSpeed := make(chan time.Time)
 	bar := p.AddBar(size,
 		mpb.PrependDecorators(
-			decor.CountersKibiByte("% 6.1f / % 6.1f", decor.WC{W: 18}),
+			decor.CountersKibiByte("% 6.1f / % 6.1f"),
 		),
 		mpb.AppendDecorators(
 			decor.Name("["),
