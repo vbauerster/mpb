@@ -109,12 +109,12 @@ _Note:_ it is preferable to go get from github.com, rather than gopkg.in. See is
 
 #### [Dynamic total](examples/dynTotal/main.go)
 
-![dynamic total](examples/gifs/1LuTsBJUAm4yV6PpT5OJSmJYw.svg)
+![dynamic total](examples/gifs/tclYsR0wDvtdmdxUgalzRmzar.svg)
 
 #### [Complex example](examples/complex/main.go)
 
-![complex](examples/gifs/fln0CKeXIUGcvOQBA3vC6U4Pu.svg)
+![complex](examples/gifs/wHzf1M7sd7B3zVa2scBMnjqRf.svg)
 
-#### [Bytes counters](examples/io/multiple/main.go)
+#### [Bytes counters](examples/io/single/main.go)
 
-![byte counters](examples/gifs/ZsrT3r0ecrFwoarnplQz4UeL4.svg)
+![byte counters](examples/gifs/Gxew29H1aDUhAb0rJcMi8KHg1.svg)
