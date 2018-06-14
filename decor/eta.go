@@ -2,6 +2,7 @@ package decor
 
 import (
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/VividCortex/ewma"
@@ -60,12 +61,16 @@ func (s *ewmaETA) Decor(st *Statistics, widthAccumulator chan<- int, widthDistri
 		return s.onComplete.wc.FormatMsg(s.onComplete.msg, widthAccumulator, widthDistributor)
 	}
 
-	var str string
-	timeRemaining := time.Duration(st.Total-st.Current) * time.Duration(round(s.mAverage.Value()))
+	v := round(s.mAverage.Value())
+	if math.IsInf(v, 0) || math.IsNaN(v) {
+		v = .0
+	}
+	timeRemaining := time.Duration(st.Total-st.Current) * time.Duration(v)
 	hours := int64((timeRemaining / time.Hour) % 60)
 	minutes := int64((timeRemaining / time.Minute) % 60)
 	seconds := int64((timeRemaining / time.Second) % 60)
 
+	var str string
 	switch s.style {
 	case ET_STYLE_GO:
 		str = fmt.Sprint(time.Duration(timeRemaining.Seconds()) * time.Second)
