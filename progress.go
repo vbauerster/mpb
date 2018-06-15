@@ -93,7 +93,7 @@ func New(options ...ProgressOption) *Progress {
 // AddBar creates a new progress bar and adds to the container.
 func (p *Progress) AddBar(total int64, options ...BarOption) *Bar {
 	p.wg.Add(1)
-	result := make(chan *Bar, 1)
+	result := make(chan *Bar)
 	select {
 	case p.operateState <- func(s *pState) {
 		options = append(options, barWidth(s.width), barFormat(s.format))
