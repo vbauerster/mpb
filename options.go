@@ -2,7 +2,6 @@ package mpb
 
 import (
 	"io"
-	"io/ioutil"
 	"sync"
 	"time"
 	"unicode/utf8"
@@ -73,7 +72,7 @@ func WithShutdownNotifier(ch chan struct{}) ProgressOption {
 func WithOutput(w io.Writer) ProgressOption {
 	return func(s *pState) {
 		if w == nil {
-			w = ioutil.Discard
+			return
 		}
 		s.cw = cwriter.New(w)
 	}
@@ -83,7 +82,7 @@ func WithOutput(w io.Writer) ProgressOption {
 func WithDebugOutput(w io.Writer) ProgressOption {
 	return func(s *pState) {
 		if w == nil {
-			w = ioutil.Discard
+			return
 		}
 		s.debugOut = w
 	}
