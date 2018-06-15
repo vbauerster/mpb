@@ -28,13 +28,12 @@ func main() {
 			decor.Name(name, decor.WC{W: len(name) + 1, C: decor.DidentRight}),
 			// replace ETA decorator with "done" message, OnComplete event
 			decor.OnComplete(
-				// ETA decorator with default eta age, and width reservation of 4
-				decor.ETA(decor.ET_STYLE_GO, 0, sbEta, decor.WC{W: 4}), "done",
+				// ETA decorator with ewma age of 60, and width reservation of 4
+				decor.ETA(decor.ET_STYLE_GO, 60, sbEta, decor.WC{W: 4}), "done",
 			),
 		),
 		mpb.AppendDecorators(decor.Percentage()),
 	)
-
 	// simulating some work
 	max := 100 * time.Millisecond
 	for i := 0; i < total; i++ {

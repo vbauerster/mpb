@@ -47,13 +47,12 @@ _Note:_ it is preferable to go get from github.com, rather than gopkg.in. See is
             decor.Name(name, decor.WC{W: len(name) + 1, C: decor.DidentRight}),
             // replace ETA decorator with "done" message, OnComplete event
             decor.OnComplete(
-                // ETA decorator with default eta age, and width reservation of 4
-                decor.ETA(decor.ET_STYLE_GO, 0, sbEta, decor.WC{W: 4}), "done",
+                // ETA decorator with ewma age of 60, and width reservation of 4
+                decor.ETA(decor.ET_STYLE_GO, 60, sbEta, decor.WC{W: 4}), "done",
             ),
         ),
         mpb.AppendDecorators(decor.Percentage()),
     )
-
     // simulating some work
     max := 100 * time.Millisecond
     for i := 0; i < total; i++ {
@@ -79,16 +78,16 @@ _Note:_ it is preferable to go get from github.com, rather than gopkg.in. See is
         sbEta := make(chan time.Time)
         bar := p.AddBar(int64(total),
             mpb.PrependDecorators(
-                // display our name with one space on the right
-                decor.Name(name, decor.WC{W: len(name) + 1, C: decor.DidentRight}),
-                // decor.DSyncWidth bit enables same column width synchronization
-                decor.Percentage(decor.WCSyncWidth),
+                // simple name decorator
+                decor.Name(name),
+                // decor.DSyncWidth bit enables column width synchronization
+                decor.Percentage(decor.WCSyncSpace),
             ),
             mpb.AppendDecorators(
                 // replace ETA decorator with "done" message, OnComplete event
                 decor.OnComplete(
-                    // ETA decorator with default eta age, and width reservation of 3
-                    decor.ETA(decor.ET_STYLE_GO, 0, sbEta, decor.WC{W: 3}), "done",
+                    // ETA decorator with ewma age of 60
+                    decor.ETA(decor.ET_STYLE_GO, 60, sbEta), "done",
                 ),
             ),
         )
