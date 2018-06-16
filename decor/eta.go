@@ -66,15 +66,15 @@ func (s *ewmaETA) Decor(st *Statistics, widthAccumulator chan<- int, widthDistri
 	if math.IsInf(v, 0) || math.IsNaN(v) {
 		v = .0
 	}
-	timeRemaining := time.Duration(st.Total-st.Current) * time.Duration(v)
-	hours := int64((timeRemaining / time.Hour) % 60)
-	minutes := int64((timeRemaining / time.Minute) % 60)
-	seconds := int64((timeRemaining / time.Second) % 60)
+	remaining := time.Duration((st.Total - st.Current) * int64(v))
+	hours := int64((remaining / time.Hour) % 60)
+	minutes := int64((remaining / time.Minute) % 60)
+	seconds := int64((remaining / time.Second) % 60)
 
 	var str string
 	switch s.style {
 	case ET_STYLE_GO:
-		str = fmt.Sprint(time.Duration(timeRemaining.Seconds()) * time.Second)
+		str = fmt.Sprint(time.Duration(remaining.Seconds()) * time.Second)
 	case ET_STYLE_HHMMSS:
 		str = fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
 	case ET_STYLE_HHMM:
