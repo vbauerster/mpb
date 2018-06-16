@@ -17,16 +17,12 @@ func main() {
 
 	// initialize bar with dynamic total and initial total guess = 80
 	bar := p.AddBar(80,
-		// indicate that total is dynamic
+		// indicate that total is dynamic, could be omitted if total set to 0
 		mpb.BarDynamicTotal(),
 		// trigger total auto increment by 1, when 18 % remains till bar completion
 		mpb.BarAutoIncrTotal(18, 1),
-		mpb.PrependDecorators(
-			decor.CountersNoUnit("%d / %d", decor.WC{W: 12}),
-		),
-		mpb.AppendDecorators(
-			decor.Percentage(),
-		),
+		mpb.PrependDecorators(decor.CountersNoUnit("%d / %d")),
+		mpb.AppendDecorators(decor.Percentage()),
 	)
 
 	totalUpd := make(chan int64)
