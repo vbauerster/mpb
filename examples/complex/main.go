@@ -44,7 +44,7 @@ func main() {
 		doneWg.Add(1)
 		i := i
 		go func() {
-			startBlock := make(chan time.Time)
+			sbEta := make(chan time.Time)
 			task := fmt.Sprintf("Task#%02d:", i)
 			job := "installing"
 			// preparing delayed bars
@@ -54,7 +54,7 @@ func main() {
 				mpb.PrependDecorators(
 					decor.Name(task, decor.WC{W: len(task) + 1, C: decor.DidentRight}),
 					decor.OnComplete(decor.Name(job, decor.WCSyncSpaceR), "done!", decor.WCSyncSpaceR),
-					decor.OnComplete(decor.ETA(decor.ET_STYLE_MMSS, 60, startBlock, decor.WCSyncWidth), "", decor.WCSyncSpace),
+					decor.OnComplete(decor.ETA(decor.ET_STYLE_MMSS, 60, sbEta, decor.WCSyncWidth), "", decor.WCSyncSpace),
 				),
 				mpb.AppendDecorators(
 					decor.OnComplete(decor.Percentage(decor.WC{W: 5}), ""),
@@ -62,19 +62,19 @@ func main() {
 			)
 			// waiting for download to complete, before starting install job
 			downloadWgg[i].Wait()
-			go newTask(doneWg, b, numBars-i, startBlock)
+			go newTask(doneWg, b, numBars-i, sbEta)
 		}()
 	}
 
 	p.Wait()
 }
 
-func newTask(wg *sync.WaitGroup, b *mpb.Bar, incrBy int, startBlock chan<- time.Time) {
+func newTask(wg *sync.WaitGroup, b *mpb.Bar, incrBy int, sbCh chan<- time.Time) {
 	defer wg.Done()
 	max := 100 * time.Millisecond
 	for !b.Completed() {
-		if startBlock != nil {
-			startBlock <- time.Now()
+		if sbCh != nil {
+			sbCh <- time.Now()
 		}
 		time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
 		b.IncrBy(incrBy)

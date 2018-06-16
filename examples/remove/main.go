@@ -29,22 +29,20 @@ func main() {
 			bOption = mpb.BarRemoveOnComplete()
 		}
 
-		startBlock := make(chan time.Time)
+		sbEta := make(chan time.Time)
 		b := p.AddBar(int64(total), mpb.BarID(i),
 			bOption,
 			mpb.PrependDecorators(
 				decor.Name(name),
-				decor.ETA(decor.ET_STYLE_GO, 0, startBlock, decor.WCSyncSpace),
+				decor.ETA(decor.ET_STYLE_GO, 60, sbEta, decor.WCSyncSpace),
 			),
-			mpb.AppendDecorators(
-				decor.Percentage(),
-			),
+			mpb.AppendDecorators(decor.Percentage()),
 		)
 		go func() {
 			defer wg.Done()
 			max := 100 * time.Millisecond
 			for i := 0; i < total; i++ {
-				startBlock <- time.Now()
+				sbEta <- time.Now()
 				if b.ID() == 2 && i == 42 {
 					p.Abort(b)
 					return

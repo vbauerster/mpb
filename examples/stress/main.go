@@ -27,11 +27,11 @@ func main() {
 	for i := 0; i < totalBars; i++ {
 		name := fmt.Sprintf("Bar#%02d: ", i)
 		total := rand.Intn(320) + 10
-		startBlock := make(chan time.Time)
+		sbEta := make(chan time.Time)
 		bar := p.AddBar(int64(total),
 			mpb.PrependDecorators(
 				decor.Name(name),
-				decor.ETA(decor.ET_STYLE_GO, 60, startBlock, decor.WCSyncSpace),
+				decor.ETA(decor.ET_STYLE_GO, 60, sbEta, decor.WCSyncSpace),
 			),
 			mpb.AppendDecorators(
 				decor.Percentage(decor.WC{W: 5}),
@@ -42,7 +42,7 @@ func main() {
 			defer wg.Done()
 			max := 100 * time.Millisecond
 			for !bar.Completed() {
-				startBlock <- time.Now()
+				sbEta <- time.Now()
 				time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
 				bar.Increment()
 			}
