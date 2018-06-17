@@ -16,14 +16,23 @@ import (
 //	`age` is the previous N samples to average over.
 //	 If zero value provided, it defaults to 30.
 //
-//	`sbCh` is a start block receive channel. User suppose to send time.Now()
+//	`sb` is a start block receive channel. User suppose to send time.Now()
 //	 to this channel on each iteration of a start block, right before actual job.
 //	 The channel will be auto closed on bar shutdown event, so there is no need
 //	 to close from user side.
 //
 //	`wcc` optional WC config
-func ETA(style int, age float64, sbCh chan time.Time, wcc ...WC) Decorator {
-	if sbCh == nil {
+func ETA(style int, age float64, sb chan time.Time, wcc ...WC) Decorator {
+	return MovingAverageETA(style, ewma.NewMovingAverage(age), sb, wcc...)
+}
+
+// MovingAverageETA returns ETA decorator, which relies on MovingAverage implementation to calculate average.
+// Default ETA decorator relies on ewma implementation. However you're free to provide your own implementation
+// or use alternative one, which is provided by decor package:
+//
+//	decor.MovingAverageETA(decor.ET_STYLE_GO, decor.NewMedianMovingAverage(), sb)
+func MovingAverageETA(style int, average MovingAverage, sb chan time.Time, wcc ...WC) Decorator {
+	if sb == nil {
 		panic("start block channel must not be nil")
 	}
 	var wc WC
@@ -31,24 +40,21 @@ func ETA(style int, age float64, sbCh chan time.Time, wcc ...WC) Decorator {
 		wc = widthConf
 	}
 	wc.BuildFormat()
-	if age == .0 {
-		age = ewma.AVG_METRIC_AGE
-	}
-	d := &ewmaETA{
+	d := &movingAverageETA{
 		style:      style,
 		wc:         wc,
-		mAverage:   ewma.NewMovingAverage(age),
-		sbReceiver: sbCh,
+		average:    average,
+		sbReceiver: sb,
 		sbStreamer: make(chan time.Time),
 	}
 	go d.serve()
 	return d
 }
 
-type ewmaETA struct {
+type movingAverageETA struct {
 	style      int
 	wc         WC
-	mAverage   ewma.MovingAverage
+	average    ewma.MovingAverage
 	sbReceiver chan time.Time
 	sbStreamer chan time.Time
 	onComplete *struct {
@@ -57,12 +63,12 @@ type ewmaETA struct {
 	}
 }
 
-func (s *ewmaETA) Decor(st *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string {
+func (s *movingAverageETA) Decor(st *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string {
 	if st.Completed && s.onComplete != nil {
 		return s.onComplete.wc.FormatMsg(s.onComplete.msg, widthAccumulator, widthDistributor)
 	}
 
-	v := internal.Round(s.mAverage.Value())
+	v := internal.Round(s.average.Value())
 	if math.IsInf(v, 0) || math.IsNaN(v) {
 		v = .0
 	}
@@ -86,14 +92,14 @@ func (s *ewmaETA) Decor(st *Statistics, widthAccumulator chan<- int, widthDistri
 	return s.wc.FormatMsg(str, widthAccumulator, widthDistributor)
 }
 
-func (s *ewmaETA) NextAmount(n int) {
+func (s *movingAverageETA) NextAmount(n int) {
 	sb := <-s.sbStreamer
 	lastBlockTime := time.Since(sb)
 	lastItemEstimate := float64(lastBlockTime) / float64(n)
-	s.mAverage.Add(lastItemEstimate)
+	s.average.Add(lastItemEstimate)
 }
 
-func (s *ewmaETA) OnCompleteMessage(msg string, wcc ...WC) {
+func (s *movingAverageETA) OnCompleteMessage(msg string, wcc ...WC) {
 	var wc WC
 	for _, widthConf := range wcc {
 		wc = widthConf
@@ -105,11 +111,11 @@ func (s *ewmaETA) OnCompleteMessage(msg string, wcc ...WC) {
 	}{msg, wc}
 }
 
-func (s *ewmaETA) Shutdown() {
+func (s *movingAverageETA) Shutdown() {
 	close(s.sbReceiver)
 }
 
-func (s *ewmaETA) serve() {
+func (s *movingAverageETA) serve() {
 	for now := range s.sbReceiver {
 		s.sbStreamer <- now
 	}

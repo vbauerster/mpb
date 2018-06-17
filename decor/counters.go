@@ -24,8 +24,8 @@ const (
 
 const (
 	_ = iota
-	unitKiB
-	unitKB
+	UnitKiB
+	UnitKB
 )
 
 type CounterKiB int64
@@ -155,7 +155,7 @@ func CountersNoUnit(pairFormat string, wcc ...WC) Decorator {
 //
 //	"%.1f / %.1f" = "1.0MiB / 12.0MiB" or "% .1f / % .1f" = "1.0 MiB / 12.0 MiB"
 func CountersKibiByte(pairFormat string, wcc ...WC) Decorator {
-	return counters(unitKiB, pairFormat, wcc...)
+	return counters(UnitKiB, pairFormat, wcc...)
 }
 
 // CountersKiloByte returns human friendly byte counters decorator, where counters unit is multiple by 1000.
@@ -168,7 +168,7 @@ func CountersKibiByte(pairFormat string, wcc ...WC) Decorator {
 //
 //	"%.1f / %.1f" = "1.0MB / 12.0MB" or "% .1f / % .1f" = "1.0 MB / 12.0 MB"
 func CountersKiloByte(pairFormat string, wcc ...WC) Decorator {
-	return counters(unitKB, pairFormat, wcc...)
+	return counters(UnitKB, pairFormat, wcc...)
 }
 
 func counters(unit int, pairFormat string, wcc ...WC) Decorator {
@@ -180,9 +180,9 @@ func counters(unit int, pairFormat string, wcc ...WC) Decorator {
 	return DecoratorFunc(func(s *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string {
 		var str string
 		switch unit {
-		case unitKiB:
+		case UnitKiB:
 			str = fmt.Sprintf(pairFormat, CounterKiB(s.Current), CounterKiB(s.Total))
-		case unitKB:
+		case UnitKB:
 			str = fmt.Sprintf(pairFormat, CounterKB(s.Current), CounterKB(s.Total))
 		default:
 			str = fmt.Sprintf(pairFormat, s.Current, s.Total)

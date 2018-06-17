@@ -50,9 +50,9 @@ func main() {
 			decor.CountersKibiByte("% 6.1f / % 6.1f"),
 		),
 		mpb.AppendDecorators(
-			decor.ETA(decor.ET_STYLE_MMSS, 600, sbEta),
+			decor.MovingAverageETA(decor.ET_STYLE_MMSS, decor.NewMedianEwma(300), sbEta),
 			decor.Name(" ] "),
-			decor.SpeedKibiByte("% .2f", 600, sbSpeed),
+			decor.MovingAverageSpeed(decor.UnitKiB, "% .2f", decor.NewMedianEwma(300), sbSpeed),
 		),
 	)
 

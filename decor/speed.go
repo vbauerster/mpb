@@ -125,7 +125,7 @@ func (s SpeedKB) Format(st fmt.State, verb rune) {
 //	`age` is the previous N samples to average over.
 //	 If zero value provided, it defaults to 30.
 //
-//	`sbCh` is a start block receive channel. User suppose to send time.Now()
+//	`sb` is a start block receive channel. User suppose to send time.Now()
 //	 to this channel on each iteration of a start block, right before actual job.
 //	 The channel will be auto closed on bar shutdown event, so there is no need
 //	 to close from user side.
@@ -135,8 +135,8 @@ func (s SpeedKB) Format(st fmt.State, verb rune) {
 // unitFormat example:
 //
 //	"%.1f" = "1.0" or "% .1f" = "1.0"
-func SpeedNoUnit(unitFormat string, age float64, sbCh chan time.Time, wcc ...WC) Decorator {
-	return speed(0, unitFormat, age, sbCh, wcc...)
+func SpeedNoUnit(unitFormat string, age float64, sb chan time.Time, wcc ...WC) Decorator {
+	return MovingAverageSpeed(0, unitFormat, ewma.NewMovingAverage(age), sb, wcc...)
 }
 
 // SpeedKibiByte returns human friendly I/O operation speed decorator,
@@ -146,7 +146,7 @@ func SpeedNoUnit(unitFormat string, age float64, sbCh chan time.Time, wcc ...WC)
 //	`age` is the previous N samples to average over.
 //	 If zero value provided, it defaults to 30.
 //
-//	`sbCh` is a start block receive channel. User suppose to send time.Now()
+//	`sb` is a start block receive channel. User suppose to send time.Now()
 //	 to this channel on each iteration of a start block, right before actual job.
 //	 The channel will be auto closed on bar shutdown event, so there is no need
 //	 to close from user side.
@@ -156,8 +156,8 @@ func SpeedNoUnit(unitFormat string, age float64, sbCh chan time.Time, wcc ...WC)
 // unitFormat example:
 //
 //	"%.1f" = "1.0MiB/s" or "% .1f" = "1.0 MiB/s"
-func SpeedKibiByte(unitFormat string, age float64, sbCh chan time.Time, wcc ...WC) Decorator {
-	return speed(unitKiB, unitFormat, age, sbCh, wcc...)
+func SpeedKibiByte(unitFormat string, age float64, sb chan time.Time, wcc ...WC) Decorator {
+	return MovingAverageSpeed(UnitKiB, unitFormat, ewma.NewMovingAverage(age), sb, wcc...)
 }
 
 // SpeedKiloByte returns human friendly I/O operation speed decorator,
@@ -167,7 +167,7 @@ func SpeedKibiByte(unitFormat string, age float64, sbCh chan time.Time, wcc ...W
 //	`age` is the previous N samples to average over.
 //	 If zero value provided, it defaults to 30.
 //
-//	`sbCh` is a start block receive channel. User suppose to send time.Now()
+//	`sb` is a start block receive channel. User suppose to send time.Now()
 //	 to this channel on each iteration of a start block, right before actual job.
 //	 The channel will be auto closed on bar shutdown event, so there is no need
 //	 to close from user side.
@@ -177,12 +177,17 @@ func SpeedKibiByte(unitFormat string, age float64, sbCh chan time.Time, wcc ...W
 // unitFormat example:
 //
 //	"%.1f" = "1.0MB/s" or "% .1f" = "1.0 MB/s"
-func SpeedKiloByte(unitFormat string, age float64, sbCh chan time.Time, wcc ...WC) Decorator {
-	return speed(unitKB, unitFormat, age, sbCh, wcc...)
+func SpeedKiloByte(unitFormat string, age float64, sb chan time.Time, wcc ...WC) Decorator {
+	return MovingAverageSpeed(UnitKB, unitFormat, ewma.NewMovingAverage(age), sb, wcc...)
 }
 
-func speed(unit int, unitFormat string, age float64, sbCh chan time.Time, wcc ...WC) Decorator {
-	if sbCh == nil {
+// MovingAverageSpeed returns Speed decorator, which relies on MovingAverage implementation to calculate average.
+// Default Speed decorator relies on ewma implementation. However you're free to provide your own implementation
+// or use alternative one, which is provided by decor package:
+//
+//	decor.MovingAverageSpeed(decor.UnitKiB, "% .2f", decor.NewMedianMovingAverage(), sb)
+func MovingAverageSpeed(unit int, unitFormat string, average MovingAverage, sb chan time.Time, wcc ...WC) Decorator {
+	if sb == nil {
 		panic("start block channel must not be nil")
 	}
 	var wc WC
@@ -190,26 +195,23 @@ func speed(unit int, unitFormat string, age float64, sbCh chan time.Time, wcc ..
 		wc = widthConf
 	}
 	wc.BuildFormat()
-	if age == .0 {
-		age = ewma.AVG_METRIC_AGE
-	}
-	d := &ewmaSpeed{
+	d := &movingAverageSpeed{
 		unit:       unit,
 		unitFormat: unitFormat,
 		wc:         wc,
-		mAverage:   ewma.NewMovingAverage(age),
-		sbReceiver: sbCh,
+		average:    average,
+		sbReceiver: sb,
 		sbStreamer: make(chan time.Time),
 	}
 	go d.serve()
 	return d
 }
 
-type ewmaSpeed struct {
+type movingAverageSpeed struct {
 	unit       int
 	unitFormat string
 	wc         WC
-	mAverage   ewma.MovingAverage
+	average    ewma.MovingAverage
 	sbReceiver chan time.Time
 	sbStreamer chan time.Time
 	onComplete *struct {
@@ -218,16 +220,16 @@ type ewmaSpeed struct {
 	}
 }
 
-func (s *ewmaSpeed) Decor(st *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string {
+func (s *movingAverageSpeed) Decor(st *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string {
 	if st.Completed && s.onComplete != nil {
 		return s.onComplete.wc.FormatMsg(s.onComplete.msg, widthAccumulator, widthDistributor)
 	}
 	var str string
-	speed := s.mAverage.Value()
+	speed := s.average.Value()
 	switch s.unit {
-	case unitKiB:
+	case UnitKiB:
 		str = fmt.Sprintf(s.unitFormat, SpeedKiB(speed))
-	case unitKB:
+	case UnitKB:
 		str = fmt.Sprintf(s.unitFormat, SpeedKB(speed))
 	default:
 		str = fmt.Sprintf(s.unitFormat, speed)
@@ -235,13 +237,13 @@ func (s *ewmaSpeed) Decor(st *Statistics, widthAccumulator chan<- int, widthDist
 	return s.wc.FormatMsg(str, widthAccumulator, widthDistributor)
 }
 
-func (s *ewmaSpeed) NextAmount(n int) {
+func (s *movingAverageSpeed) NextAmount(n int) {
 	sb := <-s.sbStreamer
 	speed := float64(n) / time.Since(sb).Seconds()
-	s.mAverage.Add(speed)
+	s.average.Add(speed)
 }
 
-func (s *ewmaSpeed) OnCompleteMessage(msg string, wcc ...WC) {
+func (s *movingAverageSpeed) OnCompleteMessage(msg string, wcc ...WC) {
 	var wc WC
 	for _, widthConf := range wcc {
 		wc = widthConf
@@ -253,11 +255,11 @@ func (s *ewmaSpeed) OnCompleteMessage(msg string, wcc ...WC) {
 	}{msg, wc}
 }
 
-func (s *ewmaSpeed) Shutdown() {
+func (s *movingAverageSpeed) Shutdown() {
 	close(s.sbReceiver)
 }
 
-func (s *ewmaSpeed) serve() {
+func (s *movingAverageSpeed) serve() {
 	for now := range s.sbReceiver {
 		s.sbStreamer <- now
 	}
