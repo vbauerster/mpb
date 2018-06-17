@@ -30,7 +30,7 @@ func ETA(style int, age float64, sb chan time.Time, wcc ...WC) Decorator {
 // Default ETA decorator relies on ewma implementation. However you're free to provide your own implementation
 // or use alternative one, which is provided by decor package:
 //
-//	decor.MovingAverageETA(decor.ET_STYLE_GO, decor.NewMedianMovingAverage(), sb)
+//	decor.MovingAverageETA(decor.ET_STYLE_GO, decor.NewMedian(), sb)
 func MovingAverageETA(style int, average MovingAverage, sb chan time.Time, wcc ...WC) Decorator {
 	if sb == nil {
 		panic("start block channel must not be nil")

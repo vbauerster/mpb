@@ -185,7 +185,7 @@ func SpeedKiloByte(unitFormat string, age float64, sb chan time.Time, wcc ...WC)
 // Default Speed decorator relies on ewma implementation. However you're free to provide your own implementation
 // or use alternative one, which is provided by decor package:
 //
-//	decor.MovingAverageSpeed(decor.UnitKiB, "% .2f", decor.NewMedianMovingAverage(), sb)
+//	decor.MovingAverageSpeed(decor.UnitKiB, "% .2f", decor.NewMedian(), sb)
 func MovingAverageSpeed(unit int, unitFormat string, average MovingAverage, sb chan time.Time, wcc ...WC) Decorator {
 	if sb == nil {
 		panic("start block channel must not be nil")
