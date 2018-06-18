@@ -60,13 +60,13 @@ func TestBarIncrWithReFill(t *testing.T) {
 
 	total := 100
 	till := 30
-	refillChar := '+'
+	refillRune := '+'
 
 	bar := p.AddBar(int64(total), BarTrim())
 
-	bar.ResumeFill(refillChar, int64(till))
+	bar.IncrBy(till, refillRune)
 
-	for i := 0; i < total; i++ {
+	for i := 0; i < total-till; i++ {
 		bar.Increment()
 		time.Sleep(10 * time.Millisecond)
 	}
@@ -74,7 +74,7 @@ func TestBarIncrWithReFill(t *testing.T) {
 	p.Wait()
 
 	wantBar := fmt.Sprintf("[%s%s]",
-		strings.Repeat(string(refillChar), till-1),
+		strings.Repeat(string(refillRune), till-1),
 		strings.Repeat("=", total-till-1))
 
 	if !strings.Contains(buf.String(), wantBar) {

@@ -152,18 +152,6 @@ func (b *Bar) ProxyReader(r io.Reader, sbChannels ...chan<- time.Time) *Reader {
 	return proxyReader
 }
 
-// ResumeFill fills bar with different r rune,
-// from 0 to till amount of progress.
-func (b *Bar) ResumeFill(r rune, till int64) {
-	if till < 1 {
-		return
-	}
-	select {
-	case b.operateState <- func(s *bState) { s.refill = &refill{r, till} }:
-	case <-b.done:
-	}
-}
-
 // NumOfAppenders returns current number of append decorators
 func (b *Bar) NumOfAppenders() int {
 	result := make(chan int)
@@ -235,8 +223,12 @@ func (b *Bar) Increment() {
 	b.IncrBy(1)
 }
 
-// IncrBy increments progress bar by amount of n
-func (b *Bar) IncrBy(n int) {
+// IncrBy increments progress bar
+//
+//	`n` amount to increment by
+//
+//	'rr' optional resume rune, if provided replaces bar's fill rune for amount of n
+func (b *Bar) IncrBy(n int, rr ...rune) {
 	select {
 	case b.operateState <- func(s *bState) {
 		s.current += int64(n)
@@ -248,6 +240,9 @@ func (b *Bar) IncrBy(n int) {
 		} else if s.current >= s.total {
 			s.current = s.total
 			s.toComplete = true
+		}
+		for _, r := range rr {
+			s.refill = &refill{r, int64(n)}
 		}
 		for _, ar := range s.amountReceivers {
 			ar.NextAmount(n)
