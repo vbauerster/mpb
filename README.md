@@ -48,7 +48,7 @@ _Note:_ it is preferable to go get from github.com, rather than gopkg.in. See is
             // replace ETA decorator with "done" message, OnComplete event
             decor.OnComplete(
                 // ETA decorator with ewma age of 60, and width reservation of 4
-                decor.ETA(decor.ET_STYLE_GO, 60, sbEta, decor.WC{W: 4}), "done",
+                decor.EwmaETA(decor.ET_STYLE_GO, 60, sbEta, decor.WC{W: 4}), "done",
             ),
         ),
         mpb.AppendDecorators(decor.Percentage()),
@@ -87,7 +87,7 @@ _Note:_ it is preferable to go get from github.com, rather than gopkg.in. See is
                 // replace ETA decorator with "done" message, OnComplete event
                 decor.OnComplete(
                     // ETA decorator with ewma age of 60
-                    decor.ETA(decor.ET_STYLE_GO, 60, sbEta), "done",
+                    decor.EwmaETA(decor.ET_STYLE_GO, 60, sbEta), "done",
                 ),
             ),
         )
