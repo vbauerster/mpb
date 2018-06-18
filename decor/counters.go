@@ -136,29 +136,24 @@ func (c CounterKB) Format(st fmt.State, verb rune) {
 	io.WriteString(st, res)
 }
 
-// CountersNoUnit returns raw counters decorator
-//
-//	`pairFormat` printf compatible verbs for current and total, like "%f" or "%d"
-//
-//	`wcc` optional WC config
+// CountersNoUnit is a wrapper around Counters with no unit param.
 func CountersNoUnit(pairFormat string, wcc ...WC) Decorator {
-	return counters(0, pairFormat, wcc...)
+	return Counters(0, pairFormat, wcc...)
 }
 
-// CountersKibiByte returns human friendly byte counters decorator, where counters unit is multiple by 1024.
-//
-//	`pairFormat` printf compatible verbs for current and total, like "%f" or "%d"
-//
-//	`wcc` optional WC config
-//
-// pairFormat example:
-//
-//	"%.1f / %.1f" = "1.0MiB / 12.0MiB" or "% .1f / % .1f" = "1.0 MiB / 12.0 MiB"
+// CountersKibiByte is a wrapper around Counters with predefined unit UnitKiB (bytes/1024).
 func CountersKibiByte(pairFormat string, wcc ...WC) Decorator {
-	return counters(UnitKiB, pairFormat, wcc...)
+	return Counters(UnitKiB, pairFormat, wcc...)
 }
 
-// CountersKiloByte returns human friendly byte counters decorator, where counters unit is multiple by 1000.
+// CountersKiloByte is a wrapper around Counters with predefined unit UnitKB (bytes/1000).
+func CountersKiloByte(pairFormat string, wcc ...WC) Decorator {
+	return Counters(UnitKB, pairFormat, wcc...)
+}
+
+// Counters decorator with dynamic unit measure adjustement
+//
+//	`unit` one of [0|UnitKiB|UnitKB] zero for no unit
 //
 //	`pairFormat` printf compatible verbs for current and total, like "%f" or "%d"
 //
@@ -167,11 +162,7 @@ func CountersKibiByte(pairFormat string, wcc ...WC) Decorator {
 // pairFormat example:
 //
 //	"%.1f / %.1f" = "1.0MB / 12.0MB" or "% .1f / % .1f" = "1.0 MB / 12.0 MB"
-func CountersKiloByte(pairFormat string, wcc ...WC) Decorator {
-	return counters(UnitKB, pairFormat, wcc...)
-}
-
-func counters(unit int, pairFormat string, wcc ...WC) Decorator {
+func Counters(unit int, pairFormat string, wcc ...WC) Decorator {
 	var wc WC
 	for _, widthConf := range wcc {
 		wc = widthConf

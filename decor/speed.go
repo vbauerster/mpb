@@ -118,74 +118,39 @@ func (s SpeedKB) Format(st fmt.State, verb rune) {
 	io.WriteString(st, res)
 }
 
-// SpeedNoUnit returns raw I/O operation speed decorator.
+// EwmaSpeed exponential-weighted-moving-average based speed decorator,
+// with dynamic unit measure adjustement.
+//
+//	`unit` one of [0|UnitKiB|UnitKB] zero for no unit
 //
 //	`unitFormat` printf compatible verb for value, like "%f" or "%d"
 //
-//	`age` is the previous N samples to average over.
-//	 If zero value provided, it defaults to 30.
+//	`average` MovingAverage implementation
 //
-//	`sb` is a start block receive channel. User suppose to send time.Now()
-//	 to this channel on each iteration of a start block, right before actual job.
-//	 The channel will be auto closed on bar shutdown event, so there is no need
-//	 to close from user side.
+//	`sb` is a start block receive channel. It's required by MovingAverage algorithm,
+//	 therefore result of time.Now() must be sent to this channel on each iteration
+//	 of a start block, right before the actual job. There is no need to close the channel,
+//	 as it will be closed automatically on bar completion event.
 //
 //	`wcc` optional WC config
-//
-// unitFormat example:
-//
-//	"%.1f" = "1.0" or "% .1f" = "1.0"
-func SpeedNoUnit(unitFormat string, age float64, sb chan time.Time, wcc ...WC) Decorator {
-	return MovingAverageSpeed(0, unitFormat, ewma.NewMovingAverage(age), sb, wcc...)
+func EwmaSpeed(unit int, unitFormat string, age float64, sb chan time.Time, wcc ...WC) Decorator {
+	return MovingAverageSpeed(unit, unitFormat, ewma.NewMovingAverage(age), sb, wcc...)
 }
 
-// SpeedKibiByte returns human friendly I/O operation speed decorator,
+// MovingAverageSpeed decorator relies on MovingAverage implementation to calculate its average.
+//
+//	`unit` one of [0|UnitKiB|UnitKB] zero for no unit
 //
 //	`unitFormat` printf compatible verb for value, like "%f" or "%d"
 //
-//	`age` is the previous N samples to average over.
-//	 If zero value provided, it defaults to 30.
+//	`average` MovingAverage implementation
 //
-//	`sb` is a start block receive channel. User suppose to send time.Now()
-//	 to this channel on each iteration of a start block, right before actual job.
-//	 The channel will be auto closed on bar shutdown event, so there is no need
-//	 to close from user side.
-//
-//	`wcc` optional WC config
-//
-// unitFormat example:
-//
-//	"%.1f" = "1.0MiB/s" or "% .1f" = "1.0 MiB/s"
-func SpeedKibiByte(unitFormat string, age float64, sb chan time.Time, wcc ...WC) Decorator {
-	return MovingAverageSpeed(UnitKiB, unitFormat, ewma.NewMovingAverage(age), sb, wcc...)
-}
-
-// SpeedKiloByte returns human friendly I/O operation speed decorator,
-//
-//	`unitFormat` printf compatible verb for value, like "%f" or "%d"
-//
-//	`age` is the previous N samples to average over.
-//	 If zero value provided, it defaults to 30.
-//
-//	`sb` is a start block receive channel. User suppose to send time.Now()
-//	 to this channel on each iteration of a start block, right before actual job.
-//	 The channel will be auto closed on bar shutdown event, so there is no need
-//	 to close from user side.
+//	`sb` is a start block receive channel. It's required by MovingAverage algorithm,
+//	 therefore result of time.Now() must be sent to this channel on each iteration
+//	 of a start block, right before the actual job. There is no need to close the channel,
+//	 as it will be closed automatically on bar completion event.
 //
 //	`wcc` optional WC config
-//
-// unitFormat example:
-//
-//	"%.1f" = "1.0MB/s" or "% .1f" = "1.0 MB/s"
-func SpeedKiloByte(unitFormat string, age float64, sb chan time.Time, wcc ...WC) Decorator {
-	return MovingAverageSpeed(UnitKB, unitFormat, ewma.NewMovingAverage(age), sb, wcc...)
-}
-
-// MovingAverageSpeed returns Speed decorator, which relies on MovingAverage implementation to calculate average.
-// Default Speed decorator relies on ewma implementation. However you're free to provide your own implementation
-// or use alternative one, which is provided by decor package:
-//
-//	decor.MovingAverageSpeed(decor.UnitKiB, "% .2f", decor.NewMedian(), sb)
 func MovingAverageSpeed(unit int, unitFormat string, average MovingAverage, sb chan time.Time, wcc ...WC) Decorator {
 	if sb == nil {
 		panic("start block channel must not be nil")
@@ -263,4 +228,35 @@ func (s *movingAverageSpeed) serve() {
 	for now := range s.sbReceiver {
 		s.sbStreamer <- now
 	}
+}
+
+// TotalAverageSpeed decorator with dynamic unit measure adjustement.
+//
+//	`unit` one of [0|UnitKiB|UnitKB] zero for no unit
+//
+//	`unitFormat` printf compatible verb for value, like "%f" or "%d"
+//
+//	`wcc` optional WC config
+func TotalAverageSpeed(unit int, unitFormat string, wcc ...WC) Decorator {
+	var wc WC
+	for _, widthConf := range wcc {
+		wc = widthConf
+	}
+	wc.BuildFormat()
+	startTime := time.Now()
+	return DecoratorFunc(func(st *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string {
+		var str string
+		timeElapsed := time.Since(startTime)
+		speed := float64(st.Current) / timeElapsed.Seconds()
+
+		switch unit {
+		case UnitKiB:
+			str = fmt.Sprintf(unitFormat, SpeedKiB(speed))
+		case UnitKB:
+			str = fmt.Sprintf(unitFormat, SpeedKB(speed))
+		default:
+			str = fmt.Sprintf(unitFormat, speed)
+		}
+		return wc.FormatMsg(str, widthAccumulator, widthDistributor)
+	})
 }
