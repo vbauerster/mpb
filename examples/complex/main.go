@@ -54,7 +54,9 @@ func main() {
 				mpb.PrependDecorators(
 					decor.Name(task, decor.WC{W: len(task) + 1, C: decor.DidentRight}),
 					decor.OnComplete(decor.Name(job, decor.WCSyncSpaceR), "done!", decor.WCSyncSpaceR),
-					decor.OnComplete(decor.ETA(decor.ET_STYLE_MMSS, 60, sbEta, decor.WCSyncWidth), "", decor.WCSyncSpace),
+					decor.OnComplete(
+						decor.EwmaETA(decor.ET_STYLE_MMSS, 60, sbEta, decor.WCSyncWidth), "", decor.WCSyncSpace,
+					),
 				),
 				mpb.AppendDecorators(
 					decor.OnComplete(decor.Percentage(decor.WC{W: 5}), ""),

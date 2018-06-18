@@ -33,7 +33,7 @@ func main() {
 				decor.CountersNoUnit("%d / %d", decor.WCSyncSpace),
 			),
 			mpb.AppendDecorators(
-				decor.ETA(decor.ET_STYLE_GO, 60, sbEta, decor.WC{W: 3}),
+				decor.EwmaETA(decor.ET_STYLE_GO, 60, sbEta, decor.WC{W: 3}),
 			),
 		)
 		go func() {

@@ -44,20 +44,19 @@ func main() {
 	)
 
 	sbEta := make(chan time.Time)
-	sbSpeed := make(chan time.Time)
 	bar := p.AddBar(size,
 		mpb.PrependDecorators(
 			decor.CountersKibiByte("% 6.1f / % 6.1f"),
 		),
 		mpb.AppendDecorators(
-			decor.MovingAverageETA(decor.ET_STYLE_MMSS, decor.NewMedianEwma(300), sbEta),
+			decor.EwmaETA(decor.ET_STYLE_MMSS, 2048, sbEta),
 			decor.Name(" ] "),
-			decor.MovingAverageSpeed(decor.UnitKiB, "% .2f", decor.NewMedianEwma(300), sbSpeed),
+			decor.TotalAverageSpeed(decor.UnitKiB, "% .2f"),
 		),
 	)
 
 	// create proxy reader
-	reader := bar.ProxyReader(resp.Body, sbEta, sbSpeed)
+	reader := bar.ProxyReader(resp.Body, sbEta)
 
 	// and copy from reader, ignoring errors
 	io.Copy(dest, reader)

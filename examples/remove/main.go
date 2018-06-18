@@ -34,7 +34,7 @@ func main() {
 			bOption,
 			mpb.PrependDecorators(
 				decor.Name(name),
-				decor.ETA(decor.ET_STYLE_GO, 60, sbEta, decor.WCSyncSpace),
+				decor.EwmaETA(decor.ET_STYLE_GO, 60, sbEta, decor.WCSyncSpace),
 			),
 			mpb.AppendDecorators(decor.Percentage()),
 		)
