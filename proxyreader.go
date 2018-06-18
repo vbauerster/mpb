@@ -13,9 +13,13 @@ type Reader struct {
 }
 
 func (r *Reader) Read(p []byte) (int, error) {
-	now := time.Now()
-	for _, ch := range r.sbChannels {
-		ch <- now
+	select {
+	case <-r.bar.done:
+	default:
+		now := time.Now()
+		for _, ch := range r.sbChannels {
+			ch <- now
+		}
 	}
 	n, err := r.Reader.Read(p)
 	r.bar.IncrBy(n)
