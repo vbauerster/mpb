@@ -12,14 +12,14 @@
  Don't:
 
 	 p := mpb.New()
-	 eta := decor.ETA(decor.ET_STYLE_GO, 0, startBlock)
-	 p.AddBar(100, mpb.AppendDecorators(eta))
-	 p.AddBar(100, mpb.AppendDecorators(eta))
+	 name := decor.Name("bar")
+	 p.AddBar(100, mpb.AppendDecorators(name))
+	 p.AddBar(100, mpb.AppendDecorators(name))
 
  Do:
 
 	p := mpb.New()
-	p.AddBar(100, mpb.AppendDecorators(decor.ETA(decor.ET_STYLE_GO, 0, startBlock)))
-	p.AddBar(100, mpb.AppendDecorators(decor.ETA(decor.ET_STYLE_GO, 0, startBlock)))
+	p.AddBar(100, mpb.AppendDecorators(decor.Name("bar1")))
+	p.AddBar(100, mpb.AppendDecorators(decor.Name("bar2")))
 */
 package decor
