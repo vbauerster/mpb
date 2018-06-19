@@ -218,17 +218,21 @@ func (b *Bar) SetTotal(total int64, final bool) {
 	}
 }
 
-// Increment is a shorthand for b.IncrBy(1)
+// RefillBy fills bar with different r rune.
+func (b *Bar) RefillBy(n int, r rune) {
+	b.operateState <- func(s *bState) {
+		s.refill = &refill{r, int64(n)}
+	}
+	b.IncrBy(n)
+}
+
+// Increment is a shorthand for b.IncrBy(1).
 func (b *Bar) Increment() {
 	b.IncrBy(1)
 }
 
-// IncrBy increments progress bar
-//
-//	`n` amount to increment by
-//
-//	'rr' optional resume rune, if provided replaces bar's fill rune for amount of n
-func (b *Bar) IncrBy(n int, rr ...rune) {
+// IncrBy increments progress bar by amount of n.
+func (b *Bar) IncrBy(n int) {
 	select {
 	case b.operateState <- func(s *bState) {
 		s.current += int64(n)
@@ -241,9 +245,6 @@ func (b *Bar) IncrBy(n int, rr ...rune) {
 			s.current = s.total
 			s.toComplete = true
 		}
-		for _, r := range rr {
-			s.refill = &refill{r, int64(n)}
-		}
 		for _, ar := range s.amountReceivers {
 			ar.NextAmount(n)
 		}
@@ -252,7 +253,7 @@ func (b *Bar) IncrBy(n int, rr ...rune) {
 	}
 }
 
-// Completed reports whether the bar is in completed state
+// Completed reports whether the bar is in completed state.
 func (b *Bar) Completed() bool {
 	result := make(chan bool)
 	b.operateState <- func(s *bState) { result <- s.toComplete }
