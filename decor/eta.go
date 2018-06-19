@@ -76,7 +76,7 @@ func (s *movingAverageETA) Decor(st *Statistics, widthAccumulator chan<- int, wi
 
 	v := internal.Round(s.average.Value())
 	if math.IsInf(v, 0) || math.IsNaN(v) {
-		v = .0
+		v = 0
 	}
 	remaining := time.Duration((st.Total - st.Current) * int64(v))
 	hours := int64((remaining / time.Hour) % 60)
@@ -142,10 +142,9 @@ func AverageETA(style int, wcc ...WC) Decorator {
 	return DecoratorFunc(func(st *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string {
 		var str string
 		timeElapsed := time.Since(startTime)
-
 		v := internal.Round(float64(timeElapsed) / float64(st.Current))
 		if math.IsInf(v, 0) || math.IsNaN(v) {
-			v = .0
+			v = 0
 		}
 		remaining := time.Duration((st.Total - st.Current) * int64(v))
 		hours := int64((remaining / time.Hour) % 60)
