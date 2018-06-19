@@ -133,6 +133,10 @@ func (s SpeedKB) Format(st fmt.State, verb rune) {
 //	 as it will be closed automatically on bar completion event.
 //
 //	`wcc` optional WC config
+//
+// unitFormat example if UnitKiB choosen:
+//
+//	"%.1f" = "1.0MiB/s" or "% .1f" = "1.0 MiB/s"
 func EwmaSpeed(unit int, unitFormat string, age float64, sb chan time.Time, wcc ...WC) Decorator {
 	return MovingAverageSpeed(unit, unitFormat, ewma.NewMovingAverage(age), sb, wcc...)
 }
@@ -237,6 +241,10 @@ func (s *movingAverageSpeed) serve() {
 //	`unitFormat` printf compatible verb for value, like "%f" or "%d"
 //
 //	`wcc` optional WC config
+//
+// unitFormat example if UnitKiB choosen:
+//
+//	"%.1f" = "1.0MiB/s" or "% .1f" = "1.0 MiB/s"
 func AverageSpeed(unit int, unitFormat string, wcc ...WC) Decorator {
 	var wc WC
 	for _, widthConf := range wcc {
