@@ -66,8 +66,8 @@ func download(wg *sync.WaitGroup, p *mpb.Progress, name, url string, n int) {
 			decor.CountersKibiByte("%6.1f / %6.1f", decor.WCSyncWidth),
 		),
 		mpb.AppendDecorators(
-			decor.EwmaETA(decor.ET_STYLE_HHMMSS, 2048, sbEta, decor.WCSyncWidth),
-			decor.TotalAverageSpeed(decor.UnitKiB, "% .2f"),
+			decor.EwmaETA(decor.ET_STYLE_HHMMSS, 1024*4, sbEta, decor.WCSyncWidth),
+			decor.AverageSpeed(decor.UnitKiB, "% .2f"),
 		),
 	)
 

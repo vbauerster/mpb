@@ -49,9 +49,9 @@ func main() {
 			decor.CountersKibiByte("% 6.1f / % 6.1f"),
 		),
 		mpb.AppendDecorators(
-			decor.EwmaETA(decor.ET_STYLE_MMSS, 2048, sbEta),
+			decor.EwmaETA(decor.ET_STYLE_MMSS, 1024*8, sbEta),
 			decor.Name(" ] "),
-			decor.TotalAverageSpeed(decor.UnitKiB, "% .2f"),
+			decor.AverageSpeed(decor.UnitKiB, "% .2f"),
 		),
 	)
 
