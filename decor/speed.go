@@ -230,14 +230,14 @@ func (s *movingAverageSpeed) serve() {
 	}
 }
 
-// TotalAverageSpeed decorator with dynamic unit measure adjustement.
+// AverageSpeed decorator with dynamic unit measure adjustement.
 //
 //	`unit` one of [0|UnitKiB|UnitKB] zero for no unit
 //
 //	`unitFormat` printf compatible verb for value, like "%f" or "%d"
 //
 //	`wcc` optional WC config
-func TotalAverageSpeed(unit int, unitFormat string, wcc ...WC) Decorator {
+func AverageSpeed(unit int, unitFormat string, wcc ...WC) Decorator {
 	var wc WC
 	for _, widthConf := range wcc {
 		wc = widthConf

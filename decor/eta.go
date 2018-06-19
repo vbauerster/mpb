@@ -127,12 +127,12 @@ func (s *movingAverageETA) serve() {
 	}
 }
 
-// TotalAverageETA decorator.
+// AverageETA decorator.
 //
 //	`style` one of [ET_STYLE_GO|ET_STYLE_HHMMSS|ET_STYLE_HHMM|ET_STYLE_MMSS]
 //
 //	`wcc` optional WC config
-func TotalAverageETA(style int, wcc ...WC) Decorator {
+func AverageETA(style int, wcc ...WC) Decorator {
 	var wc WC
 	for _, widthConf := range wcc {
 		wc = widthConf
