@@ -151,7 +151,7 @@ func CountersKiloByte(pairFormat string, wcc ...WC) Decorator {
 	return Counters(UnitKB, pairFormat, wcc...)
 }
 
-// Counters decorator with dynamic unit measure adjustement
+// Counters decorator with dynamic unit measure adjustment.
 //
 //	`unit` one of [0|UnitKiB|UnitKB] zero for no unit
 //

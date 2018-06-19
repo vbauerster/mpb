@@ -119,7 +119,7 @@ func (s SpeedKB) Format(st fmt.State, verb rune) {
 }
 
 // EwmaSpeed exponential-weighted-moving-average based speed decorator,
-// with dynamic unit measure adjustement.
+// with dynamic unit measure adjustment.
 //
 //	`unit` one of [0|UnitKiB|UnitKB] zero for no unit
 //
@@ -134,7 +134,7 @@ func (s SpeedKB) Format(st fmt.State, verb rune) {
 //
 //	`wcc` optional WC config
 //
-// unitFormat example if UnitKiB choosen:
+// unitFormat example if UnitKiB chosen:
 //
 //	"%.1f" = "1.0MiB/s" or "% .1f" = "1.0 MiB/s"
 func EwmaSpeed(unit int, unitFormat string, age float64, sb chan time.Time, wcc ...WC) Decorator {
@@ -234,7 +234,7 @@ func (s *movingAverageSpeed) serve() {
 	}
 }
 
-// AverageSpeed decorator with dynamic unit measure adjustement.
+// AverageSpeed decorator with dynamic unit measure adjustment.
 //
 //	`unit` one of [0|UnitKiB|UnitKB] zero for no unit
 //
@@ -242,7 +242,7 @@ func (s *movingAverageSpeed) serve() {
 //
 //	`wcc` optional WC config
 //
-// unitFormat example if UnitKiB choosen:
+// unitFormat example if UnitKiB chosen:
 //
 //	"%.1f" = "1.0MiB/s" or "% .1f" = "1.0 MiB/s"
 func AverageSpeed(unit int, unitFormat string, wcc ...WC) Decorator {
