@@ -16,9 +16,8 @@ func (r *Reader) Read(p []byte) (int, error) {
 	select {
 	case <-r.bar.done:
 	default:
-		now := time.Now()
 		for _, ch := range r.sbChannels {
-			ch <- now
+			ch <- time.Now()
 		}
 	}
 	n, err := r.Reader.Read(p)
