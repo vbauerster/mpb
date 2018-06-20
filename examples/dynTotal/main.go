@@ -1,6 +1,7 @@
 package main
 
 import (
+	"io"
 	"math/rand"
 	"time"
 
@@ -15,40 +16,39 @@ func init() {
 func main() {
 	p := mpb.New(mpb.WithWidth(64))
 
-	// initialize bar with dynamic total and initial total guess = 80
-	bar := p.AddBar(80,
-		// indicate that total is dynamic, could be omitted if total set to 0
-		mpb.BarDynamicTotal(),
-		// trigger total auto increment by 1, when 18 % remains till bar completion
-		mpb.BarAutoIncrTotal(18, 1),
-		mpb.PrependDecorators(decor.CountersNoUnit("%d / %d")),
+	bar := p.AddBar(0, // by setting total to 0, we indicate that it's dynamic
+		mpb.PrependDecorators(decor.Counters(decor.UnitKiB, "% .1f / % .1f")),
 		mpb.AppendDecorators(decor.Percentage()),
 	)
 
-	totalUpd := make(chan int64)
-	go func() {
-		for {
-			total, ok := <-totalUpd
-			bar.SetTotal(total, !ok)
-			if !ok {
-				break
-			}
+	var written int64
+	maxSleep := 100 * time.Millisecond
+	read := makeStream(200)
+	for {
+		n, err := read()
+		written += int64(n)
+		time.Sleep(time.Duration(rand.Intn(10)+1) * maxSleep / 10)
+		bar.IncrBy(n)
+		if err == io.EOF {
+			break
 		}
-	}()
-
-	max := 100 * time.Millisecond
-	for i := 0; !bar.Completed(); i++ {
-		if i == 140 {
-			totalUpd <- 190
-		}
-		if i == 250 {
-			totalUpd <- 300
-			// final upd, so closing channel
-			close(totalUpd)
-		}
-		time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
-		bar.Increment()
+		bar.SetTotal(written+1024, false)
 	}
 
+	// final set total, final=true
+	bar.SetTotal(written, true)
+	// need to increment once, to shutdown the bar
+	bar.IncrBy(0)
+
 	p.Wait()
+}
+
+func makeStream(limit int) func() (int, error) {
+	return func() (int, error) {
+		if limit <= 0 {
+			return 0, io.EOF
+		}
+		limit--
+		return rand.Intn(1024) + 1, nil
+	}
 }

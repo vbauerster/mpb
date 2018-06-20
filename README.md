@@ -106,7 +106,7 @@ _Note:_ it is preferable to go get from github.com, rather than gopkg.in. See is
 
 #### [Dynamic total](examples/dynTotal/main.go)
 
-![dynamic total](examples/gifs/OaBiIexGNgHLVGQLlieZf6x1x.svg)
+![dynamic total](examples/gifs/godEMrCZmJkHYH1X9dN4Nm0U7.svg)
 
 #### [Complex example](examples/complex/main.go)
 
