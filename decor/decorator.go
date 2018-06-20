@@ -2,6 +2,7 @@ package decor
 
 import (
 	"fmt"
+	"time"
 	"unicode/utf8"
 )
 
@@ -64,7 +65,7 @@ type OnCompleteMessenger interface {
 }
 
 type AmountReceiver interface {
-	NextAmount(int)
+	NextAmount(int, ...time.Duration)
 }
 
 type ShutdownListener interface {

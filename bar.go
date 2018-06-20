@@ -122,7 +122,7 @@ func newBar(wg *sync.WaitGroup, id int, total int64, cancel <-chan struct{}, opt
 	return b
 }
 
-// RemoveAllPrependers removes all prepend functions
+// RemoveAllPrependers removes all prepend functions.
 func (b *Bar) RemoveAllPrependers() {
 	select {
 	case b.operateState <- func(s *bState) { s.pDecorators = nil }:
@@ -130,7 +130,7 @@ func (b *Bar) RemoveAllPrependers() {
 	}
 }
 
-// RemoveAllAppenders removes all append functions
+// RemoveAllAppenders removes all append functions.
 func (b *Bar) RemoveAllAppenders() {
 	select {
 	case b.operateState <- func(s *bState) { s.aDecorators = nil }:
@@ -138,21 +138,16 @@ func (b *Bar) RemoveAllAppenders() {
 	}
 }
 
-// ProxyReader wrapper for io operations, like io.Copy
-//
-//	`r` io.Reader to be wrapped
-//
-//	`sbChannels` optional start block channels
-func (b *Bar) ProxyReader(r io.Reader, sbChannels ...chan<- time.Time) *Reader {
+// ProxyReader allows progress tracking against provided io.Reader.
+func (b *Bar) ProxyReader(r io.Reader) *Reader {
 	proxyReader := &Reader{
-		Reader:     r,
-		bar:        b,
-		sbChannels: sbChannels,
+		Reader: r,
+		bar:    b,
 	}
 	return proxyReader
 }
 
-// NumOfAppenders returns current number of append decorators
+// NumOfAppenders returns current number of append decorators.
 func (b *Bar) NumOfAppenders() int {
 	result := make(chan int)
 	select {
@@ -163,7 +158,7 @@ func (b *Bar) NumOfAppenders() int {
 	}
 }
 
-// NumOfPrependers returns current number of prepend decorators
+// NumOfPrependers returns current number of prepend decorators.
 func (b *Bar) NumOfPrependers() int {
 	result := make(chan int)
 	select {
@@ -174,7 +169,7 @@ func (b *Bar) NumOfPrependers() int {
 	}
 }
 
-// ID returs id of the bar
+// ID returs id of the bar.
 func (b *Bar) ID() int {
 	result := make(chan int)
 	select {
@@ -209,6 +204,7 @@ func (b *Bar) Total() int64 {
 
 // SetTotal sets total dynamically. The final param indicates the very last set,
 // in other words you should set it to true when total is determined.
+// After final has been set, IncrBy should be called at least once.
 func (b *Bar) SetTotal(total int64, final bool) {
 	b.operateState <- func(s *bState) {
 		if total != 0 {
@@ -232,7 +228,9 @@ func (b *Bar) Increment() {
 }
 
 // IncrBy increments progress bar by amount of n.
-func (b *Bar) IncrBy(n int) {
+// wdd is optional work duration i.e. time.Since(start),
+// which expected to be provided, if any ewma based decorator is used.
+func (b *Bar) IncrBy(n int, wdd ...time.Duration) {
 	select {
 	case b.operateState <- func(s *bState) {
 		s.current += int64(n)
@@ -246,7 +244,7 @@ func (b *Bar) IncrBy(n int) {
 			s.toComplete = true
 		}
 		for _, ar := range s.amountReceivers {
-			ar.NextAmount(n)
+			ar.NextAmount(n, wdd...)
 		}
 	}:
 	case <-b.done:

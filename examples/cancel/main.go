@@ -32,11 +32,10 @@ func main() {
 
 	for i := 0; i < numBars; i++ {
 		name := fmt.Sprintf("Bar#%d:", i)
-		sbEta := make(chan time.Time)
 		bar := p.AddBar(int64(total),
 			mpb.PrependDecorators(
 				decor.Name(name),
-				decor.EwmaETA(decor.ET_STYLE_GO, 60, sbEta, decor.WCSyncSpace),
+				decor.EwmaETA(decor.ET_STYLE_GO, 60, decor.WCSyncSpace),
 			),
 			mpb.AppendDecorators(
 				decor.Percentage(decor.WC{W: 5}),
@@ -47,9 +46,10 @@ func main() {
 			defer wg.Done()
 			max := 100 * time.Millisecond
 			for !bar.Completed() {
-				sbEta <- time.Now()
+				start := time.Now()
 				time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
-				bar.Increment()
+				// ewma based decorators require work duration measurement
+				bar.IncrBy(1, time.Since(start))
 			}
 		}()
 	}

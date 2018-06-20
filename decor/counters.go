@@ -159,7 +159,7 @@ func CountersKiloByte(pairFormat string, wcc ...WC) Decorator {
 //
 //	`wcc` optional WC config
 //
-// pairFormat example:
+// pairFormat example if UnitKB is chosen:
 //
 //	"%.1f / %.1f" = "1.0MB / 12.0MB" or "% .1f / % .1f" = "1.0 MB / 12.0 MB"
 func Counters(unit int, pairFormat string, wcc ...WC) Decorator {

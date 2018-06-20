@@ -29,12 +29,11 @@ func main() {
 			bOption = mpb.BarRemoveOnComplete()
 		}
 
-		sbEta := make(chan time.Time)
 		b := p.AddBar(int64(total), mpb.BarID(i),
 			bOption,
 			mpb.PrependDecorators(
 				decor.Name(name),
-				decor.EwmaETA(decor.ET_STYLE_GO, 60, sbEta, decor.WCSyncSpace),
+				decor.EwmaETA(decor.ET_STYLE_GO, 60, decor.WCSyncSpace),
 			),
 			mpb.AppendDecorators(decor.Percentage()),
 		)
@@ -42,13 +41,14 @@ func main() {
 			defer wg.Done()
 			max := 100 * time.Millisecond
 			for i := 0; i < total; i++ {
-				sbEta <- time.Now()
+				start := time.Now()
 				if b.ID() == 2 && i == 42 {
 					p.Abort(b)
 					return
 				}
 				time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
-				b.Increment()
+				// ewma based decorators require work duration measurement
+				b.IncrBy(1, time.Since(start))
 			}
 		}()
 	}

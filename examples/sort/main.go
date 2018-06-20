@@ -26,27 +26,27 @@ func main() {
 		if i != 1 {
 			name = fmt.Sprintf("Bar#%d:", i)
 		}
-		sbEta := make(chan time.Time)
 		b := p.AddBar(int64(total),
 			mpb.PrependDecorators(
 				decor.Name(name, decor.WCSyncWidth),
 				decor.CountersNoUnit("%d / %d", decor.WCSyncSpace),
 			),
 			mpb.AppendDecorators(
-				decor.EwmaETA(decor.ET_STYLE_GO, 60, sbEta, decor.WC{W: 3}),
+				decor.EwmaETA(decor.ET_STYLE_GO, 60, decor.WC{W: 3}),
 			),
 		)
 		go func() {
 			defer wg.Done()
 			max := 100 * time.Millisecond
 			for i := 0; i < total; i++ {
-				sbEta <- time.Now()
+				start := time.Now()
 				time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
 				if i&1 == 1 {
 					priority := total - int(b.Current())
 					p.UpdateBarPriority(b, priority)
 				}
-				b.Increment()
+				// ewma based decorators require work duration measurement
+				b.IncrBy(1, time.Since(start))
 			}
 		}()
 	}

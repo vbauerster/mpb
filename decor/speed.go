@@ -127,18 +127,13 @@ func (s SpeedKB) Format(st fmt.State, verb rune) {
 //
 //	`average` MovingAverage implementation
 //
-//	`sb` is a start block receive channel. It's required by MovingAverage algorithm,
-//	 therefore result of time.Now() must be sent to this channel on each iteration
-//	 of a start block, right before the actual job. There is no need to close the channel,
-//	 as it will be closed automatically on bar completion event.
-//
 //	`wcc` optional WC config
 //
-// unitFormat example if UnitKiB chosen:
+// unitFormat example if UnitKiB is chosen:
 //
 //	"%.1f" = "1.0MiB/s" or "% .1f" = "1.0 MiB/s"
-func EwmaSpeed(unit int, unitFormat string, age float64, sb chan time.Time, wcc ...WC) Decorator {
-	return MovingAverageSpeed(unit, unitFormat, ewma.NewMovingAverage(age), sb, wcc...)
+func EwmaSpeed(unit int, unitFormat string, age float64, wcc ...WC) Decorator {
+	return MovingAverageSpeed(unit, unitFormat, ewma.NewMovingAverage(age), wcc...)
 }
 
 // MovingAverageSpeed decorator relies on MovingAverage implementation to calculate its average.
@@ -149,16 +144,8 @@ func EwmaSpeed(unit int, unitFormat string, age float64, sb chan time.Time, wcc 
 //
 //	`average` MovingAverage implementation
 //
-//	`sb` is a start block receive channel. It's required by MovingAverage algorithm,
-//	 therefore result of time.Now() must be sent to this channel on each iteration
-//	 of a start block, right before the actual job. There is no need to close the channel,
-//	 as it will be closed automatically on bar completion event.
-//
 //	`wcc` optional WC config
-func MovingAverageSpeed(unit int, unitFormat string, average MovingAverage, sb chan time.Time, wcc ...WC) Decorator {
-	if sb == nil {
-		panic("start block channel must not be nil")
-	}
+func MovingAverageSpeed(unit int, unitFormat string, average MovingAverage, wcc ...WC) Decorator {
 	var wc WC
 	for _, widthConf := range wcc {
 		wc = widthConf
@@ -169,10 +156,7 @@ func MovingAverageSpeed(unit int, unitFormat string, average MovingAverage, sb c
 		unitFormat: unitFormat,
 		wc:         wc,
 		average:    average,
-		sbReceiver: sb,
-		sbStreamer: make(chan time.Time),
 	}
-	go d.serve()
 	return d
 }
 
@@ -181,8 +165,6 @@ type movingAverageSpeed struct {
 	unitFormat string
 	wc         WC
 	average    ewma.MovingAverage
-	sbReceiver chan time.Time
-	sbStreamer chan time.Time
 	onComplete *struct {
 		msg string
 		wc  WC
@@ -206,9 +188,12 @@ func (s *movingAverageSpeed) Decor(st *Statistics, widthAccumulator chan<- int, 
 	return s.wc.FormatMsg(str, widthAccumulator, widthDistributor)
 }
 
-func (s *movingAverageSpeed) NextAmount(n int) {
-	sb := <-s.sbStreamer
-	speed := float64(n) / time.Since(sb).Seconds()
+func (s *movingAverageSpeed) NextAmount(n int, wdd ...time.Duration) {
+	var workDuration time.Duration
+	for _, wd := range wdd {
+		workDuration = wd
+	}
+	speed := float64(n) / workDuration.Seconds()
 	s.average.Add(speed)
 }
 
@@ -224,16 +209,6 @@ func (s *movingAverageSpeed) OnCompleteMessage(msg string, wcc ...WC) {
 	}{msg, wc}
 }
 
-func (s *movingAverageSpeed) Shutdown() {
-	close(s.sbReceiver)
-}
-
-func (s *movingAverageSpeed) serve() {
-	for now := range s.sbReceiver {
-		s.sbStreamer <- now
-	}
-}
-
 // AverageSpeed decorator with dynamic unit measure adjustment.
 //
 //	`unit` one of [0|UnitKiB|UnitKB] zero for no unit
@@ -242,7 +217,7 @@ func (s *movingAverageSpeed) serve() {
 //
 //	`wcc` optional WC config
 //
-// unitFormat example if UnitKiB chosen:
+// unitFormat example if UnitKiB is chosen:
 //
 //	"%.1f" = "1.0MiB/s" or "% .1f" = "1.0 MiB/s"
 func AverageSpeed(unit int, unitFormat string, wcc ...WC) Decorator {
