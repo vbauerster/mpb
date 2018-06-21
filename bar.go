@@ -22,10 +22,6 @@ const (
 )
 
 const (
-	formatLen = 5
-)
-
-const (
 	cmdId = 1 << iota
 	cmdTotal
 	cmdCurrent
@@ -33,6 +29,8 @@ const (
 	cmdPLen
 	cmdCompleted
 )
+
+const formatLen = 5
 
 type barRunes [formatLen]rune
 
