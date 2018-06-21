@@ -42,7 +42,7 @@ type Bar struct {
 	runningBar    *Bar
 	cacheState    *bState
 	operateState  chan func(*bState)
-	cmdValue      chan uint
+	cmdValue      chan int
 	frameReaderCh chan io.Reader
 
 	// done is closed by Bar's goroutine, after cacheState is written
@@ -117,7 +117,7 @@ func newBar(wg *sync.WaitGroup, id int, total int64, cancel <-chan struct{}, opt
 		priority:      s.priority,
 		runningBar:    s.runningBar,
 		operateState:  make(chan func(*bState)),
-		cmdValue:      make(chan uint),
+		cmdValue:      make(chan int),
 		frameReaderCh: make(chan io.Reader, 1),
 		done:          make(chan struct{}),
 		shutdown:      make(chan struct{}),
@@ -160,7 +160,7 @@ func (b *Bar) ProxyReader(r io.Reader) *Reader {
 func (b *Bar) NumOfAppenders() int {
 	select {
 	case b.cmdValue <- cmdALen:
-		return int(<-b.cmdValue)
+		return <-b.cmdValue
 	case <-b.done:
 		return len(b.cacheState.aDecorators)
 	}
@@ -170,7 +170,7 @@ func (b *Bar) NumOfAppenders() int {
 func (b *Bar) NumOfPrependers() int {
 	select {
 	case b.cmdValue <- cmdPLen:
-		return int(<-b.cmdValue)
+		return <-b.cmdValue
 	case <-b.done:
 		return len(b.cacheState.pDecorators)
 	}
@@ -180,7 +180,7 @@ func (b *Bar) NumOfPrependers() int {
 func (b *Bar) ID() int {
 	select {
 	case b.cmdValue <- cmdId:
-		return int(<-b.cmdValue)
+		return <-b.cmdValue
 	case <-b.done:
 		return b.cacheState.id
 	}
@@ -273,17 +273,17 @@ func (b *Bar) serve(wg *sync.WaitGroup, s *bState, cancel <-chan struct{}) {
 		case cmd := <-b.cmdValue:
 			switch {
 			case cmd&cmdId != 0:
-				b.cmdValue <- uint(s.id)
+				b.cmdValue <- s.id
 			case cmd&cmdTotal != 0:
-				b.cmdValue <- uint(s.total)
+				b.cmdValue <- int(s.total)
 			case cmd&cmdCurrent != 0:
-				b.cmdValue <- uint(s.current)
+				b.cmdValue <- int(s.current)
 			case cmd&cmdPLen != 0:
-				b.cmdValue <- uint(len(s.pDecorators))
+				b.cmdValue <- len(s.pDecorators)
 			case cmd&cmdALen != 0:
-				b.cmdValue <- uint(len(s.aDecorators))
+				b.cmdValue <- len(s.aDecorators)
 			case cmd&cmdCompleted != 0:
-				var v uint
+				var v int
 				if s.toComplete {
 					v = 1
 				}
