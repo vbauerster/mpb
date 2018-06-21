@@ -25,6 +25,15 @@ const (
 	formatLen = 5
 )
 
+const (
+	cmdId = 1 << iota
+	cmdTotal
+	cmdCurrent
+	cmdALen
+	cmdPLen
+	cmdCompleted
+)
+
 type barRunes [formatLen]rune
 
 // Bar represents a progress Bar
@@ -35,6 +44,7 @@ type Bar struct {
 	runningBar    *Bar
 	cacheState    *bState
 	operateState  chan func(*bState)
+	cmdValue      chan int
 	frameReaderCh chan io.Reader
 
 	// done is closed by Bar's goroutine, after cacheState is written
@@ -47,11 +57,11 @@ type (
 	bState struct {
 		id                   int
 		width                int
-		runes                barRunes
 		total                int64
 		current              int64
 		totalAutoIncrTrigger int64
 		totalAutoIncrBy      int64
+		runes                barRunes
 		trimLeftSpace        bool
 		trimRightSpace       bool
 		toComplete           bool
@@ -109,6 +119,7 @@ func newBar(wg *sync.WaitGroup, id int, total int64, cancel <-chan struct{}, opt
 		priority:      s.priority,
 		runningBar:    s.runningBar,
 		operateState:  make(chan func(*bState)),
+		cmdValue:      make(chan int),
 		frameReaderCh: make(chan io.Reader, 1),
 		done:          make(chan struct{}),
 		shutdown:      make(chan struct{}),
@@ -149,10 +160,9 @@ func (b *Bar) ProxyReader(r io.Reader) *Reader {
 
 // NumOfAppenders returns current number of append decorators.
 func (b *Bar) NumOfAppenders() int {
-	result := make(chan int)
 	select {
-	case b.operateState <- func(s *bState) { result <- len(s.aDecorators) }:
-		return <-result
+	case b.cmdValue <- cmdALen:
+		return <-b.cmdValue
 	case <-b.done:
 		return len(b.cacheState.aDecorators)
 	}
@@ -160,10 +170,9 @@ func (b *Bar) NumOfAppenders() int {
 
 // NumOfPrependers returns current number of prepend decorators.
 func (b *Bar) NumOfPrependers() int {
-	result := make(chan int)
 	select {
-	case b.operateState <- func(s *bState) { result <- len(s.pDecorators) }:
-		return <-result
+	case b.cmdValue <- cmdPLen:
+		return <-b.cmdValue
 	case <-b.done:
 		return len(b.cacheState.pDecorators)
 	}
@@ -171,10 +180,9 @@ func (b *Bar) NumOfPrependers() int {
 
 // ID returs id of the bar.
 func (b *Bar) ID() int {
-	result := make(chan int)
 	select {
-	case b.operateState <- func(s *bState) { result <- s.id }:
-		return <-result
+	case b.cmdValue <- cmdId:
+		return <-b.cmdValue
 	case <-b.done:
 		return b.cacheState.id
 	}
@@ -182,10 +190,9 @@ func (b *Bar) ID() int {
 
 // Current returns bar's current number, in other words sum of all increments.
 func (b *Bar) Current() int64 {
-	result := make(chan int64)
 	select {
-	case b.operateState <- func(s *bState) { result <- s.current }:
-		return <-result
+	case b.cmdValue <- cmdCurrent:
+		return int64(<-b.cmdValue)
 	case <-b.done:
 		return b.cacheState.current
 	}
@@ -193,10 +200,9 @@ func (b *Bar) Current() int64 {
 
 // Total returns bar's total number.
 func (b *Bar) Total() int64 {
-	result := make(chan int64)
 	select {
-	case b.operateState <- func(s *bState) { result <- s.total }:
-		return <-result
+	case b.cmdValue <- cmdTotal:
+		return int64(<-b.cmdValue)
 	case <-b.done:
 		return b.cacheState.total
 	}
@@ -253,9 +259,11 @@ func (b *Bar) IncrBy(n int, wdd ...time.Duration) {
 
 // Completed reports whether the bar is in completed state.
 func (b *Bar) Completed() bool {
-	result := make(chan bool)
-	b.operateState <- func(s *bState) { result <- s.toComplete }
-	return <-result
+	b.cmdValue <- cmdCompleted
+	if v := <-b.cmdValue; v == 1 {
+		return true
+	}
+	return false
 }
 
 func (b *Bar) serve(wg *sync.WaitGroup, s *bState, cancel <-chan struct{}) {
@@ -264,6 +272,25 @@ func (b *Bar) serve(wg *sync.WaitGroup, s *bState, cancel <-chan struct{}) {
 		select {
 		case op := <-b.operateState:
 			op(s)
+		case cmd := <-b.cmdValue:
+			switch {
+			case cmd&cmdId != 0:
+				b.cmdValue <- s.id
+			case cmd&cmdTotal != 0:
+				b.cmdValue <- int(s.total)
+			case cmd&cmdCurrent != 0:
+				b.cmdValue <- int(s.current)
+			case cmd&cmdPLen != 0:
+				b.cmdValue <- len(s.pDecorators)
+			case cmd&cmdALen != 0:
+				b.cmdValue <- len(s.aDecorators)
+			case cmd&cmdCompleted != 0:
+				var v int
+				if s.toComplete {
+					v = 1
+				}
+				b.cmdValue <- v
+			}
 		case <-cancel:
 			s.toComplete = true
 			cancel = nil
