@@ -98,13 +98,13 @@ type WC struct {
 // FormatMsg formats final message according to WC.W and WC.C.
 // Should be called by any Decorator implementation.
 func (wc WC) FormatMsg(msg string, widthAccumulator chan<- int, widthDistributor <-chan int) string {
-	if (wc.C & DSyncWidth) != 0 {
+	if wc.C&DSyncWidth != 0 {
 		widthAccumulator <- utf8.RuneCountInString(msg)
 		max := <-widthDistributor
 		if max == 0 {
 			max = wc.W
 		}
-		if (wc.C & DextraSpace) != 0 {
+		if wc.C&DextraSpace != 0 {
 			max++
 		}
 		return fmt.Sprintf(fmt.Sprintf(wc.format, max), msg)
@@ -115,7 +115,7 @@ func (wc WC) FormatMsg(msg string, widthAccumulator chan<- int, widthDistributor
 // BuildFormat builds initial format according to WC.C
 func (wc *WC) BuildFormat() {
 	wc.format = "%%"
-	if (wc.C & DidentRight) != 0 {
+	if wc.C&DidentRight != 0 {
 		wc.format += "-"
 	}
 	wc.format += "%ds"
