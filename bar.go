@@ -42,7 +42,7 @@ type Bar struct {
 	runningBar    *Bar
 	cacheState    *bState
 	operateState  chan func(*bState)
-	cmdValue      chan int
+	cmdValue      chan int64
 	frameReaderCh chan io.Reader
 
 	// done is closed by Bar's goroutine, after cacheState is written
@@ -117,7 +117,7 @@ func newBar(wg *sync.WaitGroup, id int, total int64, cancel <-chan struct{}, opt
 		priority:      s.priority,
 		runningBar:    s.runningBar,
 		operateState:  make(chan func(*bState)),
-		cmdValue:      make(chan int),
+		cmdValue:      make(chan int64),
 		frameReaderCh: make(chan io.Reader, 1),
 		done:          make(chan struct{}),
 		shutdown:      make(chan struct{}),
@@ -160,7 +160,7 @@ func (b *Bar) ProxyReader(r io.Reader) *Reader {
 func (b *Bar) NumOfAppenders() int {
 	select {
 	case b.cmdValue <- cmdALen:
-		return <-b.cmdValue
+		return int(<-b.cmdValue)
 	case <-b.done:
 		return len(b.cacheState.aDecorators)
 	}
@@ -170,7 +170,7 @@ func (b *Bar) NumOfAppenders() int {
 func (b *Bar) NumOfPrependers() int {
 	select {
 	case b.cmdValue <- cmdPLen:
-		return <-b.cmdValue
+		return int(<-b.cmdValue)
 	case <-b.done:
 		return len(b.cacheState.pDecorators)
 	}
@@ -180,7 +180,7 @@ func (b *Bar) NumOfPrependers() int {
 func (b *Bar) ID() int {
 	select {
 	case b.cmdValue <- cmdId:
-		return <-b.cmdValue
+		return int(<-b.cmdValue)
 	case <-b.done:
 		return b.cacheState.id
 	}
@@ -190,7 +190,7 @@ func (b *Bar) ID() int {
 func (b *Bar) Current() int64 {
 	select {
 	case b.cmdValue <- cmdCurrent:
-		return int64(<-b.cmdValue)
+		return <-b.cmdValue
 	case <-b.done:
 		return b.cacheState.current
 	}
@@ -200,7 +200,7 @@ func (b *Bar) Current() int64 {
 func (b *Bar) Total() int64 {
 	select {
 	case b.cmdValue <- cmdTotal:
-		return int64(<-b.cmdValue)
+		return <-b.cmdValue
 	case <-b.done:
 		return b.cacheState.total
 	}
@@ -273,17 +273,17 @@ func (b *Bar) serve(wg *sync.WaitGroup, s *bState, cancel <-chan struct{}) {
 		case cmd := <-b.cmdValue:
 			switch {
 			case cmd&cmdId != 0:
-				b.cmdValue <- s.id
+				b.cmdValue <- int64(s.id)
 			case cmd&cmdTotal != 0:
-				b.cmdValue <- int(s.total)
+				b.cmdValue <- s.total
 			case cmd&cmdCurrent != 0:
-				b.cmdValue <- int(s.current)
+				b.cmdValue <- s.current
 			case cmd&cmdPLen != 0:
-				b.cmdValue <- len(s.pDecorators)
+				b.cmdValue <- int64(len(s.pDecorators))
 			case cmd&cmdALen != 0:
-				b.cmdValue <- len(s.aDecorators)
+				b.cmdValue <- int64(len(s.aDecorators))
 			case cmd&cmdCompleted != 0:
-				var v int
+				var v int64
 				if s.toComplete {
 					v = 1
 				}
