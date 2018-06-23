@@ -20,10 +20,11 @@ func TestWithContext(t *testing.T) {
 		mpb.WithShutdownNotifier(shutdown),
 	)
 
+	total := 1000
 	numBars := 3
 	bars := make([]*mpb.Bar, 0, numBars)
 	for i := 0; i < numBars; i++ {
-		bar := p.AddBar(int64(1000), mpb.BarID(i))
+		bar := p.AddBar(int64(total))
 		bars = append(bars, bar)
 		go func() {
 			for !bar.Completed() {
@@ -37,8 +38,8 @@ func TestWithContext(t *testing.T) {
 
 	p.Wait()
 	for _, bar := range bars {
-		if bar.Current() >= bar.Total() {
-			t.Errorf("bar %d: total = %d, current = %d\n", bar.ID(), bar.Total(), bar.Current())
+		if bar.Current() >= int64(total) {
+			t.Errorf("bar %d: total = %d, current = %d\n", bar.ID(), total, bar.Current())
 		}
 	}
 	select {
