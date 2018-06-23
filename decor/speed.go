@@ -227,8 +227,11 @@ func AverageSpeed(unit int, unitFormat string, wcc ...WC) Decorator {
 	}
 	wc.BuildFormat()
 	startTime := time.Now()
+	var str string
 	return DecoratorFunc(func(st *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string {
-		var str string
+		if st.Completed {
+			return wc.FormatMsg(str, widthAccumulator, widthDistributor)
+		}
 		timeElapsed := time.Since(startTime)
 		speed := float64(st.Current) / timeElapsed.Seconds()
 
