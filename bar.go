@@ -52,27 +52,24 @@ type Bar struct {
 
 type (
 	bState struct {
-		id                   int
-		width                int
-		total                int64
-		current              int64
-		totalAutoIncrTrigger int64
-		totalAutoIncrBy      int64
-		runes                barRunes
-		trimLeftSpace        bool
-		trimRightSpace       bool
-		toComplete           bool
-		dynamic              bool
-		removeOnComplete     bool
-		barClearOnComplete   bool
-		completeFlushed      bool
-		aDecorators          []decor.Decorator
-		pDecorators          []decor.Decorator
-		amountReceivers      []decor.AmountReceiver
-		shutdownListeners    []decor.ShutdownListener
-		refill               *refill
-		bufP, bufB, bufA     *bytes.Buffer
-		panicMsg             string
+		id                 int
+		width              int
+		total              int64
+		current            int64
+		runes              barRunes
+		trimLeftSpace      bool
+		trimRightSpace     bool
+		toComplete         bool
+		removeOnComplete   bool
+		barClearOnComplete bool
+		completeFlushed    bool
+		aDecorators        []decor.Decorator
+		pDecorators        []decor.Decorator
+		amountReceivers    []decor.AmountReceiver
+		shutdownListeners  []decor.ShutdownListener
+		refill             *refill
+		bufP, bufB, bufA   *bytes.Buffer
+		panicMsg           string
 
 		// following options are assigned to the *Bar
 		priority   int
@@ -90,8 +87,7 @@ type (
 )
 
 func newBar(wg *sync.WaitGroup, id int, total int64, cancel <-chan struct{}, options ...BarOption) *Bar {
-	dynamic := total <= 0
-	if dynamic {
+	if total <= 0 {
 		total = time.Now().Unix()
 	}
 
@@ -99,7 +95,6 @@ func newBar(wg *sync.WaitGroup, id int, total int64, cancel <-chan struct{}, opt
 		id:       id,
 		priority: id,
 		total:    total,
-		dynamic:  dynamic,
 	}
 
 	for _, opt := range options {
@@ -195,15 +190,17 @@ func (b *Bar) Current() int64 {
 	}
 }
 
-// SetTotal sets total dynamically. The final param indicates the very last set,
-// in other words you should set it to true when total is determined.
-// After final has been set, IncrBy should be called at least once.
+// SetTotal sets total dynamically.
+// Set final to true, when total is known, it will trigger bar complete event.
 func (b *Bar) SetTotal(total int64, final bool) {
 	b.operateState <- func(s *bState) {
-		if total != 0 {
+		if total > 0 {
 			s.total = total
 		}
-		s.dynamic = !final
+		if final {
+			s.current = s.total
+			s.toComplete = true
+		}
 	}
 }
 
@@ -227,12 +224,7 @@ func (b *Bar) IncrBy(n int, wdd ...time.Duration) {
 	select {
 	case b.operateState <- func(s *bState) {
 		s.current += int64(n)
-		if s.dynamic {
-			curp := internal.Percentage(s.total, s.current, 100)
-			if 100-curp <= s.totalAutoIncrTrigger {
-				s.total += s.totalAutoIncrBy
-			}
-		} else if s.current >= s.total {
+		if s.current >= s.total {
 			s.current = s.total
 			s.toComplete = true
 		}
