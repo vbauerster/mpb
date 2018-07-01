@@ -47,7 +47,6 @@ type (
 		uwg              *sync.WaitGroup
 		cancel           <-chan struct{}
 		shutdownNotifier chan struct{}
-		interceptors     []func(io.Writer)
 		waitBars         map[*Bar]*Bar
 		debugOut         io.Writer
 	}
@@ -248,10 +247,6 @@ func (s *pState) flush() (err error) {
 			}
 			heap.Push(s.bHeap, bar)
 		}()
-	}
-
-	for _, interceptor := range s.interceptors {
-		interceptor(s.cw)
 	}
 
 	if e := s.cw.Flush(); err == nil {

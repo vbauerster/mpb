@@ -43,6 +43,7 @@ type Bar struct {
 	operateState  chan func(*bState)
 	cmdValue      chan int
 	frameReaderCh chan io.Reader
+	bufNL         *bytes.Buffer
 
 	// done is closed by Bar's goroutine, after cacheState is written
 	done chan struct{}
@@ -70,6 +71,7 @@ type (
 		refill             *refill
 		bufP, bufB, bufA   *bytes.Buffer
 		panicMsg           string
+		newLineExtendFn    func(bool, io.Writer)
 
 		// following options are assigned to the *Bar
 		priority   int
@@ -119,6 +121,10 @@ func newBar(wg *sync.WaitGroup, id int, total int64, cancel <-chan struct{}, opt
 
 	if b.runningBar != nil {
 		b.priority = b.runningBar.priority
+	}
+
+	if s.newLineExtendFn != nil {
+		b.bufNL = bytes.NewBuffer(make([]byte, 0, s.width))
 	}
 
 	go b.serve(wg, s, cancel)
@@ -283,39 +289,41 @@ func (b *Bar) serve(wg *sync.WaitGroup, s *bState, cancel <-chan struct{}) {
 }
 
 func (b *Bar) render(debugOut io.Writer, tw int, pSyncer, aSyncer *widthSyncer) {
-	var r io.Reader
 	select {
 	case b.operateState <- func(s *bState) {
 		defer func() {
-			// recovering if external decorators panic
+			// recovering if user defined decorator panics for example
 			if p := recover(); p != nil {
 				s.panicMsg = fmt.Sprintf("panic: %v", p)
-				s.pDecorators = nil
-				s.aDecorators = nil
-				s.toComplete = true
-				// truncate panic msg to one tw line, if necessary
-				r = strings.NewReader(fmt.Sprintf(fmt.Sprintf("%%.%ds\n", tw), s.panicMsg))
 				fmt.Fprintf(debugOut, "%s %s bar id %02d %v\n", "[mpb]", time.Now(), s.id, s.panicMsg)
+				b.frameReaderCh <- &frameReader{
+					Reader:     strings.NewReader(fmt.Sprintf(fmt.Sprintf("%%.%ds\n", tw), s.panicMsg)),
+					toShutdown: true,
+				}
 			}
-			b.frameReaderCh <- &frameReader{
-				Reader:           r,
-				toShutdown:       s.toComplete && !s.completeFlushed,
-				removeOnComplete: s.removeOnComplete,
-			}
-			s.completeFlushed = s.toComplete
 		}()
-		r = s.draw(tw, pSyncer, aSyncer)
+		r := s.draw(tw, pSyncer, aSyncer)
+		if s.newLineExtendFn != nil {
+			b.bufNL.Reset()
+			s.newLineExtendFn(s.completeFlushed, b.bufNL)
+			r = io.MultiReader(r, b.bufNL)
+		}
+		b.frameReaderCh <- &frameReader{
+			Reader:           r,
+			toShutdown:       s.toComplete && !s.completeFlushed,
+			removeOnComplete: s.removeOnComplete,
+		}
+		s.completeFlushed = s.toComplete
 	}:
 	case <-b.done:
 		s := b.cacheState
-		if s.panicMsg != "" {
-			r = strings.NewReader(fmt.Sprintf(fmt.Sprintf("%%.%ds\n", tw), s.panicMsg))
-		} else {
-			r = s.draw(tw, pSyncer, aSyncer)
+		r := s.draw(tw, pSyncer, aSyncer)
+		if s.newLineExtendFn != nil {
+			b.bufNL.Reset()
+			s.newLineExtendFn(s.completeFlushed, b.bufNL)
+			r = io.MultiReader(r, b.bufNL)
 		}
-		b.frameReaderCh <- &frameReader{
-			Reader: r,
-		}
+		b.frameReaderCh <- &frameReader{Reader: r}
 	}
 }
 
@@ -324,6 +332,10 @@ func (s *bState) draw(termWidth int, pSyncer, aSyncer *widthSyncer) io.Reader {
 
 	if termWidth <= 0 {
 		termWidth = s.width
+	}
+
+	if s.panicMsg != "" {
+		return strings.NewReader(fmt.Sprintf(fmt.Sprintf("%%.%ds\n", termWidth), s.panicMsg))
 	}
 
 	stat := newStatistics(s)
