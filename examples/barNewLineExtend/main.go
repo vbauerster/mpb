@@ -23,7 +23,7 @@ func main() {
 
 	for i := 0; i < numBars; i++ {
 		name := fmt.Sprintf("Bar#%d:", i)
-		efn := func(completed bool, w io.Writer) {
+		efn := func(w io.Writer, completed bool) {
 			if completed {
 				io.WriteString(w, name+" is completed!\n")
 			}
