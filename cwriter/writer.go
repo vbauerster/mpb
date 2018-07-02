@@ -2,12 +2,19 @@ package cwriter
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
+	"os"
+
+	isatty "github.com/mattn/go-isatty"
+	"golang.org/x/crypto/ssh/terminal"
 )
 
 // ESC is the ASCII code for escape character
 const ESC = 27
+
+var NotATTY = errors.New("not a terminal")
 
 var (
 	cursorUp           = fmt.Sprintf("%c[%dA", ESC, 1)
@@ -52,4 +59,14 @@ func (w *Writer) WriteString(s string) (n int, err error) {
 // ReadFrom reads from the provided io.Reader and writes to the underlying buffer.
 func (w *Writer) ReadFrom(r io.Reader) (n int64, err error) {
 	return w.buf.ReadFrom(r)
+}
+
+func (w *Writer) GetWidth() (int, error) {
+	if f, ok := w.out.(*os.File); ok {
+		if isatty.IsTerminal(f.Fd()) {
+			tw, _, err := terminal.GetSize(int(f.Fd()))
+			return tw, err
+		}
+	}
+	return -1, NotATTY
 }

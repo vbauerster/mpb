@@ -330,10 +330,6 @@ func (b *Bar) render(debugOut io.Writer, tw int, pSyncer, aSyncer *widthSyncer) 
 func (s *bState) draw(termWidth int, pSyncer, aSyncer *widthSyncer) io.Reader {
 	defer s.bufA.WriteByte('\n')
 
-	if termWidth <= 0 {
-		termWidth = s.width
-	}
-
 	if s.panicMsg != "" {
 		return strings.NewReader(fmt.Sprintf(fmt.Sprintf("%%.%ds\n", termWidth), s.panicMsg))
 	}

@@ -75,14 +75,3 @@ func (w *Writer) clearLines() error {
 	}
 	return nil
 }
-
-// TermSize returns the dimensions of the given terminal.
-// the code is stolen from "golang.org/x/crypto/ssh/terminal"
-func TermSize() (width, height int, err error) {
-	var info consoleScreenBufferInfo
-	_, _, e := syscall.Syscall(procGetConsoleScreenBufferInfo.Addr(), 2, uintptr(syscall.Stdout), uintptr(unsafe.Pointer(&info)), 0)
-	if e != 0 {
-		return 0, 0, error(e)
-	}
-	return int(info.size.x), int(info.size.y), nil
-}

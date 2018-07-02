@@ -2,10 +2,6 @@
 
 package mpb
 
-import (
-	"github.com/vbauerster/mpb/cwriter"
-)
-
 func (p *Progress) serve(s *pState) {
 	var numP, numA int
 	for {
@@ -26,7 +22,10 @@ func (p *Progress) serve(s *pState) {
 				numA = s.bHeap.maxNumA()
 				s.heapUpdated = false
 			}
-			tw, _, _ := cwriter.TermSize()
+			tw, err := s.cw.GetWidth()
+			if err != nil {
+				tw = s.width
+			}
 			s.render(tw, numP, numA)
 		}
 	}

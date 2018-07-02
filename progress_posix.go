@@ -7,8 +7,6 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
-
-	"github.com/vbauerster/mpb/cwriter"
 )
 
 func (p *Progress) serve(s *pState) {
@@ -39,7 +37,10 @@ func (p *Progress) serve(s *pState) {
 				numA = s.bHeap.maxNumA()
 				s.heapUpdated = false
 			}
-			tw, _, _ := cwriter.TermSize()
+			tw, err := s.cw.GetWidth()
+			if err != nil {
+				tw = s.width
+			}
 			s.render(tw, numP, numA)
 		case <-winch:
 			if s.heapUpdated {
@@ -47,7 +48,10 @@ func (p *Progress) serve(s *pState) {
 				numA = s.bHeap.maxNumA()
 				s.heapUpdated = false
 			}
-			tw, _, _ := cwriter.TermSize()
+			tw, err := s.cw.GetWidth()
+			if err != nil {
+				tw = s.width
+			}
 			s.render(tw-tw/8, numP, numA)
 			if timer != nil && timer.Reset(resumeDelay) {
 				break
