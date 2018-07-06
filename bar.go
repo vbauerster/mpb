@@ -259,15 +259,15 @@ func (b *Bar) serve(wg *sync.WaitGroup, s *bState, cancel <-chan struct{}) {
 			op(s)
 		case cmd := <-b.cmdValue:
 			switch {
-			case cmd&cmdId != 0:
+			case (cmd & cmdId) != 0:
 				b.cmdValue <- s.id
-			case cmd&cmdCurrent != 0:
+			case (cmd & cmdCurrent) != 0:
 				b.cmdValue <- int(s.current)
-			case cmd&cmdPLen != 0:
+			case (cmd & cmdPLen) != 0:
 				b.cmdValue <- len(s.pDecorators)
-			case cmd&cmdALen != 0:
+			case (cmd & cmdALen) != 0:
 				b.cmdValue <- len(s.aDecorators)
-			case cmd&cmdCompleted != 0:
+			case (cmd & cmdCompleted) != 0:
 				var v int
 				if s.toComplete {
 					v = 1
