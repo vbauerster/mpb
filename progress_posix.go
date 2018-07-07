@@ -13,7 +13,6 @@ func (p *Progress) serve(s *pState) {
 	winch := make(chan os.Signal, 2)
 	signal.Notify(winch, syscall.SIGWINCH)
 
-	var numP, numA int
 	var timer *time.Timer
 	var tickerResumer <-chan time.Time
 	resumeDelay := s.rr * 2
@@ -32,27 +31,17 @@ func (p *Progress) serve(s *pState) {
 				close(p.done)
 				return
 			}
-			if s.heapUpdated {
-				numP = s.bHeap.maxNumP()
-				numA = s.bHeap.maxNumA()
-				s.heapUpdated = false
-			}
 			tw, err := s.cw.GetWidth()
 			if err != nil {
 				tw = s.width
 			}
-			s.render(tw, numP, numA)
+			s.render(tw)
 		case <-winch:
-			if s.heapUpdated {
-				numP = s.bHeap.maxNumP()
-				numA = s.bHeap.maxNumA()
-				s.heapUpdated = false
-			}
 			tw, err := s.cw.GetWidth()
 			if err != nil {
 				tw = s.width
 			}
-			s.render(tw-tw/8, numP, numA)
+			s.render(tw - tw/8)
 			if timer != nil && timer.Reset(resumeDelay) {
 				break
 			}

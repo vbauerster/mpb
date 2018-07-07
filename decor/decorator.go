@@ -46,37 +46,27 @@ type Statistics struct {
 	Current   int64
 }
 
-// Decorator is an interface with one method:
-//
-//	Decor(st *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string
-//
-// All decorators in this package implement this interface.
+// Decorator interface.
 type Decorator interface {
-	Decor(*Statistics, chan<- int, <-chan int) string
+	Decor(*Statistics) string
+	SyncWidth() (bool, chan int)
 }
 
-// OnCompleteMessenger is an interface with one method:
-//
-//	OnCompleteMessage(message string, wc ...WC)
-//
+// OnCompleteMessenger interface.
 // Decorators implementing this interface suppose to return provided string on complete event.
 type OnCompleteMessenger interface {
-	OnCompleteMessage(string, ...WC)
+	OnCompleteMessage(string)
 }
 
 type AmountReceiver interface {
 	NextAmount(int, ...time.Duration)
 }
 
+// ShutdownListener interface.
+// If decorator implements this interface, its Shutdown method
+// will be called once on bar shutdown event.
 type ShutdownListener interface {
 	Shutdown()
-}
-
-// DecoratorFunc is an adapter for Decorator interface
-type DecoratorFunc func(*Statistics, chan<- int, <-chan int) string
-
-func (f DecoratorFunc) Decor(s *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string {
-	return f(s, widthAccumulator, widthDistributor)
 }
 
 // Global convenience shortcuts
@@ -93,14 +83,15 @@ type WC struct {
 	W      int
 	C      int
 	format string
+	wsync  chan int
 }
 
 // FormatMsg formats final message according to WC.W and WC.C.
 // Should be called by any Decorator implementation.
-func (wc WC) FormatMsg(msg string, widthAccumulator chan<- int, widthDistributor <-chan int) string {
+func (wc WC) FormatMsg(msg string) string {
 	if (wc.C & DSyncWidth) != 0 {
-		widthAccumulator <- utf8.RuneCountInString(msg)
-		max := <-widthDistributor
+		wc.wsync <- utf8.RuneCountInString(msg)
+		max := <-wc.wsync
 		if max == 0 {
 			max = wc.W
 		}
@@ -113,12 +104,20 @@ func (wc WC) FormatMsg(msg string, widthAccumulator chan<- int, widthDistributor
 }
 
 // BuildFormat builds initial format according to WC.C
-func (wc *WC) BuildFormat() {
+// func (wc *WC) BuildFormat() {
+func (wc *WC) Init() {
 	wc.format = "%%"
 	if (wc.C & DidentRight) != 0 {
 		wc.format += "-"
 	}
 	wc.format += "%ds"
+	if (wc.C & DSyncWidth) != 0 {
+		wc.wsync = make(chan int)
+	}
+}
+
+func (wc *WC) SyncWidth() (bool, chan int) {
+	return (wc.C & DSyncWidth) != 0, wc.wsync
 }
 
 // OnComplete returns decorator, which wraps provided decorator, with sole
@@ -127,18 +126,13 @@ func (wc *WC) BuildFormat() {
 //	`decorator` Decorator to wrap
 //
 //	`message` message to display on complete event
-//
-//	`wcc` optional WC config
-func OnComplete(decorator Decorator, message string, wcc ...WC) Decorator {
-	if cm, ok := decorator.(OnCompleteMessenger); ok {
-		cm.OnCompleteMessage(message, wcc...)
-		return decorator
+func OnComplete(decorator Decorator, message string) Decorator {
+	if d, ok := decorator.(OnCompleteMessenger); ok {
+		d.OnCompleteMessage(message)
 	}
-	msgDecorator := Name(message, wcc...)
-	return DecoratorFunc(func(s *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string {
-		if s.Completed {
-			return msgDecorator.Decor(s, widthAccumulator, widthDistributor)
-		}
-		return decorator.Decor(s, widthAccumulator, widthDistributor)
-	})
+	return decorator
+}
+
+type completeMsg struct {
+	msg string
 }

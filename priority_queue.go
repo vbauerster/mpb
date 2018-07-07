@@ -38,33 +38,3 @@ func (pq *priorityQueue) update(bar *Bar, priority int) {
 	bar.priority = priority
 	heap.Fix(pq, bar.index)
 }
-
-func (pq priorityQueue) maxNumP() int {
-	if pq.Len() == 0 {
-		return 0
-	}
-
-	max := pq[0].NumOfPrependers()
-	for i := 1; i < pq.Len(); i++ {
-		n := pq[i].NumOfPrependers()
-		if n > max {
-			max = n
-		}
-	}
-	return max
-}
-
-func (pq priorityQueue) maxNumA() int {
-	if pq.Len() == 0 {
-		return 0
-	}
-
-	max := pq[0].NumOfAppenders()
-	for i := 1; i < pq.Len(); i++ {
-		n := pq[i].NumOfAppenders()
-		if n > max {
-			max = n
-		}
-	}
-	return max
-}

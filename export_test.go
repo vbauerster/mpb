@@ -1,3 +1,3 @@
 package mpb
 
-var NewWidthSync = newWidthSyncer
+var SyncWidth = syncWidth

@@ -150,42 +150,44 @@ func MovingAverageSpeed(unit int, unitFormat string, average MovingAverage, wcc 
 	for _, widthConf := range wcc {
 		wc = widthConf
 	}
-	wc.BuildFormat()
+	wc.Init()
 	d := &movingAverageSpeed{
+		WC:         wc,
 		unit:       unit,
 		unitFormat: unitFormat,
-		wc:         wc,
 		average:    average,
 	}
 	return d
 }
 
 type movingAverageSpeed struct {
+	WC
 	unit       int
 	unitFormat string
-	wc         WC
 	average    ewma.MovingAverage
-	onComplete *struct {
-		msg string
-		wc  WC
-	}
+	msg        string
+	complete   *completeMsg
 }
 
-func (s *movingAverageSpeed) Decor(st *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string {
-	if st.Completed && s.onComplete != nil {
-		return s.onComplete.wc.FormatMsg(s.onComplete.msg, widthAccumulator, widthDistributor)
+func (d *movingAverageSpeed) Decor(st *Statistics) string {
+	if st.Completed {
+		if d.complete != nil {
+			return d.FormatMsg(d.complete.msg)
+		}
+		return d.FormatMsg(d.msg)
 	}
-	var str string
-	speed := s.average.Value()
-	switch s.unit {
+
+	speed := d.average.Value()
+	switch d.unit {
 	case UnitKiB:
-		str = fmt.Sprintf(s.unitFormat, SpeedKiB(speed))
+		d.msg = fmt.Sprintf(d.unitFormat, SpeedKiB(speed))
 	case UnitKB:
-		str = fmt.Sprintf(s.unitFormat, SpeedKB(speed))
+		d.msg = fmt.Sprintf(d.unitFormat, SpeedKB(speed))
 	default:
-		str = fmt.Sprintf(s.unitFormat, speed)
+		d.msg = fmt.Sprintf(d.unitFormat, speed)
 	}
-	return s.wc.FormatMsg(str, widthAccumulator, widthDistributor)
+
+	return d.FormatMsg(d.msg)
 }
 
 func (s *movingAverageSpeed) NextAmount(n int, wdd ...time.Duration) {
@@ -197,16 +199,8 @@ func (s *movingAverageSpeed) NextAmount(n int, wdd ...time.Duration) {
 	s.average.Add(speed)
 }
 
-func (s *movingAverageSpeed) OnCompleteMessage(msg string, wcc ...WC) {
-	var wc WC
-	for _, widthConf := range wcc {
-		wc = widthConf
-	}
-	wc.BuildFormat()
-	s.onComplete = &struct {
-		msg string
-		wc  WC
-	}{msg, wc}
+func (d *movingAverageSpeed) OnCompleteMessage(msg string) {
+	d.complete = &completeMsg{msg}
 }
 
 // AverageSpeed decorator with dynamic unit measure adjustment.
@@ -225,24 +219,48 @@ func AverageSpeed(unit int, unitFormat string, wcc ...WC) Decorator {
 	for _, widthConf := range wcc {
 		wc = widthConf
 	}
-	wc.BuildFormat()
-	startTime := time.Now()
-	var str string
-	return DecoratorFunc(func(st *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string {
-		if st.Completed {
-			return wc.FormatMsg(str, widthAccumulator, widthDistributor)
-		}
-		timeElapsed := time.Since(startTime)
-		speed := float64(st.Current) / timeElapsed.Seconds()
+	wc.Init()
+	d := &averageSpeed{
+		WC:         wc,
+		unit:       unit,
+		unitFormat: unitFormat,
+		startTime:  time.Now(),
+	}
+	return d
+}
 
-		switch unit {
-		case UnitKiB:
-			str = fmt.Sprintf(unitFormat, SpeedKiB(speed))
-		case UnitKB:
-			str = fmt.Sprintf(unitFormat, SpeedKB(speed))
-		default:
-			str = fmt.Sprintf(unitFormat, speed)
+type averageSpeed struct {
+	WC
+	unit       int
+	unitFormat string
+	startTime  time.Time
+	msg        string
+	complete   *completeMsg
+}
+
+func (d *averageSpeed) Decor(st *Statistics) string {
+	if st.Completed {
+		if d.complete != nil {
+			return d.FormatMsg(d.complete.msg)
 		}
-		return wc.FormatMsg(str, widthAccumulator, widthDistributor)
-	})
+		return d.FormatMsg(d.msg)
+	}
+
+	timeElapsed := time.Since(d.startTime)
+	speed := float64(st.Current) / timeElapsed.Seconds()
+
+	switch d.unit {
+	case UnitKiB:
+		d.msg = fmt.Sprintf(d.unitFormat, SpeedKiB(speed))
+	case UnitKB:
+		d.msg = fmt.Sprintf(d.unitFormat, SpeedKB(speed))
+	default:
+		d.msg = fmt.Sprintf(d.unitFormat, speed)
+	}
+
+	return d.FormatMsg(d.msg)
+}
+
+func (d *averageSpeed) OnCompleteMessage(msg string) {
+	d.complete = &completeMsg{msg}
 }

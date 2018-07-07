@@ -30,7 +30,6 @@ type Progress struct {
 }
 
 type (
-	// progress state, which may contain several bars
 	pState struct {
 		bHeap           *priorityQueue
 		shutdownPending []*Bar
@@ -42,6 +41,8 @@ type (
 		rr              time.Duration
 		cw              *cwriter.Writer
 		ticker          *time.Ticker
+		pMatrix         map[int][]chan int
+		aMatrix         map[int][]chan int
 
 		// following are provided by user
 		uwg              *sync.WaitGroup
@@ -167,54 +168,53 @@ func (p *Progress) Wait() {
 	}
 }
 
-func newWidthSyncer(timeout <-chan struct{}, numBars, numColumn int) *widthSyncer {
-	ws := &widthSyncer{
-		Accumulator: make([]chan int, numColumn),
-		Distributor: make([]chan int, numColumn),
-	}
-	for i := 0; i < numColumn; i++ {
-		ws.Accumulator[i] = make(chan int, numBars)
-		ws.Distributor[i] = make(chan int, numBars)
-	}
-	for i := 0; i < numColumn; i++ {
-		go func(accumulator <-chan int, distributor chan<- int) {
-			defer close(distributor)
-			widths := make([]int, 0, numBars)
-		loop:
-			for {
-				select {
-				case w := <-accumulator:
-					widths = append(widths, w)
-					if len(widths) == numBars {
-						break loop
-					}
-				case <-timeout:
-					if len(widths) == 0 {
-						return
-					}
-					break loop
+func syncWidth(matrix map[int][]chan int) {
+	for _, column := range matrix {
+		column := column
+		go func() {
+			var maxWidth int
+			for _, ch := range column {
+				w := <-ch
+				if w > maxWidth {
+					maxWidth = w
 				}
 			}
-			maxWidth := calcMax(widths)
-			for i := 0; i < len(widths); i++ {
-				distributor <- maxWidth
+			for _, ch := range column {
+				ch <- maxWidth
 			}
-		}(ws.Accumulator[i], ws.Distributor[i])
+		}()
 	}
-	return ws
 }
 
-func (s *pState) render(tw, numP, numA int) {
-	timeout := make(chan struct{})
-	pSyncer := newWidthSyncer(timeout, s.bHeap.Len(), numP)
-	aSyncer := newWidthSyncer(timeout, s.bHeap.Len(), numA)
-	time.AfterFunc(s.rr-s.rr/12, func() {
-		close(timeout)
-	})
+func (s *pState) updateSyncMatrix() {
+	s.pMatrix = make(map[int][]chan int)
+	s.aMatrix = make(map[int][]chan int)
+	for i := 0; i < s.bHeap.Len(); i++ {
+		bar := (*s.bHeap)[i]
+		table := bar.wSyncTable()
+		pRow, aRow := table[0], table[1]
+
+		for i, ch := range pRow {
+			s.pMatrix[i] = append(s.pMatrix[i], ch)
+		}
+
+		for i, ch := range aRow {
+			s.aMatrix[i] = append(s.aMatrix[i], ch)
+		}
+	}
+}
+
+func (s *pState) render(tw int) {
+	if s.heapUpdated {
+		s.updateSyncMatrix()
+		s.heapUpdated = false
+	}
+	syncWidth(s.pMatrix)
+	syncWidth(s.aMatrix)
 
 	for i := 0; i < s.bHeap.Len(); i++ {
 		bar := (*s.bHeap)[i]
-		go bar.render(s.debugOut, tw, pSyncer, aSyncer)
+		go bar.render(s.debugOut, tw)
 	}
 
 	if err := s.flush(); err != nil {
@@ -258,18 +258,4 @@ func (s *pState) flush() (err error) {
 		s.shutdownPending = s.shutdownPending[:i]
 	}
 	return
-}
-
-func calcMax(slice []int) int {
-	if len(slice) == 0 {
-		return 0
-	}
-
-	max := slice[0]
-	for i := 1; i < len(slice); i++ {
-		if slice[i] > max {
-			max = slice[i]
-		}
-	}
-	return max
 }

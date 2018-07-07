@@ -24,8 +24,6 @@ const (
 const (
 	cmdId = 1 << iota
 	cmdCurrent
-	cmdALen
-	cmdPLen
 	cmdCompleted
 )
 
@@ -43,6 +41,7 @@ type Bar struct {
 	operateState  chan func(*bState)
 	cmdValue      chan int
 	frameReaderCh chan io.Reader
+	syncTableCh   chan [][]chan int
 	bufNL         *bytes.Buffer
 
 	// done is closed by Bar's goroutine, after cacheState is written
@@ -115,6 +114,7 @@ func newBar(wg *sync.WaitGroup, id int, total int64, cancel <-chan struct{}, opt
 		operateState:  make(chan func(*bState)),
 		cmdValue:      make(chan int),
 		frameReaderCh: make(chan io.Reader, 1),
+		syncTableCh:   make(chan [][]chan int),
 		done:          make(chan struct{}),
 		shutdown:      make(chan struct{}),
 	}
@@ -154,26 +154,6 @@ func (b *Bar) ProxyReader(r io.Reader) *Reader {
 		bar:    b,
 	}
 	return proxyReader
-}
-
-// NumOfAppenders returns current number of append decorators.
-func (b *Bar) NumOfAppenders() int {
-	select {
-	case b.cmdValue <- cmdALen:
-		return <-b.cmdValue
-	case <-b.done:
-		return len(b.cacheState.aDecorators)
-	}
-}
-
-// NumOfPrependers returns current number of prepend decorators.
-func (b *Bar) NumOfPrependers() int {
-	select {
-	case b.cmdValue <- cmdPLen:
-		return <-b.cmdValue
-	case <-b.done:
-		return len(b.cacheState.pDecorators)
-	}
 }
 
 // ID returs id of the bar.
@@ -251,6 +231,15 @@ func (b *Bar) Completed() bool {
 	return false
 }
 
+func (b *Bar) wSyncTable() [][]chan int {
+	select {
+	case b.operateState <- func(s *bState) { b.syncTableCh <- s.wSyncTable() }:
+		return <-b.syncTableCh
+	case <-b.done:
+		return b.cacheState.wSyncTable()
+	}
+}
+
 func (b *Bar) serve(wg *sync.WaitGroup, s *bState, cancel <-chan struct{}) {
 	defer wg.Done()
 	for {
@@ -263,10 +252,6 @@ func (b *Bar) serve(wg *sync.WaitGroup, s *bState, cancel <-chan struct{}) {
 				b.cmdValue <- s.id
 			case (cmd & cmdCurrent) != 0:
 				b.cmdValue <- int(s.current)
-			case (cmd & cmdPLen) != 0:
-				b.cmdValue <- len(s.pDecorators)
-			case (cmd & cmdALen) != 0:
-				b.cmdValue <- len(s.aDecorators)
 			case (cmd & cmdCompleted) != 0:
 				var v int
 				if s.toComplete {
@@ -288,7 +273,7 @@ func (b *Bar) serve(wg *sync.WaitGroup, s *bState, cancel <-chan struct{}) {
 	}
 }
 
-func (b *Bar) render(debugOut io.Writer, tw int, pSyncer, aSyncer *widthSyncer) {
+func (b *Bar) render(debugOut io.Writer, tw int) {
 	select {
 	case b.operateState <- func(s *bState) {
 		defer func() {
@@ -302,7 +287,7 @@ func (b *Bar) render(debugOut io.Writer, tw int, pSyncer, aSyncer *widthSyncer) 
 				}
 			}
 		}()
-		r := s.draw(tw, pSyncer, aSyncer)
+		r := s.draw(tw)
 		if s.newLineExtendFn != nil {
 			b.bufNL.Reset()
 			s.newLineExtendFn(b.bufNL, s.completeFlushed)
@@ -317,7 +302,7 @@ func (b *Bar) render(debugOut io.Writer, tw int, pSyncer, aSyncer *widthSyncer) 
 	}:
 	case <-b.done:
 		s := b.cacheState
-		r := s.draw(tw, pSyncer, aSyncer)
+		r := s.draw(tw)
 		if s.newLineExtendFn != nil {
 			b.bufNL.Reset()
 			s.newLineExtendFn(b.bufNL, s.completeFlushed)
@@ -327,7 +312,7 @@ func (b *Bar) render(debugOut io.Writer, tw int, pSyncer, aSyncer *widthSyncer) 
 	}
 }
 
-func (s *bState) draw(termWidth int, pSyncer, aSyncer *widthSyncer) io.Reader {
+func (s *bState) draw(termWidth int) io.Reader {
 	defer s.bufA.WriteByte('\n')
 
 	if s.panicMsg != "" {
@@ -336,13 +321,12 @@ func (s *bState) draw(termWidth int, pSyncer, aSyncer *widthSyncer) io.Reader {
 
 	stat := newStatistics(s)
 
-	// render prepend functions to the left of the bar
-	for i, d := range s.pDecorators {
-		s.bufP.WriteString(d.Decor(stat, pSyncer.Accumulator[i], pSyncer.Distributor[i]))
+	for _, d := range s.pDecorators {
+		s.bufP.WriteString(d.Decor(stat))
 	}
 
-	for i, d := range s.aDecorators {
-		s.bufA.WriteString(d.Decor(stat, aSyncer.Accumulator[i], aSyncer.Distributor[i]))
+	for _, d := range s.aDecorators {
+		s.bufA.WriteString(d.Decor(stat))
 	}
 
 	prependCount := utf8.RuneCount(s.bufP.Bytes())
@@ -416,6 +400,28 @@ func (s *bState) fillBar(width int) {
 	for i := completedWidth; i < int64(barWidth); i++ {
 		s.bufB.WriteRune(s.runes[rEmpty])
 	}
+}
+
+func (s *bState) wSyncTable() [][]chan int {
+	columns := make([]chan int, 0, len(s.pDecorators)+len(s.aDecorators))
+	var pCount int
+	for _, d := range s.pDecorators {
+		if ok, ch := d.SyncWidth(); ok {
+			columns = append(columns, ch)
+			pCount++
+		}
+	}
+	var aCount int
+	for _, d := range s.aDecorators {
+		if ok, ch := d.SyncWidth(); ok {
+			columns = append(columns, ch)
+			aCount++
+		}
+	}
+	table := make([][]chan int, 2)
+	table[0] = columns[0:pCount]
+	table[1] = columns[pCount : pCount+aCount : pCount+aCount]
+	return table
 }
 
 func newStatistics(s *bState) *decor.Statistics {

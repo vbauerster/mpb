@@ -15,25 +15,47 @@ func Elapsed(style int, wcc ...WC) Decorator {
 	for _, widthConf := range wcc {
 		wc = widthConf
 	}
-	wc.BuildFormat()
-	startTime := time.Now()
-	return DecoratorFunc(func(s *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string {
-		var str string
-		timeElapsed := time.Since(startTime)
-		hours := int64((timeElapsed / time.Hour) % 60)
-		minutes := int64((timeElapsed / time.Minute) % 60)
-		seconds := int64((timeElapsed / time.Second) % 60)
+	wc.Init()
+	d := &elapsedDecorator{
+		WC:        wc,
+		style:     style,
+		startTime: time.Now(),
+	}
+	return d
+}
 
-		switch style {
-		case ET_STYLE_GO:
-			str = fmt.Sprint(time.Duration(timeElapsed.Seconds()) * time.Second)
-		case ET_STYLE_HHMMSS:
-			str = fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
-		case ET_STYLE_HHMM:
-			str = fmt.Sprintf("%02d:%02d", hours, minutes)
-		case ET_STYLE_MMSS:
-			str = fmt.Sprintf("%02d:%02d", minutes, seconds)
-		}
-		return wc.FormatMsg(str, widthAccumulator, widthDistributor)
-	})
+type elapsedDecorator struct {
+	WC
+	style     int
+	startTime time.Time
+	complete  *completeMsg
+}
+
+func (d *elapsedDecorator) Decor(st *Statistics) string {
+	if st.Completed && d.complete != nil {
+		return d.FormatMsg(d.complete.msg)
+	}
+
+	var str string
+	timeElapsed := time.Since(d.startTime)
+	hours := int64((timeElapsed / time.Hour) % 60)
+	minutes := int64((timeElapsed / time.Minute) % 60)
+	seconds := int64((timeElapsed / time.Second) % 60)
+
+	switch d.style {
+	case ET_STYLE_GO:
+		str = fmt.Sprint(time.Duration(timeElapsed.Seconds()) * time.Second)
+	case ET_STYLE_HHMMSS:
+		str = fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
+	case ET_STYLE_HHMM:
+		str = fmt.Sprintf("%02d:%02d", hours, minutes)
+	case ET_STYLE_MMSS:
+		str = fmt.Sprintf("%02d:%02d", minutes, seconds)
+	}
+
+	return d.FormatMsg(str)
+}
+
+func (d *elapsedDecorator) OnCompleteMessage(msg string) {
+	d.complete = &completeMsg{msg}
 }

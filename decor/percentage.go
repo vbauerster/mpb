@@ -14,9 +14,26 @@ func Percentage(wcc ...WC) Decorator {
 	for _, widthConf := range wcc {
 		wc = widthConf
 	}
-	wc.BuildFormat()
-	return DecoratorFunc(func(s *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string {
-		str := fmt.Sprintf("%d %%", internal.Percentage(s.Total, s.Current, 100))
-		return wc.FormatMsg(str, widthAccumulator, widthDistributor)
-	})
+	wc.Init()
+	d := &percentageDecorator{
+		WC: wc,
+	}
+	return d
+}
+
+type percentageDecorator struct {
+	WC
+	complete *completeMsg
+}
+
+func (d *percentageDecorator) Decor(st *Statistics) string {
+	if st.Completed && d.complete != nil {
+		return d.FormatMsg(d.complete.msg)
+	}
+	str := fmt.Sprintf("%d %%", internal.Percentage(st.Total, st.Current, 100))
+	return d.FormatMsg(str)
+}
+
+func (d *percentageDecorator) OnCompleteMessage(msg string) {
+	d.complete = &completeMsg{msg}
 }

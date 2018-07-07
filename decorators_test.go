@@ -3,7 +3,6 @@ package mpb_test
 import (
 	"sync"
 	"testing"
-	"time"
 
 	. "github.com/vbauerster/mpb"
 	"github.com/vbauerster/mpb/decor"
@@ -33,7 +32,7 @@ func TestNameDecorator(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		got := test.decorator.Decor(nil, nil, nil)
+		got := test.decorator.Decor(new(decor.Statistics))
 		if got != test.want {
 			t.Errorf("Want: %q, Got: %q\n", test.want, got)
 		}
@@ -187,39 +186,34 @@ func testDecoratorConcurrently(t *testing.T, testCases [][]step) {
 	var wg sync.WaitGroup
 	for _, columnCase := range testCases {
 		wg.Add(numBars)
-		timeout := make(chan struct{})
-		time.AfterFunc(100*time.Millisecond, func() {
-			close(timeout)
-		})
-		ws := NewWidthSync(timeout, numBars, 1)
-		res := make([]chan string, numBars)
+		SyncWidth(toSyncMatrix(columnCase))
+		gott := make([]chan string, numBars)
 		for i := 0; i < numBars; i++ {
-			res[i] = make(chan string, 1)
+			gott[i] = make(chan string, 1)
 			go func(s step, ch chan string) {
 				defer wg.Done()
-				ch <- s.decorator.Decor(s.stat, ws.Accumulator[0], ws.Distributor[0])
-			}(columnCase[i], res[i])
+				ch <- s.decorator.Decor(s.stat)
+			}(columnCase[i], gott[i])
 		}
 		wg.Wait()
 
-		var i int
-		for got := range fanIn(res...) {
+		for i, ch := range gott {
+			got := <-ch
 			want := columnCase[i].want
 			if got != want {
 				t.Errorf("Want: %q, Got: %q\n", want, got)
 			}
-			i++
 		}
+
 	}
 }
 
-func fanIn(in ...chan string) <-chan string {
-	ch := make(chan string)
-	go func() {
-		defer close(ch)
-		for _, ich := range in {
-			ch <- <-ich
+func toSyncMatrix(ss []step) map[int][]chan int {
+	var column []chan int
+	for _, s := range ss {
+		if ok, ch := s.decorator.SyncWidth(); ok {
+			column = append(column, ch)
 		}
-	}()
-	return ch
+	}
+	return map[int][]chan int{0: column}
 }

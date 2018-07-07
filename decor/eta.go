@@ -32,31 +32,28 @@ func MovingAverageETA(style int, average MovingAverage, wcc ...WC) Decorator {
 	for _, widthConf := range wcc {
 		wc = widthConf
 	}
-	wc.BuildFormat()
+	wc.Init()
 	d := &movingAverageETA{
+		WC:      wc,
 		style:   style,
-		wc:      wc,
 		average: average,
 	}
 	return d
 }
 
 type movingAverageETA struct {
-	style      int
-	wc         WC
-	average    ewma.MovingAverage
-	onComplete *struct {
-		msg string
-		wc  WC
-	}
+	WC
+	style    int
+	average  ewma.MovingAverage
+	complete *completeMsg
 }
 
-func (s *movingAverageETA) Decor(st *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string {
-	if st.Completed && s.onComplete != nil {
-		return s.onComplete.wc.FormatMsg(s.onComplete.msg, widthAccumulator, widthDistributor)
+func (d *movingAverageETA) Decor(st *Statistics) string {
+	if st.Completed && d.complete != nil {
+		return d.FormatMsg(d.complete.msg)
 	}
 
-	v := internal.Round(s.average.Value())
+	v := internal.Round(d.average.Value())
 	if math.IsInf(v, 0) || math.IsNaN(v) {
 		v = 0
 	}
@@ -66,7 +63,7 @@ func (s *movingAverageETA) Decor(st *Statistics, widthAccumulator chan<- int, wi
 	seconds := int64((remaining / time.Second) % 60)
 
 	var str string
-	switch s.style {
+	switch d.style {
 	case ET_STYLE_GO:
 		str = fmt.Sprint(time.Duration(remaining.Seconds()) * time.Second)
 	case ET_STYLE_HHMMSS:
@@ -77,28 +74,20 @@ func (s *movingAverageETA) Decor(st *Statistics, widthAccumulator chan<- int, wi
 		str = fmt.Sprintf("%02d:%02d", minutes, seconds)
 	}
 
-	return s.wc.FormatMsg(str, widthAccumulator, widthDistributor)
+	return d.FormatMsg(str)
 }
 
-func (s *movingAverageETA) NextAmount(n int, wdd ...time.Duration) {
+func (d *movingAverageETA) NextAmount(n int, wdd ...time.Duration) {
 	var workDuration time.Duration
 	for _, wd := range wdd {
 		workDuration = wd
 	}
 	lastItemEstimate := float64(workDuration) / float64(n)
-	s.average.Add(lastItemEstimate)
+	d.average.Add(lastItemEstimate)
 }
 
-func (s *movingAverageETA) OnCompleteMessage(msg string, wcc ...WC) {
-	var wc WC
-	for _, widthConf := range wcc {
-		wc = widthConf
-	}
-	wc.BuildFormat()
-	s.onComplete = &struct {
-		msg string
-		wc  WC
-	}{msg, wc}
+func (d *movingAverageETA) OnCompleteMessage(msg string) {
+	d.complete = &completeMsg{msg}
 }
 
 // AverageETA decorator.
@@ -111,30 +100,52 @@ func AverageETA(style int, wcc ...WC) Decorator {
 	for _, widthConf := range wcc {
 		wc = widthConf
 	}
-	wc.BuildFormat()
-	startTime := time.Now()
-	return DecoratorFunc(func(st *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string {
-		var str string
-		timeElapsed := time.Since(startTime)
-		v := internal.Round(float64(timeElapsed) / float64(st.Current))
-		if math.IsInf(v, 0) || math.IsNaN(v) {
-			v = 0
-		}
-		remaining := time.Duration((st.Total - st.Current) * int64(v))
-		hours := int64((remaining / time.Hour) % 60)
-		minutes := int64((remaining / time.Minute) % 60)
-		seconds := int64((remaining / time.Second) % 60)
+	wc.Init()
+	d := &averageETA{
+		WC:        wc,
+		style:     style,
+		startTime: time.Now(),
+	}
+	return d
+}
 
-		switch style {
-		case ET_STYLE_GO:
-			str = fmt.Sprint(time.Duration(remaining.Seconds()) * time.Second)
-		case ET_STYLE_HHMMSS:
-			str = fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
-		case ET_STYLE_HHMM:
-			str = fmt.Sprintf("%02d:%02d", hours, minutes)
-		case ET_STYLE_MMSS:
-			str = fmt.Sprintf("%02d:%02d", minutes, seconds)
-		}
-		return wc.FormatMsg(str, widthAccumulator, widthDistributor)
-	})
+type averageETA struct {
+	WC
+	style     int
+	startTime time.Time
+	complete  *completeMsg
+}
+
+func (d *averageETA) Decor(st *Statistics) string {
+	if st.Completed && d.complete != nil {
+		return d.FormatMsg(d.complete.msg)
+	}
+
+	var str string
+	timeElapsed := time.Since(d.startTime)
+	v := internal.Round(float64(timeElapsed) / float64(st.Current))
+	if math.IsInf(v, 0) || math.IsNaN(v) {
+		v = 0
+	}
+	remaining := time.Duration((st.Total - st.Current) * int64(v))
+	hours := int64((remaining / time.Hour) % 60)
+	minutes := int64((remaining / time.Minute) % 60)
+	seconds := int64((remaining / time.Second) % 60)
+
+	switch d.style {
+	case ET_STYLE_GO:
+		str = fmt.Sprint(time.Duration(remaining.Seconds()) * time.Second)
+	case ET_STYLE_HHMMSS:
+		str = fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
+	case ET_STYLE_HHMM:
+		str = fmt.Sprintf("%02d:%02d", hours, minutes)
+	case ET_STYLE_MMSS:
+		str = fmt.Sprintf("%02d:%02d", minutes, seconds)
+	}
+
+	return d.FormatMsg(str)
+}
+
+func (d *averageETA) OnCompleteMessage(msg string) {
+	d.complete = &completeMsg{msg}
 }

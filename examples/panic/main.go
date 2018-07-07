@@ -20,16 +20,7 @@ func main() {
 
 	for i := 0; i < numBars; i++ {
 		name := fmt.Sprintf("b#%02d:", i)
-		bar := p.AddBar(100, mpb.BarID(i), mpb.PrependDecorators(
-			decor.DecoratorFunc(func(s *decor.Statistics, _ chan<- int, _ <-chan int) string {
-				// s.Current == 42 may never happen, if sleep btw increments is
-				// too short, thus using s.Current >= 42
-				if s.ID == 1 && s.Current >= 42 {
-					panic(wantPanic)
-				}
-				return name
-			}),
-		))
+		bar := p.AddBar(100, mpb.BarID(i), mpb.PrependDecorators(panicDecorator(name, wantPanic)))
 
 		go func() {
 			defer wg.Done()
@@ -41,4 +32,26 @@ func main() {
 	}
 
 	p.Wait()
+}
+
+func panicDecorator(name, panicMsg string) decor.Decorator {
+	d := &decorator{
+		msg:      name,
+		panicMsg: panicMsg,
+	}
+	d.Init()
+	return d
+}
+
+type decorator struct {
+	decor.WC
+	msg      string
+	panicMsg string
+}
+
+func (d *decorator) Decor(st *decor.Statistics) string {
+	if st.ID == 1 && st.Current >= 42 {
+		panic(d.panicMsg)
+	}
+	return d.FormatMsg(d.msg)
 }

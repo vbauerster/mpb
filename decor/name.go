@@ -19,8 +19,27 @@ func Name(name string, wcc ...WC) Decorator {
 	for _, widthConf := range wcc {
 		wc = widthConf
 	}
-	wc.BuildFormat()
-	return DecoratorFunc(func(s *Statistics, widthAccumulator chan<- int, widthDistributor <-chan int) string {
-		return wc.FormatMsg(name, widthAccumulator, widthDistributor)
-	})
+	wc.Init()
+	d := &nameDecorator{
+		WC:  wc,
+		msg: name,
+	}
+	return d
+}
+
+type nameDecorator struct {
+	WC
+	msg      string
+	complete *completeMsg
+}
+
+func (d *nameDecorator) Decor(st *Statistics) string {
+	if st.Completed && d.complete != nil {
+		return d.FormatMsg(d.complete.msg)
+	}
+	return d.FormatMsg(d.msg)
+}
+
+func (d *nameDecorator) OnCompleteMessage(msg string) {
+	d.complete = &completeMsg{msg}
 }
