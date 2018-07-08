@@ -103,8 +103,7 @@ func (wc WC) FormatMsg(msg string) string {
 	return fmt.Sprintf(fmt.Sprintf(wc.format, wc.W), msg)
 }
 
-// BuildFormat builds initial format according to WC.C
-// func (wc *WC) BuildFormat() {
+// Init initializes width related config.
 func (wc *WC) Init() {
 	wc.format = "%%"
 	if (wc.C & DidentRight) != 0 {
