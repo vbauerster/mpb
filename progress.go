@@ -168,24 +168,6 @@ func (p *Progress) Wait() {
 	}
 }
 
-func syncWidth(matrix map[int][]chan int) {
-	for _, column := range matrix {
-		column := column
-		go func() {
-			var maxWidth int
-			for _, ch := range column {
-				w := <-ch
-				if w > maxWidth {
-					maxWidth = w
-				}
-			}
-			for _, ch := range column {
-				ch <- maxWidth
-			}
-		}()
-	}
-}
-
 func (s *pState) updateSyncMatrix() {
 	s.pMatrix = make(map[int][]chan int)
 	s.aMatrix = make(map[int][]chan int)
@@ -258,4 +240,22 @@ func (s *pState) flush() (err error) {
 		s.shutdownPending = s.shutdownPending[:i]
 	}
 	return
+}
+
+func syncWidth(matrix map[int][]chan int) {
+	for _, column := range matrix {
+		column := column
+		go func() {
+			var maxWidth int
+			for _, ch := range column {
+				w := <-ch
+				if w > maxWidth {
+					maxWidth = w
+				}
+			}
+			for _, ch := range column {
+				ch <- maxWidth
+			}
+		}()
+	}
 }
