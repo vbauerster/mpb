@@ -9,6 +9,7 @@ import (
 	"time"
 
 	. "github.com/vbauerster/mpb"
+	"github.com/vbauerster/mpb/decor"
 )
 
 func TestBarCompleted(t *testing.T) {
@@ -81,34 +82,47 @@ func TestBarIncrRefillBy(t *testing.T) {
 	}
 }
 
-// func TestBarPanics(t *testing.T) {
-// 	var buf bytes.Buffer
-// 	p := New(WithDebugOutput(&buf), WithOutput(ioutil.Discard))
+func TestBarPanics(t *testing.T) {
+	var buf bytes.Buffer
+	p := New(WithDebugOutput(&buf), WithOutput(ioutil.Discard))
 
-// 	wantPanic := "Upps!!!"
-// 	total := 100
+	wantPanic := "Upps!!!"
+	total := 100
 
-// 	bar := p.AddBar(int64(total), PrependDecorators(
-// 		decor.DecoratorFunc(func(s *decor.Statistics, _ chan<- int, _ <-chan int) string {
-// 			if s.Current >= 42 {
-// 				panic(wantPanic)
-// 			}
-// 			return "test"
-// 		}),
-// 	))
+	bar := p.AddBar(int64(total), PrependDecorators(panicDecorator(wantPanic)))
 
-// 	go func() {
-// 		for i := 0; i < 100; i++ {
-// 			time.Sleep(10 * time.Millisecond)
-// 			bar.Increment()
-// 		}
-// 	}()
+	go func() {
+		for i := 0; i < 100; i++ {
+			time.Sleep(10 * time.Millisecond)
+			bar.Increment()
+		}
+	}()
 
-// 	p.Wait()
+	p.Wait()
 
-// 	wantPanic = fmt.Sprintf("panic: %s", wantPanic)
-// 	debugStr := buf.String()
-// 	if !strings.Contains(debugStr, wantPanic) {
-// 		t.Errorf("%q doesn't contain %q\n", debugStr, wantPanic)
-// 	}
-// }
+	wantPanic = fmt.Sprintf("panic: %s", wantPanic)
+	debugStr := buf.String()
+	if !strings.Contains(debugStr, wantPanic) {
+		t.Errorf("%q doesn't contain %q\n", debugStr, wantPanic)
+	}
+}
+
+func panicDecorator(panicMsg string) decor.Decorator {
+	d := &decorator{
+		panicMsg: panicMsg,
+	}
+	d.Init()
+	return d
+}
+
+type decorator struct {
+	decor.WC
+	panicMsg string
+}
+
+func (d *decorator) Decor(st *decor.Statistics) string {
+	if st.Current >= 42 {
+		panic(d.panicMsg)
+	}
+	return d.FormatMsg("")
+}
