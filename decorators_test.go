@@ -211,7 +211,7 @@ func testDecoratorConcurrently(t *testing.T, testCases [][]step) {
 func toSyncMatrix(ss []step) map[int][]chan int {
 	var column []chan int
 	for _, s := range ss {
-		if ok, ch := s.decorator.SyncWidth(); ok {
+		if ok, ch := s.decorator.Syncable(); ok {
 			column = append(column, ch)
 		}
 	}
