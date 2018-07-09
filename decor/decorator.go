@@ -47,9 +47,17 @@ type Statistics struct {
 }
 
 // Decorator interface.
+// A decorator must implement this interface, in order to be used with mpb library.
 type Decorator interface {
 	Decor(*Statistics) string
-	SyncWidth() (bool, chan int)
+	Syncable
+}
+
+// Syncable interface.
+// All decorators implement this interface implicitly.
+// Its Syncable method exposes width sync channel, if sync is enabled.
+type Syncable interface {
+	Syncable() (bool, chan int)
 }
 
 // OnCompleteMessenger interface.
@@ -58,13 +66,16 @@ type OnCompleteMessenger interface {
 	OnCompleteMessage(string)
 }
 
+// AmountReceiver interface.
+// If decorator needs to receive increment amount,
+// so this is the right interface to implement.
 type AmountReceiver interface {
 	NextAmount(int, ...time.Duration)
 }
 
 // ShutdownListener interface.
-// If decorator implements this interface, its Shutdown method
-// will be called once on bar shutdown event.
+// If decorator needs to be notified once upon bar shutdown event,
+// so this is the right interface to implement.
 type ShutdownListener interface {
 	Shutdown()
 }
@@ -115,7 +126,7 @@ func (wc *WC) Init() {
 	}
 }
 
-func (wc *WC) SyncWidth() (bool, chan int) {
+func (wc *WC) Syncable() (bool, chan int) {
 	return (wc.C & DSyncWidth) != 0, wc.wsync
 }
 
@@ -132,6 +143,7 @@ func OnComplete(decorator Decorator, message string) Decorator {
 	return decorator
 }
 
+// completeMsg for internal usage.
 type completeMsg struct {
 	msg string
 }
