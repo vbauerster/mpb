@@ -21,12 +21,6 @@ const (
 	rRight
 )
 
-const (
-	cmdId = 1 << iota
-	cmdCurrent
-	cmdCompleted
-)
-
 const formatLen = 5
 
 type barRunes [formatLen]rune
@@ -39,7 +33,8 @@ type Bar struct {
 	runningBar    *Bar
 	cacheState    *bState
 	operateState  chan func(*bState)
-	cmdValue      chan int
+	int64Ch       chan int64
+	boolCh        chan bool
 	frameReaderCh chan io.Reader
 	syncTableCh   chan [][]chan int
 	bufNL         *bytes.Buffer
@@ -112,7 +107,8 @@ func newBar(wg *sync.WaitGroup, id int, total int64, cancel <-chan struct{}, opt
 		priority:      s.priority,
 		runningBar:    s.runningBar,
 		operateState:  make(chan func(*bState)),
-		cmdValue:      make(chan int),
+		int64Ch:       make(chan int64),
+		boolCh:        make(chan bool),
 		frameReaderCh: make(chan io.Reader, 1),
 		syncTableCh:   make(chan [][]chan int),
 		done:          make(chan struct{}),
@@ -159,8 +155,8 @@ func (b *Bar) ProxyReader(r io.Reader) *Reader {
 // ID returs id of the bar.
 func (b *Bar) ID() int {
 	select {
-	case b.cmdValue <- cmdId:
-		return <-b.cmdValue
+	case b.operateState <- func(s *bState) { b.int64Ch <- int64(s.id) }:
+		return int(<-b.int64Ch)
 	case <-b.done:
 		return b.cacheState.id
 	}
@@ -169,8 +165,8 @@ func (b *Bar) ID() int {
 // Current returns bar's current number, in other words sum of all increments.
 func (b *Bar) Current() int64 {
 	select {
-	case b.cmdValue <- cmdCurrent:
-		return int64(<-b.cmdValue)
+	case b.operateState <- func(s *bState) { b.int64Ch <- s.current }:
+		return <-b.int64Ch
 	case <-b.done:
 		return b.cacheState.current
 	}
@@ -224,11 +220,11 @@ func (b *Bar) IncrBy(n int, wdd ...time.Duration) {
 
 // Completed reports whether the bar is in completed state.
 func (b *Bar) Completed() bool {
-	b.cmdValue <- cmdCompleted
-	if v := <-b.cmdValue; v == 1 {
-		return true
-	}
-	return false
+	// omit select here, because primary usage of the method is for loop
+	// condition, like 	for !bar.Completed() {...}
+	// so when toComplete=true it is called once (at which time, the bar is still alive),
+	// then quits the loop and never suppose to be called afterwards.
+	return <-b.boolCh
 }
 
 func (b *Bar) wSyncTable() [][]chan int {
@@ -246,19 +242,7 @@ func (b *Bar) serve(wg *sync.WaitGroup, s *bState, cancel <-chan struct{}) {
 		select {
 		case op := <-b.operateState:
 			op(s)
-		case cmd := <-b.cmdValue:
-			switch {
-			case (cmd & cmdId) != 0:
-				b.cmdValue <- s.id
-			case (cmd & cmdCurrent) != 0:
-				b.cmdValue <- int(s.current)
-			case (cmd & cmdCompleted) != 0:
-				var v int
-				if s.toComplete {
-					v = 1
-				}
-				b.cmdValue <- v
-			}
+		case b.boolCh <- s.toComplete:
 		case <-cancel:
 			s.toComplete = true
 			cancel = nil
