@@ -162,17 +162,17 @@ func MovingAverageSpeed(unit int, unitFormat string, average MovingAverage, wcc 
 
 type movingAverageSpeed struct {
 	WC
-	unit       int
-	unitFormat string
-	average    ewma.MovingAverage
-	msg        string
-	complete   *completeMsg
+	unit        int
+	unitFormat  string
+	average     ewma.MovingAverage
+	msg         string
+	completeMsg *string
 }
 
 func (d *movingAverageSpeed) Decor(st *Statistics) string {
 	if st.Completed {
-		if d.complete != nil {
-			return d.FormatMsg(d.complete.msg)
+		if d.completeMsg != nil {
+			return d.FormatMsg(*d.completeMsg)
 		}
 		return d.FormatMsg(d.msg)
 	}
@@ -200,7 +200,7 @@ func (s *movingAverageSpeed) NextAmount(n int, wdd ...time.Duration) {
 }
 
 func (d *movingAverageSpeed) OnCompleteMessage(msg string) {
-	d.complete = &completeMsg{msg}
+	d.completeMsg = &msg
 }
 
 // AverageSpeed decorator with dynamic unit measure adjustment.
@@ -231,17 +231,17 @@ func AverageSpeed(unit int, unitFormat string, wcc ...WC) Decorator {
 
 type averageSpeed struct {
 	WC
-	unit       int
-	unitFormat string
-	startTime  time.Time
-	msg        string
-	complete   *completeMsg
+	unit        int
+	unitFormat  string
+	startTime   time.Time
+	msg         string
+	completeMsg *string
 }
 
 func (d *averageSpeed) Decor(st *Statistics) string {
 	if st.Completed {
-		if d.complete != nil {
-			return d.FormatMsg(d.complete.msg)
+		if d.completeMsg != nil {
+			return d.FormatMsg(*d.completeMsg)
 		}
 		return d.FormatMsg(d.msg)
 	}
@@ -262,5 +262,5 @@ func (d *averageSpeed) Decor(st *Statistics) string {
 }
 
 func (d *averageSpeed) OnCompleteMessage(msg string) {
-	d.complete = &completeMsg{msg}
+	d.completeMsg = &msg
 }

@@ -30,16 +30,16 @@ func Name(name string, wcc ...WC) Decorator {
 type nameDecorator struct {
 	WC
 	msg      string
-	complete *completeMsg
+	complete *string
 }
 
 func (d *nameDecorator) Decor(st *Statistics) string {
 	if st.Completed && d.complete != nil {
-		return d.FormatMsg(d.complete.msg)
+		return d.FormatMsg(*d.complete)
 	}
 	return d.FormatMsg(d.msg)
 }
 
 func (d *nameDecorator) OnCompleteMessage(msg string) {
-	d.complete = &completeMsg{msg}
+	d.complete = &msg
 }

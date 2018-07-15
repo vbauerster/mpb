@@ -23,17 +23,17 @@ func Percentage(wcc ...WC) Decorator {
 
 type percentageDecorator struct {
 	WC
-	complete *completeMsg
+	completeMsg *string
 }
 
 func (d *percentageDecorator) Decor(st *Statistics) string {
-	if st.Completed && d.complete != nil {
-		return d.FormatMsg(d.complete.msg)
+	if st.Completed && d.completeMsg != nil {
+		return d.FormatMsg(*d.completeMsg)
 	}
 	str := fmt.Sprintf("%d %%", internal.Percentage(st.Total, st.Current, 100))
 	return d.FormatMsg(str)
 }
 
 func (d *percentageDecorator) OnCompleteMessage(msg string) {
-	d.complete = &completeMsg{msg}
+	d.completeMsg = &msg
 }

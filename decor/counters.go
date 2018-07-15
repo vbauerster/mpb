@@ -178,14 +178,14 @@ func Counters(unit int, pairFormat string, wcc ...WC) Decorator {
 
 type countersDecorator struct {
 	WC
-	unit       int
-	pairFormat string
-	complete   *completeMsg
+	unit        int
+	pairFormat  string
+	completeMsg *string
 }
 
 func (d *countersDecorator) Decor(st *Statistics) string {
-	if st.Completed && d.complete != nil {
-		return d.FormatMsg(d.complete.msg)
+	if st.Completed && d.completeMsg != nil {
+		return d.FormatMsg(*d.completeMsg)
 	}
 
 	var str string
@@ -202,5 +202,5 @@ func (d *countersDecorator) Decor(st *Statistics) string {
 }
 
 func (d *countersDecorator) OnCompleteMessage(msg string) {
-	d.complete = &completeMsg{msg}
+	d.completeMsg = &msg
 }

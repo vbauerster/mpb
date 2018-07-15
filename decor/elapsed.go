@@ -26,14 +26,14 @@ func Elapsed(style int, wcc ...WC) Decorator {
 
 type elapsedDecorator struct {
 	WC
-	style     int
-	startTime time.Time
-	complete  *completeMsg
+	style       int
+	startTime   time.Time
+	completeMsg *string
 }
 
 func (d *elapsedDecorator) Decor(st *Statistics) string {
-	if st.Completed && d.complete != nil {
-		return d.FormatMsg(d.complete.msg)
+	if st.Completed && d.completeMsg != nil {
+		return d.FormatMsg(*d.completeMsg)
 	}
 
 	var str string
@@ -57,5 +57,5 @@ func (d *elapsedDecorator) Decor(st *Statistics) string {
 }
 
 func (d *elapsedDecorator) OnCompleteMessage(msg string) {
-	d.complete = &completeMsg{msg}
+	d.completeMsg = &msg
 }

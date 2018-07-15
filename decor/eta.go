@@ -43,14 +43,14 @@ func MovingAverageETA(style int, average MovingAverage, wcc ...WC) Decorator {
 
 type movingAverageETA struct {
 	WC
-	style    int
-	average  ewma.MovingAverage
-	complete *completeMsg
+	style       int
+	average     ewma.MovingAverage
+	completeMsg *string
 }
 
 func (d *movingAverageETA) Decor(st *Statistics) string {
-	if st.Completed && d.complete != nil {
-		return d.FormatMsg(d.complete.msg)
+	if st.Completed && d.completeMsg != nil {
+		return d.FormatMsg(*d.completeMsg)
 	}
 
 	v := internal.Round(d.average.Value())
@@ -87,7 +87,7 @@ func (d *movingAverageETA) NextAmount(n int, wdd ...time.Duration) {
 }
 
 func (d *movingAverageETA) OnCompleteMessage(msg string) {
-	d.complete = &completeMsg{msg}
+	d.completeMsg = &msg
 }
 
 // AverageETA decorator.
@@ -111,14 +111,14 @@ func AverageETA(style int, wcc ...WC) Decorator {
 
 type averageETA struct {
 	WC
-	style     int
-	startTime time.Time
-	complete  *completeMsg
+	style       int
+	startTime   time.Time
+	completeMsg *string
 }
 
 func (d *averageETA) Decor(st *Statistics) string {
-	if st.Completed && d.complete != nil {
-		return d.FormatMsg(d.complete.msg)
+	if st.Completed && d.completeMsg != nil {
+		return d.FormatMsg(*d.completeMsg)
 	}
 
 	var str string
@@ -147,5 +147,5 @@ func (d *averageETA) Decor(st *Statistics) string {
 }
 
 func (d *averageETA) OnCompleteMessage(msg string) {
-	d.complete = &completeMsg{msg}
+	d.completeMsg = &msg
 }

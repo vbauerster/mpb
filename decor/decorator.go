@@ -142,8 +142,3 @@ func OnComplete(decorator Decorator, message string) Decorator {
 	}
 	return decorator
 }
-
-// completeMsg for internal usage.
-type completeMsg struct {
-	msg string
-}
