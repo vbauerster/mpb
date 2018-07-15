@@ -7,8 +7,9 @@ import (
 
 func TestCounterKiB(t *testing.T) {
 	cases := map[string]struct {
-		value          int64
-		verb, expected string
+		value    int64
+		verb     string
+		expected string
 	}{
 		"verb %f":   {12345678, "%f", "11.773756MiB"},
 		"verb %.0f": {12345678, "%.0f", "12MiB"},
@@ -62,18 +63,21 @@ func TestCounterKiB(t *testing.T) {
 		"4*TiB %.1f":        {4 * TiB, "%.1f", "4.0TiB"},
 		"4*TiB %s":          {4 * TiB, "%s", "4.0TiB"},
 	}
-	for k, tc := range cases {
-		got := fmt.Sprintf(tc.verb, CounterKiB(tc.value))
-		if got != tc.expected {
-			t.Errorf("%s: Expected: %q, got: %q\n", k, tc.expected, got)
-		}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			got := fmt.Sprintf(tc.verb, CounterKiB(tc.value))
+			if got != tc.expected {
+				t.Fatalf("expected: %q, got: %q\n", tc.expected, got)
+			}
+		})
 	}
 }
 
 func TestCounterKB(t *testing.T) {
 	cases := map[string]struct {
-		value          int64
-		verb, expected string
+		value    int64
+		verb     string
+		expected string
 	}{
 		"verb %f":   {12345678, "%f", "12.345678MB"},
 		"verb %.0f": {12345678, "%.0f", "12MB"},
@@ -127,10 +131,12 @@ func TestCounterKB(t *testing.T) {
 		"4*TB %.1f":        {4 * TB, "%.1f", "4.0TB"},
 		"4*TB %s":          {4 * TB, "%s", "4.0TB"},
 	}
-	for k, tc := range cases {
-		got := fmt.Sprintf(tc.verb, CounterKB(tc.value))
-		if got != tc.expected {
-			t.Errorf("%s: Expected: %q, got: %q\n", k, tc.expected, got)
-		}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			got := fmt.Sprintf(tc.verb, CounterKB(tc.value))
+			if got != tc.expected {
+				t.Fatalf("expected: %q, got: %q\n", tc.expected, got)
+			}
+		})
 	}
 }

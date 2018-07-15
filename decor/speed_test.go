@@ -7,8 +7,9 @@ import (
 
 func TestSpeedKiB(t *testing.T) {
 	cases := map[string]struct {
-		value          int64
-		verb, expected string
+		value    int64
+		verb     string
+		expected string
 	}{
 		"verb %f":   {12345678, "%f", "11.773756MiB/s"},
 		"verb %.0f": {12345678, "%.0f", "12MiB/s"},
@@ -62,18 +63,21 @@ func TestSpeedKiB(t *testing.T) {
 		"4*TiB/s %.1f":          {4 * TiB, "%.1f", "4.0TiB/s"},
 		"4*TiB/s %s":            {4 * TiB, "%s", "4.0TiB/s"},
 	}
-	for k, tc := range cases {
-		got := fmt.Sprintf(tc.verb, SpeedKiB(tc.value))
-		if got != tc.expected {
-			t.Errorf("%s: Expected: %q, got: %q\n", k, tc.expected, got)
-		}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			got := fmt.Sprintf(tc.verb, SpeedKiB(tc.value))
+			if got != tc.expected {
+				t.Fatalf("expected: %q, got: %q\n", tc.expected, got)
+			}
+		})
 	}
 }
 
 func TestSpeedKB(t *testing.T) {
 	cases := map[string]struct {
-		value          int64
-		verb, expected string
+		value    int64
+		verb     string
+		expected string
 	}{
 		"verb %f":   {12345678, "%f", "12.345678MB/s"},
 		"verb %.0f": {12345678, "%.0f", "12MB/s"},
@@ -127,10 +131,12 @@ func TestSpeedKB(t *testing.T) {
 		"4*TB/s %.1f":          {4 * TB, "%.1f", "4.0TB/s"},
 		"4*TB/s %s":            {4 * TB, "%s", "4.0TB/s"},
 	}
-	for k, tc := range cases {
-		got := fmt.Sprintf(tc.verb, SpeedKB(tc.value))
-		if got != tc.expected {
-			t.Errorf("%s: Expected: %q, got: %q\n", k, tc.expected, got)
-		}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			got := fmt.Sprintf(tc.verb, SpeedKB(tc.value))
+			if got != tc.expected {
+				t.Fatalf("expected: %q, got: %q\n", tc.expected, got)
+			}
+		})
 	}
 }
