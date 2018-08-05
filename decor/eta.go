@@ -9,6 +9,8 @@ import (
 	"github.com/vbauerster/mpb/internal"
 )
 
+type TimeNormalizer func(time.Duration) time.Duration
+
 // EwmaETA exponential-weighted-moving-average based ETA decorator.
 //
 //	`style` one of [ET_STYLE_GO|ET_STYLE_HHMMSS|ET_STYLE_HHMM|ET_STYLE_MMSS]
@@ -17,7 +19,7 @@ import (
 //
 //	`wcc` optional WC config
 func EwmaETA(style int, age float64, wcc ...WC) Decorator {
-	return MovingAverageETA(style, ewma.NewMovingAverage(age), wcc...)
+	return MovingAverageETA(style, ewma.NewMovingAverage(age), NopTimeNormalizer(), wcc...)
 }
 
 // MovingAverageETA decorator relies on MovingAverage implementation to calculate its average.
@@ -27,16 +29,17 @@ func EwmaETA(style int, age float64, wcc ...WC) Decorator {
 //	`average` MovingAverage implementation
 //
 //	`wcc` optional WC config
-func MovingAverageETA(style int, average MovingAverage, wcc ...WC) Decorator {
+func MovingAverageETA(style int, average MovingAverage, normalizer TimeNormalizer, wcc ...WC) Decorator {
 	var wc WC
 	for _, widthConf := range wcc {
 		wc = widthConf
 	}
 	wc.Init()
 	d := &movingAverageETA{
-		WC:      wc,
-		style:   style,
-		average: average,
+		WC:         wc,
+		style:      style,
+		average:    average,
+		normalizer: normalizer,
 	}
 	return d
 }
@@ -46,6 +49,7 @@ type movingAverageETA struct {
 	style       int
 	average     ewma.MovingAverage
 	completeMsg *string
+	normalizer  TimeNormalizer
 }
 
 func (d *movingAverageETA) Decor(st *Statistics) string {
@@ -57,7 +61,7 @@ func (d *movingAverageETA) Decor(st *Statistics) string {
 	if math.IsInf(v, 0) || math.IsNaN(v) {
 		v = 0
 	}
-	remaining := time.Duration((st.Total - st.Current) * int64(v))
+	remaining := d.normalizer(time.Duration((st.Total - st.Current) * int64(v)))
 	hours := int64((remaining / time.Hour) % 60)
 	minutes := int64((remaining / time.Minute) % 60)
 	seconds := int64((remaining / time.Second) % 60)
@@ -148,4 +152,46 @@ func (d *averageETA) Decor(st *Statistics) string {
 
 func (d *averageETA) OnCompleteMessage(msg string) {
 	d.completeMsg = &msg
+}
+
+func MaxTolerateTimeNormalizer(maxTolerate time.Duration) TimeNormalizer {
+	var normalized time.Duration
+	var lastCall time.Time
+	return func(remaining time.Duration) time.Duration {
+		if diff := normalized - remaining; diff <= 0 || diff >= maxTolerate || remaining <= maxTolerate {
+			normalized = remaining
+			lastCall = time.Now()
+			return remaining
+		}
+		normalized -= time.Since(lastCall)
+		lastCall = time.Now()
+		return normalized
+	}
+}
+
+func FixedIntervalTimeNormalizer(updInterval int) TimeNormalizer {
+	var normalized time.Duration
+	var lastCall time.Time
+	var count int
+	return func(remaining time.Duration) time.Duration {
+		if count == 0 || remaining <= time.Duration(15*time.Second) {
+			count = updInterval
+			normalized = remaining
+			lastCall = time.Now()
+			return remaining
+		}
+		count--
+		normalized -= time.Since(lastCall)
+		lastCall = time.Now()
+		if normalized > 0 {
+			return normalized
+		}
+		return remaining
+	}
+}
+
+func NopTimeNormalizer() TimeNormalizer {
+	return func(remaining time.Duration) time.Duration {
+		return remaining
+	}
 }
