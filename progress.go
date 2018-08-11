@@ -118,13 +118,15 @@ func (p *Progress) AddBar(total int64, options ...BarOption) *Bar {
 // it means remove bar now without waiting for its completion.
 // If bar is already completed, there is nothing to abort.
 // If you need to remove bar after completion, use BarRemoveOnComplete BarOption.
-func (p *Progress) Abort(b *Bar) {
+func (p *Progress) Abort(b *Bar, remove bool) {
 	select {
 	case p.operateState <- func(s *pState) {
 		if b.index < 0 {
 			return
 		}
-		s.heapUpdated = heap.Remove(s.bHeap, b.index) != nil
+		if remove {
+			s.heapUpdated = heap.Remove(s.bHeap, b.index) != nil
+		}
 		s.shutdownPending = append(s.shutdownPending, b)
 	}:
 	case <-p.done:
