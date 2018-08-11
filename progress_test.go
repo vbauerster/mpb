@@ -45,7 +45,7 @@ func TestBarCount(t *testing.T) {
 		t.Errorf("BarCount want: %q, got: %q\n", 1, count)
 	}
 
-	p.Abort(b)
+	p.Abort(b, true)
 	p.Wait()
 }
 
@@ -61,7 +61,7 @@ func TestBarAbort(t *testing.T) {
 		go func(n int) {
 			for i := 0; i < 100; i++ {
 				if n == 0 && i == 33 {
-					p.Abort(b)
+					p.Abort(b, true)
 					wg.Done()
 				}
 				b.Increment()
@@ -75,8 +75,8 @@ func TestBarAbort(t *testing.T) {
 	if count != 2 {
 		t.Errorf("BarCount want: %q, got: %q\n", 2, count)
 	}
-	p.Abort(bars[1])
-	p.Abort(bars[2])
+	p.Abort(bars[1], true)
+	p.Abort(bars[2], true)
 	p.Wait()
 }
 
@@ -120,7 +120,7 @@ func TestWithFormat(t *testing.T) {
 
 	for i := 0; i < 100; i++ {
 		if i == 33 {
-			p.Abort(bar)
+			p.Abort(bar, true)
 			break
 		}
 		time.Sleep(randomDuration(100 * time.Millisecond))

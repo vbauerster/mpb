@@ -43,7 +43,7 @@ func main() {
 			for i := 0; i < total; i++ {
 				start := time.Now()
 				if b.ID() == 2 && i == 42 {
-					p.Abort(b)
+					p.Abort(b, true)
 					return
 				}
 				time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)

@@ -48,7 +48,7 @@ func TestBarID(t *testing.T) {
 		t.Errorf("Expected bar id: %d, got %d\n", wantID, gotID)
 	}
 
-	p.Abort(bar)
+	p.Abort(bar, true)
 	p.Wait()
 }
 
