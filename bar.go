@@ -186,12 +186,19 @@ func (b *Bar) SetTotal(total int64, final bool) {
 	}
 }
 
-// RefillBy fills bar with different r rune.
-func (b *Bar) RefillBy(n int, r rune) {
+// SetRefill sets fill rune to r, up until n.
+func (b *Bar) SetRefill(n int, r rune) {
+	if n <= 0 {
+		return
+	}
 	b.operateState <- func(s *bState) {
 		s.refill = &refill{r, int64(n)}
 	}
-	b.IncrBy(n)
+}
+
+// RefillBy is deprecated, use SetRefill
+func (b *Bar) RefillBy(n int, r rune) {
+	b.SetRefill(n, r)
 }
 
 // Increment is a shorthand for b.IncrBy(1).
