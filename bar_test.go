@@ -52,7 +52,7 @@ func TestBarID(t *testing.T) {
 	p.Wait()
 }
 
-func TestBarIncrRefillBy(t *testing.T) {
+func TestBarSetRefill(t *testing.T) {
 	var buf bytes.Buffer
 
 	width := 100
@@ -64,7 +64,8 @@ func TestBarIncrRefillBy(t *testing.T) {
 
 	bar := p.AddBar(int64(total), BarTrim())
 
-	bar.RefillBy(till, refillRune)
+	bar.SetRefill(till, refillRune)
+	bar.IncrBy(till)
 
 	for i := 0; i < total-till; i++ {
 		bar.Increment()
