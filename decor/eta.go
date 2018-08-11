@@ -60,9 +60,6 @@ func (d *movingAverageETA) Decor(st *Statistics) string {
 	}
 
 	v := internal.Round(d.average.Value())
-	if math.IsInf(v, 0) || math.IsNaN(v) {
-		v = 0
-	}
 	remaining := d.normalizer(time.Duration((st.Total - st.Current) * int64(v)))
 	hours := int64((remaining / time.Hour) % 60)
 	minutes := int64((remaining / time.Minute) % 60)
@@ -89,6 +86,9 @@ func (d *movingAverageETA) NextAmount(n int, wdd ...time.Duration) {
 		workDuration = wd
 	}
 	lastItemEstimate := float64(workDuration) / float64(n)
+	if math.IsInf(lastItemEstimate, 0) || math.IsNaN(lastItemEstimate) {
+		return
+	}
 	d.average.Add(lastItemEstimate)
 }
 
@@ -160,7 +160,7 @@ func MaxTolerateTimeNormalizer(maxTolerate time.Duration) TimeNormalizer {
 	var normalized time.Duration
 	var lastCall time.Time
 	return func(remaining time.Duration) time.Duration {
-		if diff := normalized - remaining; diff <= 0 || diff >= maxTolerate || remaining <= maxTolerate {
+		if diff := normalized - remaining; diff <= 0 || diff > maxTolerate || remaining < maxTolerate/2 {
 			normalized = remaining
 			lastCall = time.Now()
 			return remaining

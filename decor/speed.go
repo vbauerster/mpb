@@ -3,6 +3,7 @@ package decor
 import (
 	"fmt"
 	"io"
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -195,7 +196,10 @@ func (s *movingAverageSpeed) NextAmount(n int, wdd ...time.Duration) {
 	for _, wd := range wdd {
 		workDuration = wd
 	}
-	speed := float64(n) / workDuration.Seconds()
+	speed := float64(n) / workDuration.Seconds() / 1000
+	if math.IsInf(speed, 0) || math.IsNaN(speed) {
+		return
+	}
 	s.average.Add(speed)
 }
 
