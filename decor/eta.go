@@ -19,14 +19,16 @@ type TimeNormalizer func(time.Duration) time.Duration
 //
 //	`wcc` optional WC config
 func EwmaETA(style int, age float64, wcc ...WC) Decorator {
-	return MovingAverageETA(style, ewma.NewMovingAverage(age), NopTimeNormalizer(), wcc...)
+	return MovingAverageETA(style, ewma.NewMovingAverage(age), NopNormalizer(), wcc...)
 }
 
 // MovingAverageETA decorator relies on MovingAverage implementation to calculate its average.
 //
 //	`style` one of [ET_STYLE_GO|ET_STYLE_HHMMSS|ET_STYLE_HHMM|ET_STYLE_MMSS]
 //
-//	`average` MovingAverage implementation
+//	`average` available implementations of MovingAverage [ewma.MovingAverage|NewMedian|NewMedianEwma]
+//
+//	`normalizer` available implementations are [NopNormalizer|FixedIntervalTimeNormalizer|MaxTolerateTimeNormalizer]
 //
 //	`wcc` optional WC config
 func MovingAverageETA(style int, average MovingAverage, normalizer TimeNormalizer, wcc ...WC) Decorator {
@@ -190,7 +192,7 @@ func FixedIntervalTimeNormalizer(updInterval int) TimeNormalizer {
 	}
 }
 
-func NopTimeNormalizer() TimeNormalizer {
+func NopNormalizer() TimeNormalizer {
 	return func(remaining time.Duration) time.Duration {
 		return remaining
 	}
