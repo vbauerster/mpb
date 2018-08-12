@@ -51,18 +51,22 @@ func NewMedian() MovingAverage {
 }
 
 type medianEwma struct {
-	MovingAverage
+	count  uint
 	median MovingAverage
+	MovingAverage
 }
 
-func (s medianEwma) Add(v float64) {
+func (s *medianEwma) Add(v float64) {
 	s.median.Add(v)
-	s.MovingAverage.Add(s.median.Value())
+	s.count++
+	if s.count >= 3 {
+		s.MovingAverage.Add(s.median.Value())
+	}
 }
 
 // NewMedianEwma is ewma based MovingAverage, which gets its values from median MovingAverage.
 func NewMedianEwma(age ...float64) MovingAverage {
-	return medianEwma{
+	return &medianEwma{
 		MovingAverage: ewma.NewMovingAverage(age...),
 		median:        NewMedian(),
 	}
