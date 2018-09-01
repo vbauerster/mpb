@@ -29,34 +29,27 @@ type Progress struct {
 	done         chan struct{}
 }
 
-type (
-	pState struct {
-		bHeap           *priorityQueue
-		shutdownPending []*Bar
-		heapUpdated     bool
-		zeroWait        bool
-		idCounter       int
-		width           int
-		format          string
-		rr              time.Duration
-		cw              *cwriter.Writer
-		ticker          *time.Ticker
-		pMatrix         map[int][]chan int
-		aMatrix         map[int][]chan int
+type pState struct {
+	bHeap           *priorityQueue
+	shutdownPending []*Bar
+	heapUpdated     bool
+	zeroWait        bool
+	idCounter       int
+	width           int
+	format          string
+	rr              time.Duration
+	cw              *cwriter.Writer
+	ticker          *time.Ticker
+	pMatrix         map[int][]chan int
+	aMatrix         map[int][]chan int
 
-		// following are provided by user
-		uwg              *sync.WaitGroup
-		cancel           <-chan struct{}
-		shutdownNotifier chan struct{}
-		waitBars         map[*Bar]*Bar
-		debugOut         io.Writer
-	}
-	widthSyncer struct {
-		// Public for easy testing
-		Accumulator []chan int
-		Distributor []chan int
-	}
-)
+	// following are provided by user
+	uwg              *sync.WaitGroup
+	cancel           <-chan struct{}
+	shutdownNotifier chan struct{}
+	waitBars         map[*Bar]*Bar
+	debugOut         io.Writer
+}
 
 // New creates new Progress instance, which orchestrates bars rendering process.
 // Accepts mpb.ProgressOption funcs for customization.
