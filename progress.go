@@ -27,6 +27,7 @@ type Progress struct {
 	uwg          *sync.WaitGroup
 	operateState chan func(*pState)
 	done         chan struct{}
+	refresh      chan struct{}
 }
 
 type pState struct {
@@ -78,6 +79,7 @@ func New(options ...ProgressOption) *Progress {
 		wg:           new(sync.WaitGroup),
 		operateState: make(chan func(*pState)),
 		done:         make(chan struct{}),
+		refresh:      make(chan struct{}),
 	}
 	go p.serve(s)
 	return p
@@ -146,6 +148,17 @@ func (p *Progress) BarCount() int {
 	}
 }
 
+// Refresh will refresh the progress bars manually instead of waiting
+// the refresh rate timer.
+func (p *Progress) Refresh() {
+	select {
+	case p.refresh <- struct{}{}:
+		return
+	case <-p.done:
+		return
+	}
+}
+
 // Wait first waits for user provided *sync.WaitGroup, if any,
 // then waits far all bars to complete and finally shutdowns master goroutine.
 // After this method has been called, there is no way to reuse *Progress instance.
@@ -158,6 +171,9 @@ func (p *Progress) Wait() {
 
 	select {
 	case p.operateState <- func(s *pState) { s.zeroWait = true }:
+		// manually refresh to flush state if we have a really long
+		// configured refresh rate
+		p.Refresh()
 		<-p.done
 	case <-p.done:
 	}

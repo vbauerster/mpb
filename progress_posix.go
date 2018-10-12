@@ -17,25 +17,39 @@ func (p *Progress) serve(s *pState) {
 	var tickerResumer <-chan time.Time
 	resumeDelay := s.rr * 2
 
+	// common operation for ticker for manual refresh, returns
+	// bool to indicate if we are done [false] or should continue [true]
+	tickRefresh := func() bool {
+		if s.zeroWait {
+			s.ticker.Stop()
+			signal.Stop(winch)
+			if s.shutdownNotifier != nil {
+				close(s.shutdownNotifier)
+			}
+			close(p.done)
+			close(p.refresh)
+			return false
+		}
+		tw, err := s.cw.GetWidth()
+		if err != nil {
+			tw = s.width
+		}
+		s.render(tw)
+		return true
+	}
+
 	for {
 		select {
 		case op := <-p.operateState:
 			op(s)
 		case <-s.ticker.C:
-			if s.zeroWait {
-				s.ticker.Stop()
-				signal.Stop(winch)
-				if s.shutdownNotifier != nil {
-					close(s.shutdownNotifier)
-				}
-				close(p.done)
+			if !tickRefresh() {
 				return
 			}
-			tw, err := s.cw.GetWidth()
-			if err != nil {
-				tw = s.width
+		case <-p.refresh:
+			if !tickRefresh() {
+				return
 			}
-			s.render(tw)
 		case <-winch:
 			tw, err := s.cw.GetWidth()
 			if err != nil {
