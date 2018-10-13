@@ -51,6 +51,14 @@ func WithRefreshRate(d time.Duration) ProgressOption {
 	}
 }
 
+// WithManualRefresh disables internal auto refresh time.Ticker.
+// Refresh will occur upon receive value from provided ch.
+func WithManualRefresh(ch <-chan time.Time) ProgressOption {
+	return func(s *pState) {
+		s.manualRefreshCh = ch
+	}
+}
+
 // WithCancel provide your cancel channel,
 // which you plan to close at some point.
 func WithCancel(ch <-chan struct{}) ProgressOption {

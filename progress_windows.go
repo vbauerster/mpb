@@ -2,12 +2,21 @@
 
 package mpb
 
-import "time"
+import (
+	"time"
+)
 
 func (p *Progress) serve(s *pState) {
 
-	ticker := time.NewTicker(s.rr)
-	refreshCh := ticker.C
+	var ticker *time.Ticker
+	var refreshCh <-chan time.Time
+
+	if s.manualRefreshCh == nil {
+		ticker = time.NewTicker(s.rr)
+		refreshCh = ticker.C
+	} else {
+		refreshCh = s.manualRefreshCh
+	}
 
 	for {
 		select {
@@ -15,7 +24,9 @@ func (p *Progress) serve(s *pState) {
 			op(s)
 		case <-refreshCh:
 			if s.zeroWait {
-				ticker.Stop()
+				if s.manualRefreshCh == nil {
+					ticker.Stop()
+				}
 				if s.shutdownNotifier != nil {
 					close(s.shutdownNotifier)
 				}

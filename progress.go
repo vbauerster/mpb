@@ -44,6 +44,7 @@ type pState struct {
 
 	// following are provided by user
 	uwg              *sync.WaitGroup
+	manualRefreshCh  <-chan time.Time
 	cancel           <-chan struct{}
 	shutdownNotifier chan struct{}
 	waitBars         map[*Bar]*Bar

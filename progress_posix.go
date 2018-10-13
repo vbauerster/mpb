@@ -11,14 +11,21 @@ import (
 
 func (p *Progress) serve(s *pState) {
 
+	var ticker *time.Ticker
+	var refreshCh <-chan time.Time
+	var winch chan os.Signal
 	var resumeTimer *time.Timer
 	var resumeEvent <-chan time.Time
 	winchIdleDur := s.rr * 2
-	winch := make(chan os.Signal, 2)
-	signal.Notify(winch, syscall.SIGWINCH)
 
-	ticker := time.NewTicker(s.rr)
-	refreshCh := ticker.C
+	if s.manualRefreshCh == nil {
+		ticker = time.NewTicker(s.rr)
+		refreshCh = ticker.C
+		winch = make(chan os.Signal, 2)
+		signal.Notify(winch, syscall.SIGWINCH)
+	} else {
+		refreshCh = s.manualRefreshCh
+	}
 
 	for {
 		select {
@@ -26,8 +33,10 @@ func (p *Progress) serve(s *pState) {
 			op(s)
 		case <-refreshCh:
 			if s.zeroWait {
-				ticker.Stop()
-				signal.Stop(winch)
+				if s.manualRefreshCh == nil {
+					signal.Stop(winch)
+					ticker.Stop()
+				}
 				if s.shutdownNotifier != nil {
 					close(s.shutdownNotifier)
 				}
