@@ -47,8 +47,6 @@ func WithRefreshRate(d time.Duration) ProgressOption {
 		if d < 10*time.Millisecond {
 			return
 		}
-		s.ticker.Stop()
-		s.ticker = time.NewTicker(d)
 		s.rr = d
 	}
 }

@@ -39,7 +39,6 @@ type pState struct {
 	format          string
 	rr              time.Duration
 	cw              *cwriter.Writer
-	ticker          *time.Ticker
 	pMatrix         map[int][]chan int
 	aMatrix         map[int][]chan int
 
@@ -62,7 +61,6 @@ func New(options ...ProgressOption) *Progress {
 		format:   pformat,
 		cw:       cwriter.New(os.Stdout),
 		rr:       prr,
-		ticker:   time.NewTicker(prr),
 		waitBars: make(map[*Bar]*Bar),
 		debugOut: ioutil.Discard,
 	}
