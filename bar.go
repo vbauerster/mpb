@@ -144,12 +144,11 @@ func (b *Bar) RemoveAllAppenders() {
 }
 
 // ProxyReader allows progress tracking against provided io.Reader.
-func (b *Bar) ProxyReader(r io.Reader) *Reader {
-	proxyReader := &Reader{
+func (b *Bar) ProxyReader(r io.Reader) io.Reader {
+	return &Reader{
 		Reader: r,
 		bar:    b,
 	}
-	return proxyReader
 }
 
 // ID returs id of the bar.
