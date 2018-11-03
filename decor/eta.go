@@ -74,7 +74,11 @@ func (d *movingAverageETA) Decor(st *Statistics) string {
 	case ET_STYLE_HHMM:
 		str = fmt.Sprintf("%02d:%02d", hours, minutes)
 	case ET_STYLE_MMSS:
-		str = fmt.Sprintf("%02d:%02d", minutes, seconds)
+		if hours > 0 {
+			str = fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
+		} else {
+			str = fmt.Sprintf("%02d:%02d", minutes, seconds)
+		}
 	}
 
 	return d.FormatMsg(str)
@@ -146,7 +150,11 @@ func (d *averageETA) Decor(st *Statistics) string {
 	case ET_STYLE_HHMM:
 		str = fmt.Sprintf("%02d:%02d", hours, minutes)
 	case ET_STYLE_MMSS:
-		str = fmt.Sprintf("%02d:%02d", minutes, seconds)
+		if hours > 0 {
+			str = fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
+		} else {
+			str = fmt.Sprintf("%02d:%02d", minutes, seconds)
+		}
 	}
 
 	return d.FormatMsg(str)
