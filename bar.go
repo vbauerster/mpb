@@ -145,10 +145,7 @@ func (b *Bar) RemoveAllAppenders() {
 
 // ProxyReader allows progress tracking against provided io.Reader.
 func (b *Bar) ProxyReader(r io.Reader) io.Reader {
-	return &Reader{
-		Reader: r,
-		bar:    b,
-	}
+	return &proxyReader{r, b}
 }
 
 // ID returs id of the bar.
