@@ -23,9 +23,9 @@ func main() {
 
 	for i := 0; i < numBars; i++ {
 		name := fmt.Sprintf("Bar#%d:", i)
-		efn := func(w io.Writer, completed bool) {
-			if completed {
-				io.WriteString(w, name+" is completed!\n")
+		efn := func(w io.Writer, s *decor.Statistics) {
+			if s.Completed {
+				fmt.Fprintf(w, "Bar id: %d has been completed\n", s.ID)
 			}
 		}
 		bar := p.AddBar(int64(total), mpb.BarNewLineExtend(efn),

@@ -66,7 +66,7 @@ type (
 		refill             *refill
 		bufP, bufB, bufA   *bytes.Buffer
 		panicMsg           string
-		newLineExtendFn    func(io.Writer, bool)
+		newLineExtendFn    func(io.Writer, *decor.Statistics)
 
 		// following options are assigned to the *Bar
 		priority   int
@@ -285,7 +285,7 @@ func (b *Bar) render(debugOut io.Writer, tw int) {
 		r := s.draw(tw)
 		if s.newLineExtendFn != nil {
 			b.bufNL.Reset()
-			s.newLineExtendFn(b.bufNL, s.completeFlushed)
+			s.newLineExtendFn(b.bufNL, newStatistics(s))
 			r = io.MultiReader(r, b.bufNL)
 		}
 		b.frameReaderCh <- &frameReader{
@@ -300,7 +300,7 @@ func (b *Bar) render(debugOut io.Writer, tw int) {
 		r := s.draw(tw)
 		if s.newLineExtendFn != nil {
 			b.bufNL.Reset()
-			s.newLineExtendFn(b.bufNL, s.completeFlushed)
+			s.newLineExtendFn(b.bufNL, newStatistics(s))
 			r = io.MultiReader(r, b.bufNL)
 		}
 		b.frameReaderCh <- &frameReader{Reader: r}
