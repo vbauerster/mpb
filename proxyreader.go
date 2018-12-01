@@ -7,22 +7,16 @@ import (
 
 // proxyReader is io.Reader wrapper, for proxy read bytes
 type proxyReader struct {
-	r io.Reader
-	b *Bar
+	io.ReadCloser
+	bar *Bar
+	iT  time.Time
 }
 
-func (s *proxyReader) Read(p []byte) (n int, err error) {
-	start := time.Now()
-	n, err = s.r.Read(p)
+func (pr *proxyReader) Read(p []byte) (n int, err error) {
+	n, err = pr.ReadCloser.Read(p)
 	if n > 0 {
-		s.b.IncrBy(n, time.Since(start))
+		pr.bar.IncrBy(n, time.Since(pr.iT))
+		pr.iT = time.Now()
 	}
 	return
-}
-
-func (s *proxyReader) Close() error {
-	if closer, ok := s.r.(io.Closer); ok {
-		return closer.Close()
-	}
-	return nil
 }

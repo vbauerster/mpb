@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"strings"
 	"sync"
 	"time"
@@ -143,9 +144,16 @@ func (b *Bar) RemoveAllAppenders() {
 	}
 }
 
-// ProxyReader allows progress tracking against provided io.Reader.
+// ProxyReader wraps r with metrics required for progress tracking.
 func (b *Bar) ProxyReader(r io.Reader) io.Reader {
-	return &proxyReader{r, b}
+	if r == nil {
+		panic("expect io.Reader, got nil")
+	}
+	rc, ok := r.(io.ReadCloser)
+	if !ok {
+		rc = ioutil.NopCloser(r)
+	}
+	return &proxyReader{rc, b, time.Now()}
 }
 
 // ID returs id of the bar.
