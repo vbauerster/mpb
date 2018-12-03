@@ -28,15 +28,18 @@ type elapsedDecorator struct {
 	WC
 	style       int
 	startTime   time.Time
+	msg         string
 	completeMsg *string
 }
 
 func (d *elapsedDecorator) Decor(st *Statistics) string {
-	if st.Completed && d.completeMsg != nil {
-		return d.FormatMsg(*d.completeMsg)
+	if st.Completed {
+		if d.completeMsg != nil {
+			return d.FormatMsg(*d.completeMsg)
+		}
+		return d.FormatMsg(d.msg)
 	}
 
-	var str string
 	timeElapsed := time.Since(d.startTime)
 	hours := int64((timeElapsed / time.Hour) % 60)
 	minutes := int64((timeElapsed / time.Minute) % 60)
@@ -44,16 +47,20 @@ func (d *elapsedDecorator) Decor(st *Statistics) string {
 
 	switch d.style {
 	case ET_STYLE_GO:
-		str = fmt.Sprint(time.Duration(timeElapsed.Seconds()) * time.Second)
+		d.msg = fmt.Sprint(time.Duration(timeElapsed.Seconds()) * time.Second)
 	case ET_STYLE_HHMMSS:
-		str = fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
+		d.msg = fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
 	case ET_STYLE_HHMM:
-		str = fmt.Sprintf("%02d:%02d", hours, minutes)
+		d.msg = fmt.Sprintf("%02d:%02d", hours, minutes)
 	case ET_STYLE_MMSS:
-		str = fmt.Sprintf("%02d:%02d", minutes, seconds)
+		if hours > 0 {
+			d.msg = fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
+		} else {
+			d.msg = fmt.Sprintf("%02d:%02d", minutes, seconds)
+		}
 	}
 
-	return d.FormatMsg(str)
+	return d.FormatMsg(d.msg)
 }
 
 func (d *elapsedDecorator) OnCompleteMessage(msg string) {
