@@ -198,7 +198,7 @@ func (s *pState) render(tw int) {
 	}
 }
 
-func (s *pState) flush(lineCount int) (err error) {
+func (s *pState) flush(lineCount int) error {
 	for s.bHeap.Len() > 0 {
 		bar := heap.Pop(s.bHeap).(*Bar)
 		frameReader := <-bar.frameReaderCh
