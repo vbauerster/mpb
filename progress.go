@@ -201,12 +201,12 @@ func (s *pState) render(tw int) {
 func (s *pState) flush() (err error) {
 	for s.bHeap.Len() > 0 {
 		bar := heap.Pop(s.bHeap).(*Bar)
-		reader := <-bar.frameReaderCh
-		if _, e := s.cw.ReadFrom(reader); e != nil {
+		frameReader := <-bar.frameReaderCh
+		if _, e := s.cw.ReadFrom(frameReader); e != nil {
 			err = e
 		}
 		defer func() {
-			if frame, ok := reader.(*frameReader); ok && frame.toShutdown {
+			if frameReader.toShutdown {
 				// shutdown at next flush, in other words decrement underlying WaitGroup
 				// only after the bar with completed state has been flushed.
 				// this ensures no bar ends up with less than 100% rendered.
@@ -216,7 +216,7 @@ func (s *pState) flush() (err error) {
 					s.heapUpdated = true
 					delete(s.waitBars, bar)
 				}
-				if frame.removeOnComplete {
+				if frameReader.removeOnComplete {
 					s.heapUpdated = true
 					return
 				}
