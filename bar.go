@@ -36,7 +36,7 @@ type Bar struct {
 	operateState  chan func(*bState)
 	int64Ch       chan int64
 	boolCh        chan bool
-	frameReaderCh chan io.Reader
+	frameReaderCh chan *frameReader
 	syncTableCh   chan [][]chan int
 	bufNL         *bytes.Buffer
 
@@ -110,7 +110,7 @@ func newBar(wg *sync.WaitGroup, id int, total int64, cancel <-chan struct{}, opt
 		operateState:  make(chan func(*bState)),
 		int64Ch:       make(chan int64),
 		boolCh:        make(chan bool),
-		frameReaderCh: make(chan io.Reader, 1),
+		frameReaderCh: make(chan *frameReader, 1),
 		syncTableCh:   make(chan [][]chan int),
 		done:          make(chan struct{}),
 		shutdown:      make(chan struct{}),
