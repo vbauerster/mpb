@@ -23,8 +23,10 @@ func TestWriterPosix(t *testing.T) {
 		{input: "fizz\n", expectedOutput: "foo\n" + ClearCursorAndLine + "bar\n" + ClearCursorAndLine + "fizz\n"},
 	} {
 		t.Run(tcase.input, func(t *testing.T) {
-			w.Write([]byte(tcase.input))
-			w.Flush()
+			s := []byte(tcase.input)
+			lc := bytes.Count(s, []byte("\n"))
+			w.Write(s)
+			w.Flush(lc)
 			output := out.String()
 			if output != tcase.expectedOutput {
 				t.Fatalf("want %q, got %q", tcase.expectedOutput, output)
