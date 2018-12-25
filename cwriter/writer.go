@@ -27,22 +27,18 @@ var (
 type Writer struct {
 	out       io.Writer
 	buf       bytes.Buffer
-	lineSep   []byte
 	lineCount int
 }
 
 // New returns a new Writer with defaults
 func New(w io.Writer) *Writer {
-	return &Writer{
-		out:     w,
-		lineSep: []byte("\n"),
-	}
+	return &Writer{out: w}
 }
 
 // Flush flushes the underlying buffer
-func (w *Writer) Flush() error {
+func (w *Writer) Flush(lineCount int) error {
 	err := w.clearLines()
-	w.lineCount = bytes.Count(w.buf.Bytes(), w.lineSep)
+	w.lineCount = lineCount
 	// WriteTo takes care of w.buf.Reset
 	if _, e := w.buf.WriteTo(w.out); err == nil {
 		err = e
