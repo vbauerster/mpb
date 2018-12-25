@@ -193,18 +193,15 @@ func (s *pState) render(tw int) {
 		go bar.render(s.debugOut, tw)
 	}
 
-	if err := s.flush(); err != nil {
+	if err := s.flush(s.bHeap.Len()); err != nil {
 		fmt.Fprintf(s.debugOut, "%s %s %v\n", "[mpb]", time.Now(), err)
 	}
 }
 
-func (s *pState) flush() (err error) {
+func (s *pState) flush(lineCount int) (err error) {
 	for s.bHeap.Len() > 0 {
 		bar := heap.Pop(s.bHeap).(*Bar)
 		frameReader := <-bar.frameReaderCh
-		if _, e := s.cw.ReadFrom(frameReader); e != nil {
-			err = e
-		}
 		defer func() {
 			if frameReader.toShutdown {
 				// shutdown at next flush, in other words decrement underlying WaitGroup
@@ -223,11 +220,11 @@ func (s *pState) flush() (err error) {
 			}
 			heap.Push(s.bHeap, bar)
 		}()
+		_, err = s.cw.ReadFrom(frameReader)
+		lineCount += frameReader.extendedLines
 	}
 
-	if e := s.cw.Flush(); err == nil {
-		err = e
-	}
+	err = s.cw.Flush(lineCount)
 
 	for i := len(s.shutdownPending) - 1; i >= 0; i-- {
 		close(s.shutdownPending[i].shutdown)

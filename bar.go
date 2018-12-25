@@ -38,7 +38,6 @@ type Bar struct {
 	boolCh        chan bool
 	frameReaderCh chan *frameReader
 	syncTableCh   chan [][]chan int
-	bufNL         *bytes.Buffer
 
 	// done is closed by Bar's goroutine, after cacheState is written
 	done chan struct{}
@@ -65,6 +64,7 @@ type (
 		shutdownListeners  []decor.ShutdownListener
 		refill             *refill
 		bufP, bufB, bufA   *bytes.Buffer
+		bufNL              *bytes.Buffer
 		panicMsg           string
 		newLineExtendFn    func(io.Writer, *decor.Statistics)
 
@@ -78,6 +78,7 @@ type (
 	}
 	frameReader struct {
 		io.Reader
+		extendedLines    int
 		toShutdown       bool
 		removeOnComplete bool
 	}
@@ -121,7 +122,7 @@ func newBar(wg *sync.WaitGroup, id int, total int64, cancel <-chan struct{}, opt
 	}
 
 	if s.newLineExtendFn != nil {
-		b.bufNL = bytes.NewBuffer(make([]byte, 0, s.width))
+		s.bufNL = bytes.NewBuffer(make([]byte, 0, s.width))
 	}
 
 	go b.serve(wg, s, cancel)
@@ -283,13 +284,16 @@ func (b *Bar) render(debugOut io.Writer, tw int) {
 			}
 		}()
 		r := s.draw(tw)
+		var extendedLines int
 		if s.newLineExtendFn != nil {
-			b.bufNL.Reset()
-			s.newLineExtendFn(b.bufNL, newStatistics(s))
-			r = io.MultiReader(r, b.bufNL)
+			s.bufNL.Reset()
+			s.newLineExtendFn(s.bufNL, newStatistics(s))
+			extendedLines = countLines(s.bufNL.Bytes())
+			r = io.MultiReader(r, s.bufNL)
 		}
 		b.frameReaderCh <- &frameReader{
 			Reader:           r,
+			extendedLines:    extendedLines,
 			toShutdown:       s.toComplete && !s.completeFlushed,
 			removeOnComplete: s.removeOnComplete,
 		}
@@ -298,12 +302,17 @@ func (b *Bar) render(debugOut io.Writer, tw int) {
 	case <-b.done:
 		s := b.cacheState
 		r := s.draw(tw)
+		var extendedLines int
 		if s.newLineExtendFn != nil {
-			b.bufNL.Reset()
-			s.newLineExtendFn(b.bufNL, newStatistics(s))
-			r = io.MultiReader(r, b.bufNL)
+			s.bufNL.Reset()
+			s.newLineExtendFn(s.bufNL, newStatistics(s))
+			extendedLines = countLines(s.bufNL.Bytes())
+			r = io.MultiReader(r, s.bufNL)
 		}
-		b.frameReaderCh <- &frameReader{Reader: r}
+		b.frameReaderCh <- &frameReader{
+			Reader:        r,
+			extendedLines: extendedLines,
+		}
 	}
 }
 
@@ -434,4 +443,8 @@ func strToBarRunes(format string) (array barRunes) {
 		format = format[n:]
 	}
 	return
+}
+
+func countLines(b []byte) int {
+	return bytes.Count(b, []byte("\n"))
 }
