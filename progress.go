@@ -220,17 +220,16 @@ func (s *pState) flush(lineCount int) (err error) {
 			}
 			heap.Push(s.bHeap, bar)
 		}()
-		_, err = s.cw.ReadFrom(frameReader)
+		s.cw.ReadFrom(frameReader)
 		lineCount += frameReader.extendedLines
 	}
-
-	err = s.cw.Flush(lineCount)
 
 	for i := len(s.shutdownPending) - 1; i >= 0; i-- {
 		close(s.shutdownPending[i].shutdown)
 		s.shutdownPending = s.shutdownPending[:i]
 	}
-	return
+
+	return s.cw.Flush(lineCount)
 }
 
 func syncWidth(matrix map[int][]chan int) {
