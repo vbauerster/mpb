@@ -25,14 +25,22 @@ var (
 // Writer is a buffered the writer that updates the terminal.
 // The contents of writer will be flushed when Flush is called.
 type Writer struct {
-	out       io.Writer
-	buf       bytes.Buffer
-	lineCount int
+	out        io.Writer
+	buf        bytes.Buffer
+	isTerminal bool
+	fd         int
+	lineCount  int
 }
 
 // New returns a new Writer with defaults
-func New(w io.Writer) *Writer {
-	return &Writer{out: w}
+func New(out io.Writer) *Writer {
+	w := &Writer{out: out}
+	if f, ok := out.(*os.File); ok {
+		fd := f.Fd()
+		w.isTerminal = isatty.IsTerminal(fd)
+		w.fd = int(fd)
+	}
+	return w
 }
 
 // Flush flushes the underlying buffer
@@ -62,11 +70,9 @@ func (w *Writer) ReadFrom(r io.Reader) (n int64, err error) {
 }
 
 func (w *Writer) GetWidth() (int, error) {
-	if f, ok := w.out.(*os.File); ok {
-		if isatty.IsTerminal(f.Fd()) {
-			tw, _, err := terminal.GetSize(int(f.Fd()))
-			return tw, err
-		}
+	if w.isTerminal {
+		tw, _, err := terminal.GetSize(w.fd)
+		return tw, err
 	}
 	return -1, NotATTY
 }
