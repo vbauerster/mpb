@@ -146,7 +146,7 @@ func (b *Bar) RemoveAllAppenders() {
 }
 
 // ProxyReader wraps r with metrics required for progress tracking.
-func (b *Bar) ProxyReader(r io.Reader) io.Reader {
+func (b *Bar) ProxyReader(r io.Reader) io.ReadCloser {
 	if r == nil {
 		panic("expect io.Reader, got nil")
 	}
