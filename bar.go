@@ -179,8 +179,9 @@ func (b *Bar) Current() int64 {
 
 // SetTotal sets total dynamically.
 // Set final to true, when total is known, it will trigger bar complete event.
-func (b *Bar) SetTotal(total int64, final bool) {
-	b.operateState <- func(s *bState) {
+func (b *Bar) SetTotal(total int64, final bool) bool {
+	select {
+	case b.operateState <- func(s *bState) {
 		if total > 0 {
 			s.total = total
 		}
@@ -188,6 +189,10 @@ func (b *Bar) SetTotal(total int64, final bool) {
 			s.current = s.total
 			s.toComplete = true
 		}
+	}:
+		return true
+	case <-b.done:
+		return false
 	}
 }
 
