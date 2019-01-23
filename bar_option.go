@@ -111,6 +111,12 @@ func BarNewLineExtend(efn func(io.Writer, *decor.Statistics)) BarOption {
 	}
 }
 
+func barSpinner(spinner string) BarOption {
+	return func(s *bState) {
+		s.spinner = []rune(spinner)
+	}
+}
+
 func barWidth(w int) BarOption {
 	return func(s *bState) {
 		s.width = w
