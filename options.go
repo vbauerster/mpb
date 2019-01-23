@@ -32,6 +32,13 @@ func WithWidth(w int) ProgressOption {
 	}
 }
 
+// WithSpinner overrides default bar format to use a spinner
+func WithSpinner(spinner string) ProgressOption {
+	return func(s *pState) {
+		s.spinner = spinner
+	}
+}
+
 // WithFormat overrides default bar format "[=>-]"
 func WithFormat(format string) ProgressOption {
 	return func(s *pState) {

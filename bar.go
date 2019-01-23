@@ -52,6 +52,7 @@ type (
 		total              int64
 		current            int64
 		runes              barRunes
+		spinner            []rune
 		trimLeftSpace      bool
 		trimRightSpace     bool
 		toComplete         bool
@@ -345,7 +346,7 @@ func (s *bState) draw(termWidth int) io.Reader {
 		return io.MultiReader(s.bufP, s.bufA)
 	}
 
-	s.fillBar(s.width)
+	s.fill(s.width)
 	barCount := utf8.RuneCount(s.bufB.Bytes())
 	totalCount := prependCount + barCount + appendCount
 	if spaceCount := 0; totalCount > termWidth {
@@ -355,10 +356,35 @@ func (s *bState) draw(termWidth int) io.Reader {
 		if !s.trimRightSpace {
 			spaceCount++
 		}
-		s.fillBar(termWidth - prependCount - appendCount - spaceCount)
+		s.fill(termWidth - prependCount - appendCount - spaceCount)
 	}
 
 	return io.MultiReader(s.bufP, s.bufB, s.bufA)
+}
+
+func (s *bState) fill(width int) {
+	if len(s.spinner) != 0 {
+		s.fillSpinner(width)
+	} else {
+		s.fillBar(width)
+	}
+}
+
+func (s *bState) fillSpinner(width int) {
+	s.bufB.Reset()
+
+	if !s.trimLeftSpace {
+		s.bufB.WriteByte(' ')
+	}
+
+	spin := []byte(string(s.spinner[s.current%int64(len(s.spinner))]))
+	for _, b := range spin {
+		s.bufB.WriteByte(b)
+	}
+
+	for i := len(spin); i < width; i++ {
+		s.bufB.WriteRune(' ')
+	}
 }
 
 func (s *bState) fillBar(width int) {

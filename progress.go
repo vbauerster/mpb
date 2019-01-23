@@ -37,6 +37,7 @@ type pState struct {
 	idCounter       int
 	width           int
 	format          string
+	spinner         string
 	rr              time.Duration
 	cw              *cwriter.Writer
 	pMatrix         map[int][]chan int
@@ -89,6 +90,9 @@ func (p *Progress) AddBar(total int64, options ...BarOption) *Bar {
 	select {
 	case p.operateState <- func(s *pState) {
 		options = append(options, barWidth(s.width), barFormat(s.format))
+		if s.spinner != "" {
+			options = append(options, barSpinner(s.spinner))
+		}
 		b := newBar(p.wg, s.idCounter, total, s.cancel, options...)
 		if b.runningBar != nil {
 			s.waitBars[b.runningBar] = b
