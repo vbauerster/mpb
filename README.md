@@ -39,8 +39,8 @@ _Note:_ it is preferable to go get from github.com, rather than gopkg.in. See is
     name := "Single Bar:"
     // adding a single bar
     bar := p.AddBar(int64(total),
-		// override default "[=>-]" style
-		mpb.BarStyle("╢▌▌░╟"),
+        // override default "[=>-]" style
+        mpb.BarStyle("╢▌▌░╟"),
         mpb.PrependDecorators(
             // display our name with one space on the right
             decor.Name(name, decor.WC{W: len(name) + 1, C: decor.DidentRight}),
