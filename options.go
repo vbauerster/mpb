@@ -4,7 +4,6 @@ import (
 	"io"
 	"sync"
 	"time"
-	"unicode/utf8"
 
 	"github.com/vbauerster/mpb/cwriter"
 )
@@ -28,22 +27,6 @@ func WithWidth(w int) ProgressOption {
 	return func(s *pState) {
 		if w >= 0 {
 			s.width = w
-		}
-	}
-}
-
-// WithSpinner overrides default bar format to use a spinner
-func WithSpinner(spinner string) ProgressOption {
-	return func(s *pState) {
-		s.spinner = spinner
-	}
-}
-
-// WithFormat overrides default bar format "[=>-]"
-func WithFormat(format string) ProgressOption {
-	return func(s *pState) {
-		if utf8.RuneCountInString(format) == formatLen {
-			s.format = format
 		}
 	}
 }

@@ -17,8 +17,6 @@ const (
 	prr = 120 * time.Millisecond
 	// default width
 	pwidth = 80
-	// default format
-	pformat = "[=>-]"
 )
 
 // Progress represents the container that renders Progress bars
@@ -37,7 +35,6 @@ type pState struct {
 	idCounter       int
 	width           int
 	format          string
-	spinner         string
 	rr              time.Duration
 	cw              *cwriter.Writer
 	pMatrix         map[int][]chan int
@@ -60,7 +57,6 @@ func New(options ...ProgressOption) *Progress {
 	s := &pState{
 		bHeap:    &pq,
 		width:    pwidth,
-		format:   pformat,
 		cw:       cwriter.New(os.Stdout),
 		rr:       prr,
 		waitBars: make(map[*Bar]*Bar),
@@ -85,15 +81,38 @@ func New(options ...ProgressOption) *Progress {
 
 // AddBar creates a new progress bar and adds to the container.
 func (p *Progress) AddBar(total int64, options ...BarOption) *Bar {
+	// make sure filler is initialized first
+	args := []BarOption{
+		func(s *bState) {
+			s.filler = &barFiller{
+				format: defaultBarStyle,
+			}
+		},
+	}
+	args = append(args, options...)
+	return p.add(total, args...)
+}
+
+func (p *Progress) AddSpinner(total int64, alignment SpinnerAlignment, options ...BarOption) *Bar {
+	// make sure filler is initialized first
+	args := []BarOption{
+		func(s *bState) {
+			s.filler = &spinnerFiller{
+				frames:    defaultSpinnerStyle,
+				alignment: alignment,
+			}
+		},
+	}
+	args = append(args, options...)
+	return p.add(total, args...)
+}
+
+func (p *Progress) add(total int64, options ...BarOption) *Bar {
 	p.wg.Add(1)
 	result := make(chan *Bar)
 	select {
 	case p.operateState <- func(s *pState) {
-		options = append(options, barWidth(s.width), barFormat(s.format))
-		if s.spinner != "" {
-			options = append(options, barSpinner(s.spinner))
-		}
-		b := newBar(p.wg, s.idCounter, total, s.cancel, options...)
+		b := newBar(p.wg, s.idCounter, s.width, total, s.cancel, options...)
 		if b.runningBar != nil {
 			s.waitBars[b.runningBar] = b
 		} else {
