@@ -11,20 +11,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/vbauerster/mpb/decor"
-	"github.com/vbauerster/mpb/internal"
 )
-
-const (
-	rLeft = iota
-	rFill
-	rTip
-	rEmpty
-	rRight
-)
-
-const formatLen = 5
-
-type barRunes [formatLen]rune
 
 // Bar represents a progress Bar
 type Bar struct {
@@ -45,16 +32,19 @@ type Bar struct {
 	shutdown chan struct{}
 }
 
+type filler interface {
+	fill(w io.Writer, width int, s *decor.Statistics)
+}
+
 type (
 	bState struct {
+		filler             filler
 		id                 int
 		width              int
+		alignment          int
 		total              int64
 		current            int64
-		runes              barRunes
-		spinner            []rune
-		trimLeftSpace      bool
-		trimRightSpace     bool
+		trimSpace          bool
 		toComplete         bool
 		removeOnComplete   bool
 		barClearOnComplete bool
@@ -74,8 +64,8 @@ type (
 		runningBar *Bar
 	}
 	refill struct {
-		char rune
-		till int64
+		r     rune
+		limit int64
 	}
 	frameReader struct {
 		io.Reader
@@ -85,7 +75,7 @@ type (
 	}
 )
 
-func newBar(wg *sync.WaitGroup, id int, total int64, cancel <-chan struct{}, options ...BarOption) *Bar {
+func newBar(wg *sync.WaitGroup, id, width int, total int64, cancel <-chan struct{}, options ...BarOption) *Bar {
 	if total <= 0 {
 		total = time.Now().Unix()
 	}
@@ -93,6 +83,7 @@ func newBar(wg *sync.WaitGroup, id int, total int64, cancel <-chan struct{}, opt
 	s := &bState{
 		id:       id,
 		priority: id,
+		width:    width,
 		total:    total,
 	}
 
@@ -102,9 +93,12 @@ func newBar(wg *sync.WaitGroup, id int, total int64, cancel <-chan struct{}, opt
 		}
 	}
 
-	s.bufP = bytes.NewBuffer(make([]byte, 0, s.width))
-	s.bufB = bytes.NewBuffer(make([]byte, 0, s.width))
-	s.bufA = bytes.NewBuffer(make([]byte, 0, s.width))
+	s.bufP = bytes.NewBuffer(make([]byte, 0, width))
+	s.bufB = bytes.NewBuffer(make([]byte, 0, width))
+	s.bufA = bytes.NewBuffer(make([]byte, 0, width))
+	if s.newLineExtendFn != nil {
+		s.bufNL = bytes.NewBuffer(make([]byte, 0, width))
+	}
 
 	b := &Bar{
 		priority:      s.priority,
@@ -120,10 +114,6 @@ func newBar(wg *sync.WaitGroup, id int, total int64, cancel <-chan struct{}, opt
 
 	if b.runningBar != nil {
 		b.priority = b.runningBar.priority
-	}
-
-	if s.newLineExtendFn != nil {
-		s.bufNL = bytes.NewBuffer(make([]byte, 0, s.width))
 	}
 
 	go b.serve(wg, s, cancel)
@@ -203,13 +193,10 @@ func (b *Bar) SetRefill(n int, r rune) {
 		return
 	}
 	b.operateState <- func(s *bState) {
-		s.refill = &refill{r, int64(n)}
+		if bf, ok := s.filler.(*barFiller); ok {
+			bf.refill = &refill{r, int64(n)}
+		}
 	}
-}
-
-// RefillBy is deprecated, use SetRefill
-func (b *Bar) RefillBy(n int, r rune) {
-	b.SetRefill(n, r)
 }
 
 // Increment is a shorthand for b.IncrBy(1).
@@ -323,8 +310,6 @@ func (b *Bar) render(debugOut io.Writer, tw int) {
 }
 
 func (s *bState) draw(termWidth int) io.Reader {
-	defer s.bufA.WriteByte('\n')
-
 	if s.panicMsg != "" {
 		return strings.NewReader(fmt.Sprintf(fmt.Sprintf("%%.%ds\n", termWidth), s.panicMsg))
 	}
@@ -339,103 +324,107 @@ func (s *bState) draw(termWidth int) io.Reader {
 		s.bufA.WriteString(d.Decor(stat))
 	}
 
-	prependCount := utf8.RuneCount(s.bufP.Bytes())
-	appendCount := utf8.RuneCount(s.bufA.Bytes())
-
 	if s.barClearOnComplete && s.completeFlushed {
+		s.bufA.WriteByte('\n')
 		return io.MultiReader(s.bufP, s.bufA)
 	}
 
-	s.fill(s.width)
-	barCount := utf8.RuneCount(s.bufB.Bytes())
-	totalCount := prependCount + barCount + appendCount
-	if spaceCount := 0; totalCount > termWidth {
-		if !s.trimLeftSpace {
-			spaceCount++
-		}
-		if !s.trimRightSpace {
-			spaceCount++
-		}
-		s.fill(termWidth - prependCount - appendCount - spaceCount)
+	prependCount := utf8.RuneCount(s.bufP.Bytes())
+	appendCount := utf8.RuneCount(s.bufA.Bytes())
+
+	// 	s.bufB.Reset()
+	if !s.trimSpace {
+		// reserve space for edge spaces
+		termWidth -= 2
+		s.bufB.WriteByte(' ')
 	}
 
+	if prependCount+s.width+appendCount > termWidth {
+		s.filler.fill(s.bufB, termWidth-prependCount-appendCount, stat)
+	} else {
+		s.filler.fill(s.bufB, s.width, stat)
+	}
+
+	if !s.trimSpace {
+		s.bufB.WriteByte(' ')
+	}
+
+	s.bufA.WriteByte('\n')
 	return io.MultiReader(s.bufP, s.bufB, s.bufA)
 }
 
-func (s *bState) fill(width int) {
-	if len(s.spinner) != 0 {
-		s.fillSpinner(width)
-	} else {
-		s.fillBar(width)
-	}
-}
+// func (s *bState) fillSpinner(width int) {
+// 	s.bufB.Reset()
+// 	s.bufB.WriteByte(' ')
 
-func (s *bState) fillSpinner(width int) {
-	s.bufB.Reset()
+// 	if width <= 2 {
+// 		s.bufB.WriteByte(' ')
+// 		return
+// 	}
 
-	if !s.trimLeftSpace {
-		s.bufB.WriteByte(' ')
-	}
+// 	r := s.bType.format[s.current%int64(len(s.bType.format))]
 
-	spin := []byte(string(s.spinner[s.current%int64(len(s.spinner))]))
-	for _, b := range spin {
-		s.bufB.WriteByte(b)
-	}
+// 	switch s.alignment {
+// 	case alignLeft:
+// 		s.bufB.WriteRune(r)
+// 		s.bufB.Write(bytes.Repeat([]byte(" "), width-1))
+// 	case alignMiddle:
+// 		mid := width / 2
+// 		mod := width % 2
+// 		s.bufB.Write(bytes.Repeat([]byte(" "), mid-1+mod))
+// 		s.bufB.WriteRune(r)
+// 		s.bufB.Write(bytes.Repeat([]byte(" "), mid))
+// 	case alignRight:
+// 		s.bufB.Write(bytes.Repeat([]byte(" "), width-1))
+// 		s.bufB.WriteRune(r)
+// 	}
 
-	for i := len(spin); i < width; i++ {
-		s.bufB.WriteRune(' ')
-	}
-}
+// 	s.bufB.WriteByte(' ')
+// }
 
-func (s *bState) fillBar(width int) {
-	defer func() {
-		s.bufB.WriteRune(s.runes[rRight])
-		if !s.trimRightSpace {
-			s.bufB.WriteByte(' ')
-		}
-	}()
+// func (s *bState) fillBar(width int) {
+// 	s.bufB.Reset()
+// 	s.bufB.WriteByte(' ')
 
-	s.bufB.Reset()
-	if !s.trimLeftSpace {
-		s.bufB.WriteByte(' ')
-	}
-	s.bufB.WriteRune(s.runes[rLeft])
-	if width <= 2 {
-		return
-	}
+// 	// don't count rLeft and rRight [brackets] with trailing spaces
+// 	width -= 4
 
-	// bar s.width without leftEnd and rightEnd runes
-	barWidth := width - 2
+// 	if width <= 2 {
+// 		s.bufB.WriteByte(' ')
+// 		return
+// 	}
 
-	completedWidth := internal.Percentage(s.total, s.current, int64(barWidth))
+// 	s.bufB.WriteRune(s.bType.format[rLeft])
+// 	completedWidth := internal.Percentage(s.total, s.current, int64(width))
 
-	if s.refill != nil {
-		till := internal.Percentage(s.total, s.refill.till, int64(barWidth))
-		// append refill rune
-		var i int64
-		for i = 0; i < till; i++ {
-			s.bufB.WriteRune(s.refill.char)
-		}
-		for i = till; i < completedWidth; i++ {
-			s.bufB.WriteRune(s.runes[rFill])
-		}
-	} else {
-		var i int64
-		for i = 0; i < completedWidth; i++ {
-			s.bufB.WriteRune(s.runes[rFill])
-		}
-	}
+// 	if s.refill != nil {
+// 		till := internal.Percentage(s.total, s.refill.till, int64(width))
+// 		// append refill rune
+// 		for i := int64(0); i < till; i++ {
+// 			s.bufB.WriteRune(s.refill.char)
+// 		}
+// 		for i := till; i < completedWidth; i++ {
+// 			s.bufB.WriteRune(s.bType.format[rFill])
+// 		}
+// 	} else {
+// 		for i := int64(0); i < completedWidth; i++ {
+// 			s.bufB.WriteRune(s.bType.format[rFill])
+// 		}
+// 	}
 
-	if completedWidth < int64(barWidth) && completedWidth > 0 {
-		_, size := utf8.DecodeLastRune(s.bufB.Bytes())
-		s.bufB.Truncate(s.bufB.Len() - size)
-		s.bufB.WriteRune(s.runes[rTip])
-	}
+// 	if completedWidth < int64(width) && completedWidth > 0 {
+// 		_, size := utf8.DecodeLastRune(s.bufB.Bytes())
+// 		s.bufB.Truncate(s.bufB.Len() - size)
+// 		s.bufB.WriteRune(s.bType.format[rTip])
+// 	}
 
-	for i := completedWidth; i < int64(barWidth); i++ {
-		s.bufB.WriteRune(s.runes[rEmpty])
-	}
-}
+// 	for i := completedWidth; i < int64(width); i++ {
+// 		s.bufB.WriteRune(s.bType.format[rEmpty])
+// 	}
+
+// 	s.bufB.WriteRune(s.bType.format[rRight])
+// 	s.bufB.WriteByte(' ')
+// }
 
 func (s *bState) wSyncTable() [][]chan int {
 	columns := make([]chan int, 0, len(s.pDecorators)+len(s.aDecorators))
@@ -466,14 +455,6 @@ func newStatistics(s *bState) *decor.Statistics {
 		Total:     s.total,
 		Current:   s.current,
 	}
-}
-
-func strToBarRunes(format string) (array barRunes) {
-	for i, n := 0, 0; len(format) > 0; i++ {
-		array[i], n = utf8.DecodeRuneInString(format)
-		format = format[n:]
-	}
-	return
 }
 
 func countLines(b []byte) int {
