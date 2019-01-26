@@ -120,36 +120,6 @@ func SpinnerStyle(frames []string) BarOption {
 	}
 }
 
-// AlignLeft align spinner on left, default.
-// Applicable fo spinner bar type only.
-// func AlignLeft() BarOption {
-// 	return func(s *bState) {
-// 		if bf, ok := s.filler.(*spinnerFiller); ok {
-// 			bf.alignment = alignLeft
-// 		}
-// 	}
-// }
-
-// AlignMiddle align spinner on the middle.
-// Applicable fo spinner bar type only.
-// func AlignMiddle() BarOption {
-// 	return func(s *bState) {
-// 		if bf, ok := s.filler.(*spinnerFiller); ok {
-// 			bf.alignment = alignMiddle
-// 		}
-// 	}
-// }
-
-// AlignRight align spinner on right.
-// Applicable fo spinner bar type only.
-// func AlignRight() BarOption {
-// 	return func(s *bState) {
-// 		if bf, ok := s.filler.(*spinnerFiller); ok {
-// 			bf.alignment = alignRight
-// 		}
-// 	}
-// }
-
 func TrimSpace() BarOption {
 	return func(s *bState) {
 		s.trimSpace = true
