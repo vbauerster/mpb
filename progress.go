@@ -93,6 +93,7 @@ func (p *Progress) AddBar(total int64, options ...BarOption) *Bar {
 	return p.add(total, args...)
 }
 
+// AddSpinner creates a new spinner bar and adds to the container.
 func (p *Progress) AddSpinner(total int64, alignment SpinnerAlignment, options ...BarOption) *Bar {
 	// make sure filler is initialized first
 	args := []BarOption{
