@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	. "github.com/vbauerster/mpb"
 	"github.com/vbauerster/mpb/decor"
@@ -62,7 +63,7 @@ func TestBarSetRefill(t *testing.T) {
 	till := 30
 	refillRune := '+'
 
-	bar := p.AddBar(int64(total), BarTrim())
+	bar := p.AddBar(int64(total), TrimSpace())
 
 	bar.SetRefill(till, refillRune)
 	bar.IncrBy(till)
@@ -76,10 +77,40 @@ func TestBarSetRefill(t *testing.T) {
 
 	wantBar := fmt.Sprintf("[%s%s]",
 		strings.Repeat(string(refillRune), till-1),
-		strings.Repeat("=", total-till-1))
+		strings.Repeat("=", total-till-1),
+	)
 
-	if !strings.Contains(buf.String(), wantBar) {
-		t.Errorf("Want bar: %s, got bar: %s\n", wantBar, buf.String())
+	got := string(getLastLine(buf.Bytes()))
+
+	if got != wantBar {
+		t.Errorf("Want bar: %q, got bar: %q\n", wantBar, got)
+	}
+}
+
+func TestBarStyle(t *testing.T) {
+	var buf bytes.Buffer
+	customFormat := "╢▌▌░╟"
+	p := New(WithOutput(&buf))
+	total := 80
+	bar := p.AddBar(int64(total), BarStyle(customFormat), TrimSpace())
+
+	for i := 0; i < total; i++ {
+		bar.Increment()
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	p.Wait()
+
+	runes := []rune(customFormat)
+	wantBar := fmt.Sprintf("%s%s%s",
+		string(runes[0]),
+		strings.Repeat(string(runes[1]), total-2),
+		string(runes[len(runes)-1]),
+	)
+	got := string(getLastLine(buf.Bytes()))
+
+	if got != wantBar {
+		t.Errorf("Want bar: %q:%d, got bar: %q:%d\n", wantBar, utf8.RuneCountInString(wantBar), got, utf8.RuneCountInString(got))
 	}
 }
 

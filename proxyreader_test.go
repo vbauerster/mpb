@@ -1,7 +1,6 @@
 package mpb_test
 
 import (
-	"bytes"
 	"io"
 	"io/ioutil"
 	"strings"
@@ -18,26 +17,35 @@ const content = `Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed d
 		cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id
 		est laborum.`
 
-func TestProxyReader(t *testing.T) {
-	var buf bytes.Buffer
-	p := mpb.New(mpb.WithOutput(&buf))
+type testReader struct {
+	io.Reader
+	called bool
+}
 
-	reader := strings.NewReader(content)
+func (r *testReader) Read(p []byte) (n int, err error) {
+	r.called = true
+	return r.Reader.Read(p)
+}
+
+func TestProxyReader(t *testing.T) {
+
+	p := mpb.New(mpb.WithOutput(ioutil.Discard))
+
+	reader := &testReader{Reader: strings.NewReader(content)}
 
 	total := len(content)
-	bar := p.AddBar(100, mpb.BarTrim())
-	preader := bar.ProxyReader(reader)
+	bar := p.AddBar(100, mpb.TrimSpace())
 
-	if _, ok := preader.(io.Closer); !ok {
-		t.Error("type assertion to io.Closer is not ok")
-	}
-
-	written, err := io.Copy(ioutil.Discard, preader)
+	written, err := io.Copy(ioutil.Discard, bar.ProxyReader(reader))
 	if err != nil {
 		t.Errorf("Error copying from reader: %+v\n", err)
 	}
 
 	p.Wait()
+
+	if !reader.called {
+		t.Error("Read not called")
+	}
 
 	if written != int64(total) {
 		t.Errorf("Expected written: %d, got: %d\n", total, written)

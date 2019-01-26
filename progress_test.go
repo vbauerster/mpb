@@ -112,32 +112,6 @@ func TestWithCancel(t *testing.T) {
 	}
 }
 
-func TestWithFormat(t *testing.T) {
-	var buf bytes.Buffer
-	customFormat := "╢▌▌░╟"
-	p := New(WithOutput(&buf), WithFormat(customFormat))
-	bar := p.AddBar(100, BarTrim())
-
-	for i := 0; i < 100; i++ {
-		if i == 33 {
-			p.Abort(bar, true)
-			break
-		}
-		time.Sleep(randomDuration(100 * time.Millisecond))
-		bar.Increment()
-	}
-
-	p.Wait()
-
-	lastLine := getLastLine(buf.Bytes())
-
-	for _, r := range customFormat {
-		if !bytes.ContainsRune(lastLine, r) {
-			t.Errorf("Rune %#U not found in bar\n", r)
-		}
-	}
-}
-
 func getLastLine(bb []byte) []byte {
 	split := bytes.Split(bb, []byte("\n"))
 	lastLine := split[len(split)-2]

@@ -7,193 +7,224 @@ import (
 
 func TestDraw(t *testing.T) {
 	// key is termWidth
-	testSuite := map[int]map[string]struct {
+	testSuite := map[int][]struct {
+		name           string
 		total, current int64
 		barWidth       int
 		barRefill      *refill
+		trimSpace      bool
 		want           string
 	}{
 		100: {
-			"t,c,bw{100,100,0}": {
+			{
+				name:     "t,c,bw{100,100,0}",
 				total:    100,
 				current:  0,
 				barWidth: 100,
-				want:     "[--------------------------------------------------------------------------------------------------]",
+				want:     " [------------------------------------------------------------------------------------------------] ",
 			},
-			"t,c,bw{100,1,100}": {
+			{
+				name:      "t,c,bw{100,100,0}:trimSpace",
+				total:     100,
+				current:   0,
+				barWidth:  100,
+				trimSpace: true,
+				want:      "[--------------------------------------------------------------------------------------------------]",
+			},
+			{
+				name:     "t,c,bw{100,1,100}",
 				total:    100,
 				current:  1,
 				barWidth: 100,
-				want:     "[>-------------------------------------------------------------------------------------------------]",
+				want:     " [>-----------------------------------------------------------------------------------------------] ",
 			},
-			"t,c,bw{100,40,100}": {
+			{
+				name:      "t,c,bw{100,1,100}:trimSpace",
+				total:     100,
+				current:   1,
+				barWidth:  100,
+				trimSpace: true,
+				want:      "[>-------------------------------------------------------------------------------------------------]",
+			},
+			{
+				name:     "t,c,bw{100,40,100}",
 				total:    100,
 				current:  40,
 				barWidth: 100,
-				want:     "[======================================>-----------------------------------------------------------]",
+				want:     " [=====================================>----------------------------------------------------------] ",
 			},
-			"t,c,bw{100,40,100}refill{'+', 32}": {
+			{
+				name:      "t,c,bw{100,40,100}:refill{'+', 32}",
 				total:     100,
 				current:   40,
 				barWidth:  100,
 				barRefill: &refill{'+', 32},
+				want:      " [+++++++++++++++++++++++++++++++======>----------------------------------------------------------] ",
+			},
+			{
+				name:      "t,c,bw{100,40,100}:refill{'+', 32}:trimSpace",
+				total:     100,
+				current:   40,
+				barWidth:  100,
+				barRefill: &refill{'+', 32},
+				trimSpace: true,
 				want:      "[+++++++++++++++++++++++++++++++=======>-----------------------------------------------------------]",
 			},
-			"t,c,bw{100,99,100}": {
+			{
+				name:     "t,c,bw{100,99,100}",
 				total:    100,
 				current:  99,
 				barWidth: 100,
-				want:     "[================================================================================================>-]",
+				want:     " [==============================================================================================>-] ",
 			},
-			"t,c,bw{100,100,100}": {
+			{
+				name:     "t,c,bw{100,100,100}",
 				total:    100,
 				current:  100,
 				barWidth: 100,
-				want:     "[==================================================================================================]",
+				want:     " [================================================================================================] ",
 			},
 		},
 		2: {
-			"t,c,bw{0,0,100}": {
+			{
+				name:     "t,c,bw{0,0,100}",
 				barWidth: 100,
-				want:     "[]",
+				want:     " [] ",
 			},
-			"t,c,bw{60,20,80}": {
+			{
+				name:     "t,c,bw{60,20,80}",
 				total:    60,
 				current:  20,
 				barWidth: 80,
-				want:     "[]",
+				want:     " [] ",
 			},
 		},
-		3: {
-			"t,c,bw{100,20,100}": {
+		4: {
+			{
+				name:     "t,c,bw{100,20,100}",
 				total:    100,
 				current:  20,
 				barWidth: 100,
-				want:     "[-]",
+				want:     " [] ",
 			},
-			"t,c,bw{100,98,100}": {
+			{
+				name:     "t,c,bw{100,98,100}",
 				total:    100,
 				current:  98,
 				barWidth: 100,
-				want:     "[=]",
+				want:     " [] ",
 			},
-			"t,c,bw{100,100,100}": {
+			{
+				name:     "t,c,bw{100,100,100}",
 				total:    100,
 				current:  100,
 				barWidth: 100,
-				want:     "[=]",
+				want:     " [] ",
 			},
 		},
-		5: {
-			"t,c,bw{100,20,100}": {
+		8: {
+			{
+				name:     "t,c,bw{100,20,100}",
 				total:    100,
 				current:  20,
 				barWidth: 100,
-				want:     "[>--]",
+				want:     " [>---] ",
 			},
-			"t,c,bw{100,98,100}": {
+			{
+				name:     "t,c,bw{100,98,100}",
 				total:    100,
 				current:  98,
 				barWidth: 100,
-				want:     "[===]",
+				want:     " [====] ",
 			},
-			"t,c,bw{100,100,100}": {
+			{
+				name:     "t,c,bw{100,100,100}",
 				total:    100,
 				current:  100,
 				barWidth: 100,
-				want:     "[===]",
-			},
-		},
-		6: {
-			"t,c,bw{100,20,100}": {
-				total:    100,
-				current:  20,
-				barWidth: 100,
-				want:     "[>---]",
-			},
-			"t,c,bw{100,98,100}": {
-				total:    100,
-				current:  98,
-				barWidth: 100,
-				want:     "[====]",
-			},
-			"t,c,bw{100,100,100}": {
-				total:    100,
-				current:  100,
-				barWidth: 100,
-				want:     "[====]",
+				want:     " [====] ",
 			},
 		},
 		20: {
-			"t,c,bw{100,20,100}": {
+			{
+				name:     "t,c,bw{100,20,100}",
 				total:    100,
 				current:  20,
 				barWidth: 100,
-				want:     "[===>--------------]",
+				want:     " [==>-------------] ",
 			},
-			"t,c,bw{100,60,100}": {
+			{
+				name:     "t,c,bw{100,60,100}",
 				total:    100,
 				current:  60,
 				barWidth: 100,
-				want:     "[==========>-------]",
+				want:     " [=========>------] ",
 			},
-			"t,c,bw{100,98,100}": {
+			{
+				name:     "t,c,bw{100,98,100}",
 				total:    100,
 				current:  98,
 				barWidth: 100,
-				want:     "[==================]",
+				want:     " [================] ",
 			},
-			"t,c,bw{100,100,100}": {
+			{
+				name:     "t,c,bw{100,100,100}",
 				total:    100,
 				current:  100,
 				barWidth: 100,
-				want:     "[==================]",
+				want:     " [================] ",
 			},
 		},
 		50: {
-			"t,c,bw{100,20,100}": {
+			{
+				name:     "t,c,bw{100,20,100}",
 				total:    100,
 				current:  20,
 				barWidth: 100,
-				want:     "[=========>--------------------------------------]",
+				want:     " [========>-------------------------------------] ",
 			},
-			"t,c,bw{100,60,100}": {
+			{
+				name:     "t,c,bw{100,60,100}",
 				total:    100,
 				current:  60,
 				barWidth: 100,
-				want:     "[============================>-------------------]",
+				want:     " [===========================>------------------] ",
 			},
-			"t,c,bw{100,98,100}": {
+			{
+				name:     "t,c,bw{100,98,100}",
 				total:    100,
 				current:  98,
 				barWidth: 100,
-				want:     "[==============================================>-]",
+				want:     " [============================================>-] ",
 			},
-			"t,c,bw{100,100,100}": {
+			{
+				name:     "t,c,bw{100,100,100}",
 				total:    100,
 				current:  100,
 				barWidth: 100,
-				want:     "[================================================]",
+				want:     " [==============================================] ",
 			},
 		},
 	}
 
 	var tmpBuf bytes.Buffer
 	for termWidth, cases := range testSuite {
-		for name, tc := range cases {
+		for _, tc := range cases {
 			s := newTestState()
 			s.width = tc.barWidth
 			s.total = tc.total
 			s.current = tc.current
+			s.trimSpace = tc.trimSpace
 			if tc.barRefill != nil {
-				s.refill = tc.barRefill
+				s.filler.(*barFiller).refill = tc.barRefill
 			}
 			tmpBuf.Reset()
 			tmpBuf.ReadFrom(s.draw(termWidth))
-			got := tmpBuf.String()
-			want := tc.want + "\n"
-			if got != want {
-				t.Errorf("termWidth %d; %s: want: %s %d, got: %s %d\n", termWidth, name, want, len(want), got, len(got))
+			by := tmpBuf.Bytes()
+			by = by[:len(by)-1]
+			got := string(by)
+			if got != tc.want {
+				t.Errorf("termWidth %d; %s: want: %q %d, got: %q %d\n", termWidth, tc.name, tc.want, len(tc.want), got, len(got))
 			}
 		}
 	}
@@ -201,12 +232,10 @@ func TestDraw(t *testing.T) {
 
 func newTestState() *bState {
 	s := &bState{
-		trimLeftSpace:  true,
-		trimRightSpace: true,
-		bufP:           new(bytes.Buffer),
-		bufB:           new(bytes.Buffer),
-		bufA:           new(bytes.Buffer),
+		filler: &barFiller{format: defaultBarStyle},
+		bufP:   new(bytes.Buffer),
+		bufB:   new(bytes.Buffer),
+		bufA:   new(bytes.Buffer),
 	}
-	s.runes = strToBarRunes(pformat)
 	return s
 }
