@@ -332,7 +332,6 @@ func (s *bState) draw(termWidth int) io.Reader {
 	prependCount := utf8.RuneCount(s.bufP.Bytes())
 	appendCount := utf8.RuneCount(s.bufA.Bytes())
 
-	// 	s.bufB.Reset()
 	if !s.trimSpace {
 		// reserve space for edge spaces
 		termWidth -= 2
@@ -352,79 +351,6 @@ func (s *bState) draw(termWidth int) io.Reader {
 	s.bufA.WriteByte('\n')
 	return io.MultiReader(s.bufP, s.bufB, s.bufA)
 }
-
-// func (s *bState) fillSpinner(width int) {
-// 	s.bufB.Reset()
-// 	s.bufB.WriteByte(' ')
-
-// 	if width <= 2 {
-// 		s.bufB.WriteByte(' ')
-// 		return
-// 	}
-
-// 	r := s.bType.format[s.current%int64(len(s.bType.format))]
-
-// 	switch s.alignment {
-// 	case alignLeft:
-// 		s.bufB.WriteRune(r)
-// 		s.bufB.Write(bytes.Repeat([]byte(" "), width-1))
-// 	case alignMiddle:
-// 		mid := width / 2
-// 		mod := width % 2
-// 		s.bufB.Write(bytes.Repeat([]byte(" "), mid-1+mod))
-// 		s.bufB.WriteRune(r)
-// 		s.bufB.Write(bytes.Repeat([]byte(" "), mid))
-// 	case alignRight:
-// 		s.bufB.Write(bytes.Repeat([]byte(" "), width-1))
-// 		s.bufB.WriteRune(r)
-// 	}
-
-// 	s.bufB.WriteByte(' ')
-// }
-
-// func (s *bState) fillBar(width int) {
-// 	s.bufB.Reset()
-// 	s.bufB.WriteByte(' ')
-
-// 	// don't count rLeft and rRight [brackets] with trailing spaces
-// 	width -= 4
-
-// 	if width <= 2 {
-// 		s.bufB.WriteByte(' ')
-// 		return
-// 	}
-
-// 	s.bufB.WriteRune(s.bType.format[rLeft])
-// 	completedWidth := internal.Percentage(s.total, s.current, int64(width))
-
-// 	if s.refill != nil {
-// 		till := internal.Percentage(s.total, s.refill.till, int64(width))
-// 		// append refill rune
-// 		for i := int64(0); i < till; i++ {
-// 			s.bufB.WriteRune(s.refill.char)
-// 		}
-// 		for i := till; i < completedWidth; i++ {
-// 			s.bufB.WriteRune(s.bType.format[rFill])
-// 		}
-// 	} else {
-// 		for i := int64(0); i < completedWidth; i++ {
-// 			s.bufB.WriteRune(s.bType.format[rFill])
-// 		}
-// 	}
-
-// 	if completedWidth < int64(width) && completedWidth > 0 {
-// 		_, size := utf8.DecodeLastRune(s.bufB.Bytes())
-// 		s.bufB.Truncate(s.bufB.Len() - size)
-// 		s.bufB.WriteRune(s.bType.format[rTip])
-// 	}
-
-// 	for i := completedWidth; i < int64(width); i++ {
-// 		s.bufB.WriteRune(s.bType.format[rEmpty])
-// 	}
-
-// 	s.bufB.WriteRune(s.bType.format[rRight])
-// 	s.bufB.WriteByte(' ')
-// }
 
 func (s *bState) wSyncTable() [][]chan int {
 	columns := make([]chan int, 0, len(s.pDecorators)+len(s.aDecorators))
