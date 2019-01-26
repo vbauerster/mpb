@@ -39,11 +39,10 @@ func main() {
 
 	p := mpb.New(
 		mpb.WithWidth(60),
-		mpb.WithFormat("[=>-|"),
 		mpb.WithRefreshRate(180*time.Millisecond),
 	)
 
-	bar := p.AddBar(size,
+	bar := p.AddBar(size, mpb.BarStyle("[=>-|"),
 		mpb.PrependDecorators(
 			decor.CountersKibiByte("% 6.1f / % 6.1f"),
 		),

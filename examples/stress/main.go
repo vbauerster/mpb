@@ -20,7 +20,10 @@ func init() {
 
 func main() {
 	var wg sync.WaitGroup
-	p := mpb.New(mpb.WithWaitGroup(&wg))
+	p := mpb.New(
+		mpb.WithWaitGroup(&wg),
+		mpb.WithRefreshRate(50*time.Millisecond),
+	)
 	wg.Add(totalBars)
 
 	for i := 0; i < totalBars; i++ {
