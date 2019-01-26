@@ -1,8 +1,8 @@
 package mpb
 
 import (
-	"bytes"
 	"io"
+	"strings"
 
 	"github.com/vbauerster/mpb/decor"
 	"github.com/vbauerster/mpb/internal"
@@ -25,13 +25,13 @@ type barFiller struct {
 
 func (s *barFiller) fill(w io.Writer, width int, stat *decor.Statistics) {
 
-	w.Write([]byte(string(s.format[rLeft])))
+	str := string(s.format[rLeft])
 
 	// don't count rLeft and rRight [brackets]
 	width -= 2
 
 	if width <= 2 {
-		w.Write([]byte(string(s.format[rRight])))
+		io.WriteString(w, str+string(s.format[rRight]))
 		return
 	}
 
@@ -43,25 +43,23 @@ func (s *barFiller) fill(w io.Writer, width int, stat *decor.Statistics) {
 	}
 
 	if s.refill != nil {
-		// append refill rune
-		times := internal.Percentage(stat.Total, s.refill.limit, int64(width))
-		w.Write(s.repeat(s.refill.r, int(times)))
-		rest := progressWidth - times
-		w.Write(s.repeat(s.format[rFill], int(rest)))
+		refillCount := internal.Percentage(stat.Total, s.refill.limit, int64(width))
+		rest := progressWidth - refillCount
+		str += runeRepeat(s.refill.r, int(refillCount)) + runeRepeat(s.format[rFill], int(rest))
 	} else {
-		w.Write(s.repeat(s.format[rFill], int(progressWidth)))
+		str += runeRepeat(s.format[rFill], int(progressWidth))
 	}
 
 	if needTip {
-		w.Write([]byte(string(s.format[rTip])))
+		str += string(s.format[rTip])
 		progressWidth++
 	}
 
 	rest := int64(width) - progressWidth
-	w.Write(s.repeat(s.format[rEmpty], int(rest)))
-	w.Write([]byte(string(s.format[rRight])))
+	str += runeRepeat(s.format[rEmpty], int(rest)) + string(s.format[rRight])
+	io.WriteString(w, str)
 }
 
-func (s *barFiller) repeat(r rune, count int) []byte {
-	return bytes.Repeat([]byte(string(r)), count)
+func runeRepeat(r rune, count int) string {
+	return strings.Repeat(string(r), count)
 }
