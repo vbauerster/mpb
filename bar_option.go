@@ -89,40 +89,63 @@ func BarNewLineExtend(efn func(io.Writer, *decor.Statistics)) BarOption {
 	}
 }
 
-// BarStyle sets custom bar style.
-func BarStyle(style string) BarOption {
-	return func(s *bState) {
-		if style == "" {
-			return
-		}
-		if bf, ok := s.filler.(*barFiller); ok {
-			if !utf8.ValidString(style) {
-				panic("invalid style string")
-			}
-			defaultFormat := bf.format
-			bf.format = []rune(style)
-			if len(bf.format) < 5 {
-				bf.format = defaultFormat
-			}
-		}
-	}
-}
-
-// SpinnerStyle sets custom Spinner style.
-func SpinnerStyle(frames []string) BarOption {
-	return func(s *bState) {
-		if len(frames) == 0 {
-			return
-		}
-		if bf, ok := s.filler.(*spinnerFiller); ok {
-			bf.frames = frames
-		}
-	}
-}
-
 // TrimSpace trims bar's edge spaces.
 func TrimSpace() BarOption {
 	return func(s *bState) {
 		s.trimSpace = true
+	}
+}
+
+// BarStyle sets custom bar style.
+// Effective when Filler type is bar.
+func BarStyle(style string) BarOption {
+	chk := func(filler Filler) (interface{}, bool) {
+		if style == "" {
+			return nil, false
+		}
+		t, ok := filler.(*barFiller)
+		return t, ok
+	}
+	cb := func(t interface{}) {
+		bf := t.(*barFiller)
+		if !utf8.ValidString(style) {
+			panic("invalid style string")
+		}
+		defaultFormat := bf.format
+		bf.format = []rune(style)
+		if len(bf.format) < 5 {
+			bf.format = defaultFormat
+		}
+	}
+	return MakeFillerTypeSpecificBarOption(chk, cb)
+}
+
+// SpinnerStyle sets custom spinner style.
+// Effective when Filler type is spinner.
+func SpinnerStyle(frames []string) BarOption {
+	chk := func(filler Filler) (interface{}, bool) {
+		if len(frames) == 0 {
+			return nil, false
+		}
+		t, ok := filler.(*spinnerFiller)
+		return t, ok
+	}
+	cb := func(t interface{}) {
+		t.(*spinnerFiller).frames = frames
+	}
+	return MakeFillerTypeSpecificBarOption(chk, cb)
+}
+
+// MakeFillerTypeSpecificBarOption makes BarOption specific to Filler's actual type.
+// If you implement your own Filler, so most probably you'll need this.
+// See BarStyle or SpinnerStyle for example.
+func MakeFillerTypeSpecificBarOption(
+	typeChecker func(Filler) (interface{}, bool),
+	cb func(interface{}),
+) BarOption {
+	return func(s *bState) {
+		if t, ok := typeChecker(s.filler); ok {
+			cb(t)
+		}
 	}
 }
