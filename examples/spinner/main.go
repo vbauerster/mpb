@@ -28,6 +28,7 @@ func main() {
 		var bar *mpb.Bar
 		if i == 0 {
 			bar = p.AddBar(int64(total),
+				// override default "[=>-]" style
 				mpb.BarStyle("╢▌▌░╟"),
 				mpb.PrependDecorators(
 					// simple name decorator
@@ -43,7 +44,8 @@ func main() {
 			)
 		} else {
 			bar = p.AddSpinner(int64(total), mpb.SpinnerOnMiddle,
-				// mpb.SpinnerStyle([]string{"∙∙∙", "●∙∙", "∙●∙", "∙∙●", "∙∙∙"}),
+				// override default {"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"} style
+				mpb.SpinnerStyle([]string{"∙∙∙", "●∙∙", "∙●∙", "∙∙●", "∙∙∙"}),
 				mpb.PrependDecorators(
 					// simple name decorator
 					decor.Name(name),
