@@ -9,14 +9,14 @@ import (
 	"github.com/vbauerster/mpb/cwriter"
 )
 
-// ProgressOption is a function option which changes the default behavior of
-// progress pool, if passed to mpb.New(...ProgressOption).
+// ProgressOption is a function option which changes the default
+// behavior of progress pool, if passed to mpb.New(...ProgressOption).
 type ProgressOption func(*pState)
 
-// WithWaitGroup provides means to have a single joint point.
-// If *sync.WaitGroup is provided, you can safely call just p.Wait()
-// without calling Wait() on provided *sync.WaitGroup.
-// Makes sense when there are more than one bar to render.
+// WithWaitGroup provides means to have a single joint point.  If
+// *sync.WaitGroup is provided, you can safely call just p.Wait()
+// without calling Wait() on provided *sync.WaitGroup.  Makes sense
+// when there are more than one bar to render.
 func WithWaitGroup(wg *sync.WaitGroup) ProgressOption {
 	return func(s *pState) {
 		s.uwg = wg
@@ -60,7 +60,8 @@ func WithContext(ctx context.Context) ProgressOption {
 	}
 }
 
-// WithShutdownNotifier provided chanel will be closed, after all bars have been rendered.
+// WithShutdownNotifier provided chanel will be closed, after all bars
+// have been rendered.
 func WithShutdownNotifier(ch chan struct{}) ProgressOption {
 	return func(s *pState) {
 		s.shutdownNotifier = ch

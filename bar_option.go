@@ -47,25 +47,28 @@ func BarID(id int) BarOption {
 	}
 }
 
-// BarRemoveOnComplete is a flag, if set whole bar line will be removed on complete event.
-// If both BarRemoveOnComplete and BarClearOnComplete are set, first bar section gets cleared
-// and then whole bar line gets removed completely.
+// BarRemoveOnComplete is a flag, if set whole bar line will be removed
+// on complete event.  If both BarRemoveOnComplete and BarClearOnComplete
+// are set, first bar section gets cleared and then whole bar line
+// gets removed completely.
 func BarRemoveOnComplete() BarOption {
 	return func(s *bState) {
 		s.removeOnComplete = true
 	}
 }
 
-// BarReplaceOnComplete is indicator for delayed bar start, after the `runningBar` is complete.
-// To achieve bar replacement effect, `runningBar` should has its `BarRemoveOnComplete` option set.
+// BarReplaceOnComplete is indicator for delayed bar start, after the
+// `runningBar` is complete.  To achieve bar replacement effect,
+// `runningBar` should has its `BarRemoveOnComplete` option set.
 func BarReplaceOnComplete(runningBar *Bar) BarOption {
 	return func(s *bState) {
 		s.runningBar = runningBar
 	}
 }
 
-// BarClearOnComplete is a flag, if set will clear bar section on complete event.
-// If you need to remove a whole bar line, refer to BarRemoveOnComplete.
+// BarClearOnComplete is a flag, if set will clear bar section on
+// complete event.  If you need to remove a whole bar line, refer to
+// BarRemoveOnComplete.
 func BarClearOnComplete() BarOption {
 	return func(s *bState) {
 		s.barClearOnComplete = true
@@ -73,16 +76,17 @@ func BarClearOnComplete() BarOption {
 }
 
 // BarPriority sets bar's priority.
-// Zero is highest priority, i.e. bar will be on top.
-// If `BarReplaceOnComplete` option is supplied, this option is ignored.
+// Zero is highest priority, i.e. bar will be on top.  If
+// `BarReplaceOnComplete` option is supplied, this option is ignored.
 func BarPriority(priority int) BarOption {
 	return func(s *bState) {
 		s.priority = priority
 	}
 }
 
-// BarNewLineExtend takes user defined efn, which gets called each render cycle.
-// Any write to provided writer of efn, will appear on new line of respective bar.
+// BarNewLineExtend takes user defined efn, which gets called each
+// render cycle.  Any write to provided writer of efn, will appear on
+// new line of respective bar.
 func BarNewLineExtend(efn func(io.Writer, *decor.Statistics)) BarOption {
 	return func(s *bState) {
 		s.newLineExtendFn = efn
@@ -136,9 +140,9 @@ func SpinnerStyle(frames []string) BarOption {
 	return MakeFillerTypeSpecificBarOption(chk, cb)
 }
 
-// MakeFillerTypeSpecificBarOption makes BarOption specific to Filler's actual type.
-// If you implement your own Filler, so most probably you'll need this.
-// See BarStyle or SpinnerStyle for example.
+// MakeFillerTypeSpecificBarOption makes BarOption specific to Filler's
+// actual type.  If you implement your own Filler, so most probably
+// you'll need this.  See BarStyle or SpinnerStyle for example.
 func MakeFillerTypeSpecificBarOption(
 	typeChecker func(Filler) (interface{}, bool),
 	cb func(interface{}),

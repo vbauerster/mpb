@@ -33,6 +33,10 @@ type Bar struct {
 	shutdown chan struct{}
 }
 
+// Filler interface.
+// Bar rednders by calling Filler's Fill method.  You can literally
+// have any bar kind, by implementing this interface and passing it
+// to the Add method.
 type Filler interface {
 	Fill(w io.Writer, width int, s *decor.Statistics)
 }
