@@ -34,7 +34,7 @@ type Bar struct {
 }
 
 // Filler interface.
-// Bar rednders by calling Filler's Fill method.  You can literally
+// Bar renders by calling Filler's Fill method.  You can literally
 // have any bar kind, by implementing this interface and passing it
 // to the Add method.
 type Filler interface {
