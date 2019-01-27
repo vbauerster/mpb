@@ -1,6 +1,7 @@
 package mpb
 
 import (
+	"context"
 	"io"
 	"sync"
 	"time"
@@ -9,7 +10,7 @@ import (
 )
 
 // ProgressOption is a function option which changes the default behavior of
-// progress pool, if passed to mpb.New(...ProgressOption)
+// progress pool, if passed to mpb.New(...ProgressOption).
 type ProgressOption func(*pState)
 
 // WithWaitGroup provides means to have a single joint point.
@@ -22,7 +23,7 @@ func WithWaitGroup(wg *sync.WaitGroup) ProgressOption {
 	}
 }
 
-// WithWidth overrides default width 80
+// WithWidth overrides default width 80.
 func WithWidth(w int) ProgressOption {
 	return func(s *pState) {
 		if w >= 0 {
@@ -31,7 +32,7 @@ func WithWidth(w int) ProgressOption {
 	}
 }
 
-// WithRefreshRate overrides default 120ms refresh rate
+// WithRefreshRate overrides default 120ms refresh rate.
 func WithRefreshRate(d time.Duration) ProgressOption {
 	return func(s *pState) {
 		if d < 10*time.Millisecond {
@@ -49,11 +50,13 @@ func WithManualRefresh(ch <-chan time.Time) ProgressOption {
 	}
 }
 
-// WithCancel provide your cancel channel,
-// which you plan to close at some point.
-func WithCancel(ch <-chan struct{}) ProgressOption {
+// WithContext provided context will be used for cancellation purposes.
+func WithContext(ctx context.Context) ProgressOption {
 	return func(s *pState) {
-		s.cancel = ch
+		if ctx == nil {
+			return
+		}
+		s.ctx = ctx
 	}
 }
 
@@ -64,7 +67,7 @@ func WithShutdownNotifier(ch chan struct{}) ProgressOption {
 	}
 }
 
-// WithOutput overrides default output os.Stdout
+// WithOutput overrides default output os.Stdout.
 func WithOutput(w io.Writer) ProgressOption {
 	return func(s *pState) {
 		if w == nil {

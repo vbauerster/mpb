@@ -2,6 +2,7 @@ package mpb
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -76,11 +77,11 @@ type (
 )
 
 func newBar(
+	ctx context.Context,
 	wg *sync.WaitGroup,
 	filler Filler,
 	id, width int,
 	total int64,
-	cancel <-chan struct{},
 	options ...BarOption,
 ) *Bar {
 	if total <= 0 {
@@ -124,7 +125,7 @@ func newBar(
 		b.priority = b.runningBar.priority
 	}
 
-	go b.serve(wg, s, cancel)
+	go b.serve(ctx, wg, s)
 	return b
 }
 
@@ -249,8 +250,9 @@ func (b *Bar) wSyncTable() [][]chan int {
 	}
 }
 
-func (b *Bar) serve(wg *sync.WaitGroup, s *bState, cancel <-chan struct{}) {
+func (b *Bar) serve(ctx context.Context, wg *sync.WaitGroup, s *bState) {
 	defer wg.Done()
+	cancel := ctx.Done()
 	for {
 		select {
 		case op := <-b.operateState:

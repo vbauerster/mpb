@@ -2,6 +2,7 @@ package mpb_test
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io/ioutil"
 	"math/rand"
@@ -9,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/vbauerster/mpb"
 	. "github.com/vbauerster/mpb"
 	"github.com/vbauerster/mpb/cwriter"
 )
@@ -80,35 +82,38 @@ func TestBarAbort(t *testing.T) {
 	p.Wait()
 }
 
-func TestWithCancel(t *testing.T) {
-	cancel := make(chan struct{})
+func TestWithContext(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
 	shutdown := make(chan struct{})
-	p := New(
-		WithOutput(ioutil.Discard),
-		WithCancel(cancel),
-		WithShutdownNotifier(shutdown),
+	p := mpb.New(
+		mpb.WithOutput(ioutil.Discard),
+		mpb.WithContext(ctx),
+		mpb.WithRefreshRate(50*time.Millisecond),
+		mpb.WithShutdownNotifier(shutdown),
 	)
 
-	for i := 0; i < 2; i++ {
-		bar := p.AddBar(int64(1000), BarID(i))
+	total := 10000
+	numBars := 3
+	bars := make([]*mpb.Bar, 0, numBars)
+	for i := 0; i < numBars; i++ {
+		bar := p.AddBar(int64(total))
+		bars = append(bars, bar)
 		go func() {
 			for !bar.Completed() {
-				time.Sleep(randomDuration(100 * time.Millisecond))
 				bar.Increment()
+				time.Sleep(randomDuration(100 * time.Millisecond))
 			}
 		}()
 	}
 
-	time.AfterFunc(100*time.Millisecond, func() {
-		close(cancel)
-	})
+	time.Sleep(50 * time.Millisecond)
+	cancel()
 
 	p.Wait()
-
 	select {
 	case <-shutdown:
-	case <-time.After(200 * time.Millisecond):
-		t.FailNow()
+	case <-time.After(100 * time.Millisecond):
+		t.Error("Progress didn't stop")
 	}
 }
 

@@ -2,6 +2,7 @@ package mpb
 
 import (
 	"container/heap"
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -40,10 +41,10 @@ type pState struct {
 	pMatrix         map[int][]chan int
 	aMatrix         map[int][]chan int
 
-	// following are provided by user
+	// following are provided/overrided by user
+	ctx              context.Context
 	uwg              *sync.WaitGroup
 	manualRefreshCh  <-chan time.Time
-	cancel           <-chan struct{}
 	shutdownNotifier chan struct{}
 	waitBars         map[*Bar]*Bar
 	debugOut         io.Writer
@@ -55,6 +56,7 @@ func New(options ...ProgressOption) *Progress {
 	pq := make(priorityQueue, 0)
 	heap.Init(&pq)
 	s := &pState{
+		ctx:      context.Background(),
 		bHeap:    &pq,
 		width:    pwidth,
 		cw:       cwriter.New(os.Stdout),
@@ -101,7 +103,7 @@ func (p *Progress) Add(total int64, filler Filler, options ...BarOption) *Bar {
 	result := make(chan *Bar)
 	select {
 	case p.operateState <- func(s *pState) {
-		b := newBar(p.wg, filler, s.idCounter, s.width, total, s.cancel, options...)
+		b := newBar(s.ctx, p.wg, filler, s.idCounter, s.width, total, options...)
 		if b.runningBar != nil {
 			s.waitBars[b.runningBar] = b
 		} else {
