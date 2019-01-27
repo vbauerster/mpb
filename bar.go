@@ -34,9 +34,9 @@ type Bar struct {
 }
 
 // Filler interface.
-// Bar renders by calling Filler's Fill method.  You can literally
-// have any bar kind, by implementing this interface and passing it
-// to the Add method.
+// Bar renders by calling Filler's Fill method. You can literally have
+// any bar kind, by implementing this interface and passing it to the
+// Add method.
 type Filler interface {
 	Fill(w io.Writer, width int, s *decor.Statistics)
 }
@@ -218,8 +218,8 @@ func (b *Bar) Increment() {
 }
 
 // IncrBy increments progress bar by amount of n.
-// wdd is optional work duration i.e. time.Since(start),
-// which expected to be provided, if any ewma based decorator is used.
+// wdd is optional work duration i.e. time.Since(start), which expected
+// to be provided, if any ewma based decorator is used.
 func (b *Bar) IncrBy(n int, wdd ...time.Duration) {
 	select {
 	case b.operateState <- func(s *bState) {
@@ -239,9 +239,9 @@ func (b *Bar) IncrBy(n int, wdd ...time.Duration) {
 // Completed reports whether the bar is in completed state.
 func (b *Bar) Completed() bool {
 	// omit select here, because primary usage of the method is for loop
-	// condition, like 	for !bar.Completed() {...}
-	// so when toComplete=true it is called once (at which time, the bar is still alive),
-	// then quits the loop and never suppose to be called afterwards.
+	// condition, like for !bar.Completed() {...} so when toComplete=true
+	// it is called once (at which time, the bar is still alive), then
+	// quits the loop and never suppose to be called afterwards.
 	return <-b.boolCh
 }
 

@@ -8,8 +8,10 @@ import (
 	"github.com/vbauerster/mpb/decor"
 )
 
+// SpinnerAlignment erum.
 type SpinnerAlignment int
 
+// SpinnerAlignment kinds.
 const (
 	SpinnerOnLeft SpinnerAlignment = iota
 	SpinnerOnMiddle

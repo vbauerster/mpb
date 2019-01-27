@@ -7,7 +7,7 @@ import (
 )
 
 // MovingAverage is the interface that computes a moving average over
-// a time- series stream of numbers. The average may be over a window
+// a time-series stream of numbers. The average may be over a window
 // or exponentially decaying.
 type MovingAverage interface {
 	Add(float64)

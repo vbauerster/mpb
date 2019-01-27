@@ -13,9 +13,9 @@ import (
 // behavior of progress pool, if passed to mpb.New(...ProgressOption).
 type ProgressOption func(*pState)
 
-// WithWaitGroup provides means to have a single joint point.  If
+// WithWaitGroup provides means to have a single joint point. If
 // *sync.WaitGroup is provided, you can safely call just p.Wait()
-// without calling Wait() on provided *sync.WaitGroup.  Makes sense
+// without calling Wait() on provided *sync.WaitGroup. Makes sense
 // when there are more than one bar to render.
 func WithWaitGroup(wg *sync.WaitGroup) ProgressOption {
 	return func(s *pState) {
@@ -23,7 +23,8 @@ func WithWaitGroup(wg *sync.WaitGroup) ProgressOption {
 	}
 }
 
-// WithWidth overrides default width 80.
+// WithWidth sets container width. Default is 80. Bars inherit this
+// width, as long as no BarWidth is applied.
 func WithWidth(w int) ProgressOption {
 	return func(s *pState) {
 		if w >= 0 {
