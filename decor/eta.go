@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/VividCortex/ewma"
-	"github.com/vbauerster/mpb/internal"
 )
 
 type TimeNormalizer func(time.Duration) time.Duration
@@ -59,7 +58,7 @@ func (d *movingAverageETA) Decor(st *Statistics) string {
 		return d.FormatMsg(*d.completeMsg)
 	}
 
-	v := internal.Round(d.average.Value())
+	v := math.Round(d.average.Value())
 	remaining := d.normalizer(time.Duration((st.Total - st.Current) * int64(v)))
 	hours := int64((remaining / time.Hour) % 60)
 	minutes := int64((remaining / time.Minute) % 60)
@@ -133,7 +132,7 @@ func (d *averageETA) Decor(st *Statistics) string {
 
 	var str string
 	timeElapsed := time.Since(d.startTime)
-	v := internal.Round(float64(timeElapsed) / float64(st.Current))
+	v := math.Round(float64(timeElapsed) / float64(st.Current))
 	if math.IsInf(v, 0) || math.IsNaN(v) {
 		v = 0
 	}
