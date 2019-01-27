@@ -81,39 +81,27 @@ func New(options ...ProgressOption) *Progress {
 
 // AddBar creates a new progress bar and adds to the container.
 func (p *Progress) AddBar(total int64, options ...BarOption) *Bar {
-	// make sure filler is initialized first
-	args := []BarOption{
-		func(s *bState) {
-			s.filler = &barFiller{
-				format: defaultBarStyle,
-			}
-		},
+	filler := &barFiller{
+		format: defaultBarStyle,
 	}
-	args = append(args, options...)
-	return p.add(total, args...)
+	return p.Add(total, filler, options...)
 }
 
 // AddSpinner creates a new spinner bar and adds to the container.
 func (p *Progress) AddSpinner(total int64, alignment SpinnerAlignment, options ...BarOption) *Bar {
-	// make sure filler is initialized first
-	args := []BarOption{
-		func(s *bState) {
-			s.filler = &spinnerFiller{
-				frames:    defaultSpinnerStyle,
-				alignment: alignment,
-			}
-		},
+	filler := &spinnerFiller{
+		frames:    defaultSpinnerStyle,
+		alignment: alignment,
 	}
-	args = append(args, options...)
-	return p.add(total, args...)
+	return p.Add(total, filler, options...)
 }
 
-func (p *Progress) add(total int64, options ...BarOption) *Bar {
+func (p *Progress) Add(total int64, filler Filler, options ...BarOption) *Bar {
 	p.wg.Add(1)
 	result := make(chan *Bar)
 	select {
 	case p.operateState <- func(s *pState) {
-		b := newBar(p.wg, s.idCounter, s.width, total, s.cancel, options...)
+		b := newBar(p.wg, filler, s.idCounter, s.width, total, s.cancel, options...)
 		if b.runningBar != nil {
 			s.waitBars[b.runningBar] = b
 		} else {

@@ -32,13 +32,13 @@ type Bar struct {
 	shutdown chan struct{}
 }
 
-type filler interface {
+type Filler interface {
 	fill(w io.Writer, width int, s *decor.Statistics)
 }
 
 type (
 	bState struct {
-		filler             filler
+		filler             Filler
 		id                 int
 		width              int
 		alignment          int
@@ -75,12 +75,20 @@ type (
 	}
 )
 
-func newBar(wg *sync.WaitGroup, id, width int, total int64, cancel <-chan struct{}, options ...BarOption) *Bar {
+func newBar(
+	wg *sync.WaitGroup,
+	filler Filler,
+	id, width int,
+	total int64,
+	cancel <-chan struct{},
+	options ...BarOption,
+) *Bar {
 	if total <= 0 {
 		total = time.Now().Unix()
 	}
 
 	s := &bState{
+		filler:   filler,
 		id:       id,
 		priority: id,
 		width:    width,
