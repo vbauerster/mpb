@@ -31,8 +31,12 @@ const (
 	DSyncSpaceR = DSyncWidth | DextraSpace | DidentRight
 )
 
+// TimeStyle enum.
+type TimeStyle int
+
+// TimeStyle kinds.
 const (
-	ET_STYLE_GO = iota
+	ET_STYLE_GO TimeStyle = iota
 	ET_STYLE_HHMMSS
 	ET_STYLE_HHMM
 	ET_STYLE_MMSS
@@ -55,7 +59,7 @@ type Decorator interface {
 }
 
 // Syncable interface.
-// All decorators implement this interface implicitly.  Its Syncable
+// All decorators implement this interface implicitly. Its Syncable
 // method exposes width sync channel, if sync is enabled.
 type Syncable interface {
 	Syncable() (bool, chan int)

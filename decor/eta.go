@@ -17,7 +17,7 @@ type TimeNormalizer func(time.Duration) time.Duration
 //	`age` is the previous N samples to average over.
 //
 //	`wcc` optional WC config
-func EwmaETA(style int, age float64, wcc ...WC) Decorator {
+func EwmaETA(style TimeStyle, age float64, wcc ...WC) Decorator {
 	return MovingAverageETA(style, ewma.NewMovingAverage(age), NopNormalizer(), wcc...)
 }
 
@@ -30,7 +30,7 @@ func EwmaETA(style int, age float64, wcc ...WC) Decorator {
 //	`normalizer` available implementations are [NopNormalizer|FixedIntervalTimeNormalizer|MaxTolerateTimeNormalizer]
 //
 //	`wcc` optional WC config
-func MovingAverageETA(style int, average MovingAverage, normalizer TimeNormalizer, wcc ...WC) Decorator {
+func MovingAverageETA(style TimeStyle, average MovingAverage, normalizer TimeNormalizer, wcc ...WC) Decorator {
 	var wc WC
 	for _, widthConf := range wcc {
 		wc = widthConf
@@ -47,7 +47,7 @@ func MovingAverageETA(style int, average MovingAverage, normalizer TimeNormalize
 
 type movingAverageETA struct {
 	WC
-	style       int
+	style       TimeStyle
 	average     ewma.MovingAverage
 	completeMsg *string
 	normalizer  TimeNormalizer
@@ -104,7 +104,7 @@ func (d *movingAverageETA) OnCompleteMessage(msg string) {
 //	`style` one of [ET_STYLE_GO|ET_STYLE_HHMMSS|ET_STYLE_HHMM|ET_STYLE_MMSS]
 //
 //	`wcc` optional WC config
-func AverageETA(style int, wcc ...WC) Decorator {
+func AverageETA(style TimeStyle, wcc ...WC) Decorator {
 	var wc WC
 	for _, widthConf := range wcc {
 		wc = widthConf
@@ -120,7 +120,7 @@ func AverageETA(style int, wcc ...WC) Decorator {
 
 type averageETA struct {
 	WC
-	style       int
+	style       TimeStyle
 	startTime   time.Time
 	completeMsg *string
 }
