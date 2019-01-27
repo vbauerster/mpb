@@ -120,6 +120,7 @@ func SpinnerStyle(frames []string) BarOption {
 	}
 }
 
+// TrimSpace trims bar's edge spaces.
 func TrimSpace() BarOption {
 	return func(s *bState) {
 		s.trimSpace = true
