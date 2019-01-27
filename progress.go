@@ -98,6 +98,7 @@ func (p *Progress) AddSpinner(total int64, alignment SpinnerAlignment, options .
 	return p.Add(total, filler, options...)
 }
 
+// Add creates a bar which renders itself by provided filler.
 func (p *Progress) Add(total int64, filler Filler, options ...BarOption) *Bar {
 	p.wg.Add(1)
 	result := make(chan *Bar)
