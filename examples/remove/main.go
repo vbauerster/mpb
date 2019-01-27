@@ -23,14 +23,8 @@ func main() {
 
 	for i := 0; i < numBars; i++ {
 		name := fmt.Sprintf("Bar#%d:", i)
-
-		var bOption mpb.BarOption
-		if i == 0 {
-			bOption = mpb.BarRemoveOnComplete()
-		}
-
 		b := p.AddBar(int64(total), mpb.BarID(i),
-			bOption,
+			mpb.OptionOnCondition(mpb.BarRemoveOnComplete(), func() bool { return i == 0 }),
 			mpb.PrependDecorators(
 				decor.Name(name),
 				decor.EwmaETA(decor.ET_STYLE_GO, 60, decor.WCSyncSpace),
