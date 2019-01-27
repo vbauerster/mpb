@@ -23,7 +23,7 @@ type spinnerFiller struct {
 	alignment SpinnerAlignment
 }
 
-func (s *spinnerFiller) fill(w io.Writer, width int, stat *decor.Statistics) {
+func (s *spinnerFiller) Fill(w io.Writer, width int, stat *decor.Statistics) {
 
 	frame := s.frames[stat.Current%int64(len(s.frames))]
 	frameWidth := utf8.RuneCountInString(frame)

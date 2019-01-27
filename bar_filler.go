@@ -23,7 +23,7 @@ type barFiller struct {
 	refill *refill
 }
 
-func (s *barFiller) fill(w io.Writer, width int, stat *decor.Statistics) {
+func (s *barFiller) Fill(w io.Writer, width int, stat *decor.Statistics) {
 
 	str := string(s.format[rLeft])
 

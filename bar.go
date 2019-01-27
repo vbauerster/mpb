@@ -34,7 +34,7 @@ type Bar struct {
 }
 
 type Filler interface {
-	fill(w io.Writer, width int, s *decor.Statistics)
+	Fill(w io.Writer, width int, s *decor.Statistics)
 }
 
 type (
@@ -349,9 +349,9 @@ func (s *bState) draw(termWidth int) io.Reader {
 	}
 
 	if prependCount+s.width+appendCount > termWidth {
-		s.filler.fill(s.bufB, termWidth-prependCount-appendCount, stat)
+		s.filler.Fill(s.bufB, termWidth-prependCount-appendCount, stat)
 	} else {
-		s.filler.fill(s.bufB, s.width, stat)
+		s.filler.Fill(s.bufB, s.width, stat)
 	}
 
 	if !s.trimSpace {
