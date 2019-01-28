@@ -8,7 +8,7 @@ import (
 	"github.com/vbauerster/mpb/decor"
 )
 
-// SpinnerAlignment erum.
+// SpinnerAlignment enum.
 type SpinnerAlignment int
 
 // SpinnerAlignment kinds.
