@@ -96,6 +96,7 @@ var (
 
 // WC is a struct with two public fields W and C, both of int type.
 // W represents width and C represents bit set of width related config.
+// A decorator should embed WC, in order to become Syncable.
 type WC struct {
 	W      int
 	C      int
@@ -132,6 +133,7 @@ func (wc *WC) Init() {
 	}
 }
 
+// Syncable is implementation of Syncable interface.
 func (wc *WC) Syncable() (bool, chan int) {
 	return (wc.C & DSyncWidth) != 0, wc.wsync
 }
