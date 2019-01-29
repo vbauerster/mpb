@@ -192,7 +192,7 @@ func (d *movingAverageSpeed) Decor(st *Statistics) string {
 	return d.FormatMsg(d.msg)
 }
 
-func (s *movingAverageSpeed) NextAmount(n int, wdd ...time.Duration) {
+func (d *movingAverageSpeed) NextAmount(n int, wdd ...time.Duration) {
 	var workDuration time.Duration
 	for _, wd := range wdd {
 		workDuration = wd
@@ -201,7 +201,7 @@ func (s *movingAverageSpeed) NextAmount(n int, wdd ...time.Duration) {
 	if math.IsInf(speed, 0) || math.IsNaN(speed) {
 		return
 	}
-	s.average.Add(speed)
+	d.average.Add(speed)
 }
 
 func (d *movingAverageSpeed) OnCompleteMessage(msg string) {
