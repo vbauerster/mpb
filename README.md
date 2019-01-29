@@ -112,6 +112,6 @@ func main() {
 
 ![complex](_svg/wHzf1M7sd7B3zVa2scBMnjqRf.svg)
 
-#### [Bytes counters](_examples/io/single/main.go)
+#### [Bytes counters](_examples/io/main.go)
 
 ![byte counters](_svg/hIpTa3A5rQz65ssiVuRJu87X6.svg)
