@@ -16,30 +16,29 @@
 * __Predefined Decorators__: Elapsed time, [ewma](https://github.com/VividCortex/ewma) based ETA, Percentage, Bytes counter
 * __Decorator's width sync__:  Synchronized decorator's width among multiple bars
 
-## Installation
-
-```sh
-go get github.com/vbauerster/mpb
-```
-
-_Note:_ it is preferable to go get from github.com, rather than gopkg.in. See issue [#11](https://github.com/vbauerster/mpb/issues/11).
-
 ## Usage
 
-#### [Rendering single bar](examples/singleBar/main.go)
+#### [Rendering single bar](_examples/singleBar/main.go)
 ```go
-    p := mpb.New(
-        // override default (80) width
-        mpb.WithWidth(64),
-        // override default 120ms refresh rate
-        mpb.WithRefreshRate(180*time.Millisecond),
-    )
+package main
+
+import (
+    "math/rand"
+    "time"
+
+    "github.com/vbauerster/mpb/v4"
+    "github.com/vbauerster/mpb/v4/decor"
+)
+
+func main() {
+    // initialize progress container, with custom width
+    p := mpb.New(mpb.WithWidth(64))
 
     total := 100
     name := "Single Bar:"
-    // adding a single bar
+    // adding a single bar, which will inherit container's width
     bar := p.AddBar(int64(total),
-        // override default "[=>-]" style
+        // set custom bar style, default one is "[=>-]"
         mpb.BarStyle("╢▌▌░╟"),
         mpb.PrependDecorators(
             // display our name with one space on the right
@@ -62,11 +61,13 @@ _Note:_ it is preferable to go get from github.com, rather than gopkg.in. See is
     }
     // wait for our bar to complete and flush
     p.Wait()
+}
 ```
 
-#### [Rendering multiple bars](examples/simple/main.go)
+#### [Rendering multiple bars](_examples/simple/main.go)
 ```go
     var wg sync.WaitGroup
+    // pass &wg (optional), so p will wait for it eventually
     p := mpb.New(mpb.WithWaitGroup(&wg))
     total, numBars := 100, 3
     wg.Add(numBars)
@@ -100,18 +101,18 @@ _Note:_ it is preferable to go get from github.com, rather than gopkg.in. See is
             }
         }()
     }
-    // wait for all bars to complete and flush
+    // Waiting for passed &wg and for all bars to complete and flush
     p.Wait()
 ```
 
-#### [Dynamic total](examples/dynTotal/main.go)
+#### [Dynamic total](_examples/dynTotal/main.go)
 
-![dynamic total](examples/gifs/godEMrCZmJkHYH1X9dN4Nm0U7.svg)
+![dynamic total](_svg/godEMrCZmJkHYH1X9dN4Nm0U7.svg)
 
-#### [Complex example](examples/complex/main.go)
+#### [Complex example](_examples/complex/main.go)
 
-![complex](examples/gifs/wHzf1M7sd7B3zVa2scBMnjqRf.svg)
+![complex](_svg/wHzf1M7sd7B3zVa2scBMnjqRf.svg)
 
-#### [Bytes counters](examples/io/single/main.go)
+#### [Bytes counters](_examples/io/single/main.go)
 
-![byte counters](examples/gifs/hIpTa3A5rQz65ssiVuRJu87X6.svg)
+![byte counters](_svg/hIpTa3A5rQz65ssiVuRJu87X6.svg)

@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/vbauerster/mpb"
-	"github.com/vbauerster/mpb/decor"
+	"github.com/vbauerster/mpb/v4"
+	"github.com/vbauerster/mpb/v4/decor"
 )
 
 func init() {
@@ -22,25 +22,29 @@ func main() {
 	wg.Add(numBars)
 
 	for i := 0; i < numBars; i++ {
-		name := fmt.Sprintf("Bar#%d:", i)
-		b := p.AddBar(int64(total), mpb.BarID(i),
-			mpb.OptionOnCondition(mpb.BarRemoveOnComplete(), func() bool { return i == 0 }),
+		var name string
+		if i != 1 {
+			name = fmt.Sprintf("Bar#%d:", i)
+		}
+		b := p.AddBar(int64(total),
 			mpb.PrependDecorators(
-				decor.Name(name),
-				decor.EwmaETA(decor.ET_STYLE_GO, 60, decor.WCSyncSpace),
+				decor.Name(name, decor.WCSyncWidth),
+				decor.CountersNoUnit("%d / %d", decor.WCSyncSpace),
 			),
-			mpb.AppendDecorators(decor.Percentage()),
+			mpb.AppendDecorators(
+				decor.EwmaETA(decor.ET_STYLE_GO, 60, decor.WC{W: 3}),
+			),
 		)
 		go func() {
 			defer wg.Done()
 			max := 100 * time.Millisecond
 			for i := 0; i < total; i++ {
 				start := time.Now()
-				if b.ID() == 2 && i == 42 {
-					p.Abort(b, true)
-					return
-				}
 				time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
+				if i&1 == 1 {
+					priority := total - int(b.Current())
+					p.UpdateBarPriority(b, priority)
+				}
 				// ewma based decorators require work duration measurement
 				b.IncrBy(1, time.Since(start))
 			}

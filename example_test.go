@@ -7,23 +7,19 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/vbauerster/mpb"
-	"github.com/vbauerster/mpb/decor"
+	"github.com/vbauerster/mpb/v4"
+	"github.com/vbauerster/mpb/v4/decor"
 )
 
 func Example() {
-	p := mpb.New(
-		// override default (80) width
-		mpb.WithWidth(64),
-		// override default 120ms refresh rate
-		mpb.WithRefreshRate(180*time.Millisecond),
-	)
+	// initialize progress container, with custom width
+	p := mpb.New(mpb.WithWidth(64))
 
 	total := 100
 	name := "Single Bar:"
-	// adding a single bar
+	// adding a single bar, which will inherit container's width
 	bar := p.AddBar(int64(total),
-		// override default "[=>-]" style
+		// set custom bar style, default one is "[=>-]"
 		mpb.BarStyle("╢▌▌░╟"),
 		mpb.PrependDecorators(
 			// display our name with one space on the right

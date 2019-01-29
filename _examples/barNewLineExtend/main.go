@@ -2,12 +2,13 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"math/rand"
 	"sync"
 	"time"
 
-	"github.com/vbauerster/mpb"
-	"github.com/vbauerster/mpb/decor"
+	"github.com/vbauerster/mpb/v4"
+	"github.com/vbauerster/mpb/v4/decor"
 )
 
 func init() {
@@ -22,7 +23,12 @@ func main() {
 
 	for i := 0; i < numBars; i++ {
 		name := fmt.Sprintf("Bar#%d:", i)
-		bar := p.AddBar(int64(total),
+		efn := func(w io.Writer, s *decor.Statistics) {
+			if s.Completed {
+				fmt.Fprintf(w, "Bar id: %d has been completed\n", s.ID)
+			}
+		}
+		bar := p.AddBar(int64(total), mpb.BarNewLineExtend(efn),
 			mpb.PrependDecorators(
 				// simple name decorator
 				decor.Name(name),

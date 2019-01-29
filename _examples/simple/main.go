@@ -2,13 +2,12 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"math/rand"
 	"sync"
 	"time"
 
-	"github.com/vbauerster/mpb"
-	"github.com/vbauerster/mpb/decor"
+	"github.com/vbauerster/mpb/v4"
+	"github.com/vbauerster/mpb/v4/decor"
 )
 
 func init() {
@@ -17,18 +16,14 @@ func init() {
 
 func main() {
 	var wg sync.WaitGroup
+	// pass &wg (optional), so p will wait for it eventually
 	p := mpb.New(mpb.WithWaitGroup(&wg))
 	total, numBars := 100, 3
 	wg.Add(numBars)
 
 	for i := 0; i < numBars; i++ {
 		name := fmt.Sprintf("Bar#%d:", i)
-		efn := func(w io.Writer, s *decor.Statistics) {
-			if s.Completed {
-				fmt.Fprintf(w, "Bar id: %d has been completed\n", s.ID)
-			}
-		}
-		bar := p.AddBar(int64(total), mpb.BarNewLineExtend(efn),
+		bar := p.AddBar(int64(total),
 			mpb.PrependDecorators(
 				// simple name decorator
 				decor.Name(name),
@@ -55,6 +50,6 @@ func main() {
 			}
 		}()
 	}
-	// wait for all bars to complete and flush
+	// Waiting for passed &wg and for all bars to complete and flush
 	p.Wait()
 }

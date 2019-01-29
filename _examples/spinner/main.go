@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/vbauerster/mpb"
-	"github.com/vbauerster/mpb/decor"
+	"github.com/vbauerster/mpb/v4"
+	"github.com/vbauerster/mpb/v4/decor"
 )
 
 func init() {
@@ -28,7 +28,7 @@ func main() {
 		var bar *mpb.Bar
 		if i == 0 {
 			bar = p.AddBar(int64(total),
-				// override default "[=>-]" style
+				// set custom bar style, default one is "[=>-]"
 				mpb.BarStyle("╢▌▌░╟"),
 				mpb.PrependDecorators(
 					// simple name decorator
@@ -44,7 +44,7 @@ func main() {
 			)
 		} else {
 			bar = p.AddSpinner(int64(total), mpb.SpinnerOnMiddle,
-				// override default {"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"} style
+				// set custom spinner style, default one is {"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
 				mpb.SpinnerStyle([]string{"∙∙∙", "●∙∙", "∙●∙", "∙∙●", "∙∙∙"}),
 				mpb.PrependDecorators(
 					// simple name decorator

@@ -1,14 +1,12 @@
 language: go
-sudo: false
+
 go:
   - 1.10.x
-  - tip
+  - 1.11.x
 
-before_install:
-  - go get -t -v ./...
+env:
+  - GO111MODULE=on
 
 script:
-  - go test -race -coverprofile=coverage.txt -covermode=atomic
-
-after_success:
-  - bash <(curl -s https://codecov.io/bash)
+  - go test -race -timeout 10s ./...
+  - for i in _examples/*/; do go build $i/*.go || exit 1; done
