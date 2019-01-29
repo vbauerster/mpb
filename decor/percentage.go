@@ -3,7 +3,7 @@ package decor
 import (
 	"fmt"
 
-	"github.com/vbauerster/mpb/internal"
+	"github.com/vbauerster/mpb/v4/internal"
 )
 
 // Percentage returns percentage decorator.

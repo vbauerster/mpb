@@ -6,7 +6,7 @@ import (
 	"bytes"
 	"testing"
 
-	. "github.com/vbauerster/mpb/cwriter"
+	. "github.com/vbauerster/mpb/v4/cwriter"
 )
 
 // TestWriterPosix by writing and flushing many times. The output buffer

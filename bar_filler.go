@@ -4,8 +4,8 @@ import (
 	"io"
 	"strings"
 
-	"github.com/vbauerster/mpb/decor"
-	"github.com/vbauerster/mpb/internal"
+	"github.com/vbauerster/mpb/v4/decor"
+	"github.com/vbauerster/mpb/v4/internal"
 )
 
 const (

@@ -5,7 +5,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/vbauerster/mpb/decor"
+	"github.com/vbauerster/mpb/v4/decor"
 )
 
 // SpinnerAlignment enum.

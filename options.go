@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/vbauerster/mpb/cwriter"
+	"github.com/vbauerster/mpb/v4/cwriter"
 )
 
 // ProgressOption is a function option which changes the default

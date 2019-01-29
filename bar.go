@@ -11,7 +11,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/vbauerster/mpb/decor"
+	"github.com/vbauerster/mpb/v4/decor"
 )
 
 // Bar represents a progress Bar

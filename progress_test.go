@@ -10,9 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/vbauerster/mpb"
-	. "github.com/vbauerster/mpb"
-	"github.com/vbauerster/mpb/cwriter"
+	"github.com/vbauerster/mpb/v4"
+	"github.com/vbauerster/mpb/v4/cwriter"
 )
 
 var (
@@ -26,7 +25,7 @@ func init() {
 }
 
 func TestBarCount(t *testing.T) {
-	p := New(WithOutput(ioutil.Discard))
+	p := mpb.New(mpb.WithOutput(ioutil.Discard))
 
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -52,11 +51,11 @@ func TestBarCount(t *testing.T) {
 }
 
 func TestBarAbort(t *testing.T) {
-	p := New(WithOutput(ioutil.Discard))
+	p := mpb.New(mpb.WithOutput(ioutil.Discard))
 
 	var wg sync.WaitGroup
 	wg.Add(1)
-	bars := make([]*Bar, 3)
+	bars := make([]*mpb.Bar, 3)
 	for i := 0; i < 3; i++ {
 		b := p.AddBar(100)
 		bars[i] = b

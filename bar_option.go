@@ -4,7 +4,7 @@ import (
 	"io"
 	"unicode/utf8"
 
-	"github.com/vbauerster/mpb/decor"
+	"github.com/vbauerster/mpb/v4/decor"
 )
 
 // BarOption is a function option which changes the default behavior of a bar.
