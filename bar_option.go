@@ -90,9 +90,8 @@ func BarPriority(priority int) BarOption {
 	}
 }
 
-// BarNewLineExtend takes user defined efn, which gets called each
-// render cycle. Any write to provided writer of efn, will appear on
-// new line of respective bar.
+// BarExtender is an option to extend bar to the next new line, with
+// arbitrary output.
 func BarExtender(extender Filler) BarOption {
 	return func(s *bState) {
 		s.extender = extender
