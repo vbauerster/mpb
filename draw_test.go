@@ -11,8 +11,8 @@ func TestDraw(t *testing.T) {
 		name           string
 		total, current int64
 		barWidth       int
-		barRefill      *refill
 		trimSpace      bool
+		rup            int
 		want           string
 	}{
 		100: {
@@ -54,19 +54,19 @@ func TestDraw(t *testing.T) {
 				want:     " [=====================================>----------------------------------------------------------] ",
 			},
 			{
-				name:      "t,c,bw{100,40,100}:refill{'+', 32}",
-				total:     100,
-				current:   40,
-				barWidth:  100,
-				barRefill: &refill{'+', 32},
-				want:      " [+++++++++++++++++++++++++++++++======>----------------------------------------------------------] ",
+				name:     "t,c,bw,rup{100,40,100,32}",
+				total:    100,
+				current:  40,
+				barWidth: 100,
+				rup:      32,
+				want:     " [+++++++++++++++++++++++++++++++======>----------------------------------------------------------] ",
 			},
 			{
-				name:      "t,c,bw{100,40,100}:refill{'+', 32}:trimSpace",
+				name:      "t,c,bw,rup{100,40,100,32}:trimSpace",
 				total:     100,
 				current:   40,
 				barWidth:  100,
-				barRefill: &refill{'+', 32},
+				rup:       32,
 				trimSpace: true,
 				want:      "[+++++++++++++++++++++++++++++++=======>-----------------------------------------------------------]",
 			},
@@ -215,8 +215,10 @@ func TestDraw(t *testing.T) {
 			s.total = tc.total
 			s.current = tc.current
 			s.trimSpace = tc.trimSpace
-			if tc.barRefill != nil {
-				s.filler.(*barFiller).refill = tc.barRefill
+			if tc.rup > 0 {
+				if f, ok := s.filler.(interface{ SetRefill(int) }); ok {
+					f.SetRefill(tc.rup)
+				}
 			}
 			tmpBuf.Reset()
 			tmpBuf.ReadFrom(s.draw(termWidth))

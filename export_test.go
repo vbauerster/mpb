@@ -1,3 +1,6 @@
 package mpb
 
-var SyncWidth = syncWidth
+var (
+	SyncWidth       = syncWidth
+	DefaultBarStyle = defaultBarStyle
+)

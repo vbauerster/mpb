@@ -14,13 +14,14 @@ const (
 	rTip
 	rEmpty
 	rRight
+	rRefill
 )
 
-var defaultBarStyle = []rune("[=>-]")
+var defaultBarStyle = []rune("[=>-]+")
 
 type barFiller struct {
 	format []rune
-	refill *refill
+	rup    int
 }
 
 func (s *barFiller) Fill(w io.Writer, width int, stat *decor.Statistics) {
@@ -42,10 +43,10 @@ func (s *barFiller) Fill(w io.Writer, width int, stat *decor.Statistics) {
 		progressWidth--
 	}
 
-	if s.refill != nil {
-		refillCount := internal.Percentage(stat.Total, s.refill.limit, int64(width))
+	if s.rup > 0 {
+		refillCount := internal.Percentage(stat.Total, int64(s.rup), int64(width))
 		rest := progressWidth - refillCount
-		str += runeRepeat(s.refill.r, int(refillCount)) + runeRepeat(s.format[rFill], int(rest))
+		str += runeRepeat(s.format[rRefill], int(refillCount)) + runeRepeat(s.format[rFill], int(rest))
 	} else {
 		str += runeRepeat(s.format[rFill], int(progressWidth))
 	}
@@ -58,6 +59,10 @@ func (s *barFiller) Fill(w io.Writer, width int, stat *decor.Statistics) {
 	rest := int64(width) - progressWidth
 	str += runeRepeat(s.format[rEmpty], int(rest)) + string(s.format[rRight])
 	io.WriteString(w, str)
+}
+
+func (s *barFiller) SetRefill(upto int) {
+	s.rup = upto
 }
 
 func runeRepeat(r rune, count int) string {

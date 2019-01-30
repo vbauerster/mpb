@@ -118,15 +118,10 @@ func BarStyle(style string) BarOption {
 		return t, ok
 	}
 	cb := func(t interface{}) {
-		bf := t.(*barFiller)
 		if !utf8.ValidString(style) {
-			panic("invalid style string")
+			return
 		}
-		defaultFormat := bf.format
-		bf.format = []rune(style)
-		if len(bf.format) < 5 {
-			bf.format = defaultFormat
-		}
+		copy(t.(*barFiller).format, []rune(style))
 	}
 	return MakeFillerTypeSpecificBarOption(chk, cb)
 }

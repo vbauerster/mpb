@@ -58,7 +58,6 @@ type (
 		pDecorators        []decor.Decorator
 		amountReceivers    []decor.AmountReceiver
 		shutdownListeners  []decor.ShutdownListener
-		refill             *refill
 		bufP, bufB, bufA   *bytes.Buffer
 		bufNL              *bytes.Buffer
 		panicMsg           string
@@ -67,10 +66,6 @@ type (
 		// following options are assigned to the *Bar
 		priority   int
 		runningBar *Bar
-	}
-	refill struct {
-		r     rune
-		limit int64
 	}
 	frameReader struct {
 		io.Reader
@@ -200,14 +195,11 @@ func (b *Bar) SetTotal(total int64, final bool) bool {
 	}
 }
 
-// SetRefill sets fill rune to r, up until n.
-func (b *Bar) SetRefill(n int, r rune) {
-	if n <= 0 {
-		return
-	}
+// SetRefill sets refill, if supported by underlying Filler.
+func (b *Bar) SetRefill(upto int) {
 	b.operateState <- func(s *bState) {
-		if bf, ok := s.filler.(*barFiller); ok {
-			bf.refill = &refill{r, int64(n)}
+		if f, ok := s.filler.(interface{ SetRefill(int) }); ok {
+			f.SetRefill(upto)
 		}
 	}
 }
@@ -352,11 +344,11 @@ func (s *bState) draw(termWidth int) io.Reader {
 		s.bufB.WriteByte(' ')
 	}
 
+	calcWidth := s.width
 	if prependCount+s.width+appendCount > termWidth {
-		s.filler.Fill(s.bufB, termWidth-prependCount-appendCount, stat)
-	} else {
-		s.filler.Fill(s.bufB, s.width, stat)
+		calcWidth = termWidth - prependCount - appendCount
 	}
+	s.filler.Fill(s.bufB, calcWidth, stat)
 
 	if !s.trimSpace {
 		s.bufB.WriteByte(' ')

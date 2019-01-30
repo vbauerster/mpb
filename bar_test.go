@@ -9,12 +9,12 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/vbauerster/mpb/v4"
+	. "github.com/vbauerster/mpb/v4"
 	"github.com/vbauerster/mpb/v4/decor"
 )
 
 func TestBarCompleted(t *testing.T) {
-	p := mpb.New(mpb.WithOutput(ioutil.Discard))
+	p := New(WithOutput(ioutil.Discard))
 	total := 80
 	bar := p.AddBar(int64(total))
 
@@ -32,10 +32,10 @@ func TestBarCompleted(t *testing.T) {
 }
 
 func TestBarID(t *testing.T) {
-	p := mpb.New(mpb.WithOutput(ioutil.Discard))
+	p := New(WithOutput(ioutil.Discard))
 	total := 80
 	wantID := 11
-	bar := p.AddBar(int64(total), mpb.BarID(wantID))
+	bar := p.AddBar(int64(total), BarID(wantID))
 
 	go func() {
 		for i := 0; i < total; i++ {
@@ -57,15 +57,15 @@ func TestBarSetRefill(t *testing.T) {
 	var buf bytes.Buffer
 
 	width := 100
-	p := mpb.New(mpb.WithOutput(&buf), mpb.WithWidth(width))
+	p := New(WithOutput(&buf), WithWidth(width))
 
 	total := 100
 	till := 30
-	refillRune := '+'
+	refillRune := DefaultBarStyle[len(DefaultBarStyle)-1]
 
-	bar := p.AddBar(int64(total), mpb.TrimSpace())
+	bar := p.AddBar(int64(total), TrimSpace())
 
-	bar.SetRefill(till, refillRune)
+	bar.SetRefill(till)
 	bar.IncrBy(till)
 
 	for i := 0; i < total-till; i++ {
@@ -90,9 +90,9 @@ func TestBarSetRefill(t *testing.T) {
 func TestBarStyle(t *testing.T) {
 	var buf bytes.Buffer
 	customFormat := "╢▌▌░╟"
-	p := mpb.New(mpb.WithOutput(&buf))
+	p := New(WithOutput(&buf))
 	total := 80
-	bar := p.AddBar(int64(total), mpb.BarStyle(customFormat), mpb.TrimSpace())
+	bar := p.AddBar(int64(total), BarStyle(customFormat), TrimSpace())
 
 	for i := 0; i < total; i++ {
 		bar.Increment()
@@ -116,12 +116,12 @@ func TestBarStyle(t *testing.T) {
 
 func TestBarPanics(t *testing.T) {
 	var buf bytes.Buffer
-	p := mpb.New(mpb.WithDebugOutput(&buf), mpb.WithOutput(ioutil.Discard))
+	p := New(WithDebugOutput(&buf), WithOutput(ioutil.Discard))
 
 	wantPanic := "Upps!!!"
 	total := 100
 
-	bar := p.AddBar(int64(total), mpb.PrependDecorators(panicDecorator(wantPanic)))
+	bar := p.AddBar(int64(total), PrependDecorators(panicDecorator(wantPanic)))
 
 	go func() {
 		for i := 0; i < 100; i++ {
