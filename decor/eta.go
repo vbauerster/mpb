@@ -8,7 +8,19 @@ import (
 	"github.com/VividCortex/ewma"
 )
 
-type TimeNormalizer func(time.Duration) time.Duration
+// TimeNormalizer interface
+// Implementors meant to normalize ETA.
+type TimeNormalizer interface {
+	Normalize(time.Duration) time.Duration
+}
+
+// TimeNormalizerFunc is function type adapter to convert function
+// into TimeNormalizer.
+type TimeNormalizerFunc func(time.Duration) time.Duration
+
+func (f TimeNormalizerFunc) Normalize(src time.Duration) time.Duration {
+	return f(src)
+}
 
 // EwmaETA exponential-weighted-moving-average based ETA decorator.
 //
@@ -18,7 +30,7 @@ type TimeNormalizer func(time.Duration) time.Duration
 //
 //	`wcc` optional WC config
 func EwmaETA(style TimeStyle, age float64, wcc ...WC) Decorator {
-	return MovingAverageETA(style, ewma.NewMovingAverage(age), NopNormalizer(), wcc...)
+	return MovingAverageETA(style, ewma.NewMovingAverage(age), nil, wcc...)
 }
 
 // MovingAverageETA decorator relies on MovingAverage implementation to calculate its average.
@@ -27,7 +39,7 @@ func EwmaETA(style TimeStyle, age float64, wcc ...WC) Decorator {
 //
 //	`average` available implementations of MovingAverage [ewma.MovingAverage|NewMedian|NewMedianEwma]
 //
-//	`normalizer` available implementations are [NopNormalizer|FixedIntervalTimeNormalizer|MaxTolerateTimeNormalizer]
+//	`normalizer` available implementations are [FixedIntervalTimeNormalizer|MaxTolerateTimeNormalizer]
 //
 //	`wcc` optional WC config
 func MovingAverageETA(style TimeStyle, average MovingAverage, normalizer TimeNormalizer, wcc ...WC) Decorator {
@@ -59,7 +71,10 @@ func (d *movingAverageETA) Decor(st *Statistics) string {
 	}
 
 	v := math.Round(d.average.Value())
-	remaining := d.normalizer(time.Duration((st.Total - st.Current) * int64(v)))
+	remaining := time.Duration((st.Total - st.Current) * int64(v))
+	if d.normalizer != nil {
+		remaining = d.normalizer.Normalize(remaining)
+	}
 	hours := int64((remaining / time.Hour) % 60)
 	minutes := int64((remaining / time.Minute) % 60)
 	seconds := int64((remaining / time.Second) % 60)
@@ -166,7 +181,7 @@ func (d *averageETA) OnCompleteMessage(msg string) {
 func MaxTolerateTimeNormalizer(maxTolerate time.Duration) TimeNormalizer {
 	var normalized time.Duration
 	var lastCall time.Time
-	return func(remaining time.Duration) time.Duration {
+	return TimeNormalizerFunc(func(remaining time.Duration) time.Duration {
 		if diff := normalized - remaining; diff <= 0 || diff > maxTolerate || remaining < maxTolerate/2 {
 			normalized = remaining
 			lastCall = time.Now()
@@ -175,14 +190,14 @@ func MaxTolerateTimeNormalizer(maxTolerate time.Duration) TimeNormalizer {
 		normalized -= time.Since(lastCall)
 		lastCall = time.Now()
 		return normalized
-	}
+	})
 }
 
 func FixedIntervalTimeNormalizer(updInterval int) TimeNormalizer {
 	var normalized time.Duration
 	var lastCall time.Time
 	var count int
-	return func(remaining time.Duration) time.Duration {
+	return TimeNormalizerFunc(func(remaining time.Duration) time.Duration {
 		if count == 0 || remaining <= time.Duration(15*time.Second) {
 			count = updInterval
 			normalized = remaining
@@ -196,11 +211,5 @@ func FixedIntervalTimeNormalizer(updInterval int) TimeNormalizer {
 			return normalized
 		}
 		return remaining
-	}
-}
-
-func NopNormalizer() TimeNormalizer {
-	return func(remaining time.Duration) time.Duration {
-		return remaining
-	}
+	})
 }
