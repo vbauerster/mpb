@@ -14,7 +14,22 @@ import (
 	"github.com/vbauerster/mpb/v4/decor"
 )
 
-// Bar represents a progress Bar
+// Filler interface.
+// Bar renders by calling Filler's Fill method. You can literally have
+// any bar kind, by implementing this interface and passing it to the
+// Add method.
+type Filler interface {
+	Fill(w io.Writer, termWidth int, stat *decor.Statistics)
+}
+
+// FillerFunc is function type adapter to convert function into Filler.
+type FillerFunc func(w io.Writer, termWidth int, stat *decor.Statistics)
+
+func (f FillerFunc) Fill(w io.Writer, termWidth int, stat *decor.Statistics) {
+	f(w, termWidth, stat)
+}
+
+// Bar represents a progress Bar.
 type Bar struct {
 	priority int
 	index    int
@@ -33,35 +48,26 @@ type Bar struct {
 	shutdown chan struct{}
 }
 
-// Filler interface.
-// Bar renders by calling Filler's Fill method. You can literally have
-// any bar kind, by implementing this interface and passing it to the
-// Add method.
-type Filler interface {
-	Fill(w io.Writer, width int, s *decor.Statistics)
-}
-
 type (
 	bState struct {
-		filler             Filler
-		id                 int
-		width              int
-		alignment          int
-		total              int64
-		current            int64
-		trimSpace          bool
-		toComplete         bool
-		removeOnComplete   bool
-		barClearOnComplete bool
-		completeFlushed    bool
-		aDecorators        []decor.Decorator
-		pDecorators        []decor.Decorator
-		amountReceivers    []decor.AmountReceiver
-		shutdownListeners  []decor.ShutdownListener
-		bufP, bufB, bufA   *bytes.Buffer
-		bufNL              *bytes.Buffer
-		panicMsg           string
-		newLineExtendFn    func(io.Writer, *decor.Statistics)
+		filler                 Filler
+		extender               Filler
+		id                     int
+		width                  int
+		alignment              int
+		total                  int64
+		current                int64
+		trimSpace              bool
+		toComplete             bool
+		removeOnComplete       bool
+		barClearOnComplete     bool
+		completeFlushed        bool
+		aDecorators            []decor.Decorator
+		pDecorators            []decor.Decorator
+		amountReceivers        []decor.AmountReceiver
+		shutdownListeners      []decor.ShutdownListener
+		bufP, bufB, bufA, bufE *bytes.Buffer
+		panicMsg               string
 
 		// following options are assigned to the *Bar
 		priority   int
@@ -104,8 +110,8 @@ func newBar(
 	s.bufP = bytes.NewBuffer(make([]byte, 0, width))
 	s.bufB = bytes.NewBuffer(make([]byte, 0, width))
 	s.bufA = bytes.NewBuffer(make([]byte, 0, width))
-	if s.newLineExtendFn != nil {
-		s.bufNL = bytes.NewBuffer(make([]byte, 0, width))
+	if s.extender != nil {
+		s.bufE = bytes.NewBuffer(make([]byte, 0, width))
 	}
 
 	b := &Bar{
@@ -284,11 +290,10 @@ func (b *Bar) render(debugOut io.Writer, tw int) {
 		}()
 		r := s.draw(tw)
 		var extendedLines int
-		if s.newLineExtendFn != nil {
-			s.bufNL.Reset()
-			s.newLineExtendFn(s.bufNL, newStatistics(s))
-			extendedLines = countLines(s.bufNL.Bytes())
-			r = io.MultiReader(r, s.bufNL)
+		if s.extender != nil {
+			s.extender.Fill(s.bufE, tw, newStatistics(s))
+			extendedLines = countLines(s.bufE.Bytes())
+			r = io.MultiReader(r, s.bufE)
 		}
 		b.frameReaderCh <- &frameReader{
 			Reader:           r,
@@ -302,11 +307,10 @@ func (b *Bar) render(debugOut io.Writer, tw int) {
 		s := b.cacheState
 		r := s.draw(tw)
 		var extendedLines int
-		if s.newLineExtendFn != nil {
-			s.bufNL.Reset()
-			s.newLineExtendFn(s.bufNL, newStatistics(s))
-			extendedLines = countLines(s.bufNL.Bytes())
-			r = io.MultiReader(r, s.bufNL)
+		if s.extender != nil {
+			s.extender.Fill(s.bufE, tw, newStatistics(s))
+			extendedLines = countLines(s.bufE.Bytes())
+			r = io.MultiReader(r, s.bufE)
 		}
 		b.frameReaderCh <- &frameReader{
 			Reader:        r,

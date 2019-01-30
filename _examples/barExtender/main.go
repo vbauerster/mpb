@@ -23,12 +23,12 @@ func main() {
 
 	for i := 0; i < numBars; i++ {
 		name := fmt.Sprintf("Bar#%d:", i)
-		efn := func(w io.Writer, s *decor.Statistics) {
+		efn := func(w io.Writer, width int, s *decor.Statistics) {
 			if s.Completed {
 				fmt.Fprintf(w, "Bar id: %d has been completed\n", s.ID)
 			}
 		}
-		bar := p.AddBar(int64(total), mpb.BarNewLineExtend(efn),
+		bar := p.AddBar(int64(total), mpb.BarExtender(mpb.FillerFunc(efn)),
 			mpb.PrependDecorators(
 				// simple name decorator
 				decor.Name(name),

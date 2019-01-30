@@ -1,7 +1,6 @@
 package mpb
 
 import (
-	"io"
 	"unicode/utf8"
 
 	"github.com/vbauerster/mpb/v4/decor"
@@ -94,9 +93,9 @@ func BarPriority(priority int) BarOption {
 // BarNewLineExtend takes user defined efn, which gets called each
 // render cycle. Any write to provided writer of efn, will appear on
 // new line of respective bar.
-func BarNewLineExtend(efn func(io.Writer, *decor.Statistics)) BarOption {
+func BarExtender(extender Filler) BarOption {
 	return func(s *bState) {
-		s.newLineExtendFn = efn
+		s.extender = extender
 	}
 }
 
