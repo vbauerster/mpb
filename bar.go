@@ -366,14 +366,14 @@ func (s *bState) wSyncTable() [][]chan int {
 	columns := make([]chan int, 0, len(s.pDecorators)+len(s.aDecorators))
 	var pCount int
 	for _, d := range s.pDecorators {
-		if ok, ch := d.Syncable(); ok {
+		if ch, ok := d.Sync(); ok {
 			columns = append(columns, ch)
 			pCount++
 		}
 	}
 	var aCount int
 	for _, d := range s.aDecorators {
-		if ok, ch := d.Syncable(); ok {
+		if ch, ok := d.Sync(); ok {
 			columns = append(columns, ch)
 			aCount++
 		}

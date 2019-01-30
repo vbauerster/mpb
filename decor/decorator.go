@@ -55,15 +55,15 @@ type Statistics struct {
 // A decorator must implement this interface, in order to be used with
 // mpb library.
 type Decorator interface {
+	Synchronizer
 	Decor(*Statistics) string
-	Syncable
 }
 
-// Syncable interface.
-// All decorators implement this interface implicitly. Its Syncable
+// Synchronizer interface.
+// All decorators implement this interface implicitly. Its Sync
 // method exposes width sync channel, if sync is enabled.
-type Syncable interface {
-	Syncable() (bool, chan int)
+type Synchronizer interface {
+	Sync() (chan int, bool)
 }
 
 // OnCompleteMessenger interface.
@@ -97,7 +97,7 @@ var (
 
 // WC is a struct with two public fields W and C, both of int type.
 // W represents width and C represents bit set of width related config.
-// A decorator should embed WC, in order to become Syncable.
+// A decorator should embed WC, to enable width synchronization.
 type WC struct {
 	W      int
 	C      int
@@ -134,9 +134,9 @@ func (wc *WC) Init() {
 	}
 }
 
-// Syncable is implementation of Syncable interface.
-func (wc *WC) Syncable() (bool, chan int) {
-	return (wc.C & DSyncWidth) != 0, wc.wsync
+// Sync is implementation of Synchronizer interface.
+func (wc *WC) Sync() (chan int, bool) {
+	return wc.wsync, (wc.C & DSyncWidth) != 0
 }
 
 // OnComplete returns decorator, which wraps provided decorator, with
