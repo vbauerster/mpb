@@ -19,14 +19,14 @@ import (
 // any bar kind, by implementing this interface and passing it to the
 // Add method.
 type Filler interface {
-	Fill(w io.Writer, termWidth int, stat *decor.Statistics)
+	Fill(w io.Writer, width int, stat *decor.Statistics)
 }
 
 // FillerFunc is function type adapter to convert function into Filler.
-type FillerFunc func(w io.Writer, termWidth int, stat *decor.Statistics)
+type FillerFunc func(w io.Writer, width int, stat *decor.Statistics)
 
-func (f FillerFunc) Fill(w io.Writer, termWidth int, stat *decor.Statistics) {
-	f(w, termWidth, stat)
+func (f FillerFunc) Fill(w io.Writer, width int, stat *decor.Statistics) {
+	f(w, width, stat)
 }
 
 // Bar represents a progress Bar.
