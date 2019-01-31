@@ -89,8 +89,8 @@ func WithDebugOutput(w io.Writer) ContainerOption {
 	}
 }
 
-// ContainerOptionOnCondition returns option when condition evaluates to true.
-func ContainerOptionOnCondition(option ContainerOption, condition func() bool) ContainerOption {
+// ContainerOptOnCond returns option when condition evaluates to true.
+func ContainerOptOnCond(option ContainerOption, condition func() bool) ContainerOption {
 	if condition() {
 		return option
 	}

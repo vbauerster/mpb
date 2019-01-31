@@ -149,8 +149,8 @@ func MakeFillerTypeSpecificBarOption(
 	}
 }
 
-// BarOptionOnCondition returns option when condition evaluates to true.
-func BarOptionOnCondition(option BarOption, condition func() bool) BarOption {
+// BarOptOnCond returns option when condition evaluates to true.
+func BarOptOnCond(option BarOption, condition func() bool) BarOption {
 	if condition() {
 		return option
 	}
