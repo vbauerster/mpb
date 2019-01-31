@@ -61,7 +61,7 @@ func TestBarSetRefill(t *testing.T) {
 
 	total := 100
 	till := 30
-	refillRune := DefaultBarStyle[len(DefaultBarStyle)-1]
+	refillRune, _ := utf8.DecodeLastRuneInString(DefaultBarStyle)
 
 	bar := p.AddBar(int64(total), TrimSpace())
 

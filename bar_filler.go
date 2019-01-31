@@ -1,8 +1,9 @@
 package mpb
 
 import (
+	"bytes"
 	"io"
-	"strings"
+	"unicode/utf8"
 
 	"github.com/vbauerster/mpb/v4/decor"
 	"github.com/vbauerster/mpb/v4/internal"
@@ -17,54 +18,67 @@ const (
 	rRefill
 )
 
-var defaultBarStyle = []rune("[=>-]+")
+var defaultBarStyle = "[=>-]+"
 
 type barFiller struct {
-	format []rune
+	format [][]byte
 	rup    int
+}
+
+func newDefaultBarFiller() Filler {
+	bf := &barFiller{
+		format: make([][]byte, utf8.RuneCountInString(defaultBarStyle)),
+	}
+	bf.setStyle(defaultBarStyle)
+	return bf
+}
+
+func (s *barFiller) setStyle(style string) {
+	if !utf8.ValidString(style) {
+		style = defaultBarStyle
+	}
+	src := make([][]byte, 0, utf8.RuneCountInString(style))
+	for _, r := range style {
+		src = append(src, []byte(string(r)))
+	}
+	copy(s.format, src)
 }
 
 func (s *barFiller) Fill(w io.Writer, width int, stat *decor.Statistics) {
 
-	str := string(s.format[rLeft])
+	b := s.format[rLeft]
 
 	// don't count rLeft and rRight [brackets]
 	width -= 2
 
-	if width <= 2 {
-		io.WriteString(w, str+string(s.format[rRight]))
+	if width < 2 {
+		return
+	} else if width == 2 {
+		w.Write(append(b, s.format[rRight]...))
 		return
 	}
 
-	progressWidth := internal.Percentage(stat.Total, stat.Current, int64(width))
-	needTip := progressWidth < int64(width) && progressWidth > 0
-
-	if needTip {
-		progressWidth--
-	}
+	cwidth := internal.Percentage(stat.Total, stat.Current, int64(width))
 
 	if s.rup > 0 {
-		refillCount := internal.Percentage(stat.Total, int64(s.rup), int64(width))
-		rest := progressWidth - refillCount
-		str += runeRepeat(s.format[rRefill], int(refillCount)) + runeRepeat(s.format[rFill], int(rest))
+		rwidth := internal.Percentage(stat.Total, int64(s.rup), int64(width))
+		b = append(b, bytes.Repeat(s.format[rRefill], int(rwidth))...)
+		rest := cwidth - rwidth
+		b = append(b, bytes.Repeat(s.format[rFill], int(rest))...)
 	} else {
-		str += runeRepeat(s.format[rFill], int(progressWidth))
+		b = append(b, bytes.Repeat(s.format[rFill], int(cwidth))...)
 	}
 
-	if needTip {
-		str += string(s.format[rTip])
-		progressWidth++
+	if cwidth < int64(width) && cwidth > 0 {
+		_, size := utf8.DecodeLastRune(b)
+		b = append(b[:len(b)-size], s.format[rTip]...)
 	}
 
-	rest := int64(width) - progressWidth
-	str += runeRepeat(s.format[rEmpty], int(rest)) + string(s.format[rRight])
-	io.WriteString(w, str)
+	rest := int64(width) - cwidth
+	b = append(b, bytes.Repeat(s.format[rEmpty], int(rest))...)
+	w.Write(append(b, s.format[rRight]...))
 }
 
 func (s *barFiller) SetRefill(upto int) {
 	s.rup = upto
-}
-
-func runeRepeat(r rune, count int) string {
-	return strings.Repeat(string(r), count)
 }

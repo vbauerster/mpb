@@ -1,8 +1,6 @@
 package mpb
 
 import (
-	"unicode/utf8"
-
 	"github.com/vbauerster/mpb/v4/decor"
 )
 
@@ -116,10 +114,7 @@ func BarStyle(style string) BarOption {
 		return t, ok
 	}
 	cb := func(t interface{}) {
-		if !utf8.ValidString(style) {
-			return
-		}
-		copy(t.(*barFiller).format, []rune(style))
+		t.(*barFiller).setStyle(style)
 	}
 	return MakeFillerTypeSpecificBarOption(chk, cb)
 }
