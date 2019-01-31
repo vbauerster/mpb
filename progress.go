@@ -51,8 +51,8 @@ type pState struct {
 }
 
 // New creates new Progress instance, which orchestrates bars rendering
-// process. Accepts mpb.ProgressOption funcs for customization.
-func New(options ...ProgressOption) *Progress {
+// process. Accepts mpb.ContainerOption funcs for customization.
+func New(options ...ContainerOption) *Progress {
 	pq := make(priorityQueue, 0)
 	heap.Init(&pq)
 	s := &pState{

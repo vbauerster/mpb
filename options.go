@@ -9,15 +9,15 @@ import (
 	"github.com/vbauerster/mpb/v4/cwriter"
 )
 
-// ProgressOption is a function option which changes the default
-// behavior of progress pool, if passed to mpb.New(...ProgressOption).
-type ProgressOption func(*pState)
+// ContainerOption is a function option which changes the default
+// behavior of progress container, if passed to mpb.New(...ContainerOption).
+type ContainerOption func(*pState)
 
 // WithWaitGroup provides means to have a single joint point. If
 // *sync.WaitGroup is provided, you can safely call just p.Wait()
 // without calling Wait() on provided *sync.WaitGroup. Makes sense
 // when there are more than one bar to render.
-func WithWaitGroup(wg *sync.WaitGroup) ProgressOption {
+func WithWaitGroup(wg *sync.WaitGroup) ContainerOption {
 	return func(s *pState) {
 		s.uwg = wg
 	}
@@ -25,7 +25,7 @@ func WithWaitGroup(wg *sync.WaitGroup) ProgressOption {
 
 // WithWidth sets container width. Default is 80. Bars inherit this
 // width, as long as no BarWidth is applied.
-func WithWidth(w int) ProgressOption {
+func WithWidth(w int) ContainerOption {
 	return func(s *pState) {
 		if w >= 0 {
 			s.width = w
@@ -34,7 +34,7 @@ func WithWidth(w int) ProgressOption {
 }
 
 // WithRefreshRate overrides default 120ms refresh rate.
-func WithRefreshRate(d time.Duration) ProgressOption {
+func WithRefreshRate(d time.Duration) ContainerOption {
 	return func(s *pState) {
 		if d < 10*time.Millisecond {
 			return
@@ -45,14 +45,14 @@ func WithRefreshRate(d time.Duration) ProgressOption {
 
 // WithManualRefresh disables internal auto refresh time.Ticker.
 // Refresh will occur upon receive value from provided ch.
-func WithManualRefresh(ch <-chan time.Time) ProgressOption {
+func WithManualRefresh(ch <-chan time.Time) ContainerOption {
 	return func(s *pState) {
 		s.manualRefreshCh = ch
 	}
 }
 
 // WithContext provided context will be used for cancellation purposes.
-func WithContext(ctx context.Context) ProgressOption {
+func WithContext(ctx context.Context) ContainerOption {
 	return func(s *pState) {
 		if ctx == nil {
 			return
@@ -63,14 +63,14 @@ func WithContext(ctx context.Context) ProgressOption {
 
 // WithShutdownNotifier provided chanel will be closed, after all bars
 // have been rendered.
-func WithShutdownNotifier(ch chan struct{}) ProgressOption {
+func WithShutdownNotifier(ch chan struct{}) ContainerOption {
 	return func(s *pState) {
 		s.shutdownNotifier = ch
 	}
 }
 
 // WithOutput overrides default output os.Stdout.
-func WithOutput(w io.Writer) ProgressOption {
+func WithOutput(w io.Writer) ContainerOption {
 	return func(s *pState) {
 		if w == nil {
 			return
@@ -80,11 +80,19 @@ func WithOutput(w io.Writer) ProgressOption {
 }
 
 // WithDebugOutput sets debug output.
-func WithDebugOutput(w io.Writer) ProgressOption {
+func WithDebugOutput(w io.Writer) ContainerOption {
 	return func(s *pState) {
 		if w == nil {
 			return
 		}
 		s.debugOut = w
 	}
+}
+
+// ContainerOptionOnCondition returns option when condition evaluates to true.
+func ContainerOptionOnCondition(option ContainerOption, condition func() bool) ContainerOption {
+	if condition() {
+		return option
+	}
+	return nil
 }
