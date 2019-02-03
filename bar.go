@@ -50,24 +50,25 @@ type Bar struct {
 
 type (
 	bState struct {
-		filler                 Filler
-		extender               Filler
-		id                     int
-		width                  int
-		alignment              int
-		total                  int64
-		current                int64
-		trimSpace              bool
-		toComplete             bool
-		removeOnComplete       bool
-		barClearOnComplete     bool
-		completeFlushed        bool
-		aDecorators            []decor.Decorator
-		pDecorators            []decor.Decorator
-		amountReceivers        []decor.AmountReceiver
-		shutdownListeners      []decor.ShutdownListener
-		bufP, bufB, bufA, bufE *bytes.Buffer
-		panicMsg               string
+		filler             Filler
+		extender           Filler
+		id                 int
+		width              int
+		alignment          int
+		total              int64
+		current            int64
+		trimSpace          bool
+		toComplete         bool
+		removeOnComplete   bool
+		barClearOnComplete bool
+		completeFlushed    bool
+		aDecorators        []decor.Decorator
+		pDecorators        []decor.Decorator
+		amountReceivers    []decor.AmountReceiver
+		shutdownListeners  []decor.ShutdownListener
+		bufP, bufB, bufA   *bytes.Buffer
+		bufE               *bytes.Buffer
+		panicMsg           string
 
 		// following options are assigned to the *Bar
 		priority   int
