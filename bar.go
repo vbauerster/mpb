@@ -266,6 +266,7 @@ func (b *Bar) serve(ctx context.Context, wg *sync.WaitGroup, s *bState) {
 		case <-b.shutdown:
 			b.cacheState = s
 			close(b.done)
+			// Notifying decorators about shutdown event
 			for _, sl := range s.shutdownListeners {
 				sl.Shutdown()
 			}
