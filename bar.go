@@ -37,10 +37,10 @@ type Bar struct {
 	runningBar   *Bar
 	cacheState   *bState
 	operateState chan func(*bState)
-	int64Ch      chan int64
-	boolCh       chan bool
 	bFrameCh     chan *bFrame
 	syncTableCh  chan [][]chan int
+	intValue     chan int64
+	completed    chan bool
 
 	// done is closed by Bar's goroutine, after cacheState is written
 	done chan struct{}
@@ -119,10 +119,10 @@ func newBar(
 		priority:     s.priority,
 		runningBar:   s.runningBar,
 		operateState: make(chan func(*bState)),
-		int64Ch:      make(chan int64),
-		boolCh:       make(chan bool),
 		bFrameCh:     make(chan *bFrame, 1),
 		syncTableCh:  make(chan [][]chan int),
+		intValue:     make(chan int64),
+		completed:    make(chan bool),
 		done:         make(chan struct{}),
 		shutdown:     make(chan struct{}),
 	}
@@ -166,8 +166,8 @@ func (b *Bar) ProxyReader(r io.Reader) io.ReadCloser {
 // ID returs id of the bar.
 func (b *Bar) ID() int {
 	select {
-	case b.operateState <- func(s *bState) { b.int64Ch <- int64(s.id) }:
-		return int(<-b.int64Ch)
+	case b.operateState <- func(s *bState) { b.intValue <- int64(s.id) }:
+		return int(<-b.intValue)
 	case <-b.done:
 		return b.cacheState.id
 	}
@@ -176,8 +176,8 @@ func (b *Bar) ID() int {
 // Current returns bar's current number, in other words sum of all increments.
 func (b *Bar) Current() int64 {
 	select {
-	case b.operateState <- func(s *bState) { b.int64Ch <- s.current }:
-		return <-b.int64Ch
+	case b.operateState <- func(s *bState) { b.intValue <- s.current }:
+		return <-b.intValue
 	case <-b.done:
 		return b.cacheState.current
 	}
@@ -241,7 +241,7 @@ func (b *Bar) Completed() bool {
 	// condition, like for !bar.Completed() {...} so when toComplete=true
 	// it is called once (at which time, the bar is still alive), then
 	// quits the loop and never suppose to be called afterwards.
-	return <-b.boolCh
+	return <-b.completed
 }
 
 func (b *Bar) wSyncTable() [][]chan int {
@@ -260,7 +260,7 @@ func (b *Bar) serve(ctx context.Context, wg *sync.WaitGroup, s *bState) {
 		select {
 		case op := <-b.operateState:
 			op(s)
-		case b.boolCh <- s.toComplete:
+		case b.completed <- s.toComplete:
 		case <-cancel:
 			s.toComplete = true
 			cancel = nil
