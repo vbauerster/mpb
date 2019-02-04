@@ -230,9 +230,9 @@ func (s *pState) flush(done <-chan struct{}, cw *cwriter.Writer) error {
 	var lineCount int
 	for s.bHeap.Len() > 0 {
 		bar := heap.Pop(s.bHeap).(*Bar)
-		frameReader := <-bar.frameReaderCh
+		frame := <-bar.bFrameCh
 		defer func() {
-			if frameReader.toShutdown {
+			if frame.toShutdown {
 				// force next refresh asap, without waiting for ticker
 				go func() {
 					select {
@@ -250,15 +250,15 @@ func (s *pState) flush(done <-chan struct{}, cw *cwriter.Writer) error {
 					s.heapUpdated = true
 					delete(s.waitBars, bar)
 				}
-				if frameReader.removeOnComplete {
+				if frame.removeOnComplete {
 					s.heapUpdated = true
 					return
 				}
 			}
 			heap.Push(s.bHeap, bar)
 		}()
-		cw.ReadFrom(frameReader)
-		lineCount += frameReader.extendedLines + 1
+		cw.ReadFrom(frame.rd)
+		lineCount += frame.extendedLines + 1
 	}
 
 	for i := len(s.shutdownPending) - 1; i >= 0; i-- {

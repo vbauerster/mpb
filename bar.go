@@ -34,13 +34,13 @@ type Bar struct {
 	priority int
 	index    int
 
-	runningBar    *Bar
-	cacheState    *bState
-	operateState  chan func(*bState)
-	int64Ch       chan int64
-	boolCh        chan bool
-	frameReaderCh chan *frameReader
-	syncTableCh   chan [][]chan int
+	runningBar   *Bar
+	cacheState   *bState
+	operateState chan func(*bState)
+	int64Ch      chan int64
+	boolCh       chan bool
+	bFrameCh     chan *bFrame
+	syncTableCh  chan [][]chan int
 
 	// done is closed by Bar's goroutine, after cacheState is written
 	done chan struct{}
@@ -74,8 +74,8 @@ type (
 		priority   int
 		runningBar *Bar
 	}
-	frameReader struct {
-		io.Reader
+	bFrame struct {
+		rd               io.Reader
 		extendedLines    int
 		toShutdown       bool
 		removeOnComplete bool
@@ -116,15 +116,15 @@ func newBar(
 	}
 
 	b := &Bar{
-		priority:      s.priority,
-		runningBar:    s.runningBar,
-		operateState:  make(chan func(*bState)),
-		int64Ch:       make(chan int64),
-		boolCh:        make(chan bool),
-		frameReaderCh: make(chan *frameReader, 1),
-		syncTableCh:   make(chan [][]chan int),
-		done:          make(chan struct{}),
-		shutdown:      make(chan struct{}),
+		priority:     s.priority,
+		runningBar:   s.runningBar,
+		operateState: make(chan func(*bState)),
+		int64Ch:      make(chan int64),
+		boolCh:       make(chan bool),
+		bFrameCh:     make(chan *bFrame, 1),
+		syncTableCh:  make(chan [][]chan int),
+		done:         make(chan struct{}),
+		shutdown:     make(chan struct{}),
 	}
 
 	if b.runningBar != nil {
@@ -284,8 +284,8 @@ func (b *Bar) render(debugOut io.Writer, tw int) {
 			if p := recover(); p != nil {
 				s.panicMsg = fmt.Sprintf("panic: %v", p)
 				fmt.Fprintf(debugOut, "%s %s bar id %02d %v\n", "[mpb]", time.Now(), s.id, s.panicMsg)
-				b.frameReaderCh <- &frameReader{
-					Reader:     strings.NewReader(fmt.Sprintf(fmt.Sprintf("%%.%ds\n", tw), s.panicMsg)),
+				b.bFrameCh <- &bFrame{
+					rd:         strings.NewReader(fmt.Sprintf(fmt.Sprintf("%%.%ds\n", tw), s.panicMsg)),
 					toShutdown: true,
 				}
 			}
@@ -297,8 +297,8 @@ func (b *Bar) render(debugOut io.Writer, tw int) {
 			extendedLines = countLines(s.bufE.Bytes())
 			r = io.MultiReader(r, s.bufE)
 		}
-		b.frameReaderCh <- &frameReader{
-			Reader:           r,
+		b.bFrameCh <- &bFrame{
+			rd:               r,
 			extendedLines:    extendedLines,
 			toShutdown:       s.toComplete && !s.completeFlushed,
 			removeOnComplete: s.removeOnComplete,
@@ -314,8 +314,8 @@ func (b *Bar) render(debugOut io.Writer, tw int) {
 			extendedLines = countLines(s.bufE.Bytes())
 			r = io.MultiReader(r, s.bufE)
 		}
-		b.frameReaderCh <- &frameReader{
-			Reader:        r,
+		b.bFrameCh <- &bFrame{
+			rd:            r,
 			extendedLines: extendedLines,
 		}
 	}
