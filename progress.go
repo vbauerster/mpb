@@ -318,10 +318,17 @@ func fanInRefreshSrc(done <-chan struct{}, channels ...<-chan time.Time) <-chan 
 
 	multiplex := func(c <-chan time.Time) {
 		defer wg.Done()
+		// source channels are never closed (time.Ticker never closes associated
+		// channel), so we cannot simply range over a c, instead we use select
+		// inside infinite loop
 		for {
 			select {
 			case v := <-c:
-				multiplexedStream <- v
+				select {
+				case multiplexedStream <- v:
+				case <-done:
+					return
+				}
 			case <-done:
 				return
 			}
