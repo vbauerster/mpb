@@ -54,7 +54,6 @@ type (
 		extender           Filler
 		id                 int
 		width              int
-		alignment          int
 		total              int64
 		current            int64
 		trimSpace          bool

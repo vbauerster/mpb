@@ -35,7 +35,6 @@ type pState struct {
 	heapUpdated     bool
 	idCounter       int
 	width           int
-	format          string
 	rr              time.Duration
 	pMatrix         map[int][]chan int
 	aMatrix         map[int][]chan int
