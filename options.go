@@ -5,8 +5,6 @@ import (
 	"io"
 	"sync"
 	"time"
-
-	"github.com/vbauerster/mpb/v4/cwriter"
 )
 
 // ContainerOption is a function option which changes the default
@@ -75,7 +73,7 @@ func WithOutput(w io.Writer) ContainerOption {
 		if w == nil {
 			return
 		}
-		s.cw = cwriter.New(w)
+		s.output = w
 	}
 }
 

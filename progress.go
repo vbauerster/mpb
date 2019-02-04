@@ -37,10 +37,10 @@ type pState struct {
 	width           int
 	format          string
 	rr              time.Duration
-	cw              *cwriter.Writer
 	pMatrix         map[int][]chan int
 	aMatrix         map[int][]chan int
 	forceRefreshCh  chan time.Time
+	output          io.Writer
 
 	// following are provided/overrided by user
 	ctx              context.Context
@@ -56,15 +56,16 @@ type pState struct {
 func New(options ...ContainerOption) *Progress {
 	pq := make(priorityQueue, 0)
 	heap.Init(&pq)
+
 	s := &pState{
 		ctx:            context.Background(),
 		bHeap:          &pq,
 		width:          pwidth,
-		cw:             cwriter.New(os.Stdout),
 		rr:             prr,
 		waitBars:       make(map[*Bar]*Bar),
 		debugOut:       ioutil.Discard,
 		forceRefreshCh: make(chan time.Time),
+		output:         os.Stdout,
 	}
 
 	for _, opt := range options {
@@ -81,7 +82,7 @@ func New(options ...ContainerOption) *Progress {
 		done:         make(chan struct{}),
 	}
 	p.cwg.Add(1)
-	go p.serve(s)
+	go p.serve(s, cwriter.New(s.output))
 	return p
 }
 
@@ -179,7 +180,7 @@ func (p *Progress) Wait() {
 	p.cwg.Wait()
 }
 
-func (p *Progress) serve(s *pState) {
+func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 	defer p.cwg.Done()
 
 	manualOrTickCh, cleanUp := s.manualOrTick()
@@ -198,16 +199,14 @@ func (p *Progress) serve(s *pState) {
 				}
 				return
 			}
-			tw, err := s.cw.GetWidth()
-			if err != nil {
-				tw = s.width
+			if err := s.render(p.done, cw); err != nil {
+				fmt.Fprintf(s.debugOut, "[mpb] %s %v\n", time.Now(), err)
 			}
-			s.render(p.done, tw)
 		}
 	}
 }
 
-func (s *pState) render(done <-chan struct{}, tw int) {
+func (s *pState) render(done <-chan struct{}, cw *cwriter.Writer) error {
 	if s.heapUpdated {
 		s.updateSyncMatrix()
 		s.heapUpdated = false
@@ -215,17 +214,20 @@ func (s *pState) render(done <-chan struct{}, tw int) {
 	syncWidth(s.pMatrix)
 	syncWidth(s.aMatrix)
 
+	tw, err := cw.GetWidth()
+	if err != nil {
+		tw = s.width
+	}
 	for i := 0; i < s.bHeap.Len(); i++ {
 		bar := (*s.bHeap)[i]
 		go bar.render(s.debugOut, tw)
 	}
 
-	if err := s.flush(done, s.bHeap.Len()); err != nil {
-		fmt.Fprintf(s.debugOut, "%s %s %v\n", "[mpb]", time.Now(), err)
-	}
+	return s.flush(done, cw)
 }
 
-func (s *pState) flush(done <-chan struct{}, lineCount int) error {
+func (s *pState) flush(done <-chan struct{}, cw *cwriter.Writer) error {
+	var lineCount int
 	for s.bHeap.Len() > 0 {
 		bar := heap.Pop(s.bHeap).(*Bar)
 		frameReader := <-bar.frameReaderCh
@@ -255,8 +257,8 @@ func (s *pState) flush(done <-chan struct{}, lineCount int) error {
 			}
 			heap.Push(s.bHeap, bar)
 		}()
-		s.cw.ReadFrom(frameReader)
-		lineCount += frameReader.extendedLines
+		cw.ReadFrom(frameReader)
+		lineCount += frameReader.extendedLines + 1
 	}
 
 	for i := len(s.shutdownPending) - 1; i >= 0; i-- {
@@ -264,7 +266,7 @@ func (s *pState) flush(done <-chan struct{}, lineCount int) error {
 		s.shutdownPending = s.shutdownPending[:i]
 	}
 
-	return s.cw.Flush(lineCount)
+	return cw.Flush(lineCount)
 }
 
 func (s *pState) manualOrTick() (<-chan time.Time, func()) {
