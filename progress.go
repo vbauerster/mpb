@@ -198,14 +198,14 @@ func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 				}
 				return
 			}
-			if err := s.render(p.done, cw); err != nil {
+			if err := s.render(cw); err != nil {
 				fmt.Fprintf(s.debugOut, "[mpb] %s %v\n", time.Now(), err)
 			}
 		}
 	}
 }
 
-func (s *pState) render(done <-chan struct{}, cw *cwriter.Writer) error {
+func (s *pState) render(cw *cwriter.Writer) error {
 	if s.heapUpdated {
 		s.updateSyncMatrix()
 		s.heapUpdated = false
@@ -222,22 +222,22 @@ func (s *pState) render(done <-chan struct{}, cw *cwriter.Writer) error {
 		go bar.render(s.debugOut, tw)
 	}
 
-	return s.flush(done, cw)
+	return s.flush(cw)
 }
 
-func (s *pState) flush(done <-chan struct{}, cw *cwriter.Writer) error {
+func (s *pState) flush(cw *cwriter.Writer) error {
 	var lineCount int
 	for s.bHeap.Len() > 0 {
 		bar := heap.Pop(s.bHeap).(*Bar)
 		frame := <-bar.bFrameCh
 		defer func() {
 			if frame.toShutdown {
-				// force next refresh asap, without waiting for ticker
 				go func() {
+					// force next refresh, so it will be triggered either by ticker or by
+					// this goroutine, whichever comes first
 					select {
 					case s.forceRefreshCh <- time.Now():
-					case <-done:
-						return
+					case <-bar.done:
 					}
 				}()
 				// shutdown at next flush, in other words decrement underlying WaitGroup
