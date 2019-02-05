@@ -3,7 +3,6 @@ package mpb_test
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io/ioutil"
 	"math/rand"
 	"sync"
@@ -11,13 +10,6 @@ import (
 	"time"
 
 	"github.com/vbauerster/mpb/v4"
-	"github.com/vbauerster/mpb/v4/cwriter"
-)
-
-var (
-	cursorUp           = fmt.Sprintf("%c[%dA", cwriter.ESC, 1)
-	clearLine          = fmt.Sprintf("%c[2K\r", cwriter.ESC)
-	clearCursorAndLine = cursorUp + clearLine
 )
 
 func init() {
@@ -118,8 +110,7 @@ func TestWithContext(t *testing.T) {
 
 func getLastLine(bb []byte) []byte {
 	split := bytes.Split(bb, []byte("\n"))
-	lastLine := split[len(split)-2]
-	return lastLine[len(clearCursorAndLine):]
+	return split[len(split)-2]
 }
 
 func randomDuration(max time.Duration) time.Duration {
