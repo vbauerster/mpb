@@ -2,12 +2,8 @@
 
 package cwriter
 
-import (
-	"io"
-	"strings"
-)
+import "fmt"
 
-func (w *Writer) clearLines() error {
-	_, err := io.WriteString(w.out, strings.Repeat(clearCursorAndLine, w.lineCount))
-	return err
+func (w *Writer) clearLines() {
+	fmt.Fprintf(w.out, cuuAndEd, w.lineCount)
 }

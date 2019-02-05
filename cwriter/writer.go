@@ -7,51 +7,39 @@ import (
 	"io"
 	"os"
 
-	isatty "github.com/mattn/go-isatty"
 	"golang.org/x/crypto/ssh/terminal"
 )
 
-// ESC is the ASCII code for escape character
-const ESC = 27
-
 var NotATTY = errors.New("not a terminal")
 
-var (
-	cursorUp           = fmt.Sprintf("%c[%dA", ESC, 1)
-	clearLine          = fmt.Sprintf("%c[2K\r", ESC)
-	clearCursorAndLine = cursorUp + clearLine
-)
+var cuuAndEd = fmt.Sprintf("%c[%%dA%[1]c[J", 27)
 
-// Writer is a buffered the writer that updates the terminal.  The
+// Writer is a buffered the writer that updates the terminal. The
 // contents of writer will be flushed when Flush is called.
 type Writer struct {
 	out        io.Writer
 	buf        bytes.Buffer
-	isTerminal bool
-	fd         int
 	lineCount  int
+	fd         uintptr
+	isTerminal bool
 }
 
 // New returns a new Writer with defaults
 func New(out io.Writer) *Writer {
 	w := &Writer{out: out}
 	if f, ok := out.(*os.File); ok {
-		fd := f.Fd()
-		w.isTerminal = isatty.IsTerminal(fd)
-		w.fd = int(fd)
+		w.fd = f.Fd()
+		w.isTerminal = terminal.IsTerminal(int(w.fd))
 	}
 	return w
 }
 
 // Flush flushes the underlying buffer
-func (w *Writer) Flush(lineCount int) error {
-	err := w.clearLines()
+func (w *Writer) Flush(lineCount int) (err error) {
+	w.clearLines()
 	w.lineCount = lineCount
-	// WriteTo takes care of w.buf.Reset
-	if _, e := w.buf.WriteTo(w.out); err == nil {
-		err = e
-	}
-	return err
+	_, err = w.buf.WriteTo(w.out)
+	return
 }
 
 // Write appends the contents of p to the underlying buffer
@@ -73,7 +61,7 @@ func (w *Writer) ReadFrom(r io.Reader) (n int64, err error) {
 // GetWidth returns width of underlying terminal.
 func (w *Writer) GetWidth() (int, error) {
 	if w.isTerminal {
-		tw, _, err := terminal.GetSize(w.fd)
+		tw, _, err := terminal.GetSize(int(w.fd))
 		return tw, err
 	}
 	return -1, NotATTY

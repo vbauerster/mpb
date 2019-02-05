@@ -3,12 +3,9 @@
 package cwriter
 
 import (
-	"io"
-	"strings"
+	"fmt"
 	"syscall"
 	"unsafe"
-
-	isatty "github.com/mattn/go-isatty"
 )
 
 var kernel32 = syscall.NewLazyDLL("kernel32.dll")
@@ -20,58 +17,48 @@ var (
 	procFillConsoleOutputAttribute = kernel32.NewProc("FillConsoleOutputAttribute")
 )
 
-type (
-	short int16
-	word  uint16
-	dword uint32
+type short int16
+type dword uint32
+type word uint16
 
-	coord struct {
-		x short
-		y short
-	}
-	smallRect struct {
-		left   short
-		top    short
-		right  short
-		bottom short
-	}
-	consoleScreenBufferInfo struct {
-		size              coord
-		cursorPosition    coord
-		attributes        word
-		window            smallRect
-		maximumWindowSize coord
-	}
-)
-
-// FdWriter is a writer with a file descriptor.
-type FdWriter interface {
-	io.Writer
-	Fd() uintptr
+type coord struct {
+	x short
+	y short
 }
 
-func (w *Writer) clearLines() error {
-	f, ok := w.out.(FdWriter)
-	if ok && !isatty.IsTerminal(f.Fd()) {
-		_, err := io.WriteString(w.out, strings.Repeat(clearCursorAndLine, w.lineCount))
-		return err
+type smallRect struct {
+	left   short
+	top    short
+	right  short
+	bottom short
+}
+
+type consoleScreenBufferInfo struct {
+	size              coord
+	cursorPosition    coord
+	attributes        word
+	window            smallRect
+	maximumWindowSize coord
+}
+
+func (w *Writer) clearLines() {
+	if !w.isTerminal {
+		fmt.Fprintf(w.out, cuuAndEd, w.lineCount)
 	}
-	fd := f.Fd()
 	var info consoleScreenBufferInfo
-	procGetConsoleScreenBufferInfo.Call(fd, uintptr(unsafe.Pointer(&info)))
+	procGetConsoleScreenBufferInfo.Call(w.fd, uintptr(unsafe.Pointer(&info)))
 
 	for i := 0; i < w.lineCount; i++ {
 		// move the cursor up
 		info.cursorPosition.y--
-		procSetConsoleCursorPosition.Call(fd, uintptr(*(*int32)(unsafe.Pointer(&info.cursorPosition))))
+		procSetConsoleCursorPosition.Call(w.fd, uintptr(*(*int32)(unsafe.Pointer(&info.cursorPosition))))
 		// clear the line
 		cursor := coord{
 			x: info.window.left,
 			y: info.window.top + info.cursorPosition.y,
 		}
-		var count, w dword
+		var count, dw dword
 		count = dword(info.size.x)
-		procFillConsoleOutputCharacter.Call(fd, uintptr(' '), uintptr(count), *(*uintptr)(unsafe.Pointer(&cursor)), uintptr(unsafe.Pointer(&w)))
+		procFillConsoleOutputCharacter.Call(w.fd, uintptr(' '), uintptr(count), *(*uintptr)(unsafe.Pointer(&cursor)), uintptr(unsafe.Pointer(&dw)))
 	}
-	return nil
 }
