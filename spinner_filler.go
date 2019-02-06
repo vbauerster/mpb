@@ -22,12 +22,13 @@ var defaultSpinnerStyle = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "�
 
 type spinnerFiller struct {
 	frames    []string
+	count     uint
 	alignment SpinnerAlignment
 }
 
 func (s *spinnerFiller) Fill(w io.Writer, width int, stat *decor.Statistics) {
 
-	frame := s.frames[stat.Current%int64(len(s.frames))]
+	frame := s.frames[s.count%uint(len(s.frames))]
 	frameWidth := utf8.RuneCountInString(frame)
 
 	if width < frameWidth {
@@ -43,4 +44,5 @@ func (s *spinnerFiller) Fill(w io.Writer, width int, stat *decor.Statistics) {
 	case SpinnerOnRight:
 		io.WriteString(w, strings.Repeat(" ", rest)+frame)
 	}
+	s.count++
 }

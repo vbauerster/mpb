@@ -26,6 +26,7 @@ func Spinner(frames []string, wcc ...WC) Decorator {
 type spinnerDecorator struct {
 	WC
 	frames   []string
+	count    uint
 	complete *string
 }
 
@@ -33,7 +34,8 @@ func (d *spinnerDecorator) Decor(st *Statistics) string {
 	if st.Completed && d.complete != nil {
 		return d.FormatMsg(*d.complete)
 	}
-	frame := d.frames[st.Current%int64(len(d.frames))]
+	frame := d.frames[d.count%uint(len(d.frames))]
+	d.count++
 	return d.FormatMsg(frame)
 }
 
