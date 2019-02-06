@@ -22,11 +22,9 @@ func main() {
 	wg.Add(numBars)
 
 	for i := 0; i < numBars; i++ {
-		var name string
-		if i != 1 {
-			name = fmt.Sprintf("Bar#%d:", i)
-		}
+		name := fmt.Sprintf("Bar#%d:", i)
 		b := p.AddBar(int64(total),
+			mpb.BarOptOnCond(mpb.BarWidth(40), func() bool { return i > 0 }),
 			mpb.PrependDecorators(
 				decor.Name(name, decor.WCSyncWidth),
 				decor.CountersNoUnit("%d / %d", decor.WCSyncSpace),
