@@ -36,7 +36,9 @@ func New(out io.Writer) *Writer {
 
 // Flush flushes the underlying buffer
 func (w *Writer) Flush(lineCount int) (err error) {
-	w.clearLines()
+	if w.lineCount > 0 {
+		w.clearLines()
+	}
 	w.lineCount = lineCount
 	_, err = w.buf.WriteTo(w.out)
 	return
