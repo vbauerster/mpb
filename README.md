@@ -63,7 +63,7 @@ func main() {
 }
 ```
 
-#### [Rendering multiple bars](_examples/simple/main.go)
+#### [Rendering multiple bars](_examples/multiBars//main.go)
 ```go
     var wg sync.WaitGroup
     // pass &wg (optional), so p will wait for it eventually
