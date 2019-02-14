@@ -1,7 +1,6 @@
 package mpb
 
 import (
-	"bytes"
 	"io"
 	"unicode/utf8"
 
@@ -15,14 +14,16 @@ const (
 	rTip
 	rEmpty
 	rRight
+	rRevTip
 	rRefill
 )
 
-var defaultBarStyle = "[=>-]+"
+var defaultBarStyle = "[=>-]<+"
 
 type barFiller struct {
-	format [][]byte
-	rup    int
+	format      [][]byte
+	refillCount int
+	reverse     bool
 }
 
 func newDefaultBarFiller() Filler {
@@ -35,7 +36,7 @@ func newDefaultBarFiller() Filler {
 
 func (s *barFiller) setStyle(style string) {
 	if !utf8.ValidString(style) {
-		style = defaultBarStyle
+		return
 	}
 	src := make([][]byte, 0, utf8.RuneCountInString(style))
 	for _, r := range style {
@@ -44,41 +45,68 @@ func (s *barFiller) setStyle(style string) {
 	copy(s.format, src)
 }
 
-func (s *barFiller) Fill(w io.Writer, width int, stat *decor.Statistics) {
+func (s *barFiller) setReverse() {
+	s.reverse = true
+}
 
-	b := s.format[rLeft]
+func (s *barFiller) Fill(w io.Writer, width int, stat *decor.Statistics) {
 
 	// don't count rLeft and rRight [brackets]
 	width -= 2
-
 	if width < 2 {
 		return
-	} else if width == 2 {
-		w.Write(append(b, s.format[rRight]...))
+	}
+
+	w.Write(s.format[rLeft])
+	if width == 2 {
+		w.Write(s.format[rRight])
 		return
 	}
 
-	cwidth := internal.Percentage(stat.Total, stat.Current, int64(width))
+	bb := make([][]byte, width)
 
-	if s.rup > 0 {
-		rwidth := internal.Percentage(stat.Total, int64(s.rup), int64(width))
-		b = append(b, bytes.Repeat(s.format[rRefill], int(rwidth))...)
-		rest := cwidth - rwidth
-		b = append(b, bytes.Repeat(s.format[rFill], int(rest))...)
-	} else {
-		b = append(b, bytes.Repeat(s.format[rFill], int(cwidth))...)
+	cwidth := int(internal.Percentage(stat.Total, stat.Current, int64(width)))
+
+	for i := 0; i < cwidth; i++ {
+		bb[i] = s.format[rFill]
 	}
 
-	if cwidth < int64(width) && cwidth > 0 {
-		_, size := utf8.DecodeLastRune(b)
-		b = append(b[:len(b)-size], s.format[rTip]...)
+	if s.refillCount > 0 {
+		var rwidth int
+		if s.refillCount > cwidth {
+			rwidth = cwidth
+		} else {
+			rwidth = int(internal.Percentage(stat.Total, int64(s.refillCount), int64(width)))
+		}
+		for i := 0; i < rwidth; i++ {
+			bb[i] = s.format[rRefill]
+		}
 	}
 
-	rest := int64(width) - cwidth
-	b = append(b, bytes.Repeat(s.format[rEmpty], int(rest))...)
-	w.Write(append(b, s.format[rRight]...))
+	if cwidth < width && cwidth > 0 {
+		if s.reverse {
+			bb[cwidth-1] = s.format[rRevTip]
+		} else {
+			bb[cwidth-1] = s.format[rTip]
+		}
+	}
+
+	for i := cwidth; i < width; i++ {
+		bb[i] = s.format[rEmpty]
+	}
+
+	if s.reverse {
+		for i, j := 0, len(bb)-1; i < j; i, j = i+1, j-1 {
+			bb[i], bb[j] = bb[j], bb[i]
+		}
+	}
+
+	for i := 0; i < width; i++ {
+		w.Write(bb[i])
+	}
+	w.Write(s.format[rRight])
 }
 
-func (s *barFiller) SetRefill(upto int) {
-	s.rup = upto
+func (s *barFiller) SetRefill(count int) {
+	s.refillCount = count
 }

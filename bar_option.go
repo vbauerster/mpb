@@ -103,8 +103,23 @@ func TrimSpace() BarOption {
 	}
 }
 
-// BarStyle sets custom bar style.
-// Effective when Filler type is bar.
+// BarStyle sets custom bar style, default one is "[=>-]<+".
+//
+//	'[' left bracket rune
+//
+//	'=' fill rune
+//
+//	'>' tip rune
+//
+//	'-' empty rune
+//
+//	']' right bracket rune
+//
+//	'<' reverse tip rune, used when BarReverse option is set
+//
+//	'+' refill rune, used when *Bar.SetRefill(int) is called
+//
+// It's ok to provide first five runes only, for example mpb.BarStyle("╢▌▌░╟")
 func BarStyle(style string) BarOption {
 	chk := func(filler Filler) (interface{}, bool) {
 		if style == "" {
@@ -115,6 +130,18 @@ func BarStyle(style string) BarOption {
 	}
 	cb := func(t interface{}) {
 		t.(*barFiller).setStyle(style)
+	}
+	return MakeFillerTypeSpecificBarOption(chk, cb)
+}
+
+// BarReverse reverse mode, bar will progress from right to left.
+func BarReverse() BarOption {
+	chk := func(filler Filler) (interface{}, bool) {
+		t, ok := filler.(*barFiller)
+		return t, ok
+	}
+	cb := func(t interface{}) {
+		t.(*barFiller).setReverse()
 	}
 	return MakeFillerTypeSpecificBarOption(chk, cb)
 }
