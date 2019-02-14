@@ -49,6 +49,10 @@ func (s *barFiller) setReverse() {
 	s.reverse = true
 }
 
+func (s *barFiller) SetRefill(count int) {
+	s.refillCount = count
+}
+
 func (s *barFiller) Fill(w io.Writer, width int, stat *decor.Statistics) {
 
 	// don't count rLeft and rRight [brackets]
@@ -101,12 +105,8 @@ func (s *barFiller) Fill(w io.Writer, width int, stat *decor.Statistics) {
 		}
 	}
 
-	for i := 0; i < width; i++ {
+	for i := 0; i < len(bb); i++ {
 		w.Write(bb[i])
 	}
 	w.Write(s.format[rRight])
-}
-
-func (s *barFiller) SetRefill(count int) {
-	s.refillCount = count
 }
