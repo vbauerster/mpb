@@ -87,12 +87,8 @@ func (s *barFiller) Fill(w io.Writer, width int, stat *decor.Statistics) {
 		}
 	}
 
-	if cwidth < width && cwidth > 0 {
-		if s.reverse {
-			bb[cwidth-1] = s.format[rRevTip]
-		} else {
-			bb[cwidth-1] = s.format[rTip]
-		}
+	if cwidth > 0 && cwidth < width {
+		bb[cwidth-1] = s.format[rTip]
 	}
 
 	for i := cwidth; i < width; i++ {
@@ -100,13 +96,16 @@ func (s *barFiller) Fill(w io.Writer, width int, stat *decor.Statistics) {
 	}
 
 	if s.reverse {
-		for i, j := 0, len(bb)-1; i < j; i, j = i+1, j-1 {
-			bb[i], bb[j] = bb[j], bb[i]
+		if cwidth > 0 && cwidth < width {
+			bb[cwidth-1] = s.format[rRevTip]
 		}
-	}
-
-	for i := 0; i < len(bb); i++ {
-		w.Write(bb[i])
+		for i := len(bb) - 1; i >= 0; i-- {
+			w.Write(bb[i])
+		}
+	} else {
+		for i := 0; i < len(bb); i++ {
+			w.Write(bb[i])
+		}
 	}
 	w.Write(s.format[rRight])
 }
