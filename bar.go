@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"runtime"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -32,9 +33,8 @@ func (f FillerFunc) Fill(w io.Writer, width int, stat *decor.Statistics) {
 
 // Bar represents a progress Bar.
 type Bar struct {
-	priority         int
-	index            int
-	arbitraryCurrent int64
+	priority int
+	index    int
 
 	runningBar   *Bar
 	cacheState   *bState
@@ -48,6 +48,11 @@ type Bar struct {
 	done chan struct{}
 	// shutdown is closed from master Progress goroutine only
 	shutdown chan struct{}
+
+	arbitraryCurrent struct {
+		lock    uint32
+		current int64
+	}
 }
 
 type (
@@ -217,9 +222,13 @@ func (b *Bar) SetCurrent(current int64, wdd ...time.Duration) {
 	if current <= 0 {
 		return
 	}
-	last := atomic.LoadInt64(&b.arbitraryCurrent)
+	for !atomic.CompareAndSwapUint32(&b.arbitraryCurrent.lock, 0, 1) {
+		runtime.Gosched()
+	}
+	last := b.arbitraryCurrent.current
 	b.IncrBy(int(current-last), wdd...)
-	atomic.StoreInt64(&b.arbitraryCurrent, current)
+	b.arbitraryCurrent.current = current
+	atomic.StoreUint32(&b.arbitraryCurrent.lock, 0)
 }
 
 // Increment is a shorthand for b.IncrBy(1).
