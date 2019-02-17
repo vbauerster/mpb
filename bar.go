@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 	"unicode/utf8"
 
@@ -31,8 +32,9 @@ func (f FillerFunc) Fill(w io.Writer, width int, stat *decor.Statistics) {
 
 // Bar represents a progress Bar.
 type Bar struct {
-	priority int
-	index    int
+	priority         int
+	index            int
+	arbitraryCurrent int64
 
 	runningBar   *Bar
 	cacheState   *bState
@@ -182,6 +184,15 @@ func (b *Bar) Current() int64 {
 	}
 }
 
+// SetRefill sets refill, if supported by underlying Filler.
+func (b *Bar) SetRefill(upto int) {
+	b.operateState <- func(s *bState) {
+		if f, ok := s.filler.(interface{ SetRefill(int) }); ok {
+			f.SetRefill(upto)
+		}
+	}
+}
+
 // SetTotal sets total dynamically.
 // Set final to true, when total is known, it will trigger bar complete event.
 func (b *Bar) SetTotal(total int64, final bool) bool {
@@ -201,13 +212,14 @@ func (b *Bar) SetTotal(total int64, final bool) bool {
 	}
 }
 
-// SetRefill sets refill, if supported by underlying Filler.
-func (b *Bar) SetRefill(upto int) {
-	b.operateState <- func(s *bState) {
-		if f, ok := s.filler.(interface{ SetRefill(int) }); ok {
-			f.SetRefill(upto)
-		}
+// SetCurrent sets progress' current to arbitrary amount.
+func (b *Bar) SetCurrent(current int64, wdd ...time.Duration) {
+	if current <= 0 {
+		return
 	}
+	last := atomic.LoadInt64(&b.arbitraryCurrent)
+	b.IncrBy(int(current-last), wdd...)
+	atomic.StoreInt64(&b.arbitraryCurrent, current)
 }
 
 // Increment is a shorthand for b.IncrBy(1).
