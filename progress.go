@@ -62,8 +62,8 @@ func New(options ...ContainerOption) *Progress {
 		width:          pwidth,
 		rr:             prr,
 		waitBars:       make(map[*Bar]*Bar),
-		debugOut:       ioutil.Discard,
 		forceRefreshCh: make(chan time.Time),
+		debugOut:       ioutil.Discard,
 		output:         os.Stdout,
 	}
 
@@ -105,7 +105,7 @@ func (p *Progress) Add(total int64, filler Filler, options ...BarOption) *Bar {
 	result := make(chan *Bar)
 	select {
 	case p.operateState <- func(s *pState) {
-		b := newBar(s.ctx, p.bwg, filler, s.idCounter, s.width, total, options...)
+		b := newBar(s.ctx, p.bwg, s.forceRefreshCh, filler, s.idCounter, s.width, total, options...)
 		if b.runningBar != nil {
 			s.waitBars[b.runningBar] = b
 		} else {
@@ -232,14 +232,6 @@ func (s *pState) flush(cw *cwriter.Writer) error {
 		frame := <-bar.bFrameCh
 		defer func() {
 			if frame.toShutdown {
-				go func() {
-					// force next refresh, so it will be triggered either by ticker or by
-					// this goroutine, whichever comes first
-					select {
-					case s.forceRefreshCh <- time.Now():
-					case <-bar.done:
-					}
-				}()
 				// shutdown at next flush, in other words decrement underlying WaitGroup
 				// only after the bar with completed state has been flushed. this
 				// ensures no bar ends up with less than 100% rendered.

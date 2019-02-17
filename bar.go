@@ -36,13 +36,13 @@ type Bar struct {
 	priority int
 	index    int
 
-	runningBar   *Bar
-	cacheState   *bState
-	operateState chan func(*bState)
-	bFrameCh     chan *bFrame
-	syncTableCh  chan [][]chan int
-	intValue     chan int64
-	completed    chan bool
+	runningBar     *Bar
+	cacheState     *bState
+	operateState   chan func(*bState)
+	bFrameCh       chan *bFrame
+	syncTableCh    chan [][]chan int
+	completed      chan bool
+	forceRefreshCh chan time.Time
 
 	// done is closed by Bar's goroutine, after cacheState is written
 	done chan struct{}
@@ -91,6 +91,7 @@ type (
 func newBar(
 	ctx context.Context,
 	wg *sync.WaitGroup,
+	forceRefreshCh chan time.Time,
 	filler Filler,
 	id, width int,
 	total int64,
@@ -122,15 +123,15 @@ func newBar(
 	}
 
 	b := &Bar{
-		priority:     s.priority,
-		runningBar:   s.runningBar,
-		operateState: make(chan func(*bState)),
-		bFrameCh:     make(chan *bFrame, 1),
-		syncTableCh:  make(chan [][]chan int),
-		intValue:     make(chan int64),
-		completed:    make(chan bool),
-		done:         make(chan struct{}),
-		shutdown:     make(chan struct{}),
+		priority:       s.priority,
+		runningBar:     s.runningBar,
+		operateState:   make(chan func(*bState)),
+		bFrameCh:       make(chan *bFrame, 1),
+		syncTableCh:    make(chan [][]chan int),
+		completed:      make(chan bool),
+		done:           make(chan struct{}),
+		shutdown:       make(chan struct{}),
+		forceRefreshCh: forceRefreshCh,
 	}
 
 	if b.runningBar != nil {
@@ -171,9 +172,10 @@ func (b *Bar) ProxyReader(r io.Reader) io.ReadCloser {
 
 // ID returs id of the bar.
 func (b *Bar) ID() int {
+	result := make(chan int)
 	select {
-	case b.operateState <- func(s *bState) { b.intValue <- int64(s.id) }:
-		return int(<-b.intValue)
+	case b.operateState <- func(s *bState) { result <- s.id }:
+		return <-result
 	case <-b.done:
 		return b.cacheState.id
 	}
@@ -181,9 +183,10 @@ func (b *Bar) ID() int {
 
 // Current returns bar's current number, in other words sum of all increments.
 func (b *Bar) Current() int64 {
+	result := make(chan int64)
 	select {
-	case b.operateState <- func(s *bState) { b.intValue <- s.current }:
-		return <-b.intValue
+	case b.operateState <- func(s *bState) { result <- s.current }:
+		return <-result
 	case <-b.done:
 		return b.cacheState.current
 	}
@@ -209,6 +212,7 @@ func (b *Bar) SetTotal(total int64, final bool) bool {
 		if final {
 			s.current = s.total
 			s.toComplete = true
+			go b.forceRefresh()
 		}
 	}:
 		return true
@@ -246,6 +250,7 @@ func (b *Bar) IncrBy(n int, wdd ...time.Duration) {
 		if s.current >= s.total {
 			s.current = s.total
 			s.toComplete = true
+			go b.forceRefresh()
 		}
 		for _, ar := range s.amountReceivers {
 			ar.NextAmount(n, wdd...)
@@ -404,6 +409,13 @@ func (s *bState) wSyncTable() [][]chan int {
 	table[0] = columns[0:pCount]
 	table[1] = columns[pCount : pCount+aCount : pCount+aCount]
 	return table
+}
+
+func (b *Bar) forceRefresh() {
+	select {
+	case b.forceRefreshCh <- time.Now():
+	case <-b.shutdown:
+	}
 }
 
 func newStatistics(s *bState) *decor.Statistics {
