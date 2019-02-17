@@ -209,7 +209,7 @@ func (b *Bar) SetTotal(total int64, final bool) bool {
 		if total > 0 {
 			s.total = total
 		}
-		if final {
+		if final && !s.toComplete {
 			s.current = s.total
 			s.toComplete = true
 			go b.forceRefresh()
