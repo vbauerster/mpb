@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"runtime"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 	"unicode/utf8"
 
@@ -46,6 +48,11 @@ type Bar struct {
 	done chan struct{}
 	// shutdown is closed from master Progress goroutine only
 	shutdown chan struct{}
+
+	arbitraryCurrent struct {
+		lock    uint32
+		current int64
+	}
 }
 
 type (
@@ -182,6 +189,15 @@ func (b *Bar) Current() int64 {
 	}
 }
 
+// SetRefill sets refill, if supported by underlying Filler.
+func (b *Bar) SetRefill(upto int) {
+	b.operateState <- func(s *bState) {
+		if f, ok := s.filler.(interface{ SetRefill(int) }); ok {
+			f.SetRefill(upto)
+		}
+	}
+}
+
 // SetTotal sets total dynamically.
 // Set final to true, when total is known, it will trigger bar complete event.
 func (b *Bar) SetTotal(total int64, final bool) bool {
@@ -201,13 +217,18 @@ func (b *Bar) SetTotal(total int64, final bool) bool {
 	}
 }
 
-// SetRefill sets refill, if supported by underlying Filler.
-func (b *Bar) SetRefill(upto int) {
-	b.operateState <- func(s *bState) {
-		if f, ok := s.filler.(interface{ SetRefill(int) }); ok {
-			f.SetRefill(upto)
-		}
+// SetCurrent sets progress' current to arbitrary amount.
+func (b *Bar) SetCurrent(current int64, wdd ...time.Duration) {
+	if current <= 0 {
+		return
 	}
+	for !atomic.CompareAndSwapUint32(&b.arbitraryCurrent.lock, 0, 1) {
+		runtime.Gosched()
+	}
+	last := b.arbitraryCurrent.current
+	b.IncrBy(int(current-last), wdd...)
+	b.arbitraryCurrent.current = current
+	atomic.StoreUint32(&b.arbitraryCurrent.lock, 0)
 }
 
 // Increment is a shorthand for b.IncrBy(1).
