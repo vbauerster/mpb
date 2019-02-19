@@ -65,7 +65,7 @@ func TestBarSetRefill(t *testing.T) {
 
 	bar := p.AddBar(int64(total), TrimSpace())
 
-	bar.SetRefill(till)
+	bar.SetRefill(int64(till))
 	bar.IncrBy(till)
 
 	for i := 0; i < total-till; i++ {

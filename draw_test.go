@@ -13,7 +13,7 @@ func TestDraw(t *testing.T) {
 		total, current int64
 		barWidth       int
 		trimSpace      bool
-		rup            int
+		rup            int64
 		want           string
 	}{
 		2: {
@@ -274,7 +274,7 @@ func TestDraw(t *testing.T) {
 			s.current = tc.current
 			s.trimSpace = tc.trimSpace
 			if tc.rup > 0 {
-				if f, ok := s.filler.(interface{ SetRefill(int) }); ok {
+				if f, ok := s.filler.(interface{ SetRefill(int64) }); ok {
 					f.SetRefill(tc.rup)
 				}
 			}
