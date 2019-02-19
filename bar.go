@@ -193,10 +193,10 @@ func (b *Bar) Current() int64 {
 }
 
 // SetRefill sets refill, if supported by underlying Filler.
-func (b *Bar) SetRefill(upto int) {
+func (b *Bar) SetRefill(amount int64) {
 	b.operateState <- func(s *bState) {
-		if f, ok := s.filler.(interface{ SetRefill(int) }); ok {
-			f.SetRefill(upto)
+		if f, ok := s.filler.(interface{ SetRefill(int64) }); ok {
+			f.SetRefill(amount)
 		}
 	}
 }

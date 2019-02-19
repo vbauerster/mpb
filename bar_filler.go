@@ -21,9 +21,9 @@ const (
 var defaultBarStyle = "[=>-]<+"
 
 type barFiller struct {
-	format      [][]byte
-	refillCount int
-	reverse     bool
+	format       [][]byte
+	refillAmount int64
+	reverse      bool
 }
 
 func newDefaultBarFiller() Filler {
@@ -49,8 +49,8 @@ func (s *barFiller) setReverse() {
 	s.reverse = true
 }
 
-func (s *barFiller) SetRefill(count int) {
-	s.refillCount = count
+func (s *barFiller) SetRefill(amount int64) {
+	s.refillAmount = amount
 }
 
 func (s *barFiller) Fill(w io.Writer, width int, stat *decor.Statistics) {
@@ -75,12 +75,12 @@ func (s *barFiller) Fill(w io.Writer, width int, stat *decor.Statistics) {
 		bb[i] = s.format[rFill]
 	}
 
-	if s.refillCount > 0 {
+	if s.refillAmount > 0 {
 		var rwidth int
-		if s.refillCount > cwidth {
+		if s.refillAmount > stat.Current {
 			rwidth = cwidth
 		} else {
-			rwidth = int(internal.Percentage(stat.Total, int64(s.refillCount), int64(width)))
+			rwidth = int(internal.Percentage(stat.Total, int64(s.refillAmount), int64(width)))
 		}
 		for i := 0; i < rwidth; i++ {
 			bb[i] = s.format[rRefill]
