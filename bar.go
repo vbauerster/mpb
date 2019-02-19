@@ -247,7 +247,7 @@ func (b *Bar) IncrBy(n int, wdd ...time.Duration) {
 	select {
 	case b.operateState <- func(s *bState) {
 		s.current += int64(n)
-		if s.current >= s.total {
+		if s.current >= s.total && !s.toComplete {
 			s.current = s.total
 			s.toComplete = true
 			go b.forceRefresh()
@@ -412,9 +412,12 @@ func (s *bState) wSyncTable() [][]chan int {
 }
 
 func (b *Bar) forceRefresh() {
-	select {
-	case b.forceRefreshCh <- time.Now():
-	case <-b.shutdown:
+	for {
+		select {
+		case b.forceRefreshCh <- time.Now():
+		case <-b.shutdown:
+			return
+		}
 	}
 }
 
