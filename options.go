@@ -3,6 +3,7 @@ package mpb
 import (
 	"context"
 	"io"
+	"io/ioutil"
 	"sync"
 	"time"
 )
@@ -25,18 +26,16 @@ func WithWaitGroup(wg *sync.WaitGroup) ContainerOption {
 // width, as long as no BarWidth is applied.
 func WithWidth(w int) ContainerOption {
 	return func(s *pState) {
-		if w >= 0 {
-			s.width = w
+		if w < 0 {
+			return
 		}
+		s.width = w
 	}
 }
 
 // WithRefreshRate overrides default 120ms refresh rate.
 func WithRefreshRate(d time.Duration) ContainerOption {
 	return func(s *pState) {
-		if d < 10*time.Millisecond {
-			return
-		}
 		s.rr = d
 	}
 }
@@ -67,10 +66,14 @@ func WithShutdownNotifier(ch chan struct{}) ContainerOption {
 	}
 }
 
-// WithOutput overrides default output os.Stdout.
+// WithOutput overrides default os.Stdout output. Setting it to nil will
+// effectively disable auto refresh rate and discard any output, usefull
+// if you want to disable progress bars with little overhead.
 func WithOutput(w io.Writer) ContainerOption {
 	return func(s *pState) {
 		if w == nil {
+			s.manualRefreshCh = make(chan time.Time)
+			s.output = ioutil.Discard
 			return
 		}
 		s.output = w
