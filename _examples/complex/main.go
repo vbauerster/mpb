@@ -48,7 +48,7 @@ func main() {
 			job := "installing"
 			// preparing delayed bars
 			b := p.AddBar(rand.Int63n(101)+100,
-				mpb.BarReplaceOnComplete(bars[i]),
+				mpb.BarParkTo(bars[i]),
 				mpb.BarClearOnComplete(),
 				mpb.PrependDecorators(
 					decor.Name(task, decor.WC{W: len(task) + 1, C: decor.DidentRight}),

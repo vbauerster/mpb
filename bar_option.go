@@ -61,10 +61,17 @@ func BarRemoveOnComplete() BarOption {
 	}
 }
 
-// BarReplaceOnComplete is indicator for delayed bar start, after the
-// `runningBar` is complete. To achieve bar replacement effect,
-// `runningBar` should has its `BarRemoveOnComplete` option set.
+// BarReplaceOnComplete is deprecated. Refer to BarParkTo option.
 func BarReplaceOnComplete(runningBar *Bar) BarOption {
+	return BarParkTo(runningBar)
+}
+
+// BarParkTo parks constructed bar into the runningBar. In other words,
+// constructed bar will start only after runningBar has been completed.
+// Parked bar will replace runningBar if BarRemoveOnComplete option
+// is set on the runningBar. Parked bar inherits priority of the
+// runningBar, if no BarPriority option is set.
+func BarParkTo(runningBar *Bar) BarOption {
 	return func(s *bState) {
 		s.runningBar = runningBar
 	}
