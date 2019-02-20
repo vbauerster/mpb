@@ -76,9 +76,8 @@ func TestBarAbort(t *testing.T) {
 func TestWithContext(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	shutdown := make(chan struct{})
-	p := mpb.New(
+	p := mpb.NewWithContext(ctx,
 		mpb.WithOutput(ioutil.Discard),
-		mpb.WithContext(ctx),
 		mpb.WithRefreshRate(50*time.Millisecond),
 		mpb.WithShutdownNotifier(shutdown),
 	)

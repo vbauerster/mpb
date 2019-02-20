@@ -6,10 +6,9 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"runtime"
+	"log"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 	"unicode/utf8"
 
@@ -36,13 +35,13 @@ type Bar struct {
 	priority int
 	index    int
 
-	runningBar     *Bar
-	cacheState     *bState
-	operateState   chan func(*bState)
-	bFrameCh       chan *bFrame
-	syncTableCh    chan [][]chan int
-	completed      chan bool
-	forceRefreshCh chan time.Time
+	runningBar   *Bar
+	cacheState   *bState
+	operateState chan func(*bState)
+	bFrameCh     chan *bFrame
+	syncTableCh  chan [][]chan int
+	completed    chan bool
+	forceRefresh chan<- time.Time
 
 	// done is closed by Bar's goroutine, after cacheState is written
 	done chan struct{}
@@ -50,9 +49,11 @@ type Bar struct {
 	shutdown chan struct{}
 
 	arbitraryCurrent struct {
-		lock    uint32
+		sync.Mutex
 		current int64
 	}
+
+	dlogger *log.Logger
 }
 
 type (
@@ -91,55 +92,33 @@ type (
 func newBar(
 	ctx context.Context,
 	wg *sync.WaitGroup,
-	forceRefreshCh chan time.Time,
-	filler Filler,
-	id, width int,
-	total int64,
-	options ...BarOption,
+	forceRefresh chan<- time.Time,
+	bs *bState,
+	dlogger *log.Logger,
 ) *Bar {
-	if total <= 0 {
-		total = time.Now().Unix()
+
+	bs.bufP = bytes.NewBuffer(make([]byte, 0, bs.width))
+	bs.bufB = bytes.NewBuffer(make([]byte, 0, bs.width))
+	bs.bufA = bytes.NewBuffer(make([]byte, 0, bs.width))
+	if bs.extender != nil {
+		bs.bufE = bytes.NewBuffer(make([]byte, 0, bs.width))
 	}
 
-	s := &bState{
-		filler:   filler,
-		id:       id,
-		priority: id,
-		width:    width,
-		total:    total,
+	bar := &Bar{
+		priority:     bs.priority,
+		runningBar:   bs.runningBar,
+		operateState: make(chan func(*bState)),
+		bFrameCh:     make(chan *bFrame, 1),
+		syncTableCh:  make(chan [][]chan int),
+		completed:    make(chan bool),
+		done:         make(chan struct{}),
+		shutdown:     make(chan struct{}),
+		forceRefresh: forceRefresh,
+		dlogger:      dlogger,
 	}
 
-	for _, opt := range options {
-		if opt != nil {
-			opt(s)
-		}
-	}
-
-	s.bufP = bytes.NewBuffer(make([]byte, 0, width))
-	s.bufB = bytes.NewBuffer(make([]byte, 0, width))
-	s.bufA = bytes.NewBuffer(make([]byte, 0, width))
-	if s.extender != nil {
-		s.bufE = bytes.NewBuffer(make([]byte, 0, width))
-	}
-
-	b := &Bar{
-		priority:       s.priority,
-		runningBar:     s.runningBar,
-		operateState:   make(chan func(*bState)),
-		bFrameCh:       make(chan *bFrame, 1),
-		syncTableCh:    make(chan [][]chan int),
-		completed:      make(chan bool),
-		done:           make(chan struct{}),
-		shutdown:       make(chan struct{}),
-		forceRefreshCh: forceRefreshCh,
-	}
-
-	if b.runningBar != nil {
-		b.priority = b.runningBar.priority
-	}
-
-	go b.serve(ctx, wg, s)
-	return b
+	go bar.serve(ctx, wg, bs)
+	return bar
 }
 
 // RemoveAllPrependers removes all prepend functions.
@@ -212,7 +191,7 @@ func (b *Bar) SetTotal(total int64, final bool) bool {
 		if final && !s.toComplete {
 			s.current = s.total
 			s.toComplete = true
-			go b.forceRefresh()
+			go b.refreshNowTillShutdown()
 		}
 	}:
 		return true
@@ -226,13 +205,11 @@ func (b *Bar) SetCurrent(current int64, wdd ...time.Duration) {
 	if current <= 0 {
 		return
 	}
-	for !atomic.CompareAndSwapUint32(&b.arbitraryCurrent.lock, 0, 1) {
-		runtime.Gosched()
-	}
+	b.arbitraryCurrent.Lock()
 	last := b.arbitraryCurrent.current
 	b.IncrBy(int(current-last), wdd...)
 	b.arbitraryCurrent.current = current
-	atomic.StoreUint32(&b.arbitraryCurrent.lock, 0)
+	b.arbitraryCurrent.Unlock()
 }
 
 // Increment is a shorthand for b.IncrBy(1).
@@ -250,7 +227,7 @@ func (b *Bar) IncrBy(n int, wdd ...time.Duration) {
 		if s.current >= s.total && !s.toComplete {
 			s.current = s.total
 			s.toComplete = true
-			go b.forceRefresh()
+			go b.refreshNowTillShutdown()
 		}
 		for _, ar := range s.amountReceivers {
 			ar.NextAmount(n, wdd...)
@@ -308,7 +285,7 @@ func (b *Bar) render(debugOut io.Writer, tw int) {
 			// recovering if user defined decorator panics for example
 			if p := recover(); p != nil {
 				s.panicMsg = fmt.Sprintf("panic: %v", p)
-				fmt.Fprintf(debugOut, "%s %s bar id %02d %v\n", "[mpb]", time.Now(), s.id, s.panicMsg)
+				b.dlogger.Println(s.panicMsg)
 				b.bFrameCh <- &bFrame{
 					rd:         strings.NewReader(fmt.Sprintf(fmt.Sprintf("%%.%ds\n", tw), s.panicMsg)),
 					toShutdown: true,
@@ -411,10 +388,10 @@ func (s *bState) wSyncTable() [][]chan int {
 	return table
 }
 
-func (b *Bar) forceRefresh() {
+func (b *Bar) refreshNowTillShutdown() {
 	for {
 		select {
-		case b.forceRefreshCh <- time.Now():
+		case b.forceRefresh <- time.Now():
 		case <-b.shutdown:
 			return
 		}

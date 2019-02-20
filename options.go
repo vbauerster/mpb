@@ -48,13 +48,9 @@ func WithManualRefresh(ch <-chan time.Time) ContainerOption {
 	}
 }
 
-// WithContext provided context will be used for cancellation purposes.
+// WithContext deprecated and has no effect, please use NewWithContext instead.
 func WithContext(ctx context.Context) ContainerOption {
 	return func(s *pState) {
-		if ctx == nil {
-			return
-		}
-		s.ctx = ctx
 	}
 }
 

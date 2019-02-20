@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"os"
 	"sync"
 	"time"
@@ -22,11 +23,14 @@ const (
 
 // Progress represents the container that renders Progress bars
 type Progress struct {
+	ctx          context.Context
 	uwg          *sync.WaitGroup
 	cwg          *sync.WaitGroup
 	bwg          *sync.WaitGroup
 	operateState chan func(*pState)
 	done         chan struct{}
+	forceRefresh chan time.Time
+	dlogger      *log.Logger
 }
 
 type pState struct {
@@ -38,33 +42,36 @@ type pState struct {
 	rr              time.Duration
 	pMatrix         map[int][]chan int
 	aMatrix         map[int][]chan int
-	forceRefreshCh  chan time.Time
 	output          io.Writer
 
 	// following are provided/overrided by user
-	ctx              context.Context
 	uwg              *sync.WaitGroup
 	manualRefreshCh  <-chan time.Time
 	shutdownNotifier chan struct{}
-	waitBars         map[*Bar]*Bar
+	parkedBars       map[*Bar]*Bar
 	debugOut         io.Writer
 }
 
-// New creates new Progress instance, which orchestrates bars rendering
-// process. Accepts mpb.ContainerOption funcs for customization.
+// New creates new Progress container instance. It's not possible to
+// reuse instance after *Progress.Wait() method has been called.
 func New(options ...ContainerOption) *Progress {
+	return NewWithContext(context.Background(), options...)
+}
+
+// NewWithContext creates new Progress container instance with provided
+// context. It's not possible to reuse instance after *Progress.Wait()
+// method has been called.
+func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 	pq := make(priorityQueue, 0)
 	heap.Init(&pq)
 
 	s := &pState{
-		ctx:            context.Background(),
-		bHeap:          &pq,
-		width:          pwidth,
-		rr:             prr,
-		waitBars:       make(map[*Bar]*Bar),
-		forceRefreshCh: make(chan time.Time),
-		debugOut:       ioutil.Discard,
-		output:         os.Stdout,
+		bHeap:      &pq,
+		width:      pwidth,
+		rr:         prr,
+		parkedBars: make(map[*Bar]*Bar),
+		output:     os.Stdout,
+		debugOut:   ioutil.Discard,
 	}
 
 	for _, opt := range options {
@@ -74,11 +81,14 @@ func New(options ...ContainerOption) *Progress {
 	}
 
 	p := &Progress{
+		ctx:          ctx,
 		uwg:          s.uwg,
 		cwg:          new(sync.WaitGroup),
 		bwg:          new(sync.WaitGroup),
 		operateState: make(chan func(*pState)),
+		forceRefresh: make(chan time.Time),
 		done:         make(chan struct{}),
+		dlogger:      log.New(s.debugOut, "[mpb] ", log.Lshortfile),
 	}
 	p.cwg.Add(1)
 	go p.serve(s, cwriter.New(s.output))
@@ -101,19 +111,42 @@ func (p *Progress) AddSpinner(total int64, alignment SpinnerAlignment, options .
 
 // Add creates a bar which renders itself by provided filler.
 func (p *Progress) Add(total int64, filler Filler, options ...BarOption) *Bar {
+	if total <= 0 {
+		total = time.Now().Unix()
+	}
+	if filler == nil {
+		filler = newDefaultBarFiller()
+	}
 	p.bwg.Add(1)
 	result := make(chan *Bar)
 	select {
-	case p.operateState <- func(s *pState) {
-		b := newBar(s.ctx, p.bwg, s.forceRefreshCh, filler, s.idCounter, s.width, total, options...)
-		if b.runningBar != nil {
-			s.waitBars[b.runningBar] = b
-		} else {
-			heap.Push(s.bHeap, b)
-			s.heapUpdated = true
+	case p.operateState <- func(ps *pState) {
+		logPrefix := fmt.Sprintf("%sbar#%02d ", p.dlogger.Prefix(), ps.idCounter)
+		dlogger := log.New(ps.debugOut, logPrefix, log.Lshortfile)
+		bs := &bState{
+			total:    total,
+			filler:   filler,
+			priority: ps.idCounter,
+			id:       ps.idCounter,
+			width:    ps.width,
 		}
-		s.idCounter++
-		result <- b
+		for _, opt := range options {
+			if opt != nil {
+				opt(bs)
+			}
+		}
+		bar := newBar(p.ctx, p.bwg, p.forceRefresh, bs, dlogger)
+		if bar.runningBar != nil {
+			if bar.priority == ps.idCounter {
+				bar.priority = bar.runningBar.priority
+			}
+			ps.parkedBars[bar.runningBar] = bar
+		} else {
+			heap.Push(ps.bHeap, bar)
+			ps.heapUpdated = true
+		}
+		ps.idCounter++
+		result <- bar
 	}:
 		return <-result
 	case <-p.done:
@@ -185,7 +218,7 @@ func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 	manualOrTickCh, cleanUp := s.manualOrTick()
 	defer cleanUp()
 
-	refreshCh := fanInRefreshSrc(p.done, s.forceRefreshCh, manualOrTickCh)
+	refreshCh := fanInRefreshSrc(p.done, p.forceRefresh, manualOrTickCh)
 
 	for {
 		select {
@@ -199,7 +232,7 @@ func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 				return
 			}
 			if err := s.render(cw); err != nil {
-				fmt.Fprintf(s.debugOut, "[mpb] %s %v\n", time.Now(), err)
+				p.dlogger.Println(err)
 			}
 		}
 	}
@@ -236,10 +269,10 @@ func (s *pState) flush(cw *cwriter.Writer) error {
 				// only after the bar with completed state has been flushed. this
 				// ensures no bar ends up with less than 100% rendered.
 				s.shutdownPending = append(s.shutdownPending, bar)
-				if replacementBar, ok := s.waitBars[bar]; ok {
+				if replacementBar, ok := s.parkedBars[bar]; ok {
 					heap.Push(s.bHeap, replacementBar)
 					s.heapUpdated = true
-					delete(s.waitBars, bar)
+					delete(s.parkedBars, bar)
 				}
 				if frame.removeOnComplete {
 					s.heapUpdated = true
