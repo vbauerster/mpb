@@ -57,7 +57,7 @@ func BarWidth(width int) BarOption {
 // gets removed completely.
 func BarRemoveOnComplete() BarOption {
 	return func(s *bState) {
-		s.removeOnComplete = true
+		s.dropOnComplete = true
 	}
 }
 
@@ -82,7 +82,7 @@ func BarParkTo(runningBar *Bar) BarOption {
 // BarRemoveOnComplete.
 func BarClearOnComplete() BarOption {
 	return func(s *bState) {
-		s.barClearOnComplete = true
+		s.noBufBOnComplete = true
 	}
 }
 

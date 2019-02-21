@@ -133,9 +133,10 @@ func (p *Progress) Add(total int64, filler Filler, options ...BarOption) *Bar {
 				opt(bs)
 			}
 		}
+		bar := newBar(p.ctx, p.bwg, bs)
+		bar.forceRefresh = p.forceRefresh
 		prefix := fmt.Sprintf("%sbar#%02d ", p.dlogger.Prefix(), bs.id)
-		dlogger := log.New(ps.debugOut, prefix, log.Lshortfile)
-		bar := newBar(p.ctx, p.bwg, p.forceRefresh, bs, dlogger)
+		bar.dlogger = log.New(ps.debugOut, prefix, log.Lshortfile)
 		if bs.runningBar != nil {
 			if bar.priority == ps.idCounter {
 				bar.priority = bs.runningBar.priority
@@ -262,9 +263,9 @@ func (s *pState) flush(cw *cwriter.Writer) error {
 	var lineCount int
 	for s.bHeap.Len() > 0 {
 		bar := heap.Pop(s.bHeap).(*Bar)
-		frame := <-bar.bFrameCh
+		frame := <-bar.frameCh
 		defer func() {
-			if frame.toShutdown {
+			if bar.toShutdown {
 				// shutdown at next flush, in other words decrement underlying WaitGroup
 				// only after the bar with completed state has been flushed. this
 				// ensures no bar ends up with less than 100% rendered.
@@ -274,15 +275,15 @@ func (s *pState) flush(cw *cwriter.Writer) error {
 					s.heapUpdated = true
 					delete(s.parkedBars, bar)
 				}
-				if frame.removeOnComplete {
+				if bar.dropOnComplete {
 					s.heapUpdated = true
 					return
 				}
 			}
 			heap.Push(s.bHeap, bar)
 		}()
-		cw.ReadFrom(frame.rd)
-		lineCount += frame.extendedLines + 1
+		cw.ReadFrom(frame)
+		lineCount += bar.extendedLines + 1
 	}
 
 	for i := len(s.shutdownPending) - 1; i >= 0; i-- {

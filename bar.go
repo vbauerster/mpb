@@ -32,20 +32,24 @@ func (f FillerFunc) Fill(w io.Writer, width int, stat *decor.Statistics) {
 
 // Bar represents a progress Bar.
 type Bar struct {
-	priority int
-	index    int
+	priority int // used by heap
+	index    int // used by heap
 
-	cacheState   *bState
-	operateState chan func(*bState)
-	bFrameCh     chan *bFrame
-	syncTableCh  chan [][]chan int
-	completed    chan bool
-	forceRefresh chan<- time.Time
+	extendedLines  int
+	toShutdown     bool
+	dropOnComplete bool
+	operateState   chan func(*bState)
+	frameCh        chan io.Reader
+	syncTableCh    chan [][]chan int
+	completed      chan bool
+	forceRefresh   chan<- time.Time
 
-	// done is closed by Bar's goroutine, after cacheState is written
-	done chan struct{}
-	// shutdown is closed from master Progress goroutine only
+	// shutdown is closed when bar completed and flushed
 	shutdown chan struct{}
+	// done is closed after cacheState is written
+	done chan struct{}
+	// cacheState is populated, right after close(shutdown)
+	cacheState *bState
 
 	arbitraryCurrent struct {
 		sync.Mutex
@@ -55,47 +59,34 @@ type Bar struct {
 	dlogger *log.Logger
 }
 
-type (
-	bState struct {
-		filler             Filler
-		extender           Filler
-		id                 int
-		width              int
-		total              int64
-		current            int64
-		trimSpace          bool
-		toComplete         bool
-		removeOnComplete   bool
-		barClearOnComplete bool
-		completeFlushed    bool
-		aDecorators        []decor.Decorator
-		pDecorators        []decor.Decorator
-		amountReceivers    []decor.AmountReceiver
-		shutdownListeners  []decor.ShutdownListener
-		bufP, bufB, bufA   *bytes.Buffer
-		bufE               *bytes.Buffer
-		panicMsg           string
+type bState struct {
+	filler            Filler
+	extender          Filler
+	id                int
+	width             int
+	total             int64
+	current           int64
+	trimSpace         bool
+	toComplete        bool
+	completeFlushed   bool
+	noBufBOnComplete  bool
+	aDecorators       []decor.Decorator
+	pDecorators       []decor.Decorator
+	amountReceivers   []decor.AmountReceiver
+	shutdownListeners []decor.ShutdownListener
+	bufP, bufB, bufA  *bytes.Buffer
+	bufE              *bytes.Buffer
+	panicMsg          string
 
-		// priority overrides *Bar's priority, if set
-		priority int
-		// runningBar is a key for *pState.parkedBars
-		runningBar *Bar
-	}
-	bFrame struct {
-		rd               io.Reader
-		extendedLines    int
-		toShutdown       bool
-		removeOnComplete bool
-	}
-)
+	// priority overrides *Bar's priority, if set
+	priority int
+	// dropOnComplete propagates to *Bar
+	dropOnComplete bool
+	// runningBar is a key for *pState.parkedBars
+	runningBar *Bar
+}
 
-func newBar(
-	ctx context.Context,
-	wg *sync.WaitGroup,
-	forceRefresh chan<- time.Time,
-	bs *bState,
-	dlogger *log.Logger,
-) *Bar {
+func newBar(ctx context.Context, wg *sync.WaitGroup, bs *bState) *Bar {
 
 	bs.bufP = bytes.NewBuffer(make([]byte, 0, bs.width))
 	bs.bufB = bytes.NewBuffer(make([]byte, 0, bs.width))
@@ -105,15 +96,14 @@ func newBar(
 	}
 
 	bar := &Bar{
-		priority:     bs.priority,
-		operateState: make(chan func(*bState)),
-		bFrameCh:     make(chan *bFrame, 1),
-		syncTableCh:  make(chan [][]chan int),
-		completed:    make(chan bool),
-		done:         make(chan struct{}),
-		shutdown:     make(chan struct{}),
-		forceRefresh: forceRefresh,
-		dlogger:      dlogger,
+		priority:       bs.priority,
+		dropOnComplete: bs.dropOnComplete,
+		operateState:   make(chan func(*bState)),
+		frameCh:        make(chan io.Reader, 1),
+		syncTableCh:    make(chan [][]chan int),
+		completed:      make(chan bool),
+		done:           make(chan struct{}),
+		shutdown:       make(chan struct{}),
 	}
 
 	go bar.serve(ctx, wg, bs)
@@ -283,45 +273,45 @@ func (b *Bar) render(debugOut io.Writer, tw int) {
 		defer func() {
 			// recovering if user defined decorator panics for example
 			if p := recover(); p != nil {
+				b.dlogger.Println(p)
 				s.panicMsg = fmt.Sprintf("panic: %v", p)
-				b.dlogger.Println(s.panicMsg)
-				b.bFrameCh <- &bFrame{
-					rd:         strings.NewReader(fmt.Sprintf(fmt.Sprintf("%%.%ds\n", tw), s.panicMsg)),
-					toShutdown: true,
-				}
+				close(b.shutdown)
+				b.frameCh <- s.drawPanic(tw)
 			}
 		}()
-		frame := &bFrame{
-			rd:               s.draw(tw),
-			toShutdown:       s.toComplete && !s.completeFlushed,
-			removeOnComplete: s.removeOnComplete,
-		}
+
+		frame := s.draw(tw)
+		b.toShutdown = s.toComplete && !s.completeFlushed
+		s.completeFlushed = s.toComplete
+
 		if s.extender != nil {
 			s.extender.Fill(s.bufE, tw, newStatistics(s))
-			frame.extendedLines = countLines(s.bufE.Bytes())
-			frame.rd = io.MultiReader(frame.rd, s.bufE)
+			b.extendedLines = countLines(s.bufE.Bytes())
+			frame = io.MultiReader(frame, s.bufE)
 		}
-		b.bFrameCh <- frame
-		s.completeFlushed = s.toComplete
+		b.frameCh <- frame
 	}:
 	case <-b.done:
 		s := b.cacheState
-		frame := &bFrame{
-			rd: s.draw(tw),
+		if s.panicMsg != "" {
+			b.frameCh <- s.drawPanic(tw)
+			return
 		}
+		frame := s.draw(tw)
 		if s.extender != nil {
 			s.extender.Fill(s.bufE, tw, newStatistics(s))
-			frame.extendedLines = countLines(s.bufE.Bytes())
-			frame.rd = io.MultiReader(frame.rd, s.bufE)
+			b.extendedLines = countLines(s.bufE.Bytes())
+			frame = io.MultiReader(frame, s.bufE)
 		}
-		b.bFrameCh <- frame
+		b.frameCh <- frame
 	}
 }
 
+func (s *bState) drawPanic(termWidth int) io.Reader {
+	return strings.NewReader(fmt.Sprintf(fmt.Sprintf("%%.%ds\n", termWidth), s.panicMsg))
+}
+
 func (s *bState) draw(termWidth int) io.Reader {
-	if s.panicMsg != "" {
-		return strings.NewReader(fmt.Sprintf(fmt.Sprintf("%%.%ds\n", termWidth), s.panicMsg))
-	}
 
 	stat := newStatistics(s)
 
@@ -333,7 +323,7 @@ func (s *bState) draw(termWidth int) io.Reader {
 		s.bufA.WriteString(d.Decor(stat))
 	}
 
-	if s.barClearOnComplete && s.completeFlushed {
+	if s.noBufBOnComplete && s.completeFlushed {
 		s.bufA.WriteByte('\n')
 		return io.MultiReader(s.bufP, s.bufA)
 	}

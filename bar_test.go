@@ -132,7 +132,6 @@ func TestBarPanics(t *testing.T) {
 
 	p.Wait()
 
-	wantPanic = fmt.Sprintf("panic: %s", wantPanic)
 	debugStr := buf.String()
 	if !strings.Contains(debugStr, wantPanic) {
 		t.Errorf("%q doesn't contain %q\n", debugStr, wantPanic)
