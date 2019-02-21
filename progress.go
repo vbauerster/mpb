@@ -121,8 +121,6 @@ func (p *Progress) Add(total int64, filler Filler, options ...BarOption) *Bar {
 	result := make(chan *Bar)
 	select {
 	case p.operateState <- func(ps *pState) {
-		logPrefix := fmt.Sprintf("%sbar#%02d ", p.dlogger.Prefix(), ps.idCounter)
-		dlogger := log.New(ps.debugOut, logPrefix, log.Lshortfile)
 		bs := &bState{
 			total:    total,
 			filler:   filler,
@@ -135,12 +133,14 @@ func (p *Progress) Add(total int64, filler Filler, options ...BarOption) *Bar {
 				opt(bs)
 			}
 		}
+		prefix := fmt.Sprintf("%sbar#%02d ", p.dlogger.Prefix(), bs.id)
+		dlogger := log.New(ps.debugOut, prefix, log.Lshortfile)
 		bar := newBar(p.ctx, p.bwg, p.forceRefresh, bs, dlogger)
-		if bar.runningBar != nil {
+		if bs.runningBar != nil {
 			if bar.priority == ps.idCounter {
-				bar.priority = bar.runningBar.priority
+				bar.priority = bs.runningBar.priority
 			}
-			ps.parkedBars[bar.runningBar] = bar
+			ps.parkedBars[bs.runningBar] = bar
 		} else {
 			heap.Push(ps.bHeap, bar)
 			ps.heapUpdated = true

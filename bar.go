@@ -35,7 +35,6 @@ type Bar struct {
 	priority int
 	index    int
 
-	runningBar   *Bar
 	cacheState   *bState
 	operateState chan func(*bState)
 	bFrameCh     chan *bFrame
@@ -77,8 +76,9 @@ type (
 		bufE               *bytes.Buffer
 		panicMsg           string
 
-		// following options are assigned to the *Bar
-		priority   int
+		// priority overrides *Bar's priority, if set
+		priority int
+		// runningBar is a key for *pState.parkedBars
 		runningBar *Bar
 	}
 	bFrame struct {
@@ -106,7 +106,6 @@ func newBar(
 
 	bar := &Bar{
 		priority:     bs.priority,
-		runningBar:   bs.runningBar,
 		operateState: make(chan func(*bState)),
 		bFrameCh:     make(chan *bFrame, 1),
 		syncTableCh:  make(chan [][]chan int),
