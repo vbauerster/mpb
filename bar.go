@@ -291,34 +291,30 @@ func (b *Bar) render(debugOut io.Writer, tw int) {
 				}
 			}
 		}()
-		r := s.draw(tw)
-		var extendedLines int
-		if s.extender != nil {
-			s.extender.Fill(s.bufE, tw, newStatistics(s))
-			extendedLines = countLines(s.bufE.Bytes())
-			r = io.MultiReader(r, s.bufE)
-		}
-		b.bFrameCh <- &bFrame{
-			rd:               r,
-			extendedLines:    extendedLines,
+		frame := &bFrame{
+			rd:               s.draw(tw),
 			toShutdown:       s.toComplete && !s.completeFlushed,
 			removeOnComplete: s.removeOnComplete,
 		}
+		if s.extender != nil {
+			s.extender.Fill(s.bufE, tw, newStatistics(s))
+			frame.extendedLines = countLines(s.bufE.Bytes())
+			frame.rd = io.MultiReader(frame.rd, s.bufE)
+		}
+		b.bFrameCh <- frame
 		s.completeFlushed = s.toComplete
 	}:
 	case <-b.done:
 		s := b.cacheState
-		r := s.draw(tw)
-		var extendedLines int
+		frame := &bFrame{
+			rd: s.draw(tw),
+		}
 		if s.extender != nil {
 			s.extender.Fill(s.bufE, tw, newStatistics(s))
-			extendedLines = countLines(s.bufE.Bytes())
-			r = io.MultiReader(r, s.bufE)
+			frame.extendedLines = countLines(s.bufE.Bytes())
+			frame.rd = io.MultiReader(frame.rd, s.bufE)
 		}
-		b.bFrameCh <- &bFrame{
-			rd:            r,
-			extendedLines: extendedLines,
-		}
+		b.bFrameCh <- frame
 	}
 }
 
