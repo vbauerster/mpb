@@ -34,21 +34,21 @@ type Progress struct {
 }
 
 type pState struct {
-	bHeap           *priorityQueue
-	shutdownPending []*Bar
-	heapUpdated     bool
-	idCounter       int
-	width           int
-	rr              time.Duration
-	pMatrix         map[int][]chan int
-	aMatrix         map[int][]chan int
-	output          io.Writer
+	bHeap            *priorityQueue
+	heapUpdated      bool
+	pMatrix          map[int][]chan int
+	aMatrix          map[int][]chan int
+	barShutdownQueue []chan struct{}
 
 	// following are provided/overrided by user
+	idCount          int
+	width            int
+	rr               time.Duration
 	uwg              *sync.WaitGroup
 	manualRefreshCh  <-chan time.Time
 	shutdownNotifier chan struct{}
 	parkedBars       map[*Bar]*Bar
+	output           io.Writer
 	debugOut         io.Writer
 }
 
@@ -124,8 +124,8 @@ func (p *Progress) Add(total int64, filler Filler, options ...BarOption) *Bar {
 		bs := &bState{
 			total:    total,
 			filler:   filler,
-			priority: ps.idCounter,
-			id:       ps.idCounter,
+			priority: ps.idCount,
+			id:       ps.idCount,
 			width:    ps.width,
 		}
 		for _, opt := range options {
@@ -138,7 +138,7 @@ func (p *Progress) Add(total int64, filler Filler, options ...BarOption) *Bar {
 		prefix := fmt.Sprintf("%sbar#%02d ", p.dlogger.Prefix(), bs.id)
 		bar.dlogger = log.New(ps.debugOut, prefix, log.Lshortfile)
 		if bs.runningBar != nil {
-			if bar.priority == ps.idCounter {
+			if bar.priority == ps.idCount {
 				bar.priority = bs.runningBar.priority
 			}
 			ps.parkedBars[bs.runningBar] = bar
@@ -146,7 +146,7 @@ func (p *Progress) Add(total int64, filler Filler, options ...BarOption) *Bar {
 			heap.Push(ps.bHeap, bar)
 			ps.heapUpdated = true
 		}
-		ps.idCounter++
+		ps.idCount++
 		result <- bar
 	}:
 		return <-result
@@ -169,7 +169,7 @@ func (p *Progress) Abort(b *Bar, remove bool) {
 		if remove {
 			s.heapUpdated = heap.Remove(s.bHeap, b.index) != nil
 		}
-		s.shutdownPending = append(s.shutdownPending, b)
+		s.barShutdownQueue = append(s.barShutdownQueue, b.shutdown)
 	}:
 	case <-p.done:
 	}
@@ -269,7 +269,7 @@ func (s *pState) flush(cw *cwriter.Writer) error {
 				// shutdown at next flush, in other words decrement underlying WaitGroup
 				// only after the bar with completed state has been flushed. this
 				// ensures no bar ends up with less than 100% rendered.
-				s.shutdownPending = append(s.shutdownPending, bar)
+				s.barShutdownQueue = append(s.barShutdownQueue, bar.shutdown)
 				if parkedBar := s.parkedBars[bar]; parkedBar != nil {
 					heap.Push(s.bHeap, parkedBar)
 					s.heapUpdated = true
@@ -286,9 +286,9 @@ func (s *pState) flush(cw *cwriter.Writer) error {
 		lineCount += bar.extendedLines + 1
 	}
 
-	for i := len(s.shutdownPending) - 1; i >= 0; i-- {
-		close(s.shutdownPending[i].shutdown)
-		s.shutdownPending = s.shutdownPending[:i]
+	for i := len(s.barShutdownQueue) - 1; i >= 0; i-- {
+		close(s.barShutdownQueue[i])
+		s.barShutdownQueue = s.barShutdownQueue[:i]
 	}
 
 	return cw.Flush(lineCount)
