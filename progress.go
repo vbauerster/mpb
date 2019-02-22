@@ -270,8 +270,8 @@ func (s *pState) flush(cw *cwriter.Writer) error {
 				// only after the bar with completed state has been flushed. this
 				// ensures no bar ends up with less than 100% rendered.
 				s.shutdownPending = append(s.shutdownPending, bar)
-				if replacementBar, ok := s.parkedBars[bar]; ok {
-					heap.Push(s.bHeap, replacementBar)
+				if parkedBar := s.parkedBars[bar]; parkedBar != nil {
+					heap.Push(s.bHeap, parkedBar)
 					s.heapUpdated = true
 					delete(s.parkedBars, bar)
 				}
