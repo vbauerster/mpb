@@ -267,7 +267,7 @@ func (b *Bar) serve(ctx context.Context, wg *sync.WaitGroup, s *bState) {
 	}
 }
 
-func (b *Bar) render(debugOut io.Writer, tw int) {
+func (b *Bar) render(tw int) {
 	if b.bpanic != nil {
 		b.toShutdown = false
 		b.frameCh <- b.panicToFrame(tw)

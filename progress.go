@@ -253,7 +253,7 @@ func (s *pState) render(cw *cwriter.Writer) error {
 	}
 	for i := 0; i < s.bHeap.Len(); i++ {
 		bar := (*s.bHeap)[i]
-		go bar.render(s.debugOut, tw)
+		go bar.render(tw)
 	}
 
 	return s.flush(cw)
