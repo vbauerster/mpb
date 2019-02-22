@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 	"unicode/utf8"
@@ -148,12 +149,12 @@ func TestBarPanicBeforeComplete(t *testing.T) {
 
 	total := 100
 	panicMsg := "Upps!!!"
-	var pCount int
+	var pCount uint32
 	bar := p.AddBar(int64(total),
 		PrependDecorators(panicDecorator(panicMsg,
 			func(st *decor.Statistics) bool {
 				if st.Current >= 42 {
-					pCount++
+					atomic.AddUint32(&pCount, 1)
 					return true
 				}
 				return false
@@ -184,12 +185,12 @@ func TestBarPanicAfterComplete(t *testing.T) {
 
 	total := 100
 	panicMsg := "Upps!!!"
-	var pCount int
+	var pCount uint32
 	bar := p.AddBar(int64(total),
 		PrependDecorators(panicDecorator(panicMsg,
 			func(st *decor.Statistics) bool {
 				if st.Completed {
-					pCount++
+					atomic.AddUint32(&pCount, 1)
 					return true
 				}
 				return false
