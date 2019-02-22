@@ -263,7 +263,6 @@ func (s *pState) flush(cw *cwriter.Writer) error {
 	var lineCount int
 	for s.bHeap.Len() > 0 {
 		bar := heap.Pop(s.bHeap).(*Bar)
-		frame := <-bar.frameCh
 		defer func() {
 			if bar.toShutdown {
 				// shutdown at next flush, in other words decrement underlying WaitGroup
@@ -282,7 +281,7 @@ func (s *pState) flush(cw *cwriter.Writer) error {
 			}
 			heap.Push(s.bHeap, bar)
 		}()
-		cw.ReadFrom(frame)
+		cw.ReadFrom(<-bar.frameCh)
 		lineCount += bar.extendedLines + 1
 	}
 
