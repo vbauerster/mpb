@@ -33,16 +33,16 @@ func TestBarCompleted(t *testing.T) {
 
 func TestBarID(t *testing.T) {
 	p := New(WithOutput(ioutil.Discard))
-	total := 80
+	total := 100
 	wantID := 11
 	bar := p.AddBar(int64(total), BarID(wantID))
 
-	go func() {
+	go func(total int) {
 		for i := 0; i < total; i++ {
 			time.Sleep(50 * time.Millisecond)
 			bar.Increment()
 		}
-	}()
+	}(total)
 
 	gotID := bar.ID()
 	if gotID != wantID {
@@ -87,6 +87,34 @@ func TestBarSetRefill(t *testing.T) {
 	}
 }
 
+func TestBarHas100PercentAfterOnComplete(t *testing.T) {
+	var buf bytes.Buffer
+
+	p := New(WithOutput(&buf))
+
+	total := 50
+
+	bar := p.AddBar(int64(total),
+		AppendDecorators(
+			decor.OnComplete(
+				decor.Percentage(), "done",
+			),
+		),
+	)
+
+	for i := 0; i < total; i++ {
+		bar.Increment()
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	p.Wait()
+
+	hundred := "100 %"
+	if !bytes.Contains(buf.Bytes(), []byte(hundred)) {
+		t.Errorf("Bar's buffer does not contain: %q\n", hundred)
+	}
+}
+
 func TestBarStyle(t *testing.T) {
 	var buf bytes.Buffer
 	customFormat := "╢▌▌░╟"
@@ -114,33 +142,82 @@ func TestBarStyle(t *testing.T) {
 	}
 }
 
-func TestBarPanics(t *testing.T) {
+func TestBarPanicBeforeComplete(t *testing.T) {
 	var buf bytes.Buffer
 	p := New(WithDebugOutput(&buf), WithOutput(ioutil.Discard))
 
-	wantPanic := "Upps!!!"
 	total := 100
+	panicMsg := "Upps!!!"
+	var pCount int
+	bar := p.AddBar(int64(total),
+		PrependDecorators(panicDecorator(panicMsg,
+			func(st *decor.Statistics) bool {
+				if st.Current >= 42 {
+					pCount++
+					return true
+				}
+				return false
+			},
+		)),
+	)
 
-	bar := p.AddBar(int64(total), PrependDecorators(panicDecorator(wantPanic)))
-
-	go func() {
-		for i := 0; i < 100; i++ {
-			time.Sleep(10 * time.Millisecond)
-			bar.Increment()
-		}
-	}()
+	for i := 0; i < total; i++ {
+		time.Sleep(10 * time.Millisecond)
+		bar.Increment()
+	}
 
 	p.Wait()
 
-	debugStr := buf.String()
-	if !strings.Contains(debugStr, wantPanic) {
-		t.Errorf("%q doesn't contain %q\n", debugStr, wantPanic)
+	if pCount != 1 {
+		t.Errorf("Decor called after panic %d times\n", pCount-1)
+	}
+
+	barStr := buf.String()
+	if !strings.Contains(barStr, panicMsg) {
+		t.Errorf("%q doesn't contain %q\n", barStr, panicMsg)
 	}
 }
 
-func panicDecorator(panicMsg string) decor.Decorator {
+func TestBarPanicAfterComplete(t *testing.T) {
+	var buf bytes.Buffer
+	p := New(WithDebugOutput(&buf), WithOutput(ioutil.Discard))
+
+	total := 100
+	panicMsg := "Upps!!!"
+	var pCount int
+	bar := p.AddBar(int64(total),
+		PrependDecorators(panicDecorator(panicMsg,
+			func(st *decor.Statistics) bool {
+				if st.Completed {
+					pCount++
+					return true
+				}
+				return false
+			},
+		)),
+	)
+
+	for i := 0; i < total; i++ {
+		time.Sleep(10 * time.Millisecond)
+		bar.Increment()
+	}
+
+	p.Wait()
+
+	if pCount != 1 {
+		t.Errorf("Decor called after panic %d times\n", pCount-1)
+	}
+
+	barStr := buf.String()
+	if !strings.Contains(barStr, panicMsg) {
+		t.Errorf("%q doesn't contain %q\n", barStr, panicMsg)
+	}
+}
+
+func panicDecorator(panicMsg string, cond func(*decor.Statistics) bool) decor.Decorator {
 	d := &decorator{
 		panicMsg: panicMsg,
+		cond:     cond,
 	}
 	d.Init()
 	return d
@@ -149,10 +226,11 @@ func panicDecorator(panicMsg string) decor.Decorator {
 type decorator struct {
 	decor.WC
 	panicMsg string
+	cond     func(*decor.Statistics) bool
 }
 
 func (d *decorator) Decor(st *decor.Statistics) string {
-	if st.Current >= 42 {
+	if d.cond(st) {
 		panic(d.panicMsg)
 	}
 	return d.FormatMsg("")
