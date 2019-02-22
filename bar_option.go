@@ -124,7 +124,7 @@ func TrimSpace() BarOption {
 //
 //	'<' reverse tip rune, used when BarReverse option is set
 //
-//	'+' refill rune, used when *Bar.SetRefill(int) is called
+//	'+' refill rune, used when *Bar.SetRefill(int64) is called
 //
 // It's ok to provide first five runes only, for example mpb.BarStyle("╢▌▌░╟")
 func BarStyle(style string) BarOption {
