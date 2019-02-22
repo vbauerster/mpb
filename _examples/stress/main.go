@@ -35,7 +35,9 @@ func main() {
 				decor.EwmaETA(decor.ET_STYLE_GO, 60, decor.WCSyncSpace),
 			),
 			mpb.AppendDecorators(
-				decor.Percentage(decor.WC{W: 5}),
+				decor.OnComplete(
+					decor.Percentage(decor.WC{W: 5}), "done",
+				),
 			),
 		)
 
