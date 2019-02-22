@@ -57,6 +57,7 @@ type Bar struct {
 	}
 
 	dlogger *log.Logger
+	bpanic  interface{}
 }
 
 type bState struct {
@@ -76,7 +77,6 @@ type bState struct {
 	shutdownListeners []decor.ShutdownListener
 	bufP, bufB, bufA  *bytes.Buffer
 	bufE              *bytes.Buffer
-	panicMsg          string
 
 	// priority overrides *Bar's priority, if set
 	priority int
@@ -268,35 +268,38 @@ func (b *Bar) serve(ctx context.Context, wg *sync.WaitGroup, s *bState) {
 }
 
 func (b *Bar) render(debugOut io.Writer, tw int) {
+	if b.bpanic != nil {
+		b.toShutdown = false
+		b.frameCh <- b.panicToFrame(tw)
+		return
+	}
 	select {
 	case b.operateState <- func(s *bState) {
 		defer func() {
 			// recovering if user defined decorator panics for example
 			if p := recover(); p != nil {
 				b.dlogger.Println(p)
-				s.panicMsg = fmt.Sprintf("panic: %v", p)
-				close(b.shutdown)
-				b.frameCh <- s.drawPanic(tw)
+				b.bpanic = p
+				b.toShutdown = !s.completeFlushed
+				b.frameCh <- b.panicToFrame(tw)
 			}
 		}()
 
 		frame := s.draw(tw)
-		b.toShutdown = s.toComplete && !s.completeFlushed
-		s.completeFlushed = s.toComplete
 
 		if s.extender != nil {
 			s.extender.Fill(s.bufE, tw, newStatistics(s))
 			b.extendedLines = countLines(s.bufE.Bytes())
 			frame = io.MultiReader(frame, s.bufE)
 		}
+
+		b.toShutdown = s.toComplete && !s.completeFlushed
+		s.completeFlushed = s.toComplete
+
 		b.frameCh <- frame
 	}:
 	case <-b.done:
 		s := b.cacheState
-		if s.panicMsg != "" {
-			b.frameCh <- s.drawPanic(tw)
-			return
-		}
 		frame := s.draw(tw)
 		if s.extender != nil {
 			s.extender.Fill(s.bufE, tw, newStatistics(s))
@@ -307,8 +310,8 @@ func (b *Bar) render(debugOut io.Writer, tw int) {
 	}
 }
 
-func (s *bState) drawPanic(termWidth int) io.Reader {
-	return strings.NewReader(fmt.Sprintf(fmt.Sprintf("%%.%ds\n", termWidth), s.panicMsg))
+func (b *Bar) panicToFrame(termWidth int) io.Reader {
+	return strings.NewReader(fmt.Sprintf(fmt.Sprintf("%%.%dv\n", termWidth), b.bpanic))
 }
 
 func (s *bState) draw(termWidth int) io.Reader {
