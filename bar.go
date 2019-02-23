@@ -170,22 +170,18 @@ func (b *Bar) SetRefill(amount int64) {
 }
 
 // SetTotal sets total dynamically.
-// Set final to true, when total is known, it will trigger bar complete event.
-func (b *Bar) SetTotal(total int64, final bool) bool {
+// Set toComplete to true, to trigger bar complete event now.
+func (b *Bar) SetTotal(total int64, toComplete bool) {
 	select {
 	case b.operateState <- func(s *bState) {
-		if total > 0 {
-			s.total = total
-		}
-		if final && !s.toComplete {
+		s.total = total
+		if toComplete && !s.toComplete {
 			s.current = s.total
 			s.toComplete = true
 			go b.refreshNowTillShutdown()
 		}
 	}:
-		return true
 	case <-b.done:
-		return false
 	}
 }
 
@@ -213,7 +209,7 @@ func (b *Bar) IncrBy(n int, wdd ...time.Duration) {
 	select {
 	case b.operateState <- func(s *bState) {
 		s.current += int64(n)
-		if s.current >= s.total && !s.toComplete {
+		if s.total > 0 && s.current >= s.total {
 			s.current = s.total
 			s.toComplete = true
 			go b.refreshNowTillShutdown()
