@@ -27,16 +27,19 @@ func main() {
 	for {
 		n, err := read()
 		total += int64(n)
-		time.Sleep(time.Duration(rand.Intn(10)+1) * maxSleep / 10)
-		bar.IncrBy(n)
 		if err == io.EOF {
-			// total is known, final=true
-			bar.SetTotal(total, true)
 			break
 		}
-		// total is unknown, final=false
+		// while total is unknown,
+		// set it to a positive number which is greater than current total,
+		// to make sure no complete event is triggered by next IncrBy call.
 		bar.SetTotal(total+2048, false)
+		bar.IncrBy(n)
+		time.Sleep(time.Duration(rand.Intn(10)+1) * maxSleep / 10)
 	}
+
+	// force bar complete event, note true flag
+	bar.SetTotal(total, true)
 
 	p.Wait()
 }
