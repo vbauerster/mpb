@@ -110,6 +110,7 @@ func (p *Progress) AddSpinner(total int64, alignment SpinnerAlignment, options .
 }
 
 // Add creates a bar which renders itself by provided filler.
+// Set total to 0, if you plan to update it later.
 func (p *Progress) Add(total int64, filler Filler, options ...BarOption) *Bar {
 	if filler == nil {
 		filler = newDefaultBarFiller()
