@@ -51,10 +51,9 @@ func BarWidth(width int) BarOption {
 	}
 }
 
-// BarRemoveOnComplete is a flag, if set whole bar line will be removed
-// on complete event. If both BarRemoveOnComplete and BarClearOnComplete
-// are set, first bar section gets cleared and then whole bar line
-// gets removed completely.
+// BarRemoveOnComplete removes whole bar line on complete event. Any
+// decorators attached to the bar, having OnComplete action will not
+// have a chance to run its OnComplete action, because of this option.
 func BarRemoveOnComplete() BarOption {
 	return func(s *bState) {
 		s.dropOnComplete = true
@@ -77,9 +76,7 @@ func BarParkTo(runningBar *Bar) BarOption {
 	}
 }
 
-// BarClearOnComplete is a flag, if set will clear bar section on
-// complete event. If you need to remove a whole bar line, refer to
-// BarRemoveOnComplete.
+// BarClearOnComplete clears bar part of bar line on complete event.
 func BarClearOnComplete() BarOption {
 	return func(s *bState) {
 		s.noBufBOnComplete = true
