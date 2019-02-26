@@ -10,6 +10,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/vbauerster/mpb"
 	. "github.com/vbauerster/mpb/v4"
 	"github.com/vbauerster/mpb/v4/decor"
 )
@@ -88,7 +89,7 @@ func TestBarSetRefill(t *testing.T) {
 	}
 }
 
-func TestBarHas100PercentAfterOnComplete(t *testing.T) {
+func TestBarHas100PercentWithOnCompleteDecorator(t *testing.T) {
 	var buf bytes.Buffer
 
 	p := New(WithOutput(&buf))
@@ -101,6 +102,31 @@ func TestBarHas100PercentAfterOnComplete(t *testing.T) {
 				decor.Percentage(), "done",
 			),
 		),
+	)
+
+	for i := 0; i < total; i++ {
+		bar.Increment()
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	p.Wait()
+
+	hundred := "100 %"
+	if !bytes.Contains(buf.Bytes(), []byte(hundred)) {
+		t.Errorf("Bar's buffer does not contain: %q\n", hundred)
+	}
+}
+
+func TestBarHas100PercentWithBarRemoveOnComplete(t *testing.T) {
+	var buf bytes.Buffer
+
+	p := New(WithOutput(&buf))
+
+	total := 50
+
+	bar := p.AddBar(int64(total),
+		mpb.BarRemoveOnComplete(),
+		AppendDecorators(decor.Percentage()),
 	)
 
 	for i := 0; i < total; i++ {
