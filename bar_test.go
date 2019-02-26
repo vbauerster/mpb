@@ -10,7 +10,6 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/vbauerster/mpb"
 	. "github.com/vbauerster/mpb/v4"
 	"github.com/vbauerster/mpb/v4/decor"
 )
@@ -125,7 +124,7 @@ func TestBarHas100PercentWithBarRemoveOnComplete(t *testing.T) {
 	total := 50
 
 	bar := p.AddBar(int64(total),
-		mpb.BarRemoveOnComplete(),
+		BarRemoveOnComplete(),
 		AppendDecorators(decor.Percentage()),
 	)
 
