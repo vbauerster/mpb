@@ -30,6 +30,7 @@ type Progress struct {
 	operateState chan func(*pState)
 	done         chan struct{}
 	forceRefresh chan time.Time
+	once         sync.Once
 	dlogger      *log.Logger
 }
 
@@ -205,10 +206,14 @@ func (p *Progress) Wait() {
 	// wait for bars to quit, if any
 	p.bwg.Wait()
 
-	close(p.done)
+	p.once.Do(p.shutdown)
 
 	// wait for container to quit
 	p.cwg.Wait()
+}
+
+func (p *Progress) shutdown() {
+	close(p.done)
 }
 
 func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
