@@ -20,10 +20,7 @@ func main() {
 	defer cancel()
 
 	var wg sync.WaitGroup
-	p := mpb.New(
-		mpb.WithWaitGroup(&wg),
-		mpb.WithContext(ctx),
-	)
+	p := mpb.NewWithContext(ctx, mpb.WithWaitGroup(&wg))
 	total := 300
 	numBars := 3
 	wg.Add(numBars)
@@ -36,7 +33,8 @@ func main() {
 				decor.EwmaETA(decor.ET_STYLE_GO, 60, decor.WCSyncSpace),
 			),
 			mpb.AppendDecorators(
-				decor.Percentage(decor.WC{W: 5}),
+				// note that OnComplete will not be fired, because of cancel
+				decor.OnComplete(decor.Percentage(decor.WC{W: 5}), "done"),
 			),
 		)
 

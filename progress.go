@@ -3,7 +3,6 @@ package mpb
 import (
 	"container/heap"
 	"context"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -39,7 +38,7 @@ type pState struct {
 	heapUpdated      bool
 	pMatrix          map[int][]chan int
 	aMatrix          map[int][]chan int
-	barShutdownQueue []chan struct{}
+	barShutdownQueue []func()
 
 	// following are provided/overrided by user
 	idCount          int
@@ -126,16 +125,14 @@ func (p *Progress) Add(total int64, filler Filler, options ...BarOption) *Bar {
 			priority: ps.idCount,
 			id:       ps.idCount,
 			width:    ps.width,
+			debugOut: ps.debugOut,
 		}
 		for _, opt := range options {
 			if opt != nil {
 				opt(bs)
 			}
 		}
-		bar := newBar(p.ctx, p.bwg, bs)
-		bar.forceRefresh = p.forceRefresh
-		prefix := fmt.Sprintf("%sbar#%02d ", p.dlogger.Prefix(), bs.id)
-		bar.dlogger = log.New(ps.debugOut, prefix, log.Lshortfile)
+		bar := newBar(p, bs)
 		if bs.runningBar != nil {
 			if bar.priority == ps.idCount {
 				bar.priority = bs.runningBar.priority
@@ -155,30 +152,26 @@ func (p *Progress) Add(total int64, filler Filler, options ...BarOption) *Bar {
 	}
 }
 
-// Abort is only effective while bar progress is running, it means
-// remove bar now without waiting for its completion. If bar is already
-// completed, there is nothing to abort. If you need to remove bar
-// after completion, use BarRemoveOnComplete BarOption.
-func (p *Progress) Abort(b *Bar, remove bool) {
+func (p *Progress) dropBar(b *Bar) {
 	select {
 	case p.operateState <- func(s *pState) {
 		if b.index < 0 {
 			return
 		}
-		if remove {
-			s.heapUpdated = heap.Remove(s.bHeap, b.index) != nil
-		}
-		s.barShutdownQueue = append(s.barShutdownQueue, b.shutdown)
+		s.heapUpdated = heap.Remove(s.bHeap, b.index) != nil
 	}:
 	case <-p.done:
 	}
 }
 
-// UpdateBarPriority provides a way to change bar's order position.
-// Zero is highest priority, i.e. bar will be on top.
+// UpdateBarPriority is deprecated. Please use *Bar.SetOrder.
 func (p *Progress) UpdateBarPriority(b *Bar, priority int) {
+	p.setBarOrder(b, priority)
+}
+
+func (p *Progress) setBarOrder(b *Bar, order int) {
 	select {
-	case p.operateState <- func(s *pState) { s.bHeap.update(b, priority) }:
+	case p.operateState <- func(s *pState) { s.bHeap.update(b, order) }:
 	case <-p.done:
 	}
 }
@@ -271,7 +264,7 @@ func (s *pState) flush(cw *cwriter.Writer) error {
 				// shutdown at next flush, in other words decrement underlying WaitGroup
 				// only after the bar with completed state has been flushed. this
 				// ensures no bar ends up with less than 100% rendered.
-				s.barShutdownQueue = append(s.barShutdownQueue, bar.shutdown)
+				s.barShutdownQueue = append(s.barShutdownQueue, bar.cancel)
 				if parkedBar := s.parkedBars[bar]; parkedBar != nil {
 					heap.Push(s.bHeap, parkedBar)
 					s.heapUpdated = true
@@ -289,7 +282,7 @@ func (s *pState) flush(cw *cwriter.Writer) error {
 	}
 
 	for i := len(s.barShutdownQueue) - 1; i >= 0; i-- {
-		close(s.barShutdownQueue[i])
+		s.barShutdownQueue[i]()
 		s.barShutdownQueue = s.barShutdownQueue[:i]
 	}
 

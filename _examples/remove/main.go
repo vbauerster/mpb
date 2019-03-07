@@ -34,11 +34,11 @@ func main() {
 		go func() {
 			defer wg.Done()
 			max := 100 * time.Millisecond
-			for i := 0; i < total; i++ {
+			for i := 0; !b.Completed(); i++ {
 				start := time.Now()
-				if b.ID() == 2 && i == 42 {
-					p.Abort(b, true)
-					return
+				if b.ID() == 2 && i >= 42 {
+					// aborting and removing while bar is running
+					b.Abort(true)
 				}
 				time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
 				// ewma based decorators require work duration measurement

@@ -42,11 +42,10 @@ type Bar struct {
 	frameCh        chan io.Reader
 	syncTableCh    chan [][]chan int
 	completed      chan bool
-	forceRefresh   chan<- time.Time
 
-	// shutdown is closed when bar completed and flushed
-	shutdown chan struct{}
-	// done is closed after cacheState is written
+	// concel is called either by user or on complete event
+	cancel func()
+	// done is closed after cacheState is assigned
 	done chan struct{}
 	// cacheState is populated, right after close(shutdown)
 	cacheState *bState
@@ -56,8 +55,9 @@ type Bar struct {
 		current int64
 	}
 
-	dlogger *log.Logger
-	bpanic  interface{}
+	container      *Progress
+	dlogger        *log.Logger
+	recoveredPanic interface{}
 }
 
 type bState struct {
@@ -84,9 +84,11 @@ type bState struct {
 	dropOnComplete bool
 	// runningBar is a key for *pState.parkedBars
 	runningBar *Bar
+
+	debugOut io.Writer
 }
 
-func newBar(ctx context.Context, wg *sync.WaitGroup, bs *bState) *Bar {
+func newBar(container *Progress, bs *bState) *Bar {
 
 	bs.bufP = bytes.NewBuffer(make([]byte, 0, bs.width))
 	bs.bufB = bytes.NewBuffer(make([]byte, 0, bs.width))
@@ -95,7 +97,10 @@ func newBar(ctx context.Context, wg *sync.WaitGroup, bs *bState) *Bar {
 		bs.bufE = bytes.NewBuffer(make([]byte, 0, bs.width))
 	}
 
+	logPrefix := fmt.Sprintf("%sbar#%02d ", container.dlogger.Prefix(), bs.id)
+	ctx, cancel := context.WithCancel(container.ctx)
 	bar := &Bar{
+		container:      container,
 		priority:       bs.priority,
 		dropOnComplete: bs.dropOnComplete,
 		operateState:   make(chan func(*bState)),
@@ -103,10 +108,11 @@ func newBar(ctx context.Context, wg *sync.WaitGroup, bs *bState) *Bar {
 		syncTableCh:    make(chan [][]chan int),
 		completed:      make(chan bool),
 		done:           make(chan struct{}),
-		shutdown:       make(chan struct{}),
+		cancel:         cancel,
+		dlogger:        log.New(bs.debugOut, logPrefix, log.Lshortfile),
 	}
 
-	go bar.serve(ctx, wg, bs)
+	go bar.serve(ctx, bs)
 	return bar
 }
 
@@ -222,13 +228,39 @@ func (b *Bar) IncrBy(n int, wdd ...time.Duration) {
 	}
 }
 
+// SetOrder changes bar's order among multiple bars. Zero is highest
+// priority, i.e. bar will be on top. If you don't need to set order
+// dynamically, better use BarPriority option.
+func (b *Bar) SetOrder(order int) {
+	select {
+	case <-b.done:
+	default:
+		b.container.setBarOrder(b, order)
+	}
+}
+
+// Abort interrupts bar's running goroutine. Call this, if you'd like
+// to stop/remove bar before completion event. It has no effect after
+// completion event. If drop is true bar will be removed as well.
+func (b *Bar) Abort(drop bool) {
+	select {
+	case <-b.done:
+	default:
+		if drop {
+			b.container.dropBar(b)
+		}
+		b.cancel()
+	}
+}
+
 // Completed reports whether the bar is in completed state.
 func (b *Bar) Completed() bool {
-	// omit select here, because primary usage of the method is for loop
-	// condition, like for !bar.Completed() {...} so when toComplete=true
-	// it is called once (at which time, the bar is still alive), then
-	// quits the loop and never suppose to be called afterwards.
-	return <-b.completed
+	select {
+	case completed := <-b.completed:
+		return completed
+	case <-b.done:
+		return true
+	}
 }
 
 func (b *Bar) wSyncTable() [][]chan int {
@@ -240,18 +272,14 @@ func (b *Bar) wSyncTable() [][]chan int {
 	}
 }
 
-func (b *Bar) serve(ctx context.Context, wg *sync.WaitGroup, s *bState) {
-	defer wg.Done()
-	cancel := ctx.Done()
+func (b *Bar) serve(ctx context.Context, s *bState) {
+	defer b.container.bwg.Done()
 	for {
 		select {
 		case op := <-b.operateState:
 			op(s)
 		case b.completed <- s.toComplete:
-		case <-cancel:
-			s.toComplete = true
-			cancel = nil
-		case <-b.shutdown:
+		case <-ctx.Done():
 			b.cacheState = s
 			close(b.done)
 			// Notifying decorators about shutdown event
@@ -264,7 +292,7 @@ func (b *Bar) serve(ctx context.Context, wg *sync.WaitGroup, s *bState) {
 }
 
 func (b *Bar) render(tw int) {
-	if b.bpanic != nil {
+	if b.recoveredPanic != nil {
 		b.toShutdown = false
 		b.frameCh <- b.panicToFrame(tw)
 		return
@@ -275,7 +303,7 @@ func (b *Bar) render(tw int) {
 			// recovering if user defined decorator panics for example
 			if p := recover(); p != nil {
 				b.dlogger.Println(p)
-				b.bpanic = p
+				b.recoveredPanic = p
 				b.toShutdown = !s.completeFlushed
 				b.frameCh <- b.panicToFrame(tw)
 			}
@@ -307,7 +335,7 @@ func (b *Bar) render(tw int) {
 }
 
 func (b *Bar) panicToFrame(termWidth int) io.Reader {
-	return strings.NewReader(fmt.Sprintf(fmt.Sprintf("%%.%dv\n", termWidth), b.bpanic))
+	return strings.NewReader(fmt.Sprintf(fmt.Sprintf("%%.%dv\n", termWidth), b.recoveredPanic))
 }
 
 func (s *bState) draw(termWidth int) io.Reader {
@@ -375,8 +403,8 @@ func (s *bState) wSyncTable() [][]chan int {
 func (b *Bar) refreshNowTillShutdown() {
 	for {
 		select {
-		case b.forceRefresh <- time.Now():
-		case <-b.shutdown:
+		case b.container.forceRefresh <- time.Now():
+		case <-b.done:
 			return
 		}
 	}

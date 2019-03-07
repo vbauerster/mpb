@@ -38,7 +38,7 @@ func TestBarCount(t *testing.T) {
 		t.Errorf("BarCount want: %q, got: %q\n", 1, count)
 	}
 
-	p.Abort(b, true)
+	b.Abort(true)
 	p.Wait()
 }
 
@@ -52,9 +52,9 @@ func TestBarAbort(t *testing.T) {
 		b := p.AddBar(100)
 		bars[i] = b
 		go func(n int) {
-			for i := 0; i < 100; i++ {
-				if n == 0 && i == 33 {
-					p.Abort(b, true)
+			for i := 0; !b.Completed(); i++ {
+				if n == 0 && i >= 33 {
+					b.Abort(true)
 					wg.Done()
 				}
 				b.Increment()
@@ -68,8 +68,8 @@ func TestBarAbort(t *testing.T) {
 	if count != 2 {
 		t.Errorf("BarCount want: %q, got: %q\n", 2, count)
 	}
-	p.Abort(bars[1], true)
-	p.Abort(bars[2], true)
+	bars[1].Abort(true)
+	bars[2].Abort(true)
 	p.Wait()
 }
 
