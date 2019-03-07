@@ -41,7 +41,7 @@ func main() {
 				time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
 				if i&1 == 1 {
 					priority := total - int(b.Current())
-					p.UpdateBarPriority(b, priority)
+					b.SetPriority(priority)
 				}
 				// ewma based decorators require work duration measurement
 				b.IncrBy(1, time.Since(start))

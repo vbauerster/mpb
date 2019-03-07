@@ -166,12 +166,12 @@ func (p *Progress) dropBar(b *Bar) {
 
 // UpdateBarPriority is deprecated. Please use *Bar.SetOrder.
 func (p *Progress) UpdateBarPriority(b *Bar, priority int) {
-	p.setBarOrder(b, priority)
+	p.setBarPriority(b, priority)
 }
 
-func (p *Progress) setBarOrder(b *Bar, order int) {
+func (p *Progress) setBarPriority(b *Bar, priority int) {
 	select {
-	case p.operateState <- func(s *pState) { s.bHeap.update(b, order) }:
+	case p.operateState <- func(s *pState) { s.bHeap.update(b, priority) }:
 	case <-p.done:
 	}
 }

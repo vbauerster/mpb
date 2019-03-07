@@ -228,14 +228,14 @@ func (b *Bar) IncrBy(n int, wdd ...time.Duration) {
 	}
 }
 
-// SetOrder changes bar's order among multiple bars. Zero is highest
-// priority, i.e. bar will be on top. If you don't need to set order
+// SetPriority changes bar's order among multiple bars. Zero is highest
+// priority, i.e. bar will be on top. If you don't need to set priority
 // dynamically, better use BarPriority option.
-func (b *Bar) SetOrder(order int) {
+func (b *Bar) SetPriority(priority int) {
 	select {
 	case <-b.done:
 	default:
-		b.container.setBarOrder(b, order)
+		b.container.setBarPriority(b, priority)
 	}
 }
 
