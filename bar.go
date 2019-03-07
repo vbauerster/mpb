@@ -106,7 +106,7 @@ func newBar(container *Progress, bs *bState) *Bar {
 		operateState:   make(chan func(*bState)),
 		frameCh:        make(chan io.Reader, 1),
 		syncTableCh:    make(chan [][]chan int),
-		completed:      make(chan bool),
+		completed:      make(chan bool, 1),
 		done:           make(chan struct{}),
 		cancel:         cancel,
 		dlogger:        log.New(bs.debugOut, logPrefix, log.Lshortfile),
@@ -256,8 +256,8 @@ func (b *Bar) Abort(drop bool) {
 // Completed reports whether the bar is in completed state.
 func (b *Bar) Completed() bool {
 	select {
-	case completed := <-b.completed:
-		return completed
+	case b.operateState <- func(s *bState) { b.completed <- s.toComplete }:
+		return <-b.completed
 	case <-b.done:
 		return true
 	}
@@ -278,7 +278,6 @@ func (b *Bar) serve(ctx context.Context, s *bState) {
 		select {
 		case op := <-b.operateState:
 			op(s)
-		case b.completed <- s.toComplete:
 		case <-ctx.Done():
 			b.cacheState = s
 			close(b.done)
