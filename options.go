@@ -1,7 +1,6 @@
 package mpb
 
 import (
-	"context"
 	"io"
 	"io/ioutil"
 	"sync"
@@ -45,12 +44,6 @@ func WithRefreshRate(d time.Duration) ContainerOption {
 func WithManualRefresh(ch <-chan time.Time) ContainerOption {
 	return func(s *pState) {
 		s.manualRefreshCh = ch
-	}
-}
-
-// WithContext deprecated and has no effect, please use NewWithContext instead.
-func WithContext(ctx context.Context) ContainerOption {
-	return func(s *pState) {
 	}
 }
 
