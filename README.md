@@ -9,7 +9,7 @@
 ## Features
 
 * __Multiple Bars__: Multiple progress bars are supported
-* __Dynamic Total__: [Set total](https://github.com/vbauerster/mpb/issues/9#issuecomment-344448984) while bar is running
+* __Dynamic Total__: Set total while bar is running
 * __Dynamic Add/Remove__: Dynamically add or remove bars
 * __Cancellation__: Cancel whole rendering process
 * __Predefined Decorators__: Elapsed time, [ewma](https://github.com/VividCortex/ewma) based ETA, Percentage, Bytes counter
