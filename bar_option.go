@@ -67,10 +67,10 @@ func BarReplaceOnComplete(runningBar *Bar) BarOption {
 
 // BarParkTo parks constructed bar into the runningBar. In other words,
 // constructed bar will start only after runningBar has been completed.
-// Parked bar will replace runningBar if BarRemoveOnComplete option
-// is set on the runningBar. Parked bar inherits priority of the
-// runningBar, if no BarPriority option is set.
+// Parked bar inherits priority of the runningBar, if no BarPriority
+// option is set. Parked bar will replace runningBar eventually.
 func BarParkTo(runningBar *Bar) BarOption {
+	runningBar.dropOnComplete()
 	return func(s *bState) {
 		s.runningBar = runningBar
 	}

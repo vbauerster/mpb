@@ -270,7 +270,7 @@ func (s *pState) flush(cw *cwriter.Writer) error {
 					s.heapUpdated = true
 					delete(s.parkedBars, bar)
 				}
-				if bar.dropOnComplete {
+				if bar.toDrop {
 					s.heapUpdated = true
 					return
 				}

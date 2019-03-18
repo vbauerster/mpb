@@ -28,7 +28,6 @@ func main() {
 		task := fmt.Sprintf("Task#%02d:", i)
 		job := "downloading"
 		b := p.AddBar(rand.Int63n(201)+100,
-			mpb.BarRemoveOnComplete(),
 			mpb.PrependDecorators(
 				decor.Name(task, decor.WC{W: len(task) + 1, C: decor.DidentRight}),
 				decor.Name(job, decor.WCSyncSpaceR),

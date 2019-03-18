@@ -35,13 +35,13 @@ type Bar struct {
 	priority int // used by heap
 	index    int // used by heap
 
-	extendedLines  int
-	toShutdown     bool
-	dropOnComplete bool
-	operateState   chan func(*bState)
-	frameCh        chan io.Reader
-	syncTableCh    chan [][]chan int
-	completed      chan bool
+	extendedLines int
+	toShutdown    bool
+	toDrop        bool
+	operateState  chan func(*bState)
+	frameCh       chan io.Reader
+	syncTableCh   chan [][]chan int
+	completed     chan bool
 
 	// concel is called either by user or on complete event
 	cancel func()
@@ -100,16 +100,16 @@ func newBar(container *Progress, bs *bState) *Bar {
 	logPrefix := fmt.Sprintf("%sbar#%02d ", container.dlogger.Prefix(), bs.id)
 	ctx, cancel := context.WithCancel(container.ctx)
 	bar := &Bar{
-		container:      container,
-		priority:       bs.priority,
-		dropOnComplete: bs.dropOnComplete,
-		operateState:   make(chan func(*bState)),
-		frameCh:        make(chan io.Reader, 1),
-		syncTableCh:    make(chan [][]chan int),
-		completed:      make(chan bool, 1),
-		done:           make(chan struct{}),
-		cancel:         cancel,
-		dlogger:        log.New(bs.debugOut, logPrefix, log.Lshortfile),
+		container:    container,
+		priority:     bs.priority,
+		toDrop:       bs.dropOnComplete,
+		operateState: make(chan func(*bState)),
+		frameCh:      make(chan io.Reader, 1),
+		syncTableCh:  make(chan [][]chan int),
+		completed:    make(chan bool, 1),
+		done:         make(chan struct{}),
+		cancel:       cancel,
+		dlogger:      log.New(bs.debugOut, logPrefix, log.Lshortfile),
 	}
 
 	go bar.serve(ctx, bs)
@@ -316,6 +316,7 @@ func (b *Bar) render(tw int) {
 			frame = io.MultiReader(frame, s.bufE)
 		}
 
+		b.toDrop = s.dropOnComplete
 		b.toShutdown = s.toComplete && !s.completeFlushed
 		s.completeFlushed = s.toComplete
 
@@ -406,6 +407,13 @@ func (b *Bar) refreshNowTillShutdown() {
 		case <-b.done:
 			return
 		}
+	}
+}
+
+func (b *Bar) dropOnComplete() {
+	select {
+	case b.operateState <- func(s *bState) { s.dropOnComplete = true }:
+	case <-b.done:
 	}
 }
 
