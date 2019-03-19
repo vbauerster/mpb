@@ -61,11 +61,11 @@ func TestBarSetRefill(t *testing.T) {
 
 	total := 100
 	till := 30
-	refillRune := '+'
+	refillRune, _ := utf8.DecodeLastRuneInString(DefaultBarStyle)
 
 	bar := p.AddBar(int64(total), TrimSpace())
 
-	bar.SetRefill(till, refillRune)
+	bar.SetRefill(int64(till))
 	bar.IncrBy(till)
 
 	for i := 0; i < total-till; i++ {
@@ -82,8 +82,61 @@ func TestBarSetRefill(t *testing.T) {
 
 	got := string(getLastLine(buf.Bytes()))
 
-	if got != wantBar {
+	if !strings.Contains(got, wantBar) {
 		t.Errorf("Want bar: %q, got bar: %q\n", wantBar, got)
+	}
+}
+
+func TestBarHas100PercentWithOnCompleteDecorator(t *testing.T) {
+	var buf bytes.Buffer
+
+	p := New(WithOutput(&buf))
+
+	total := 50
+
+	bar := p.AddBar(int64(total),
+		AppendDecorators(
+			decor.OnComplete(
+				decor.Percentage(), "done",
+			),
+		),
+	)
+
+	for i := 0; i < total; i++ {
+		bar.Increment()
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	p.Wait()
+
+	hundred := "100 %"
+	if !bytes.Contains(buf.Bytes(), []byte(hundred)) {
+		t.Errorf("Bar's buffer does not contain: %q\n", hundred)
+	}
+}
+
+func TestBarHas100PercentWithBarRemoveOnComplete(t *testing.T) {
+	var buf bytes.Buffer
+
+	p := New(WithOutput(&buf))
+
+	total := 50
+
+	bar := p.AddBar(int64(total),
+		BarRemoveOnComplete(),
+		AppendDecorators(decor.Percentage()),
+	)
+
+	for i := 0; i < total; i++ {
+		bar.Increment()
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	p.Wait()
+
+	hundred := "100 %"
+	if !bytes.Contains(buf.Bytes(), []byte(hundred)) {
+		t.Errorf("Bar's buffer does not contain: %q\n", hundred)
 	}
 }
 
