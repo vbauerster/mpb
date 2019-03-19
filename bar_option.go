@@ -70,6 +70,9 @@ func BarReplaceOnComplete(runningBar *Bar) BarOption {
 // Parked bar inherits priority of the runningBar, if no BarPriority
 // option is set. Parked bar will replace runningBar eventually.
 func BarParkTo(runningBar *Bar) BarOption {
+	if runningBar == nil {
+		return nil
+	}
 	runningBar.dropOnComplete()
 	return func(s *bState) {
 		s.runningBar = runningBar
