@@ -176,12 +176,12 @@ func (b *Bar) SetRefill(amount int64) {
 }
 
 // SetTotal sets total dynamically.
-// Set toComplete to true, to trigger bar complete event now.
-func (b *Bar) SetTotal(total int64, toComplete bool) {
+// Set complete to true, to trigger bar complete event now.
+func (b *Bar) SetTotal(total int64, complete bool) {
 	select {
 	case b.operateState <- func(s *bState) {
 		s.total = total
-		if toComplete && !s.toComplete {
+		if complete && !s.toComplete {
 			s.current = s.total
 			s.toComplete = true
 			go b.refreshNowTillShutdown()
