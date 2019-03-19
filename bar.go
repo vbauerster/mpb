@@ -88,9 +88,6 @@ func newBar(
 	total int64,
 	options ...BarOption,
 ) *Bar {
-	if total <= 0 {
-		total = time.Now().Unix()
-	}
 
 	s := &bState{
 		filler:   filler,
@@ -106,11 +103,11 @@ func newBar(
 		}
 	}
 
-	s.bufP = bytes.NewBuffer(make([]byte, 0, width))
-	s.bufB = bytes.NewBuffer(make([]byte, 0, width))
-	s.bufA = bytes.NewBuffer(make([]byte, 0, width))
+	s.bufP = bytes.NewBuffer(make([]byte, 0, s.width))
+	s.bufB = bytes.NewBuffer(make([]byte, 0, s.width))
+	s.bufA = bytes.NewBuffer(make([]byte, 0, s.width))
 	if s.newLineExtendFn != nil {
-		s.bufNL = bytes.NewBuffer(make([]byte, 0, width))
+		s.bufNL = bytes.NewBuffer(make([]byte, 0, s.width))
 	}
 
 	b := &Bar{
@@ -182,32 +179,25 @@ func (b *Bar) Current() int64 {
 }
 
 // SetTotal sets total dynamically.
-// Set final to true, when total is known, it will trigger bar complete event.
-func (b *Bar) SetTotal(total int64, final bool) bool {
+// Set complete to true, to trigger bar complete event now.
+func (b *Bar) SetTotal(total int64, complete bool) {
 	select {
 	case b.operateState <- func(s *bState) {
-		if total > 0 {
-			s.total = total
-		}
-		if final {
+		s.total = total
+		if complete && !s.toComplete {
 			s.current = s.total
 			s.toComplete = true
 		}
 	}:
-		return true
 	case <-b.done:
-		return false
 	}
 }
 
-// SetRefill sets fill rune to r, up until n.
-func (b *Bar) SetRefill(n int, r rune) {
-	if n <= 0 {
-		return
-	}
+// SetRefill sets refill, if supported by underlying Filler.
+func (b *Bar) SetRefill(amount int64) {
 	b.operateState <- func(s *bState) {
-		if bf, ok := s.filler.(*barFiller); ok {
-			bf.refill = &refill{r, int64(n)}
+		if f, ok := s.filler.(interface{ SetRefill(int64) }); ok {
+			f.SetRefill(amount)
 		}
 	}
 }
@@ -224,7 +214,7 @@ func (b *Bar) IncrBy(n int, wdd ...time.Duration) {
 	select {
 	case b.operateState <- func(s *bState) {
 		s.current += int64(n)
-		if s.current >= s.total {
+		if s.total > 0 && s.current >= s.total {
 			s.current = s.total
 			s.toComplete = true
 		}

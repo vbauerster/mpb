@@ -83,10 +83,7 @@ func New(options ...ProgressOption) *Progress {
 
 // AddBar creates a new progress bar and adds to the container.
 func (p *Progress) AddBar(total int64, options ...BarOption) *Bar {
-	filler := &barFiller{
-		format: defaultBarStyle,
-	}
-	return p.Add(total, filler, options...)
+	return p.Add(total, newDefaultBarFiller(), options...)
 }
 
 // AddSpinner creates a new spinner bar and adds to the container.
@@ -100,6 +97,9 @@ func (p *Progress) AddSpinner(total int64, alignment SpinnerAlignment, options .
 
 // Add creates a bar which renders itself by provided filler.
 func (p *Progress) Add(total int64, filler Filler, options ...BarOption) *Bar {
+	if filler == nil {
+		filler = newDefaultBarFiller()
+	}
 	p.wg.Add(1)
 	result := make(chan *Bar)
 	select {

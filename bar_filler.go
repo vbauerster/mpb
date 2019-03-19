@@ -2,7 +2,7 @@ package mpb
 
 import (
 	"io"
-	"strings"
+	"unicode/utf8"
 
 	"github.com/vbauerster/mpb/decor"
 	"github.com/vbauerster/mpb/internal"
@@ -14,52 +14,98 @@ const (
 	rTip
 	rEmpty
 	rRight
+	rRevTip
+	rRefill
 )
 
-var defaultBarStyle = []rune("[=>-]")
+var defaultBarStyle = "[=>-]<+"
 
 type barFiller struct {
-	format []rune
-	refill *refill
+	format       [][]byte
+	refillAmount int64
+	reverse      bool
+}
+
+func newDefaultBarFiller() Filler {
+	bf := &barFiller{
+		format: make([][]byte, utf8.RuneCountInString(defaultBarStyle)),
+	}
+	bf.setStyle(defaultBarStyle)
+	return bf
+}
+
+func (s *barFiller) setStyle(style string) {
+	if !utf8.ValidString(style) {
+		return
+	}
+	src := make([][]byte, 0, utf8.RuneCountInString(style))
+	for _, r := range style {
+		src = append(src, []byte(string(r)))
+	}
+	copy(s.format, src)
+}
+
+func (s *barFiller) setReverse() {
+	s.reverse = true
+}
+
+func (s *barFiller) SetRefill(amount int64) {
+	s.refillAmount = amount
 }
 
 func (s *barFiller) Fill(w io.Writer, width int, stat *decor.Statistics) {
 
-	str := string(s.format[rLeft])
-
 	// don't count rLeft and rRight [brackets]
 	width -= 2
-
-	if width <= 2 {
-		io.WriteString(w, str+string(s.format[rRight]))
+	if width < 2 {
 		return
 	}
 
-	progressWidth := internal.Percentage(stat.Total, stat.Current, int64(width))
-	needTip := progressWidth < int64(width) && progressWidth > 0
-
-	if needTip {
-		progressWidth--
+	w.Write(s.format[rLeft])
+	if width == 2 {
+		w.Write(s.format[rRight])
+		return
 	}
 
-	if s.refill != nil {
-		refillCount := internal.Percentage(stat.Total, s.refill.limit, int64(width))
-		rest := progressWidth - refillCount
-		str += runeRepeat(s.refill.r, int(refillCount)) + runeRepeat(s.format[rFill], int(rest))
+	bb := make([][]byte, width)
+
+	cwidth := int(internal.Percentage(stat.Total, stat.Current, int64(width)))
+
+	for i := 0; i < cwidth; i++ {
+		bb[i] = s.format[rFill]
+	}
+
+	if s.refillAmount > 0 {
+		var rwidth int
+		if s.refillAmount > stat.Current {
+			rwidth = cwidth
+		} else {
+			rwidth = int(internal.Percentage(stat.Total, int64(s.refillAmount), int64(width)))
+		}
+		for i := 0; i < rwidth; i++ {
+			bb[i] = s.format[rRefill]
+		}
+	}
+
+	if cwidth > 0 && cwidth < width {
+		bb[cwidth-1] = s.format[rTip]
+	}
+
+	for i := cwidth; i < width; i++ {
+		bb[i] = s.format[rEmpty]
+	}
+
+	if s.reverse {
+		if cwidth > 0 && cwidth < width {
+			bb[cwidth-1] = s.format[rRevTip]
+		}
+		for i := len(bb) - 1; i >= 0; i-- {
+			w.Write(bb[i])
+		}
 	} else {
-		str += runeRepeat(s.format[rFill], int(progressWidth))
+		for i := 0; i < len(bb); i++ {
+			w.Write(bb[i])
+		}
 	}
-
-	if needTip {
-		str += string(s.format[rTip])
-		progressWidth++
-	}
-
-	rest := int64(width) - progressWidth
-	str += runeRepeat(s.format[rEmpty], int(rest)) + string(s.format[rRight])
-	io.WriteString(w, str)
-}
-
-func runeRepeat(r rune, count int) string {
-	return strings.Repeat(string(r), count)
+	w.Write(s.format[rRight])
 }
