@@ -41,6 +41,13 @@ type Filler interface {
 	Fill(w io.Writer, width int, s *decor.Statistics)
 }
 
+// FillerFunc is function type adapter to convert function into Filler.
+type FillerFunc func(w io.Writer, width int, stat *decor.Statistics)
+
+func (f FillerFunc) Fill(w io.Writer, width int, stat *decor.Statistics) {
+	f(w, width, stat)
+}
+
 type (
 	bState struct {
 		filler             Filler
