@@ -67,6 +67,11 @@ func BarRemoveOnComplete() BarOption {
 // `runningBar` is complete. To achieve bar replacement effect,
 // `runningBar` should has its `BarRemoveOnComplete` option set.
 func BarReplaceOnComplete(runningBar *Bar) BarOption {
+	return BarParkTo(runningBar)
+}
+
+// BarParkTo same as BarReplaceOnComplete
+func BarParkTo(runningBar *Bar) BarOption {
 	return func(s *bState) {
 		s.runningBar = runningBar
 	}
