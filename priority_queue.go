@@ -18,18 +18,18 @@ func (pq priorityQueue) Swap(i, j int) {
 }
 
 func (pq *priorityQueue) Push(x interface{}) {
-	n := len(*pq)
+	s := *pq
 	bar := x.(*Bar)
-	bar.index = n
-	*pq = append(*pq, bar)
+	bar.index = len(s)
+	s = append(s, bar)
+	*pq = s
 }
 
 func (pq *priorityQueue) Pop() interface{} {
-	old := *pq
-	n := len(old)
-	bar := old[n-1]
+	s := *pq
+	*pq = s[0 : len(s)-1]
+	bar := s[len(s)-1]
 	bar.index = -1 // for safety
-	*pq = old[0 : n-1]
 	return bar
 }
 

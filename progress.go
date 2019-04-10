@@ -34,7 +34,7 @@ type Progress struct {
 }
 
 type pState struct {
-	bHeap            *priorityQueue
+	bHeap            priorityQueue
 	heapUpdated      bool
 	pMatrix          map[int][]chan int
 	aMatrix          map[int][]chan int
@@ -62,11 +62,9 @@ func New(options ...ContainerOption) *Progress {
 // context. It's not possible to reuse instance after *Progress.Wait()
 // method has been called.
 func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
-	pq := make(priorityQueue, 0)
-	heap.Init(&pq)
 
 	s := &pState{
-		bHeap:      &pq,
+		bHeap:      priorityQueue{},
 		width:      pwidth,
 		rr:         prr,
 		parkedBars: make(map[*Bar]*Bar),
@@ -139,7 +137,7 @@ func (p *Progress) Add(total int64, filler Filler, options ...BarOption) *Bar {
 			}
 			ps.parkedBars[bs.runningBar] = bar
 		} else {
-			heap.Push(ps.bHeap, bar)
+			heap.Push(&ps.bHeap, bar)
 			ps.heapUpdated = true
 		}
 		ps.idCount++
@@ -158,7 +156,7 @@ func (p *Progress) dropBar(b *Bar) {
 		if b.index < 0 {
 			return
 		}
-		s.heapUpdated = heap.Remove(s.bHeap, b.index) != nil
+		s.heapUpdated = heap.Remove(&s.bHeap, b.index) != nil
 	}:
 	case <-p.done:
 	}
@@ -248,7 +246,7 @@ func (s *pState) render(cw *cwriter.Writer) error {
 		tw = s.width
 	}
 	for i := 0; i < s.bHeap.Len(); i++ {
-		bar := (*s.bHeap)[i]
+		bar := s.bHeap[i]
 		go bar.render(tw)
 	}
 
@@ -258,7 +256,7 @@ func (s *pState) render(cw *cwriter.Writer) error {
 func (s *pState) flush(cw *cwriter.Writer) error {
 	var lineCount int
 	for s.bHeap.Len() > 0 {
-		bar := heap.Pop(s.bHeap).(*Bar)
+		bar := heap.Pop(&s.bHeap).(*Bar)
 		defer func() {
 			if bar.toShutdown {
 				// shutdown at next flush, in other words decrement underlying WaitGroup
@@ -266,7 +264,7 @@ func (s *pState) flush(cw *cwriter.Writer) error {
 				// ensures no bar ends up with less than 100% rendered.
 				s.barShutdownQueue = append(s.barShutdownQueue, bar.cancel)
 				if parkedBar := s.parkedBars[bar]; parkedBar != nil {
-					heap.Push(s.bHeap, parkedBar)
+					heap.Push(&s.bHeap, parkedBar)
 					s.heapUpdated = true
 					delete(s.parkedBars, bar)
 				}
@@ -275,7 +273,7 @@ func (s *pState) flush(cw *cwriter.Writer) error {
 					return
 				}
 			}
-			heap.Push(s.bHeap, bar)
+			heap.Push(&s.bHeap, bar)
 		}()
 		cw.ReadFrom(<-bar.frameCh)
 		lineCount += bar.extendedLines + 1
@@ -301,7 +299,7 @@ func (s *pState) updateSyncMatrix() {
 	s.pMatrix = make(map[int][]chan int)
 	s.aMatrix = make(map[int][]chan int)
 	for i := 0; i < s.bHeap.Len(); i++ {
-		bar := (*s.bHeap)[i]
+		bar := s.bHeap[i]
 		table := bar.wSyncTable()
 		pRow, aRow := table[0], table[1]
 
