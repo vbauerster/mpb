@@ -24,6 +24,7 @@ type barFiller struct {
 	format       [][]byte
 	refillAmount int64
 	reverse      bool
+	noBrackets   bool
 }
 
 func newDefaultBarFiller() Filler {
@@ -45,26 +46,20 @@ func (s *barFiller) setStyle(style string) {
 	copy(s.format, src)
 }
 
-func (s *barFiller) setReverse() {
-	s.reverse = true
-}
-
 func (s *barFiller) SetRefill(amount int64) {
 	s.refillAmount = amount
 }
 
 func (s *barFiller) Fill(w io.Writer, width int, stat *decor.Statistics) {
 
-	// don't count rLeft and rRight [brackets]
-	width -= 2
-	if width < 2 {
-		return
-	}
-
-	w.Write(s.format[rLeft])
-	if width == 2 {
-		w.Write(s.format[rRight])
-		return
+	if !s.noBrackets {
+		// don't count rLeft and rRight as progress
+		width -= 2
+		if width < 2 {
+			return
+		}
+		w.Write(s.format[rLeft])
+		defer w.Write(s.format[rRight])
 	}
 
 	bb := make([][]byte, width)
@@ -107,5 +102,4 @@ func (s *barFiller) Fill(w io.Writer, width int, stat *decor.Statistics) {
 			w.Write(bb[i])
 		}
 	}
-	w.Write(s.format[rRight])
 }

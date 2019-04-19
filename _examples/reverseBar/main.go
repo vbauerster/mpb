@@ -26,6 +26,7 @@ func main() {
 		bar := p.AddBar(int64(total),
 			// reverse Bar#1
 			mpb.BarOptOnCond(mpb.BarReverse(), func() bool { return i == 1 }),
+			mpb.BarNoBrackets(),
 			mpb.PrependDecorators(
 				// simple name decorator
 				decor.Name(name),

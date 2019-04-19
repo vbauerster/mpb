@@ -350,31 +350,27 @@ func (s *bState) draw(termWidth int) io.Reader {
 		s.bufA.WriteString(d.Decor(stat))
 	}
 
+	s.bufA.WriteByte('\n')
 	if s.noBufBOnComplete && s.completeFlushed {
-		s.bufA.WriteByte('\n')
 		return io.MultiReader(s.bufP, s.bufA)
 	}
 
 	prependCount := utf8.RuneCount(s.bufP.Bytes())
-	appendCount := utf8.RuneCount(s.bufA.Bytes())
+	appendCount := utf8.RuneCount(s.bufA.Bytes()) - 1
 
-	if !s.trimSpace {
-		// reserve space for edge spaces
-		termWidth -= 2
-		s.bufB.WriteByte(' ')
+	if fitWidth := s.width; termWidth > 1 {
+		if !s.trimSpace {
+			// reserve space for edge spaces
+			termWidth -= 2
+			s.bufB.WriteByte(' ')
+			defer s.bufB.WriteByte(' ')
+		}
+		if prependCount+s.width+appendCount > termWidth {
+			fitWidth = termWidth - prependCount - appendCount
+		}
+		s.filler.Fill(s.bufB, fitWidth, stat)
 	}
 
-	calcWidth := s.width
-	if prependCount+s.width+appendCount > termWidth {
-		calcWidth = termWidth - prependCount - appendCount
-	}
-	s.filler.Fill(s.bufB, calcWidth, stat)
-
-	if !s.trimSpace {
-		s.bufB.WriteByte(' ')
-	}
-
-	s.bufA.WriteByte('\n')
 	return io.MultiReader(s.bufP, s.bufB, s.bufA)
 }
 

@@ -13,9 +13,60 @@ func TestDraw(t *testing.T) {
 		total, current int64
 		barWidth       int
 		trimSpace      bool
+		noBrackets     bool
 		rup            int64
 		want           string
 	}{
+		0: {
+			{
+				name:     "t,c,bw{60,20,80}",
+				total:    60,
+				current:  20,
+				barWidth: 80,
+				want:     "",
+			},
+			{
+				name:      "t,c,bw{60,20,80}",
+				total:     60,
+				current:   20,
+				barWidth:  80,
+				trimSpace: true,
+				want:      "",
+			},
+			{
+				name:       "t,c,bw,noBrackets{60,20,80}",
+				total:      60,
+				current:    20,
+				barWidth:   80,
+				noBrackets: true,
+				want:       "",
+			},
+		},
+		1: {
+			{
+				name:     "t,c,bw{60,20,80}",
+				total:    60,
+				current:  20,
+				barWidth: 80,
+				want:     "",
+			},
+			{
+				name:      "t,c,bw{60,20,80}",
+				total:     60,
+				current:   20,
+				barWidth:  80,
+				trimSpace: true,
+				want:      "",
+			},
+			{
+				name:       "t,c,bw,noBrackets{60,20,80}",
+				total:      60,
+				current:    20,
+				barWidth:   80,
+				noBrackets: true,
+				want:       "",
+			},
+		},
 		2: {
 			{
 				name:     "t,c,bw{60,20,80}",
@@ -31,6 +82,14 @@ func TestDraw(t *testing.T) {
 				barWidth:  80,
 				trimSpace: true,
 				want:      "",
+			},
+			{
+				name:       "t,c,bw,noBrackets{60,20,80,true}",
+				total:      60,
+				current:    20,
+				barWidth:   80,
+				noBrackets: true,
+				want:       "  ",
 			},
 		},
 		3: {
@@ -49,6 +108,14 @@ func TestDraw(t *testing.T) {
 				trimSpace: true,
 				want:      "",
 			},
+			{
+				name:       "t,c,bw,trim{60,20,80,true}",
+				total:      60,
+				current:    20,
+				barWidth:   80,
+				noBrackets: true,
+				want:       " - ",
+			},
 		},
 		4: {
 			{
@@ -64,7 +131,15 @@ func TestDraw(t *testing.T) {
 				current:   20,
 				barWidth:  80,
 				trimSpace: true,
-				want:      "[]",
+				want:      "[>-]",
+			},
+			{
+				name:       "t,c,bw,noBrackets{60,20,80,true}",
+				total:      60,
+				current:    20,
+				barWidth:   80,
+				noBrackets: true,
+				want:       " >- ",
 			},
 		},
 		5: {
@@ -83,6 +158,14 @@ func TestDraw(t *testing.T) {
 				trimSpace: true,
 				want:      "[>--]",
 			},
+			{
+				name:       "t,c,bw,noBrackets{60,20,80,true}",
+				total:      60,
+				current:    20,
+				barWidth:   80,
+				noBrackets: true,
+				want:       " >-- ",
+			},
 		},
 		6: {
 			{
@@ -90,7 +173,7 @@ func TestDraw(t *testing.T) {
 				total:    60,
 				current:  20,
 				barWidth: 80,
-				want:     " [] ",
+				want:     " [>-] ",
 			},
 			{
 				name:      "t,c,bw,trim{60,20,80,true}",
@@ -99,6 +182,14 @@ func TestDraw(t *testing.T) {
 				barWidth:  80,
 				trimSpace: true,
 				want:      "[>---]",
+			},
+			{
+				name:       "t,c,bw,noBrackets{60,20,80,true}",
+				total:      60,
+				current:    20,
+				barWidth:   80,
+				noBrackets: true,
+				want:       " >--- ",
 			},
 		},
 		7: {
@@ -117,6 +208,14 @@ func TestDraw(t *testing.T) {
 				trimSpace: true,
 				want:      "[=>---]",
 			},
+			{
+				name:       "t,c,bw,noBrackets{60,20,80,true}",
+				total:      60,
+				current:    20,
+				barWidth:   80,
+				noBrackets: true,
+				want:       " =>--- ",
+			},
 		},
 		8: {
 			{
@@ -134,6 +233,14 @@ func TestDraw(t *testing.T) {
 				trimSpace: true,
 				want:      "[=>----]",
 			},
+			{
+				name:       "t,c,bw,noBrackets{60,20,80,true}",
+				total:      60,
+				current:    20,
+				barWidth:   80,
+				noBrackets: true,
+				want:       " =>---- ",
+			},
 		},
 		80: {
 			{
@@ -150,6 +257,14 @@ func TestDraw(t *testing.T) {
 				barWidth:  80,
 				trimSpace: true,
 				want:      "[=========================>----------------------------------------------------]",
+			},
+			{
+				name:       "t,c,bw,noBrackets{60,20,80,true}",
+				total:      60,
+				current:    20,
+				barWidth:   80,
+				noBrackets: true,
+				want:       " =========================>---------------------------------------------------- ",
 			},
 		},
 		100: {
@@ -273,6 +388,7 @@ func TestDraw(t *testing.T) {
 			s.total = tc.total
 			s.current = tc.current
 			s.trimSpace = tc.trimSpace
+			s.filler.(*barFiller).noBrackets = tc.noBrackets
 			if tc.rup > 0 {
 				if f, ok := s.filler.(interface{ SetRefill(int64) }); ok {
 					f.SetRefill(tc.rup)
