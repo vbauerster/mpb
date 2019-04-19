@@ -126,7 +126,7 @@ func TrimSpace() BarOption {
 //
 //	'+' refill rune, used when *Bar.SetRefill(int64) is called
 //
-// It's ok to provide first five runes only, for example mpb.BarStyle("╢▌▌░╟")
+// It's ok to provide first five runes only, for example mpb.BarStyle("╢▌▌░╟").
 // To omit left and right edge runes use BarNoBrackets option.
 func BarStyle(style string) BarOption {
 	chk := func(filler Filler) (interface{}, bool) {
@@ -143,7 +143,7 @@ func BarStyle(style string) BarOption {
 }
 
 // BarNoBrackets omits left and right edge runes of the bar. Edges are
-// brackets by default, hence the name of the option.
+// brackets in default bar style, hence the name of the option.
 func BarNoBrackets() BarOption {
 	chk := func(filler Filler) (interface{}, bool) {
 		t, ok := filler.(*barFiller)
