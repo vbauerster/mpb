@@ -6,29 +6,33 @@ import (
 	"unicode/utf8"
 )
 
-func Merge(decorator Decorator, wcc ...WC) Decorator {
+// Merge helper func, provides a way to synchronize width of single
+// decorator with adjacent decorators of different bar, like so:
+//   +--------+---------+
+//   |     MERGE(D)     |
+//   +--------+---------+
+//   |   D1   |   D2    |
+//   +--------+---------+
+//
+func Merge(decorator Decorator, placeholders ...WC) Decorator {
 	if _, ok := decorator.Sync(); !ok {
 		return decorator
 	}
-	var placeHolders []*placeHolderDecorator
-	for _, wc := range wcc {
+	md := &MergeDecorator{Decorator: decorator}
+	md.wc = decorator.SetConfig(md.wc)
+	for _, wc := range placeholders {
 		wc.Init()
-		placeHolders = append(placeHolders, &placeHolderDecorator{
+		md.placeHolders = append(md.placeHolders, &placeHolderDecorator{
 			WC:    wc,
 			wsync: make(chan int),
 		})
 	}
-	md := &MergeDecorator{
-		decorator:    decorator,
-		placeHolders: placeHolders,
-	}
-	md.WC = decorator.SetConfig(md.WC)
 	return md
 }
 
 type MergeDecorator struct {
-	WC
-	decorator    Decorator
+	Decorator
+	wc           WC
 	placeHolders []*placeHolderDecorator
 }
 
@@ -40,24 +44,27 @@ func (d *MergeDecorator) PlaceHolders() []Decorator {
 	return decorators
 }
 
+func (md *MergeDecorator) Sync() (chan int, bool) {
+	return md.wc.Sync()
+}
+
 func (d *MergeDecorator) Decor(st *Statistics) string {
-	msg := d.decorator.Decor(st)
+	msg := d.Decorator.Decor(st)
 	msgLen := utf8.RuneCountInString(msg)
 	pWidth := msgLen / (len(d.placeHolders) + 1)
 	mod := msgLen % (len(d.placeHolders) + 1)
-	d.wsync <- pWidth + mod
+	d.wc.wsync <- pWidth + mod
 	for _, ph := range d.placeHolders {
 		ph.wsync <- pWidth
 	}
-	// fmt.Fprintln(os.Stderr, "all sent")
-	max := <-d.wsync
+	max := <-d.wc.wsync
 	for _, ph := range d.placeHolders {
 		max += <-ph.wsync
 	}
-	if (d.C & DextraSpace) != 0 {
+	if (d.wc.C & DextraSpace) != 0 {
 		max++
 	}
-	return fmt.Sprintf(fmt.Sprintf(d.format, max), msg)
+	return fmt.Sprintf(fmt.Sprintf(d.wc.format, max), msg)
 }
 
 type placeHolderDecorator struct {

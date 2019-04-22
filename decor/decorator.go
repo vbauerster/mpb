@@ -55,15 +55,21 @@ type Statistics struct {
 // A decorator must implement this interface, in order to be used with
 // mpb library.
 type Decorator interface {
+	ConfigSetter
 	Synchronizer
 	Decor(*Statistics) string
 }
 
 // Synchronizer interface.
 // All decorators implement this interface implicitly. Its Sync
-// method exposes width sync channel, if sync is enabled.
+// method exposes width sync channel, if DSyncWidth bit is set.
 type Synchronizer interface {
 	Sync() (chan int, bool)
+}
+
+// ConfigSetter interface
+type ConfigSetter interface {
+	SetConfig(config WC) (old WC)
 }
 
 // OnCompleteMessenger interface.
@@ -107,13 +113,10 @@ type WC struct {
 
 // FormatMsg formats final message according to WC.W and WC.C.
 // Should be called by any Decorator implementation.
-func (wc WC) FormatMsg(msg string) string {
+func (wc *WC) FormatMsg(msg string) string {
 	if (wc.C & DSyncWidth) != 0 {
 		wc.wsync <- utf8.RuneCountInString(msg)
 		max := <-wc.wsync
-		if max == 0 {
-			max = wc.W
-		}
 		if (wc.C & DextraSpace) != 0 {
 			max++
 		}
@@ -137,6 +140,13 @@ func (wc *WC) Init() {
 // Sync is implementation of Synchronizer interface.
 func (wc *WC) Sync() (chan int, bool) {
 	return wc.wsync, (wc.C & DSyncWidth) != 0
+}
+
+func (wc *WC) SetConfig(conf WC) (old WC) {
+	old = *wc
+	*wc = conf
+	wc.Init()
+	return old
 }
 
 // OnComplete returns decorator, which wraps provided decorator, with

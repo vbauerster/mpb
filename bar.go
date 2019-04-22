@@ -396,6 +396,18 @@ func (s *bState) wSyncTable() [][]chan int {
 	return table
 }
 
+func (s *bState) appendAmountReceiver(d decor.Decorator) {
+	if ar, ok := d.(decor.AmountReceiver); ok {
+		s.amountReceivers = append(s.amountReceivers, ar)
+	}
+}
+
+func (s *bState) appendShutdownListener(d decor.Decorator) {
+	if sl, ok := d.(decor.ShutdownListener); ok {
+		s.shutdownListeners = append(s.shutdownListeners, sl)
+	}
+}
+
 func (b *Bar) refreshNowTillShutdown() {
 	for {
 		select {

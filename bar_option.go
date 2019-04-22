@@ -11,11 +11,12 @@ type BarOption func(*bState)
 func AppendDecorators(appenders ...decor.Decorator) BarOption {
 	return func(s *bState) {
 		for _, decorator := range appenders {
-			if ar, ok := decorator.(decor.AmountReceiver); ok {
-				s.amountReceivers = append(s.amountReceivers, ar)
-			}
-			if sl, ok := decorator.(decor.ShutdownListener); ok {
-				s.shutdownListeners = append(s.shutdownListeners, sl)
+			s.appendAmountReceiver(decorator)
+			s.appendShutdownListener(decorator)
+			if md, ok := decorator.(*decor.MergeDecorator); ok {
+				s.appendAmountReceiver(md.Decorator)
+				s.appendShutdownListener(md.Decorator)
+				s.aDecorators = append(s.aDecorators, md.PlaceHolders()...)
 			}
 			s.aDecorators = append(s.aDecorators, decorator)
 		}
@@ -26,11 +27,12 @@ func AppendDecorators(appenders ...decor.Decorator) BarOption {
 func PrependDecorators(prependers ...decor.Decorator) BarOption {
 	return func(s *bState) {
 		for _, decorator := range prependers {
-			if ar, ok := decorator.(decor.AmountReceiver); ok {
-				s.amountReceivers = append(s.amountReceivers, ar)
-			}
-			if sl, ok := decorator.(decor.ShutdownListener); ok {
-				s.shutdownListeners = append(s.shutdownListeners, sl)
+			s.appendAmountReceiver(decorator)
+			s.appendShutdownListener(decorator)
+			if md, ok := decorator.(*decor.MergeDecorator); ok {
+				s.appendAmountReceiver(md.Decorator)
+				s.appendShutdownListener(md.Decorator)
+				s.pDecorators = append(s.pDecorators, md.PlaceHolders()...)
 			}
 			s.pDecorators = append(s.pDecorators, decorator)
 		}
