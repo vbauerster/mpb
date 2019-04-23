@@ -64,7 +64,7 @@ func (d *MergeDecorator) Decor(st *Statistics) string {
 	if (d.wc.C & DextraSpace) != 0 {
 		max++
 	}
-	return fmt.Sprintf(fmt.Sprintf(d.wc.format, max), msg)
+	return fmt.Sprintf(fmt.Sprintf(d.wc.dynFormat, max), msg)
 }
 
 type placeHolderDecorator struct {

@@ -105,10 +105,11 @@ var (
 // W represents width and C represents bit set of width related config.
 // A decorator should embed WC, to enable width synchronization.
 type WC struct {
-	W      int
-	C      int
-	format string
-	wsync  chan int
+	W            int
+	C            int
+	dynFormat    string
+	staticFormat string
+	wsync        chan int
 }
 
 // FormatMsg formats final message according to WC.W and WC.C.
@@ -120,18 +121,19 @@ func (wc *WC) FormatMsg(msg string) string {
 		if (wc.C & DextraSpace) != 0 {
 			max++
 		}
-		return fmt.Sprintf(fmt.Sprintf(wc.format, max), msg)
+		return fmt.Sprintf(fmt.Sprintf(wc.dynFormat, max), msg)
 	}
-	return fmt.Sprintf(fmt.Sprintf(wc.format, wc.W), msg)
+	return fmt.Sprintf(wc.staticFormat, msg)
 }
 
 // Init initializes width related config.
 func (wc *WC) Init() {
-	wc.format = "%%"
+	wc.dynFormat = "%%"
 	if (wc.C & DidentRight) != 0 {
-		wc.format += "-"
+		wc.dynFormat += "-"
 	}
-	wc.format += "%ds"
+	wc.dynFormat += "%ds"
+	wc.staticFormat = fmt.Sprintf(wc.dynFormat, wc.W)
 	if (wc.C & DSyncWidth) != 0 {
 		wc.wsync = make(chan int)
 	}
@@ -142,6 +144,7 @@ func (wc *WC) Sync() (chan int, bool) {
 	return wc.wsync, (wc.C & DSyncWidth) != 0
 }
 
+// SetConfig sets new conf and return old conf.
 func (wc *WC) SetConfig(conf WC) (old WC) {
 	old = *wc
 	*wc = conf
