@@ -15,7 +15,7 @@ import (
 //   +--------+---------+
 //
 func Merge(decorator Decorator, placeholders ...WC) Decorator {
-	if _, ok := decorator.Sync(); !ok {
+	if _, ok := decorator.Sync(); !ok || len(placeholders) == 0 {
 		return decorator
 	}
 	md := &MergeDecorator{Decorator: decorator}
