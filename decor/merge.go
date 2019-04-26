@@ -18,7 +18,7 @@ func Merge(decorator Decorator, placeholders ...WC) Decorator {
 	if _, ok := decorator.Sync(); !ok || len(placeholders) == 0 {
 		return decorator
 	}
-	md := &MergeDecorator{
+	md := &mergeDecorator{
 		Decorator:    decorator,
 		placeHolders: make([]*placeHolderDecorator, len(placeholders)),
 	}
@@ -33,25 +33,26 @@ func Merge(decorator Decorator, placeholders ...WC) Decorator {
 	return md
 }
 
-type MergeDecorator struct {
+type mergeDecorator struct {
 	Decorator
 	wc           WC
 	placeHolders []*placeHolderDecorator
 }
 
-func (d *MergeDecorator) PlaceHolders() []Decorator {
-	decorators := make([]Decorator, len(d.placeHolders))
+func (d *mergeDecorator) CompoundDecorators() []Decorator {
+	decorators := make([]Decorator, len(d.placeHolders)+1)
+	decorators[0] = d.Decorator
 	for i, ph := range d.placeHolders {
-		decorators[i] = ph
+		decorators[i+1] = ph
 	}
 	return decorators
 }
 
-func (md *MergeDecorator) Sync() (chan int, bool) {
+func (md *mergeDecorator) Sync() (chan int, bool) {
 	return md.wc.Sync()
 }
 
-func (d *MergeDecorator) Decor(st *Statistics) string {
+func (d *mergeDecorator) Decor(st *Statistics) string {
 	msg := d.Decorator.Decor(st)
 	msgLen := utf8.RuneCountInString(msg)
 	pWidth := msgLen / (len(d.placeHolders) + 1)

@@ -7,35 +7,47 @@ import (
 // BarOption is a function option which changes the default behavior of a bar.
 type BarOption func(*bState)
 
-// AppendDecorators let you inject decorators to the bar's right side.
-func AppendDecorators(appenders ...decor.Decorator) BarOption {
-	return func(s *bState) {
-		for _, decorator := range appenders {
-			s.appendAmountReceiver(decorator)
-			s.appendShutdownListener(decorator)
-			if md, ok := decorator.(*decor.MergeDecorator); ok {
-				s.appendAmountReceiver(md.Decorator)
-				s.appendShutdownListener(md.Decorator)
-				s.aDecorators = append(s.aDecorators, md.PlaceHolders()...)
-			}
-			s.aDecorators = append(s.aDecorators, decorator)
+type merger interface {
+	CompoundDecorators() []decor.Decorator
+}
+
+func (s *bState) appendAmountReceiver(d decor.Decorator) {
+	if ar, ok := d.(decor.AmountReceiver); ok {
+		s.amountReceivers = append(s.amountReceivers, ar)
+	}
+}
+
+func (s *bState) appendShutdownListener(d decor.Decorator) {
+	if sl, ok := d.(decor.ShutdownListener); ok {
+		s.shutdownListeners = append(s.shutdownListeners, sl)
+	}
+}
+
+func (s *bState) addDecorators(dest *[]decor.Decorator, decorators ...decor.Decorator) {
+	for _, decorator := range decorators {
+		s.appendAmountReceiver(decorator)
+		s.appendShutdownListener(decorator)
+		if m, ok := decorator.(merger); ok {
+			dd := m.CompoundDecorators()
+			s.appendAmountReceiver(dd[0])
+			s.appendShutdownListener(dd[0])
+			*dest = append(*dest, dd[1:]...)
 		}
+		*dest = append(*dest, decorator)
+	}
+}
+
+// AppendDecorators let you inject decorators to the bar's right side.
+func AppendDecorators(decorators ...decor.Decorator) BarOption {
+	return func(s *bState) {
+		s.addDecorators(&s.aDecorators, decorators...)
 	}
 }
 
 // PrependDecorators let you inject decorators to the bar's left side.
-func PrependDecorators(prependers ...decor.Decorator) BarOption {
+func PrependDecorators(decorators ...decor.Decorator) BarOption {
 	return func(s *bState) {
-		for _, decorator := range prependers {
-			s.appendAmountReceiver(decorator)
-			s.appendShutdownListener(decorator)
-			if md, ok := decorator.(*decor.MergeDecorator); ok {
-				s.appendAmountReceiver(md.Decorator)
-				s.appendShutdownListener(md.Decorator)
-				s.pDecorators = append(s.pDecorators, md.PlaceHolders()...)
-			}
-			s.pDecorators = append(s.pDecorators, decorator)
-		}
+		s.addDecorators(&s.pDecorators, decorators...)
 	}
 }
 
