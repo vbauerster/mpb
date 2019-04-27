@@ -203,7 +203,7 @@ func (b *Bar) SetCurrent(current int64, wdd ...time.Duration) {
 	b.arbitraryCurrent.Unlock()
 }
 
-// Increment is a shorthand for b.IncrInt64(1).
+// Increment is a shorthand for b.IncrInt64(1, wdd...).
 func (b *Bar) Increment(wdd ...time.Duration) {
 	b.IncrInt64(1, wdd...)
 }
