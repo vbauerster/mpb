@@ -126,7 +126,7 @@ func (s SpeedKB) Format(st fmt.State, verb rune) {
 //
 //	`unitFormat` printf compatible verb for value, like "%f" or "%d"
 //
-//	`average` MovingAverage implementation
+//	`age` ewma age
 //
 //	`wcc` optional WC config
 //
