@@ -83,7 +83,7 @@ type OnCompleteMessenger interface {
 // If decorator needs to receive increment amount, so this is the right
 // interface to implement.
 type AmountReceiver interface {
-	NextAmount(int, ...time.Duration)
+	NextAmount(int64, ...time.Duration)
 }
 
 // ShutdownListener interface.

@@ -203,18 +203,23 @@ func (b *Bar) SetCurrent(current int64, wdd ...time.Duration) {
 	b.arbitraryCurrent.Unlock()
 }
 
-// Increment is a shorthand for b.IncrBy(1).
-func (b *Bar) Increment() {
-	b.IncrBy(1)
+// Increment is a shorthand for b.IncrInt64(1).
+func (b *Bar) Increment(wdd ...time.Duration) {
+	b.IncrInt64(1, wdd...)
 }
 
-// IncrBy increments progress bar by amount of n.
-// wdd is optional work duration i.e. time.Since(start), which expected
-// to be provided, if any ewma based decorator is used.
+// IncrBy is a shorthand for b.IncrInt64(int64(n), wdd...).
 func (b *Bar) IncrBy(n int, wdd ...time.Duration) {
+	b.IncrInt64(int64(n), wdd...)
+}
+
+// IncrInt64 increments progress bar by amount of n. wdd is an optional
+// work duration i.e. time.Since(start), which expected to be passed,
+// if any ewma based decorator is used.
+func (b *Bar) IncrInt64(n int64, wdd ...time.Duration) {
 	select {
 	case b.operateState <- func(s *bState) {
-		s.current += int64(n)
+		s.current += n
 		if s.total > 0 && s.current >= s.total {
 			s.current = s.total
 			s.toComplete = true
