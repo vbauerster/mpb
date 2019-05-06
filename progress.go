@@ -38,7 +38,7 @@ type pState struct {
 	heapUpdated      bool
 	pMatrix          map[int][]chan int
 	aMatrix          map[int][]chan int
-	barShutdownQueue []func()
+	barShutdownQueue []*Bar
 
 	// following are provided/overrided by user
 	idCount          int
@@ -156,7 +156,8 @@ func (p *Progress) dropBar(b *Bar) {
 		if b.index < 0 {
 			return
 		}
-		s.heapUpdated = heap.Remove(&s.bHeap, b.index) != nil
+		heap.Remove(&s.bHeap, b.index)
+		s.heapUpdated = true
 	}:
 	case <-p.done:
 	}
@@ -254,35 +255,52 @@ func (s *pState) render(cw *cwriter.Writer) error {
 }
 
 func (s *pState) flush(cw *cwriter.Writer) error {
+	var rpop bool
 	var lineCount int
-	for s.bHeap.Len() > 0 {
+	hlen := s.bHeap.Len()
+	tmp := make([]*Bar, hlen)
+	for i := 0; i < hlen; i++ {
 		bar := heap.Pop(&s.bHeap).(*Bar)
 		defer func() {
 			if bar.toShutdown {
 				// shutdown at next flush, in other words decrement underlying WaitGroup
 				// only after the bar with completed state has been flushed. this
 				// ensures no bar ends up with less than 100% rendered.
-				s.barShutdownQueue = append(s.barShutdownQueue, bar.cancel)
-				if parkedBar := s.parkedBars[bar]; parkedBar != nil {
-					heap.Push(&s.bHeap, parkedBar)
-					s.heapUpdated = true
-					delete(s.parkedBars, bar)
-				}
-				if bar.toDrop {
-					s.heapUpdated = true
-					return
-				}
+				s.barShutdownQueue = append(s.barShutdownQueue, bar)
+				// if parkedBar := s.parkedBars[bar]; parkedBar != nil {
+				// 	heap.Push(&s.bHeap, parkedBar)
+				// 	s.heapUpdated = true
+				// 	delete(s.parkedBars, bar)
+				// }
+				// if bar.toDrop {
+				// 	s.heapUpdated = true
+				// 	return
+				// }
+				// bar.priority = 0
 			}
-			heap.Push(&s.bHeap, bar)
 		}()
 		cw.ReadFrom(<-bar.frameCh)
 		lineCount += bar.extendedLines + 1
+		tmp[i] = bar
 	}
 
-	for i := len(s.barShutdownQueue) - 1; i >= 0; i-- {
-		s.barShutdownQueue[i]()
-		s.barShutdownQueue = s.barShutdownQueue[:i]
+	for _, b := range tmp {
+		heap.Push(&s.bHeap, b)
 	}
+
+	for _, b := range s.barShutdownQueue {
+		if parkedBar := s.parkedBars[b]; parkedBar != nil {
+			heap.Remove(&s.bHeap, b.index)
+			heap.Push(&s.bHeap, parkedBar)
+			delete(s.parkedBars, b)
+			s.heapUpdated = true
+		} else if b.toDrop {
+			heap.Remove(&s.bHeap, b.index)
+			s.heapUpdated = true
+		}
+		b.cancel()
+	}
+	s.barShutdownQueue = s.barShutdownQueue[0:0]
 
 	return cw.Flush(lineCount)
 }
