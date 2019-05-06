@@ -1,7 +1,5 @@
 package mpb
 
-import "container/heap"
-
 // A priorityQueue implements heap.Interface
 type priorityQueue []*Bar
 
@@ -31,10 +29,4 @@ func (pq *priorityQueue) Pop() interface{} {
 	bar := s[len(s)-1]
 	bar.index = -1 // for safety
 	return bar
-}
-
-// update modifies the priority of a Bar in the queue.
-func (pq *priorityQueue) update(bar *Bar, priority int) {
-	bar.priority = priority
-	heap.Fix(pq, bar.index)
 }

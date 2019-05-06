@@ -74,20 +74,17 @@ func BarRemoveOnComplete() BarOption {
 	}
 }
 
-// BarReplaceOnComplete is deprecated. Refer to BarParkTo option.
+// BarReplaceOnComplete is deprecated. Use BarParkTo instead.
 func BarReplaceOnComplete(runningBar *Bar) BarOption {
 	return BarParkTo(runningBar)
 }
 
 // BarParkTo parks constructed bar into the runningBar. In other words,
-// constructed bar will start only after runningBar has been completed.
-// Parked bar inherits priority of the runningBar, if no BarPriority
-// option is set. Parked bar will replace runningBar eventually.
+// constructed bar will replace runningBar after it has been completed.
 func BarParkTo(runningBar *Bar) BarOption {
 	if runningBar == nil {
 		return nil
 	}
-	runningBar.dropOnComplete()
 	return func(s *bState) {
 		s.runningBar = runningBar
 	}

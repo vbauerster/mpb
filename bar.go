@@ -321,7 +321,6 @@ func (b *Bar) render(tw int) {
 			frame = io.MultiReader(frame, s.bufE)
 		}
 
-		// b.toDrop = s.dropOnComplete
 		b.toShutdown = s.toComplete && !s.completeFlushed
 		s.completeFlushed = s.toComplete
 
@@ -410,13 +409,6 @@ func (b *Bar) refreshNowTillShutdown() {
 		}
 	}
 }
-
-// func (b *Bar) dropOnComplete() {
-// 	select {
-// 	case b.operateState <- func(s *bState) { s.dropOnComplete = true }:
-// 	case <-b.done:
-// 	}
-// }
 
 func newStatistics(s *bState) *decor.Statistics {
 	return &decor.Statistics{

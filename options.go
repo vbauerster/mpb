@@ -79,6 +79,13 @@ func WithDebugOutput(w io.Writer) ContainerOption {
 	}
 }
 
+// PopCompletedMode will pop and stop rendering completed bars.
+func PopCompletedMode() ContainerOption {
+	return func(s *pState) {
+		s.popCompleted = true
+	}
+}
+
 // ContainerOptOnCond returns option when condition evaluates to true.
 func ContainerOptOnCond(option ContainerOption, condition func() bool) ContainerOption {
 	if condition() {

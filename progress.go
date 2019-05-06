@@ -39,10 +39,12 @@ type pState struct {
 	pMatrix          map[int][]chan int
 	aMatrix          map[int][]chan int
 	barShutdownQueue []*Bar
+	barPopQueue      []*Bar
 
 	// following are provided/overrided by user
 	idCount          int
 	width            int
+	popCompleted     bool
 	rr               time.Duration
 	uwg              *sync.WaitGroup
 	manualRefreshCh  <-chan time.Time
@@ -132,9 +134,6 @@ func (p *Progress) Add(total int64, filler Filler, options ...BarOption) *Bar {
 		}
 		bar := newBar(p, bs)
 		if bs.runningBar != nil {
-			if bar.priority == ps.idCount {
-				bar.priority = bs.runningBar.priority
-			}
 			ps.parkedBars[bs.runningBar] = bar
 		} else {
 			heap.Push(&ps.bHeap, bar)
@@ -163,16 +162,22 @@ func (p *Progress) dropBar(b *Bar) {
 	}
 }
 
-// UpdateBarPriority is deprecated. Please use *Bar.SetOrder.
-func (p *Progress) UpdateBarPriority(b *Bar, priority int) {
-	p.setBarPriority(b, priority)
-}
-
 func (p *Progress) setBarPriority(b *Bar, priority int) {
 	select {
-	case p.operateState <- func(s *pState) { s.bHeap.update(b, priority) }:
+	case p.operateState <- func(s *pState) {
+		if b.index < 0 {
+			return
+		}
+		b.priority = priority
+		heap.Fix(&s.bHeap, b.index)
+	}:
 	case <-p.done:
 	}
+}
+
+// UpdateBarPriority same as *Bar.SetPriority.
+func (p *Progress) UpdateBarPriority(b *Bar, priority int) {
+	p.setBarPriority(b, priority)
 }
 
 // BarCount returns bars count
@@ -255,52 +260,56 @@ func (s *pState) render(cw *cwriter.Writer) error {
 }
 
 func (s *pState) flush(cw *cwriter.Writer) error {
-	var rpop bool
 	var lineCount int
 	hlen := s.bHeap.Len()
-	tmp := make([]*Bar, hlen)
+	bb := make([]*Bar, hlen)
 	for i := 0; i < hlen; i++ {
-		bar := heap.Pop(&s.bHeap).(*Bar)
+		b := heap.Pop(&s.bHeap).(*Bar)
 		defer func() {
-			if bar.toShutdown {
+			if b.toShutdown {
 				// shutdown at next flush, in other words decrement underlying WaitGroup
 				// only after the bar with completed state has been flushed. this
 				// ensures no bar ends up with less than 100% rendered.
-				s.barShutdownQueue = append(s.barShutdownQueue, bar)
-				// if parkedBar := s.parkedBars[bar]; parkedBar != nil {
-				// 	heap.Push(&s.bHeap, parkedBar)
-				// 	s.heapUpdated = true
-				// 	delete(s.parkedBars, bar)
-				// }
-				// if bar.toDrop {
-				// 	s.heapUpdated = true
-				// 	return
-				// }
-				// bar.priority = 0
+				s.barShutdownQueue = append(s.barShutdownQueue, b)
+				if s.popCompleted && s.parkedBars[b] == nil {
+					b.priority = -1
+				}
 			}
 		}()
-		cw.ReadFrom(<-bar.frameCh)
-		lineCount += bar.extendedLines + 1
-		tmp[i] = bar
+		cw.ReadFrom(<-b.frameCh)
+		lineCount += b.extendedLines + 1
+		bb[i] = b
 	}
 
-	for _, b := range tmp {
+	for _, b := range bb {
 		heap.Push(&s.bHeap, b)
 	}
 
 	for _, b := range s.barShutdownQueue {
 		if parkedBar := s.parkedBars[b]; parkedBar != nil {
-			heap.Remove(&s.bHeap, b.index)
+			parkedBar.priority = b.priority
 			heap.Push(&s.bHeap, parkedBar)
 			delete(s.parkedBars, b)
-			s.heapUpdated = true
-		} else if b.toDrop {
+			b.toDrop = true
+		}
+		if b.toDrop {
 			heap.Remove(&s.bHeap, b.index)
 			s.heapUpdated = true
+		} else if s.popCompleted {
+			defer func() {
+				s.barPopQueue = append(s.barPopQueue, b)
+			}()
 		}
 		b.cancel()
 	}
 	s.barShutdownQueue = s.barShutdownQueue[0:0]
+
+	for _, b := range s.barPopQueue {
+		heap.Remove(&s.bHeap, b.index)
+		s.heapUpdated = true
+		lineCount -= b.extendedLines + 1
+	}
+	s.barPopQueue = s.barPopQueue[0:0]
 
 	return cw.Flush(lineCount)
 }
