@@ -134,6 +134,7 @@ func (p *Progress) Add(total int64, filler Filler, options ...BarOption) *Bar {
 		}
 		bar := newBar(p, bs)
 		if bs.runningBar != nil {
+			bs.runningBar.noPop = true
 			ps.parkedBars[bs.runningBar] = bar
 		} else {
 			heap.Push(&ps.bHeap, bar)
@@ -270,7 +271,7 @@ func (s *pState) flush(cw *cwriter.Writer) error {
 				// only after the bar with completed state has been flushed. this
 				// ensures no bar ends up with less than 100% rendered.
 				s.barShutdownQueue = append(s.barShutdownQueue, b)
-				if s.popCompleted && s.parkedBars[b] == nil {
+				if !b.noPop && s.popCompleted {
 					b.priority = -1
 				}
 			}
