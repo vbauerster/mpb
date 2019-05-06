@@ -167,6 +167,14 @@ func BarNoBrackets() BarOption {
 	return MakeFillerTypeSpecificBarOption(chk, cb)
 }
 
+// BarNoPop disables bar pop out of container. Effective when
+// PopCompletedMode of container is enabled.
+func BarNoPop() BarOption {
+	return func(s *bState) {
+		s.noPop = true
+	}
+}
+
 // BarReverse reverse mode, bar will progress from right to left.
 func BarReverse() BarOption {
 	chk := func(filler Filler) (interface{}, bool) {

@@ -261,9 +261,8 @@ func (s *pState) render(cw *cwriter.Writer) error {
 
 func (s *pState) flush(cw *cwriter.Writer) error {
 	var lineCount int
-	hlen := s.bHeap.Len()
-	bb := make([]*Bar, hlen)
-	for i := 0; i < hlen; i++ {
+	bm := make(map[*Bar]struct{}, s.bHeap.Len())
+	for s.bHeap.Len() > 0 {
 		b := heap.Pop(&s.bHeap).(*Bar)
 		defer func() {
 			if b.toShutdown {
@@ -278,11 +277,7 @@ func (s *pState) flush(cw *cwriter.Writer) error {
 		}()
 		cw.ReadFrom(<-b.frameCh)
 		lineCount += b.extendedLines + 1
-		bb[i] = b
-	}
-
-	for _, b := range bb {
-		heap.Push(&s.bHeap, b)
+		bm[b] = struct{}{}
 	}
 
 	for _, b := range s.barShutdownQueue {
@@ -293,23 +288,29 @@ func (s *pState) flush(cw *cwriter.Writer) error {
 			b.toDrop = true
 		}
 		if b.toDrop {
-			heap.Remove(&s.bHeap, b.index)
+			delete(bm, b)
 			s.heapUpdated = true
 		} else if s.popCompleted {
-			defer func() {
-				s.barPopQueue = append(s.barPopQueue, b)
-			}()
+			if !b.noPop {
+				defer func() {
+					s.barPopQueue = append(s.barPopQueue, b)
+				}()
+			}
 		}
 		b.cancel()
 	}
 	s.barShutdownQueue = s.barShutdownQueue[0:0]
 
 	for _, b := range s.barPopQueue {
-		heap.Remove(&s.bHeap, b.index)
+		delete(bm, b)
 		s.heapUpdated = true
 		lineCount -= b.extendedLines + 1
 	}
 	s.barPopQueue = s.barPopQueue[0:0]
+
+	for b := range bm {
+		heap.Push(&s.bHeap, b)
+	}
 
 	return cw.Flush(lineCount)
 }

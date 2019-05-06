@@ -38,6 +38,7 @@ type Bar struct {
 	extendedLines int
 	toShutdown    bool
 	toDrop        bool
+	noPop         bool
 	operateState  chan func(*bState)
 	frameCh       chan io.Reader
 	syncTableCh   chan [][]chan int
@@ -71,6 +72,7 @@ type bState struct {
 	toComplete        bool
 	completeFlushed   bool
 	noBufBOnComplete  bool
+	noPop             bool
 	aDecorators       []decor.Decorator
 	pDecorators       []decor.Decorator
 	amountReceivers   []decor.AmountReceiver
@@ -103,6 +105,7 @@ func newBar(container *Progress, bs *bState) *Bar {
 		container:    container,
 		priority:     bs.priority,
 		toDrop:       bs.dropOnComplete,
+		noPop:        bs.noPop,
 		operateState: make(chan func(*bState)),
 		frameCh:      make(chan io.Reader, 1),
 		syncTableCh:  make(chan [][]chan int),
