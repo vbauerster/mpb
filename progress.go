@@ -348,8 +348,7 @@ func syncWidth(matrix map[int][]chan int) {
 		go func() {
 			var maxWidth int
 			for _, ch := range column {
-				w := <-ch
-				if w > maxWidth {
+				if w := <-ch; w > maxWidth {
 					maxWidth = w
 				}
 			}
