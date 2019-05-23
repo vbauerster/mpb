@@ -265,18 +265,17 @@ func (s *pState) flush(cw *cwriter.Writer) error {
 	bm := make(map[*Bar]struct{}, s.bHeap.Len())
 	for s.bHeap.Len() > 0 {
 		b := heap.Pop(&s.bHeap).(*Bar)
-		defer func() {
-			if b.toShutdown {
-				// shutdown at next flush, in other words decrement underlying WaitGroup
-				// only after the bar with completed state has been flushed. this
-				// ensures no bar ends up with less than 100% rendered.
+		cw.ReadFrom(<-b.frameCh)
+		if b.toShutdown {
+			// shutdown at next flush
+			// this ensures no bar ends up with less than 100% rendered
+			defer func() {
 				s.barShutdownQueue = append(s.barShutdownQueue, b)
 				if !b.noPop && s.popCompleted {
 					b.priority = -1
 				}
-			}
-		}()
-		cw.ReadFrom(<-b.frameCh)
+			}()
+		}
 		lineCount += b.extendedLines + 1
 		bm[b] = struct{}{}
 	}
