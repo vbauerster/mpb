@@ -292,7 +292,7 @@ func (s *pState) flush(cw *cwriter.Writer) error {
 			delete(bm, b)
 			s.heapUpdated = true
 		} else if s.popCompleted {
-			if !b.noPop {
+			if b := b; !b.noPop {
 				defer func() {
 					s.barPopQueue = append(s.barPopQueue, b)
 				}()
