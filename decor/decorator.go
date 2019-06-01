@@ -144,11 +144,11 @@ func (wc *WC) Sync() (chan int, bool) {
 	return wc.wsync, (wc.C & DSyncWidth) != 0
 }
 
-// SetConfig sets new conf and return old conf.
+// SetConfig sets new conf and returns old one.
 func (wc *WC) SetConfig(conf WC) (old WC) {
+	conf.Init()
 	old = *wc
 	*wc = conf
-	wc.Init()
 	return old
 }
 

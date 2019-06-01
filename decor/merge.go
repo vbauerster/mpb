@@ -2,7 +2,6 @@ package decor
 
 import (
 	"fmt"
-	"strings"
 	"unicode/utf8"
 )
 
@@ -55,20 +54,23 @@ func (md *mergeDecorator) Sync() (chan int, bool) {
 func (d *mergeDecorator) Decor(st *Statistics) string {
 	msg := d.Decorator.Decor(st)
 	msgLen := utf8.RuneCountInString(msg)
-	pWidth := msgLen / (len(d.placeHolders) + 1)
-	mod := msgLen % (len(d.placeHolders) + 1)
-	d.wc.wsync <- pWidth + mod
+
+	var pWidth int
 	for _, ph := range d.placeHolders {
-		ph.wsync <- pWidth
+		pWidth += <-ph.wsync
 	}
+
+	if msgLen > pWidth {
+		d.wc.wsync <- msgLen - pWidth
+	} else {
+		d.wc.wsync <- msgLen
+	}
+
 	max := <-d.wc.wsync
-	for _, ph := range d.placeHolders {
-		max += <-ph.wsync
-	}
 	if (d.wc.C & DextraSpace) != 0 {
 		max++
 	}
-	return fmt.Sprintf(fmt.Sprintf(d.wc.dynFormat, max), msg)
+	return fmt.Sprintf(fmt.Sprintf(d.wc.dynFormat, max+pWidth), msg)
 }
 
 type placeHolderDecorator struct {
@@ -78,9 +80,7 @@ type placeHolderDecorator struct {
 
 func (d *placeHolderDecorator) Decor(st *Statistics) string {
 	go func() {
-		width := <-d.wsync
-		msg := strings.Repeat(" ", width)
-		d.wsync <- utf8.RuneCountInString(d.FormatMsg(msg))
+		d.wsync <- utf8.RuneCountInString(d.FormatMsg(""))
 	}()
 	return ""
 }
