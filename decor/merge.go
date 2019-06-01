@@ -60,11 +60,7 @@ func (d *mergeDecorator) Decor(st *Statistics) string {
 		pWidth += <-ph.wsync
 	}
 
-	if msgLen > pWidth {
-		d.wc.wsync <- msgLen - pWidth
-	} else {
-		d.wc.wsync <- msgLen
-	}
+	d.wc.wsync <- msgLen - pWidth
 
 	max := <-d.wc.wsync
 	if (d.wc.C & DextraSpace) != 0 {
