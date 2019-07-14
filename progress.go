@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/vbauerster/mpb/v4/cwriter"
+	"github.com/vbauerster/mpb/v4/decor"
 )
 
 const (
@@ -143,7 +144,22 @@ func (p *Progress) Add(total int64, filler Filler, options ...BarOption) *Bar {
 		ps.idCount++
 		result <- bar
 	}:
-		return <-result
+		var amountReceivers []decor.AmountReceiver
+		var shutdownListeners []decor.ShutdownListener
+		bar := <-result
+		bar.UpdateDecorators(func(d decor.Decorator) {
+			if d, ok := d.(decor.AmountReceiver); ok {
+				amountReceivers = append(amountReceivers, d)
+			}
+			if d, ok := d.(decor.ShutdownListener); ok {
+				shutdownListeners = append(shutdownListeners, d)
+			}
+		})
+		bar.operateState <- func(s *bState) {
+			s.amountReceivers = amountReceivers
+			s.shutdownListeners = shutdownListeners
+		}
+		return bar
 	case <-p.done:
 		p.bwg.Done()
 		return nil

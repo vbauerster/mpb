@@ -93,6 +93,9 @@ type ShutdownListener interface {
 	Shutdown()
 }
 
+// UpdateFunc convenience func type
+type UpdateFunc func(Decorator)
+
 // Global convenience shortcuts
 var (
 	WCSyncWidth  = WC{C: DSyncWidth}

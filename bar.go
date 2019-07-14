@@ -75,6 +75,7 @@ type bState struct {
 	noPop             bool
 	aDecorators       []decor.Decorator
 	pDecorators       []decor.Decorator
+	mDecorators       []decor.Decorator
 	amountReceivers   []decor.AmountReceiver
 	shutdownListeners []decor.ShutdownListener
 	bufP, bufB, bufA  *bytes.Buffer
@@ -170,10 +171,42 @@ func (b *Bar) Current() int64 {
 }
 
 // SetRefill sets refill, if supported by underlying Filler.
+// Useful for resume-able tasks.
 func (b *Bar) SetRefill(amount int64) {
+	type refiller interface {
+		SetRefill(int64)
+	}
 	b.operateState <- func(s *bState) {
-		if f, ok := s.filler.(interface{ SetRefill(int64) }); ok {
+		if f, ok := s.filler.(refiller); ok {
 			f.SetRefill(amount)
+		}
+	}
+}
+
+// AdjustAverageDecorators updates start time of all average decorators.
+// Useful for resume-able tasks.
+func (b *Bar) AdjustAverageDecorators(startTime time.Time) {
+	type adjustable interface {
+		AverageAdjust(time.Time)
+	}
+	b.UpdateDecorators(func(d decor.Decorator) {
+		if d, ok := d.(adjustable); ok {
+			d.AverageAdjust(startTime)
+		}
+	})
+}
+
+// UpdateDecorators general helper func.
+func (b *Bar) UpdateDecorators(cb decor.UpdateFunc) {
+	b.operateState <- func(s *bState) {
+		for _, decorators := range [...][]decor.Decorator{
+			s.pDecorators,
+			s.aDecorators,
+			s.mDecorators,
+		} {
+			for _, d := range decorators {
+				cb(d)
+			}
 		}
 	}
 }

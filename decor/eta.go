@@ -120,6 +120,17 @@ func (d *movingAverageETA) OnCompleteMessage(msg string) {
 //
 //	`wcc` optional WC config
 func AverageETA(style TimeStyle, wcc ...WC) Decorator {
+	return NewAverageETA(style, time.Now(), wcc...)
+}
+
+// NewAverageETA decorator with user provided start time.
+//
+//	`style` one of [ET_STYLE_GO|ET_STYLE_HHMMSS|ET_STYLE_HHMM|ET_STYLE_MMSS]
+//
+//	`startTime` start time
+//
+//	`wcc` optional WC config
+func NewAverageETA(style TimeStyle, startTime time.Time, wcc ...WC) Decorator {
 	var wc WC
 	for _, widthConf := range wcc {
 		wc = widthConf
@@ -128,7 +139,7 @@ func AverageETA(style TimeStyle, wcc ...WC) Decorator {
 	d := &averageETA{
 		WC:        wc,
 		style:     style,
-		startTime: time.Now(),
+		startTime: startTime,
 	}
 	return d
 }
@@ -176,6 +187,10 @@ func (d *averageETA) Decor(st *Statistics) string {
 
 func (d *averageETA) OnCompleteMessage(msg string) {
 	d.completeMsg = &msg
+}
+
+func (d *averageETA) AverageAdjust(startTime time.Time) {
+	d.startTime = startTime
 }
 
 func MaxTolerateTimeNormalizer(maxTolerate time.Duration) TimeNormalizer {

@@ -220,6 +220,24 @@ func (d *movingAverageSpeed) OnCompleteMessage(msg string) {
 //
 //	"%.1f" = "1.0MiB/s" or "% .1f" = "1.0 MiB/s"
 func AverageSpeed(unit int, unitFormat string, wcc ...WC) Decorator {
+	return NewAverageSpeed(unit, unitFormat, time.Now(), wcc...)
+}
+
+// NewAverageSpeed decorator with dynamic unit measure adjustment and
+// user provided start time.
+//
+//	`unit` one of [0|UnitKiB|UnitKB] zero for no unit
+//
+//	`unitFormat` printf compatible verb for value, like "%f" or "%d"
+//
+//	`startTime` start time
+//
+//	`wcc` optional WC config
+//
+// unitFormat example if UnitKiB is chosen:
+//
+//	"%.1f" = "1.0MiB/s" or "% .1f" = "1.0 MiB/s"
+func NewAverageSpeed(unit int, unitFormat string, startTime time.Time, wcc ...WC) Decorator {
 	var wc WC
 	for _, widthConf := range wcc {
 		wc = widthConf
@@ -229,7 +247,7 @@ func AverageSpeed(unit int, unitFormat string, wcc ...WC) Decorator {
 		WC:         wc,
 		unit:       unit,
 		unitFormat: unitFormat,
-		startTime:  time.Now(),
+		startTime:  startTime,
 	}
 	return d
 }
@@ -268,4 +286,8 @@ func (d *averageSpeed) Decor(st *Statistics) string {
 
 func (d *averageSpeed) OnCompleteMessage(msg string) {
 	d.completeMsg = &msg
+}
+
+func (d *averageSpeed) AverageAdjust(startTime time.Time) {
+	d.startTime = startTime
 }
