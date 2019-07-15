@@ -93,10 +93,17 @@ type ShutdownListener interface {
 	Shutdown()
 }
 
-// UpdateFunc convenience func type
-type UpdateFunc func(Decorator)
+// AverageAdjuster interface.
+// Average decorators should implement this interface to provide start
+// time adjustment facility, for resume-able tasks.
+type AverageAdjuster interface {
+	AverageAdjust(time.Time)
+}
 
-// Global convenience shortcuts
+// CBFunc convenience call back func type.
+type CBFunc func(Decorator)
+
+// Global convenience instances of WC with sync width bit set.
 var (
 	WCSyncWidth  = WC{C: DSyncWidth}
 	WCSyncWidthR = WC{C: DSyncWidthR}

@@ -78,6 +78,7 @@ type bState struct {
 	mDecorators       []decor.Decorator
 	amountReceivers   []decor.AmountReceiver
 	shutdownListeners []decor.ShutdownListener
+	averageAdjusters  []decor.AverageAdjuster
 	bufP, bufB, bufA  *bytes.Buffer
 	bufE              *bytes.Buffer
 
@@ -186,18 +187,15 @@ func (b *Bar) SetRefill(amount int64) {
 // AdjustAverageDecorators updates start time of all average decorators.
 // Useful for resume-able tasks.
 func (b *Bar) AdjustAverageDecorators(startTime time.Time) {
-	type adjustable interface {
-		AverageAdjust(time.Time)
-	}
-	b.UpdateDecorators(func(d decor.Decorator) {
-		if d, ok := d.(adjustable); ok {
-			d.AverageAdjust(startTime)
+	b.operateState <- func(s *bState) {
+		for _, adjuster := range s.averageAdjusters {
+			adjuster.AverageAdjust(startTime)
 		}
-	})
+	}
 }
 
-// UpdateDecorators general helper func.
-func (b *Bar) UpdateDecorators(cb decor.UpdateFunc) {
+// TraverseDecorators traverses all available decorators and calls cb func on each.
+func (b *Bar) TraverseDecorators(cb decor.CBFunc) {
 	b.operateState <- func(s *bState) {
 		for _, decorators := range [...][]decor.Decorator{
 			s.pDecorators,

@@ -146,18 +146,23 @@ func (p *Progress) Add(total int64, filler Filler, options ...BarOption) *Bar {
 	}:
 		var amountReceivers []decor.AmountReceiver
 		var shutdownListeners []decor.ShutdownListener
+		var averageAdjusters []decor.AverageAdjuster
 		bar := <-result
-		bar.UpdateDecorators(func(d decor.Decorator) {
+		bar.TraverseDecorators(func(d decor.Decorator) {
 			if d, ok := d.(decor.AmountReceiver); ok {
 				amountReceivers = append(amountReceivers, d)
 			}
 			if d, ok := d.(decor.ShutdownListener); ok {
 				shutdownListeners = append(shutdownListeners, d)
 			}
+			if d, ok := d.(decor.AverageAdjuster); ok {
+				averageAdjusters = append(averageAdjusters, d)
+			}
 		})
 		bar.operateState <- func(s *bState) {
 			s.amountReceivers = amountReceivers
 			s.shutdownListeners = shutdownListeners
+			s.averageAdjusters = averageAdjusters
 		}
 		return bar
 	case <-p.done:
