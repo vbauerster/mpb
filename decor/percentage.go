@@ -46,17 +46,21 @@ func (s PercentageType) Format(st fmt.State, verb rune) {
 	io.WriteString(st, res)
 }
 
-// Percentage returns percentage decorator.
-//
-//	`wcc` optional WC config
+// Percentage returns percentage decorator. It's a wrapper of NewPercentage.
 func Percentage(wcc ...WC) Decorator {
-	return PercentageFmt("% d", wcc...)
+	return NewPercentage("% d", wcc...)
 }
 
-// PercentageFmt percentage decorator with custom fmt.
-//	"%.1f" = "1.0%" or "% .1f" = "1.0 %"
-//	"%d" = "1%" or "% d" = "1 %"
-func PercentageFmt(fmt string, wcc ...WC) Decorator {
+// NewPercentage percentage decorator with custom fmt string.
+//
+// fmt examples:
+//
+//	fmt="%.1f"  output: "1.0%"
+//	fmt="% .1f" output: "1.0 %"
+//	fmt="%d"    output: "1%"
+//	fmt="% d"   output: "1 %"
+//
+func NewPercentage(fmt string, wcc ...WC) Decorator {
 	var wc WC
 	for _, widthConf := range wcc {
 		wc = widthConf

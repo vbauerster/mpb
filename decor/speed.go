@@ -119,22 +119,12 @@ func (s SpeedKB) Format(st fmt.State, verb rune) {
 	io.WriteString(st, res)
 }
 
-// EwmaSpeed exponential-weighted-moving-average based speed decorator,
-// with dynamic unit measure adjustment.
-//
-//	`unit` one of [0|UnitKiB|UnitKB] zero for no unit
-//
-//	`unitFormat` printf compatible verb for value, like "%f" or "%d"
-//
-//	`age` ewma age
-//
-//	`wcc` optional WC config
-//
-// unitFormat example if UnitKiB is chosen:
-//
-//	"%.1f" = "1.0MiB/s" or "% .1f" = "1.0 MiB/s"
-func EwmaSpeed(unit int, unitFormat string, age float64, wcc ...WC) Decorator {
-	return MovingAverageSpeed(unit, unitFormat, ewma.NewMovingAverage(age), wcc...)
+// EwmaSpeed exponential-weighted-moving-average based speed decorator.
+// Note that it's necessary to supply bar.Incr* methods with incremental
+// work duration as second argument, in order for this decorator to
+// work correctly. This decorator is a wrapper of MovingAverageSpeed.
+func EwmaSpeed(unit int, fmt string, age float64, wcc ...WC) Decorator {
+	return MovingAverageSpeed(unit, fmt, ewma.NewMovingAverage(age), wcc...)
 }
 
 // MovingAverageSpeed decorator relies on MovingAverage implementation
@@ -142,22 +132,30 @@ func EwmaSpeed(unit int, unitFormat string, age float64, wcc ...WC) Decorator {
 //
 //	`unit` one of [0|UnitKiB|UnitKB] zero for no unit
 //
-//	`unitFormat` printf compatible verb for value, like "%f" or "%d"
+//	`fmt` printf compatible verb for value, like "%f" or "%d"
 //
 //	`average` MovingAverage implementation
 //
 //	`wcc` optional WC config
-func MovingAverageSpeed(unit int, unitFormat string, average MovingAverage, wcc ...WC) Decorator {
+//
+// fmt examples:
+//
+//	unit=UnitKiB, fmt="%.1f"  output: "1.0MiB/s"
+//	unit=UnitKiB, fmt="% .1f" output: "1.0 MiB/s"
+//	unit=UnitKB,  fmt="%.1f"  output: "1.0MB/s"
+//	unit=UnitKB,  fmt="% .1f" output: "1.0 MB/s"
+//
+func MovingAverageSpeed(unit int, fmt string, average MovingAverage, wcc ...WC) Decorator {
 	var wc WC
 	for _, widthConf := range wcc {
 		wc = widthConf
 	}
 	wc.Init()
 	d := &movingAverageSpeed{
-		WC:         wc,
-		unit:       unit,
-		unitFormat: unitFormat,
-		average:    average,
+		WC:      wc,
+		unit:    unit,
+		fmt:     fmt,
+		average: average,
 	}
 	return d
 }
@@ -165,7 +163,7 @@ func MovingAverageSpeed(unit int, unitFormat string, average MovingAverage, wcc 
 type movingAverageSpeed struct {
 	WC
 	unit        int
-	unitFormat  string
+	fmt         string
 	average     ewma.MovingAverage
 	msg         string
 	completeMsg *string
@@ -182,11 +180,11 @@ func (d *movingAverageSpeed) Decor(st *Statistics) string {
 	speed := d.average.Value()
 	switch d.unit {
 	case UnitKiB:
-		d.msg = fmt.Sprintf(d.unitFormat, SpeedKiB(speed))
+		d.msg = fmt.Sprintf(d.fmt, SpeedKiB(speed))
 	case UnitKB:
-		d.msg = fmt.Sprintf(d.unitFormat, SpeedKB(speed))
+		d.msg = fmt.Sprintf(d.fmt, SpeedKB(speed))
 	default:
-		d.msg = fmt.Sprintf(d.unitFormat, speed)
+		d.msg = fmt.Sprintf(d.fmt, speed)
 	}
 
 	return d.FormatMsg(d.msg)
@@ -208,19 +206,10 @@ func (d *movingAverageSpeed) OnCompleteMessage(msg string) {
 	d.completeMsg = &msg
 }
 
-// AverageSpeed decorator with dynamic unit measure adjustment.
-//
-//	`unit` one of [0|UnitKiB|UnitKB] zero for no unit
-//
-//	`unitFormat` printf compatible verb for value, like "%f" or "%d"
-//
-//	`wcc` optional WC config
-//
-// unitFormat example if UnitKiB is chosen:
-//
-//	"%.1f" = "1.0MiB/s" or "% .1f" = "1.0 MiB/s"
-func AverageSpeed(unit int, unitFormat string, wcc ...WC) Decorator {
-	return NewAverageSpeed(unit, unitFormat, time.Now(), wcc...)
+// AverageSpeed decorator with dynamic unit measure adjustment. It's
+// a wrapper of NewAverageSpeed.
+func AverageSpeed(unit int, fmt string, wcc ...WC) Decorator {
+	return NewAverageSpeed(unit, fmt, time.Now(), wcc...)
 }
 
 // NewAverageSpeed decorator with dynamic unit measure adjustment and
@@ -228,26 +217,30 @@ func AverageSpeed(unit int, unitFormat string, wcc ...WC) Decorator {
 //
 //	`unit` one of [0|UnitKiB|UnitKB] zero for no unit
 //
-//	`unitFormat` printf compatible verb for value, like "%f" or "%d"
+//	`fmt` printf compatible verb for value, like "%f" or "%d"
 //
 //	`startTime` start time
 //
 //	`wcc` optional WC config
 //
-// unitFormat example if UnitKiB is chosen:
+// fmt examples:
 //
-//	"%.1f" = "1.0MiB/s" or "% .1f" = "1.0 MiB/s"
-func NewAverageSpeed(unit int, unitFormat string, startTime time.Time, wcc ...WC) Decorator {
+//	unit=UnitKiB, fmt="%.1f"  output: "1.0MiB/s"
+//	unit=UnitKiB, fmt="% .1f" output: "1.0 MiB/s"
+//	unit=UnitKB,  fmt="%.1f"  output: "1.0MB/s"
+//	unit=UnitKB,  fmt="% .1f" output: "1.0 MB/s"
+//
+func NewAverageSpeed(unit int, fmt string, startTime time.Time, wcc ...WC) Decorator {
 	var wc WC
 	for _, widthConf := range wcc {
 		wc = widthConf
 	}
 	wc.Init()
 	d := &averageSpeed{
-		WC:         wc,
-		unit:       unit,
-		unitFormat: unitFormat,
-		startTime:  startTime,
+		WC:        wc,
+		unit:      unit,
+		fmt:       fmt,
+		startTime: startTime,
 	}
 	return d
 }
@@ -255,7 +248,7 @@ func NewAverageSpeed(unit int, unitFormat string, startTime time.Time, wcc ...WC
 type averageSpeed struct {
 	WC
 	unit        int
-	unitFormat  string
+	fmt         string
 	startTime   time.Time
 	msg         string
 	completeMsg *string
@@ -274,11 +267,11 @@ func (d *averageSpeed) Decor(st *Statistics) string {
 
 	switch d.unit {
 	case UnitKiB:
-		d.msg = fmt.Sprintf(d.unitFormat, SpeedKiB(speed))
+		d.msg = fmt.Sprintf(d.fmt, SpeedKiB(speed))
 	case UnitKB:
-		d.msg = fmt.Sprintf(d.unitFormat, SpeedKB(speed))
+		d.msg = fmt.Sprintf(d.fmt, SpeedKB(speed))
 	default:
-		d.msg = fmt.Sprintf(d.unitFormat, speed)
+		d.msg = fmt.Sprintf(d.fmt, speed)
 	}
 
 	return d.FormatMsg(d.msg)
