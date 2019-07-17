@@ -64,7 +64,7 @@ func (s *barFiller) Fill(w io.Writer, width int, stat *decor.Statistics) {
 
 	bb := make([][]byte, width)
 
-	cwidth := int(internal.Percentage(stat.Total, stat.Current, int64(width)))
+	cwidth := int(internal.PercentageRound(stat.Total, stat.Current, width))
 
 	for i := 0; i < cwidth; i++ {
 		bb[i] = s.format[rFill]
@@ -75,7 +75,7 @@ func (s *barFiller) Fill(w io.Writer, width int, stat *decor.Statistics) {
 		if s.refillAmount > stat.Current {
 			rwidth = cwidth
 		} else {
-			rwidth = int(internal.Percentage(stat.Total, int64(s.refillAmount), int64(width)))
+			rwidth = int(internal.PercentageRound(stat.Total, int64(s.refillAmount), width))
 		}
 		for i := 0; i < rwidth; i++ {
 			bb[i] = s.format[rRefill]

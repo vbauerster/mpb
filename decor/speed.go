@@ -14,17 +14,17 @@ import (
 type SpeedKiB float64
 
 func (s SpeedKiB) Format(st fmt.State, verb rune) {
-	prec, ok := st.Precision()
-
-	if verb == 'd' || !ok {
-		prec = 0
-	}
-	if verb == 'f' && !ok {
-		prec = 6
-	}
-	// retain old beahavior if s verb used
-	if verb == 's' {
-		prec = 1
+	var prec int
+	switch verb {
+	case 'd':
+	case 's':
+		prec = -1
+	default:
+		if p, ok := st.Precision(); ok {
+			prec = p
+		} else {
+			prec = 6
+		}
 	}
 
 	var res, unit string
@@ -54,7 +54,7 @@ func (s SpeedKiB) Format(st fmt.State, verb rune) {
 	if w, ok := st.Width(); ok {
 		if len(res) < w {
 			pad := strings.Repeat(" ", w-len(res))
-			if st.Flag(int('-')) {
+			if st.Flag('-') {
 				res += pad
 			} else {
 				res = pad + res
@@ -68,17 +68,17 @@ func (s SpeedKiB) Format(st fmt.State, verb rune) {
 type SpeedKB float64
 
 func (s SpeedKB) Format(st fmt.State, verb rune) {
-	prec, ok := st.Precision()
-
-	if verb == 'd' || !ok {
-		prec = 0
-	}
-	if verb == 'f' && !ok {
-		prec = 6
-	}
-	// retain old beahavior if s verb used
-	if verb == 's' {
-		prec = 1
+	var prec int
+	switch verb {
+	case 'd':
+	case 's':
+		prec = -1
+	default:
+		if p, ok := st.Precision(); ok {
+			prec = p
+		} else {
+			prec = 6
+		}
 	}
 
 	var res, unit string

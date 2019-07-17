@@ -4,9 +4,11 @@ import "testing"
 
 func TestPercentage(t *testing.T) {
 	// key is barWidth
-	testSuite := map[int64][]struct {
-		name                     string
-		total, current, expected int64
+	testSuite := map[int][]struct {
+		name     string
+		total    int64
+		current  int64
+		expected int64
 	}{
 		100: {
 			{"t,c,e{-1,-1,0}", -1, -1, 0},
@@ -64,7 +66,7 @@ func TestPercentage(t *testing.T) {
 
 	for width, cases := range testSuite {
 		for _, tc := range cases {
-			got := Percentage(tc.total, tc.current, width)
+			got := int64(PercentageRound(tc.total, tc.current, width))
 			if got != tc.expected {
 				t.Errorf("width %d; %s: Expected: %d, got: %d\n", width, tc.name, tc.expected, got)
 			}
