@@ -71,7 +71,7 @@ func (c CounterKiB) Format(st fmt.State, verb rune) {
 	if w, ok := st.Width(); ok {
 		if len(res) < w {
 			pad := strings.Repeat(" ", w-len(res))
-			if st.Flag(int('-')) {
+			if st.Flag('-') {
 				res += pad
 			} else {
 				res = pad + res
@@ -125,7 +125,7 @@ func (c CounterKB) Format(st fmt.State, verb rune) {
 	if w, ok := st.Width(); ok {
 		if len(res) < w {
 			pad := strings.Repeat(" ", w-len(res))
-			if st.Flag(int('-')) {
+			if st.Flag('-') {
 				res += pad
 			} else {
 				res = pad + res
