@@ -31,17 +31,17 @@ const (
 type CounterKiB int64
 
 func (c CounterKiB) Format(st fmt.State, verb rune) {
-	prec, ok := st.Precision()
-
-	if verb == 'd' || !ok {
-		prec = 0
-	}
-	if verb == 'f' && !ok {
-		prec = 6
-	}
-	// retain old beahavior if s verb used
-	if verb == 's' {
-		prec = 1
+	var prec int
+	switch verb {
+	case 'd':
+	case 's':
+		prec = -1
+	default:
+		if p, ok := st.Precision(); ok {
+			prec = p
+		} else {
+			prec = 6
+		}
 	}
 
 	var res, unit string
@@ -85,17 +85,17 @@ func (c CounterKiB) Format(st fmt.State, verb rune) {
 type CounterKB int64
 
 func (c CounterKB) Format(st fmt.State, verb rune) {
-	prec, ok := st.Precision()
-
-	if verb == 'd' || !ok {
-		prec = 0
-	}
-	if verb == 'f' && !ok {
-		prec = 6
-	}
-	// retain old beahavior if s verb used
-	if verb == 's' {
-		prec = 1
+	var prec int
+	switch verb {
+	case 'd':
+	case 's':
+		prec = -1
+	default:
+		if p, ok := st.Precision(); ok {
+			prec = p
+		} else {
+			prec = 6
+		}
 	}
 
 	var res, unit string
@@ -137,43 +137,44 @@ func (c CounterKB) Format(st fmt.State, verb rune) {
 }
 
 // CountersNoUnit is a wrapper around Counters with no unit param.
-func CountersNoUnit(pairFormat string, wcc ...WC) Decorator {
-	return Counters(0, pairFormat, wcc...)
+func CountersNoUnit(pairFmt string, wcc ...WC) Decorator {
+	return Counters(0, pairFmt, wcc...)
 }
 
 // CountersKibiByte is a wrapper around Counters with predefined unit
 // UnitKiB (bytes/1024).
-func CountersKibiByte(pairFormat string, wcc ...WC) Decorator {
-	return Counters(UnitKiB, pairFormat, wcc...)
+func CountersKibiByte(pairFmt string, wcc ...WC) Decorator {
+	return Counters(UnitKiB, pairFmt, wcc...)
 }
 
 // CountersKiloByte is a wrapper around Counters with predefined unit
 // UnitKB (bytes/1000).
-func CountersKiloByte(pairFormat string, wcc ...WC) Decorator {
-	return Counters(UnitKB, pairFormat, wcc...)
+func CountersKiloByte(pairFmt string, wcc ...WC) Decorator {
+	return Counters(UnitKB, pairFmt, wcc...)
 }
 
 // Counters decorator with dynamic unit measure adjustment.
 //
 //	`unit` one of [0|UnitKiB|UnitKB] zero for no unit
 //
-//	`pairFormat` printf compatible verbs for current and total, like "%f" or "%d"
+//	`pairFmt` printf compatible verbs for current and total, like "%f" or "%d"
 //
 //	`wcc` optional WC config
 //
-// pairFormat example if UnitKB is chosen:
+// pairFmt example if UnitKB is chosen:
 //
 //	"%.1f / %.1f" = "1.0MB / 12.0MB" or "% .1f / % .1f" = "1.0 MB / 12.0 MB"
-func Counters(unit int, pairFormat string, wcc ...WC) Decorator {
+//
+func Counters(unit int, pairFmt string, wcc ...WC) Decorator {
 	var wc WC
 	for _, widthConf := range wcc {
 		wc = widthConf
 	}
 	wc.Init()
 	d := &countersDecorator{
-		WC:         wc,
-		unit:       unit,
-		pairFormat: pairFormat,
+		WC:      wc,
+		unit:    unit,
+		pairFmt: pairFmt,
 	}
 	return d
 }
@@ -181,7 +182,7 @@ func Counters(unit int, pairFormat string, wcc ...WC) Decorator {
 type countersDecorator struct {
 	WC
 	unit        int
-	pairFormat  string
+	pairFmt     string
 	completeMsg *string
 }
 
@@ -193,11 +194,11 @@ func (d *countersDecorator) Decor(st *Statistics) string {
 	var str string
 	switch d.unit {
 	case UnitKiB:
-		str = fmt.Sprintf(d.pairFormat, CounterKiB(st.Current), CounterKiB(st.Total))
+		str = fmt.Sprintf(d.pairFmt, CounterKiB(st.Current), CounterKiB(st.Total))
 	case UnitKB:
-		str = fmt.Sprintf(d.pairFormat, CounterKB(st.Current), CounterKB(st.Total))
+		str = fmt.Sprintf(d.pairFmt, CounterKB(st.Current), CounterKB(st.Total))
 	default:
-		str = fmt.Sprintf(d.pairFormat, st.Current, st.Total)
+		str = fmt.Sprintf(d.pairFmt, st.Current, st.Total)
 	}
 
 	return d.FormatMsg(str)

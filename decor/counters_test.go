@@ -49,19 +49,19 @@ func TestCounterKiB(t *testing.T) {
 		"1024 %f":           {1024, "%f", "1.000000KiB"},
 		"1024 %d":           {1024, "%d", "1KiB"},
 		"1024 %.1f":         {1024, "%.1f", "1.0KiB"},
-		"1024 %s":           {1024, "%s", "1.0KiB"},
+		"1024 %s":           {1024, "%s", "1KiB"},
 		"3*MiB+140KiB %f":   {3*MiB + 140*KiB, "%f", "3.136719MiB"},
 		"3*MiB+140KiB %d":   {3*MiB + 140*KiB, "%d", "3MiB"},
 		"3*MiB+140KiB %.1f": {3*MiB + 140*KiB, "%.1f", "3.1MiB"},
-		"3*MiB+140KiB %s":   {3*MiB + 140*KiB, "%s", "3.1MiB"},
+		"3*MiB+140KiB %s":   {3*MiB + 140*KiB, "%s", "3.13671875MiB"},
 		"2*GiB %f":          {2 * GiB, "%f", "2.000000GiB"},
 		"2*GiB %d":          {2 * GiB, "%d", "2GiB"},
 		"2*GiB %.1f":        {2 * GiB, "%.1f", "2.0GiB"},
-		"2*GiB %s":          {2 * GiB, "%s", "2.0GiB"},
+		"2*GiB %s":          {2 * GiB, "%s", "2GiB"},
 		"4*TiB %f":          {4 * TiB, "%f", "4.000000TiB"},
 		"4*TiB %d":          {4 * TiB, "%d", "4TiB"},
 		"4*TiB %.1f":        {4 * TiB, "%.1f", "4.0TiB"},
-		"4*TiB %s":          {4 * TiB, "%s", "4.0TiB"},
+		"4*TiB %s":          {4 * TiB, "%s", "4TiB"},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
