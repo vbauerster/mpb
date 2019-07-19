@@ -48,8 +48,8 @@ func (d *mergeDecorator) MergeUnwrap() []Decorator {
 	return decorators
 }
 
-func (md *mergeDecorator) Sync() (chan int, bool) {
-	return md.wc.Sync()
+func (d *mergeDecorator) Sync() (chan int, bool) {
+	return d.wc.Sync()
 }
 
 func (d *mergeDecorator) Decor(st *Statistics) string {
