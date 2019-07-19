@@ -8,7 +8,7 @@ func _() {
 	// An "invalid array index" compiler error signifies that the constant values have changed.
 	// Re-run the stringer command to generate them again.
 	var x [1]struct{}
-	_ = x[_b-0]
+	_ = x[_b-1]
 	_ = x[_KB-1000]
 	_ = x[_MB-1000000]
 	_ = x[_GB-1000000000]
@@ -25,7 +25,7 @@ const (
 
 func (i SizeB1000) String() string {
 	switch {
-	case i == 0:
+	case i == 1:
 		return _SizeB1000_name_0
 	case i == 1000:
 		return _SizeB1000_name_1
