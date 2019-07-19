@@ -25,25 +25,29 @@ func (s PercentageType) Format(st fmt.State, verb rune) {
 		}
 	}
 
-	res := strconv.FormatFloat(float64(s), 'f', prec, 64)
+	var b strings.Builder
+	b.WriteString(strconv.FormatFloat(float64(s), 'f', prec, 64))
 
 	if st.Flag(' ') {
-		res += " "
+		b.WriteString(" ")
 	}
-	res += "%"
+	b.WriteString("%")
 
 	if w, ok := st.Width(); ok {
-		if len(res) < w {
-			pad := strings.Repeat(" ", w-len(res))
+		if l := b.Len(); l < w {
+			pad := strings.Repeat(" ", w-l)
 			if st.Flag('-') {
-				res += pad
+				b.WriteString(pad)
 			} else {
-				res = pad + res
+				tmp := b.String()
+				b.Reset()
+				b.WriteString(pad)
+				b.WriteString(tmp)
 			}
 		}
 	}
 
-	io.WriteString(st, res)
+	io.WriteString(st, b.String())
 }
 
 // Percentage returns percentage decorator. It's a wrapper of NewPercentage.
@@ -66,6 +70,9 @@ func NewPercentage(fmt string, wcc ...WC) Decorator {
 		wc = widthConf
 	}
 	wc.Init()
+	if fmt == "" {
+		fmt = "% d"
+	}
 	d := &percentageDecorator{
 		WC:  wc,
 		fmt: fmt,

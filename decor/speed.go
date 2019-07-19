@@ -40,8 +40,10 @@ func MovingAverageSpeed(unit int, fmt string, average MovingAverage, wcc ...WC) 
 		wc = widthConf
 	}
 	wc.Init()
-	switch unit {
-	case UnitKiB, UnitKB:
+	if fmt == "" {
+		fmt = "%.0f"
+	}
+	if unit > 0 {
 		fmt += "/s"
 	}
 	d := &movingAverageSpeed{
@@ -130,8 +132,10 @@ func NewAverageSpeed(unit int, fmt string, startTime time.Time, wcc ...WC) Decor
 		wc = widthConf
 	}
 	wc.Init()
-	switch unit {
-	case UnitKiB, UnitKB:
+	if fmt == "" {
+		fmt = "%.0f"
+	}
+	if unit > 0 {
 		fmt += "/s"
 	}
 	d := &averageSpeed{

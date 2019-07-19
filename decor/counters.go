@@ -45,6 +45,9 @@ func Counters(unit int, pairFmt string, wcc ...WC) Decorator {
 		wc = widthConf
 	}
 	wc.Init()
+	if pairFmt == "" {
+		pairFmt = "%d / %d"
+	}
 	d := &countersDecorator{
 		WC:      wc,
 		unit:    unit,

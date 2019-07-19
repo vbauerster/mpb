@@ -15,6 +15,14 @@ func TestSpeedKiBDecor(t *testing.T) {
 		expected string
 	}{
 		{
+			name:     "empty fmt",
+			unit:     UnitKiB,
+			fmt:      "",
+			current:  0,
+			elapsed:  time.Second,
+			expected: "0b/s",
+		},
+		{
 			name:     "UnitKiB:%d:0b",
 			unit:     UnitKiB,
 			fmt:      "%d",
@@ -134,6 +142,14 @@ func TestSpeedKBDecor(t *testing.T) {
 		elapsed  time.Duration
 		expected string
 	}{
+		{
+			name:     "empty fmt",
+			unit:     UnitKB,
+			fmt:      "",
+			current:  0,
+			elapsed:  time.Second,
+			expected: "0b/s",
+		},
 		{
 			name:     "UnitKB:%d:0b",
 			unit:     UnitKB,
