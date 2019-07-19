@@ -8,6 +8,9 @@ import (
 	"strings"
 )
 
+//go:generate stringer -type=SizeB1024 -trimprefix=_i
+//go:generate stringer -type=SizeB1000 -trimprefix=_
+
 const (
 	_ib   SizeB1024 = iota + 1
 	_iKiB SizeB1024 = 1 << (iota * 10)
@@ -16,7 +19,9 @@ const (
 	_iTiB
 )
 
-//go:generate stringer -type=SizeB1024 -trimprefix=_i
+// SizeB1024 named type, which implements fmt.Formatter interface. It
+// adjusts its value according to byte size multiple by 1024 and appends
+// appropriate size marker (KiB, MiB, GiB, TiB).
 type SizeB1024 int64
 
 func (self SizeB1024) Format(st fmt.State, verb rune) {
@@ -80,7 +85,9 @@ const (
 	_TB SizeB1000 = _GB * 1000
 )
 
-//go:generate stringer -type=SizeB1000 -trimprefix=_
+// SizeB1000 named type, which implements fmt.Formatter interface. It
+// adjusts its value according to byte size multiple by 1000 and appends
+// appropriate size marker (KB, MB, GB, TB).
 type SizeB1000 int64
 
 func (self SizeB1000) Format(st fmt.State, verb rune) {
