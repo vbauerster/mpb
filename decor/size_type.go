@@ -74,7 +74,7 @@ func (self SizeB1024) Format(st fmt.State, verb rune) {
 
 const (
 	_b  SizeB1000 = 1
-	_KB SizeB1000 = 1000
+	_KB SizeB1000 = _b * 1000
 	_MB SizeB1000 = _KB * 1000
 	_GB SizeB1000 = _MB * 1000
 	_TB SizeB1000 = _GB * 1000
