@@ -2,24 +2,6 @@ package decor
 
 import (
 	"fmt"
-	"io"
-	"strconv"
-	"strings"
-)
-
-const (
-	_   = iota
-	KiB = 1 << (iota * 10)
-	MiB
-	GiB
-	TiB
-)
-
-const (
-	KB = 1000
-	MB = KB * 1000
-	GB = MB * 1000
-	TB = GB * 1000
 )
 
 const (
@@ -27,114 +9,6 @@ const (
 	UnitKiB
 	UnitKB
 )
-
-type CounterKiB int64
-
-func (c CounterKiB) Format(st fmt.State, verb rune) {
-	var prec int
-	switch verb {
-	case 'd':
-	case 's':
-		prec = -1
-	default:
-		if p, ok := st.Precision(); ok {
-			prec = p
-		} else {
-			prec = 6
-		}
-	}
-
-	var res, unit string
-	switch {
-	case c >= TiB:
-		unit = "TiB"
-		res = strconv.FormatFloat(float64(c)/TiB, 'f', prec, 64)
-	case c >= GiB:
-		unit = "GiB"
-		res = strconv.FormatFloat(float64(c)/GiB, 'f', prec, 64)
-	case c >= MiB:
-		unit = "MiB"
-		res = strconv.FormatFloat(float64(c)/MiB, 'f', prec, 64)
-	case c >= KiB:
-		unit = "KiB"
-		res = strconv.FormatFloat(float64(c)/KiB, 'f', prec, 64)
-	default:
-		unit = "b"
-		res = strconv.FormatInt(int64(c), 10)
-	}
-
-	if st.Flag(' ') {
-		res += " "
-	}
-	res += unit
-
-	if w, ok := st.Width(); ok {
-		if len(res) < w {
-			pad := strings.Repeat(" ", w-len(res))
-			if st.Flag('-') {
-				res += pad
-			} else {
-				res = pad + res
-			}
-		}
-	}
-
-	io.WriteString(st, res)
-}
-
-type CounterKB int64
-
-func (c CounterKB) Format(st fmt.State, verb rune) {
-	var prec int
-	switch verb {
-	case 'd':
-	case 's':
-		prec = -1
-	default:
-		if p, ok := st.Precision(); ok {
-			prec = p
-		} else {
-			prec = 6
-		}
-	}
-
-	var res, unit string
-	switch {
-	case c >= TB:
-		unit = "TB"
-		res = strconv.FormatFloat(float64(c)/TB, 'f', prec, 64)
-	case c >= GB:
-		unit = "GB"
-		res = strconv.FormatFloat(float64(c)/GB, 'f', prec, 64)
-	case c >= MB:
-		unit = "MB"
-		res = strconv.FormatFloat(float64(c)/MB, 'f', prec, 64)
-	case c >= KB:
-		unit = "kB"
-		res = strconv.FormatFloat(float64(c)/KB, 'f', prec, 64)
-	default:
-		unit = "b"
-		res = strconv.FormatInt(int64(c), 10)
-	}
-
-	if st.Flag(' ') {
-		res += " "
-	}
-	res += unit
-
-	if w, ok := st.Width(); ok {
-		if len(res) < w {
-			pad := strings.Repeat(" ", w-len(res))
-			if st.Flag('-') {
-				res += pad
-			} else {
-				res = pad + res
-			}
-		}
-	}
-
-	io.WriteString(st, res)
-}
 
 // CountersNoUnit is a wrapper around Counters with no unit param.
 func CountersNoUnit(pairFmt string, wcc ...WC) Decorator {
@@ -191,17 +65,17 @@ func (d *countersDecorator) Decor(st *Statistics) string {
 		return d.FormatMsg(*d.completeMsg)
 	}
 
-	var str string
+	var res string
 	switch d.unit {
 	case UnitKiB:
-		str = fmt.Sprintf(d.pairFmt, CounterKiB(st.Current), CounterKiB(st.Total))
+		res = fmt.Sprintf(d.pairFmt, SizeB1024(st.Current), SizeB1024(st.Total))
 	case UnitKB:
-		str = fmt.Sprintf(d.pairFmt, CounterKB(st.Current), CounterKB(st.Total))
+		res = fmt.Sprintf(d.pairFmt, SizeB1000(st.Current), SizeB1000(st.Total))
 	default:
-		str = fmt.Sprintf(d.pairFmt, st.Current, st.Total)
+		res = fmt.Sprintf(d.pairFmt, st.Current, st.Total)
 	}
 
-	return d.FormatMsg(str)
+	return d.FormatMsg(res)
 }
 
 func (d *countersDecorator) OnCompleteMessage(msg string) {

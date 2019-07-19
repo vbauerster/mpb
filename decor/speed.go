@@ -2,122 +2,11 @@ package decor
 
 import (
 	"fmt"
-	"io"
 	"math"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/VividCortex/ewma"
 )
-
-type SpeedKiB float64
-
-func (s SpeedKiB) Format(st fmt.State, verb rune) {
-	var prec int
-	switch verb {
-	case 'd':
-	case 's':
-		prec = -1
-	default:
-		if p, ok := st.Precision(); ok {
-			prec = p
-		} else {
-			prec = 6
-		}
-	}
-
-	var res, unit string
-	switch {
-	case s >= TiB:
-		unit = "TiB/s"
-		res = strconv.FormatFloat(float64(s)/TiB, 'f', prec, 64)
-	case s >= GiB:
-		unit = "GiB/s"
-		res = strconv.FormatFloat(float64(s)/GiB, 'f', prec, 64)
-	case s >= MiB:
-		unit = "MiB/s"
-		res = strconv.FormatFloat(float64(s)/MiB, 'f', prec, 64)
-	case s >= KiB:
-		unit = "KiB/s"
-		res = strconv.FormatFloat(float64(s)/KiB, 'f', prec, 64)
-	default:
-		unit = "b/s"
-		res = strconv.FormatInt(int64(s), 10)
-	}
-
-	if st.Flag(' ') {
-		res += " "
-	}
-	res += unit
-
-	if w, ok := st.Width(); ok {
-		if len(res) < w {
-			pad := strings.Repeat(" ", w-len(res))
-			if st.Flag('-') {
-				res += pad
-			} else {
-				res = pad + res
-			}
-		}
-	}
-
-	io.WriteString(st, res)
-}
-
-type SpeedKB float64
-
-func (s SpeedKB) Format(st fmt.State, verb rune) {
-	var prec int
-	switch verb {
-	case 'd':
-	case 's':
-		prec = -1
-	default:
-		if p, ok := st.Precision(); ok {
-			prec = p
-		} else {
-			prec = 6
-		}
-	}
-
-	var res, unit string
-	switch {
-	case s >= TB:
-		unit = "TB/s"
-		res = strconv.FormatFloat(float64(s)/TB, 'f', prec, 64)
-	case s >= GB:
-		unit = "GB/s"
-		res = strconv.FormatFloat(float64(s)/GB, 'f', prec, 64)
-	case s >= MB:
-		unit = "MB/s"
-		res = strconv.FormatFloat(float64(s)/MB, 'f', prec, 64)
-	case s >= KB:
-		unit = "kB/s"
-		res = strconv.FormatFloat(float64(s)/KB, 'f', prec, 64)
-	default:
-		unit = "b/s"
-		res = strconv.FormatInt(int64(s), 10)
-	}
-
-	if st.Flag(' ') {
-		res += " "
-	}
-	res += unit
-
-	if w, ok := st.Width(); ok {
-		if len(res) < w {
-			pad := strings.Repeat(" ", w-len(res))
-			if st.Flag(int('-')) {
-				res += pad
-			} else {
-				res = pad + res
-			}
-		}
-	}
-
-	io.WriteString(st, res)
-}
 
 // EwmaSpeed exponential-weighted-moving-average based speed decorator.
 // Note that it's necessary to supply bar.Incr* methods with incremental
@@ -151,6 +40,10 @@ func MovingAverageSpeed(unit int, fmt string, average MovingAverage, wcc ...WC) 
 		wc = widthConf
 	}
 	wc.Init()
+	switch unit {
+	case UnitKiB, UnitKB:
+		fmt += "/s"
+	}
 	d := &movingAverageSpeed{
 		WC:      wc,
 		unit:    unit,
@@ -178,11 +71,12 @@ func (d *movingAverageSpeed) Decor(st *Statistics) string {
 	}
 
 	speed := d.average.Value()
+
 	switch d.unit {
 	case UnitKiB:
-		d.msg = fmt.Sprintf(d.fmt, SpeedKiB(speed))
+		d.msg = fmt.Sprintf(d.fmt, SizeB1024(math.Round(speed)))
 	case UnitKB:
-		d.msg = fmt.Sprintf(d.fmt, SpeedKB(speed))
+		d.msg = fmt.Sprintf(d.fmt, SizeB1000(math.Round(speed)))
 	default:
 		d.msg = fmt.Sprintf(d.fmt, speed)
 	}
@@ -236,11 +130,15 @@ func NewAverageSpeed(unit int, fmt string, startTime time.Time, wcc ...WC) Decor
 		wc = widthConf
 	}
 	wc.Init()
+	switch unit {
+	case UnitKiB, UnitKB:
+		fmt += "/s"
+	}
 	d := &averageSpeed{
 		WC:        wc,
 		unit:      unit,
-		fmt:       fmt,
 		startTime: startTime,
+		fmt:       fmt,
 	}
 	return d
 }
@@ -248,8 +146,8 @@ func NewAverageSpeed(unit int, fmt string, startTime time.Time, wcc ...WC) Decor
 type averageSpeed struct {
 	WC
 	unit        int
-	fmt         string
 	startTime   time.Time
+	fmt         string
 	msg         string
 	completeMsg *string
 }
@@ -267,9 +165,9 @@ func (d *averageSpeed) Decor(st *Statistics) string {
 
 	switch d.unit {
 	case UnitKiB:
-		d.msg = fmt.Sprintf(d.fmt, SpeedKiB(speed))
+		d.msg = fmt.Sprintf(d.fmt, SizeB1024(math.Round(speed)))
 	case UnitKB:
-		d.msg = fmt.Sprintf(d.fmt, SpeedKB(speed))
+		d.msg = fmt.Sprintf(d.fmt, SizeB1000(math.Round(speed)))
 	default:
 		d.msg = fmt.Sprintf(d.fmt, speed)
 	}

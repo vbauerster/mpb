@@ -1,141 +1,245 @@
 package decor
 
 import (
-	"fmt"
 	"testing"
+	"time"
 )
 
-func TestSpeedKiB(t *testing.T) {
-	cases := map[string]struct {
-		value    int64
-		verb     string
+func TestSpeedKiBDecor(t *testing.T) {
+	cases := []struct {
+		name     string
+		fmt      string
+		unit     int
+		current  int64
+		elapsed  time.Duration
 		expected string
 	}{
-		"verb %f":   {12345678, "%f", "11.773756MiB/s"},
-		"verb %.0f": {12345678, "%.0f", "12MiB/s"},
-		"verb %.1f": {12345678, "%.1f", "11.8MiB/s"},
-		"verb %.2f": {12345678, "%.2f", "11.77MiB/s"},
-		"verb %.3f": {12345678, "%.3f", "11.774MiB/s"},
-
-		"verb % f":   {12345678, "% f", "11.773756 MiB/s"},
-		"verb % .0f": {12345678, "% .0f", "12 MiB/s"},
-		"verb % .1f": {12345678, "% .1f", "11.8 MiB/s"},
-		"verb % .2f": {12345678, "% .2f", "11.77 MiB/s"},
-		"verb % .3f": {12345678, "% .3f", "11.774 MiB/s"},
-
-		"verb %10.f":  {12345678, "%10.f", "   12MiB/s"},
-		"verb %10.0f": {12345678, "%10.0f", "   12MiB/s"},
-		"verb %10.1f": {12345678, "%10.1f", " 11.8MiB/s"},
-		"verb %10.2f": {12345678, "%10.2f", "11.77MiB/s"},
-		"verb %10.3f": {12345678, "%10.3f", "11.774MiB/s"},
-
-		"verb % 10.f":  {12345678, "% 10.f", "  12 MiB/s"},
-		"verb % 10.0f": {12345678, "% 10.0f", "  12 MiB/s"},
-		"verb % 10.1f": {12345678, "% 10.1f", "11.8 MiB/s"},
-
-		"verb %-10.f":  {12345678, "%-10.f", "12MiB/s   "},
-		"verb %-10.0f": {12345678, "%-10.0f", "12MiB/s   "},
-		"verb %-10.1f": {12345678, "%-10.1f", "11.8MiB/s "},
-		"verb %-10.2f": {12345678, "%10.2f", "11.77MiB/s"},
-		"verb %-10.3f": {12345678, "%10.3f", "11.774MiB/s"},
-
-		"verb % -10.f":  {12345678, "% -10.f", "12 MiB/s  "},
-		"verb % -10.0f": {12345678, "% -10.0f", "12 MiB/s  "},
-		"verb % -10.1f": {12345678, "% -10.1f", "11.8 MiB/s"},
-
-		"1000 %f":               {1000, "%f", "1000b/s"},
-		"1000 %d":               {1000, "%d", "1000b/s"},
-		"1000 %s":               {1000, "%s", "1000b/s"},
-		"1024 %f":               {1024, "%f", "1.000000KiB/s"},
-		"1024 %d":               {1024, "%d", "1KiB/s"},
-		"1024 %.1f":             {1024, "%.1f", "1.0KiB/s"},
-		"1024 %s":               {1024, "%s", "1KiB/s"},
-		"3*MiB/s+140KiB/s %f":   {3*MiB + 140*KiB, "%f", "3.136719MiB/s"},
-		"3*MiB/s+140KiB/s %d":   {3*MiB + 140*KiB, "%d", "3MiB/s"},
-		"3*MiB/s+140KiB/s %.1f": {3*MiB + 140*KiB, "%.1f", "3.1MiB/s"},
-		"3*MiB/s+140KiB/s %s":   {3*MiB + 140*KiB, "%s", "3.13671875MiB/s"},
-		"2*GiB/s %f":            {2 * GiB, "%f", "2.000000GiB/s"},
-		"2*GiB/s %d":            {2 * GiB, "%d", "2GiB/s"},
-		"2*GiB/s %.1f":          {2 * GiB, "%.1f", "2.0GiB/s"},
-		"2*GiB/s %s":            {2 * GiB, "%s", "2GiB/s"},
-		"4*TiB/s %f":            {4 * TiB, "%f", "4.000000TiB/s"},
-		"4*TiB/s %d":            {4 * TiB, "%d", "4TiB/s"},
-		"4*TiB/s %.1f":          {4 * TiB, "%.1f", "4.0TiB/s"},
-		"4*TiB/s %s":            {4 * TiB, "%s", "4TiB/s"},
+		{
+			name:     "UnitKiB:%d:0b",
+			unit:     UnitKiB,
+			fmt:      "%d",
+			current:  0,
+			elapsed:  time.Second,
+			expected: "0b/s",
+		},
+		{
+			name:     "UnitKiB:% .2f:0b",
+			unit:     UnitKiB,
+			fmt:      "% .2f",
+			current:  0,
+			elapsed:  time.Second,
+			expected: "0.00 b/s",
+		},
+		{
+			name:     "UnitKiB:%d:1b",
+			unit:     UnitKiB,
+			fmt:      "%d",
+			current:  1,
+			elapsed:  time.Second,
+			expected: "1b/s",
+		},
+		{
+			name:     "UnitKiB:% .2f:1b",
+			unit:     UnitKiB,
+			fmt:      "% .2f",
+			current:  1,
+			elapsed:  time.Second,
+			expected: "1.00 b/s",
+		},
+		{
+			name:     "UnitKiB:%d:KiB",
+			unit:     UnitKiB,
+			fmt:      "%d",
+			current:  2 * int64(_iKiB),
+			elapsed:  1 * time.Second,
+			expected: "2KiB/s",
+		},
+		{
+			name:     "UnitKiB:% .f:KiB",
+			unit:     UnitKiB,
+			fmt:      "% .2f",
+			current:  2 * int64(_iKiB),
+			elapsed:  1 * time.Second,
+			expected: "2.00 KiB/s",
+		},
+		{
+			name:     "UnitKiB:%d:MiB",
+			unit:     UnitKiB,
+			fmt:      "%d",
+			current:  2 * int64(_iMiB),
+			elapsed:  1 * time.Second,
+			expected: "2MiB/s",
+		},
+		{
+			name:     "UnitKiB:% .2f:MiB",
+			unit:     UnitKiB,
+			fmt:      "% .2f",
+			current:  2 * int64(_iMiB),
+			elapsed:  1 * time.Second,
+			expected: "2.00 MiB/s",
+		},
+		{
+			name:     "UnitKiB:%d:GiB",
+			unit:     UnitKiB,
+			fmt:      "%d",
+			current:  2 * int64(_iGiB),
+			elapsed:  1 * time.Second,
+			expected: "2GiB/s",
+		},
+		{
+			name:     "UnitKiB:% .2f:GiB",
+			unit:     UnitKiB,
+			fmt:      "% .2f",
+			current:  2 * int64(_iGiB),
+			elapsed:  1 * time.Second,
+			expected: "2.00 GiB/s",
+		},
+		{
+			name:     "UnitKiB:%d:TiB",
+			unit:     UnitKiB,
+			fmt:      "%d",
+			current:  2 * int64(_iTiB),
+			elapsed:  1 * time.Second,
+			expected: "2TiB/s",
+		},
+		{
+			name:     "UnitKiB:% .2f:TiB",
+			unit:     UnitKiB,
+			fmt:      "% .2f",
+			current:  2 * int64(_iTiB),
+			elapsed:  1 * time.Second,
+			expected: "2.00 TiB/s",
+		},
 	}
-	for name, tc := range cases {
-		t.Run(name, func(t *testing.T) {
-			got := fmt.Sprintf(tc.verb, SpeedKiB(tc.value))
-			if got != tc.expected {
-				t.Fatalf("expected: %q, got: %q\n", tc.expected, got)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			decor := NewAverageSpeed(tc.unit, tc.fmt, time.Now().Add(-tc.elapsed))
+			stat := &Statistics{
+				Current: tc.current,
+			}
+			res := decor.Decor(stat)
+			if res != tc.expected {
+				t.Fatalf("expected: %q, got: %q\n", tc.expected, res)
 			}
 		})
 	}
 }
 
-func TestSpeedKB(t *testing.T) {
-	cases := map[string]struct {
-		value    int64
-		verb     string
+func TestSpeedKBDecor(t *testing.T) {
+	cases := []struct {
+		name     string
+		fmt      string
+		unit     int
+		current  int64
+		elapsed  time.Duration
 		expected string
 	}{
-		"verb %f":   {12345678, "%f", "12.345678MB/s"},
-		"verb %.0f": {12345678, "%.0f", "12MB/s"},
-		"verb %.1f": {12345678, "%.1f", "12.3MB/s"},
-		"verb %.2f": {12345678, "%.2f", "12.35MB/s"},
-		"verb %.3f": {12345678, "%.3f", "12.346MB/s"},
-
-		"verb % f":   {12345678, "% f", "12.345678 MB/s"},
-		"verb % .0f": {12345678, "% .0f", "12 MB/s"},
-		"verb % .1f": {12345678, "% .1f", "12.3 MB/s"},
-		"verb % .2f": {12345678, "% .2f", "12.35 MB/s"},
-		"verb % .3f": {12345678, "% .3f", "12.346 MB/s"},
-
-		"verb %10.f":  {12345678, "%10.f", "    12MB/s"},
-		"verb %10.0f": {12345678, "%10.0f", "    12MB/s"},
-		"verb %10.1f": {12345678, "%10.1f", "  12.3MB/s"},
-		"verb %10.2f": {12345678, "%10.2f", " 12.35MB/s"},
-		"verb %10.3f": {12345678, "%10.3f", "12.346MB/s"},
-
-		"verb % 10.f":  {12345678, "% 10.f", "   12 MB/s"},
-		"verb % 10.0f": {12345678, "% 10.0f", "   12 MB/s"},
-		"verb % 10.1f": {12345678, "% 10.1f", " 12.3 MB/s"},
-
-		"verb %-10.f":  {12345678, "%-10.f", "12MB/s    "},
-		"verb %-10.0f": {12345678, "%-10.0f", "12MB/s    "},
-		"verb %-10.1f": {12345678, "%-10.1f", "12.3MB/s  "},
-		"verb %-10.2f": {12345678, "%10.2f", " 12.35MB/s"},
-		"verb %-10.3f": {12345678, "%10.3f", "12.346MB/s"},
-
-		"verb % -10.f":  {12345678, "% -10.f", "12 MB/s   "},
-		"verb % -10.0f": {12345678, "% -10.0f", "12 MB/s   "},
-		"verb % -10.1f": {12345678, "% -10.1f", "12.3 MB/s "},
-
-		"1000 %f":              {1000, "%f", "1.000000kB/s"},
-		"1000 %d":              {1000, "%d", "1kB/s"},
-		"1000 %s":              {1000, "%s", "1kB/s"},
-		"1024 %f":              {1024, "%f", "1.024000kB/s"},
-		"1024 %d":              {1024, "%d", "1kB/s"},
-		"1024 %.1f":            {1024, "%.1f", "1.0kB/s"},
-		"1024 %s":              {1024, "%s", "1.024kB/s"},
-		"3*MB/s+140*KB/s %f":   {3*MB + 140*KB, "%f", "3.140000MB/s"},
-		"3*MB/s+140*KB/s %d":   {3*MB + 140*KB, "%d", "3MB/s"},
-		"3*MB/s+140*KB/s %.1f": {3*MB + 140*KB, "%.1f", "3.1MB/s"},
-		"3*MB/s+140*KB/s %s":   {3*MB + 140*KB, "%s", "3.14MB/s"},
-		"2*GB/s %f":            {2 * GB, "%f", "2.000000GB/s"},
-		"2*GB/s %d":            {2 * GB, "%d", "2GB/s"},
-		"2*GB/s %.1f":          {2 * GB, "%.1f", "2.0GB/s"},
-		"2*GB/s %s":            {2 * GB, "%s", "2GB/s"},
-		"4*TB/s %f":            {4 * TB, "%f", "4.000000TB/s"},
-		"4*TB/s %d":            {4 * TB, "%d", "4TB/s"},
-		"4*TB/s %.1f":          {4 * TB, "%.1f", "4.0TB/s"},
-		"4*TB/s %s":            {4 * TB, "%s", "4TB/s"},
+		{
+			name:     "UnitKB:%d:0b",
+			unit:     UnitKB,
+			fmt:      "%d",
+			current:  0,
+			elapsed:  time.Second,
+			expected: "0b/s",
+		},
+		{
+			name:     "UnitKB:% .2f:0b",
+			unit:     UnitKB,
+			fmt:      "% .2f",
+			current:  0,
+			elapsed:  time.Second,
+			expected: "0.00 b/s",
+		},
+		{
+			name:     "UnitKB:%d:1b",
+			unit:     UnitKB,
+			fmt:      "%d",
+			current:  1,
+			elapsed:  time.Second,
+			expected: "1b/s",
+		},
+		{
+			name:     "UnitKB:% .2f:1b",
+			unit:     UnitKB,
+			fmt:      "% .2f",
+			current:  1,
+			elapsed:  time.Second,
+			expected: "1.00 b/s",
+		},
+		{
+			name:     "UnitKB:%d:KB",
+			unit:     UnitKB,
+			fmt:      "%d",
+			current:  2 * int64(_KB),
+			elapsed:  1 * time.Second,
+			expected: "2KB/s",
+		},
+		{
+			name:     "UnitKB:% .f:KB",
+			unit:     UnitKB,
+			fmt:      "% .2f",
+			current:  2 * int64(_KB),
+			elapsed:  1 * time.Second,
+			expected: "2.00 KB/s",
+		},
+		{
+			name:     "UnitKB:%d:MB",
+			unit:     UnitKB,
+			fmt:      "%d",
+			current:  2 * int64(_MB),
+			elapsed:  1 * time.Second,
+			expected: "2MB/s",
+		},
+		{
+			name:     "UnitKB:% .2f:MB",
+			unit:     UnitKB,
+			fmt:      "% .2f",
+			current:  2 * int64(_MB),
+			elapsed:  1 * time.Second,
+			expected: "2.00 MB/s",
+		},
+		{
+			name:     "UnitKB:%d:GB",
+			unit:     UnitKB,
+			fmt:      "%d",
+			current:  2 * int64(_GB),
+			elapsed:  1 * time.Second,
+			expected: "2GB/s",
+		},
+		{
+			name:     "UnitKB:% .2f:GB",
+			unit:     UnitKB,
+			fmt:      "% .2f",
+			current:  2 * int64(_GB),
+			elapsed:  1 * time.Second,
+			expected: "2.00 GB/s",
+		},
+		{
+			name:     "UnitKB:%d:TB",
+			unit:     UnitKB,
+			fmt:      "%d",
+			current:  2 * int64(_TB),
+			elapsed:  1 * time.Second,
+			expected: "2TB/s",
+		},
+		{
+			name:     "UnitKB:% .2f:TB",
+			unit:     UnitKB,
+			fmt:      "% .2f",
+			current:  2 * int64(_TB),
+			elapsed:  1 * time.Second,
+			expected: "2.00 TB/s",
+		},
 	}
-	for name, tc := range cases {
-		t.Run(name, func(t *testing.T) {
-			got := fmt.Sprintf(tc.verb, SpeedKB(tc.value))
-			if got != tc.expected {
-				t.Fatalf("expected: %q, got: %q\n", tc.expected, got)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			decor := NewAverageSpeed(tc.unit, tc.fmt, time.Now().Add(-tc.elapsed))
+			stat := &Statistics{
+				Current: tc.current,
+			}
+			res := decor.Decor(stat)
+			if res != tc.expected {
+				t.Fatalf("expected: %q, got: %q\n", tc.expected, res)
 			}
 		})
 	}
