@@ -9,6 +9,8 @@ import (
 	"github.com/vbauerster/mpb/v4/internal"
 )
 
+// PercentageType named type, which implements fmt.Formatter interface.
+// It appends `%` sign to its value.
 type PercentageType float64
 
 func (s PercentageType) Format(st fmt.State, verb rune) {
