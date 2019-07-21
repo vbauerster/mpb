@@ -23,7 +23,7 @@ func (self *speedType) Format(st fmt.State, verb rune) {
 	io.WriteString(st, self.perSecond)
 }
 
-func sizePerSecond(sizeT fmt.Formatter) fmt.Formatter {
+func speedPerSecond(sizeT fmt.Formatter) fmt.Formatter {
 	return &speedType{
 		sizeT:     sizeT,
 		perSecond: perSecond,
@@ -95,9 +95,9 @@ func (d *movingAverageSpeed) Decor(st *Statistics) string {
 
 	switch d.unit {
 	case UnitKiB:
-		d.msg = fmt.Sprintf(d.fmt, SizeB1024(math.Round(speed)))
+		d.msg = fmt.Sprintf(d.fmt, speedPerSecond(SizeB1024(math.Round(speed))))
 	case UnitKB:
-		d.msg = fmt.Sprintf(d.fmt, SizeB1000(math.Round(speed)))
+		d.msg = fmt.Sprintf(d.fmt, speedPerSecond(SizeB1000(math.Round(speed))))
 	default:
 		d.msg = fmt.Sprintf(d.fmt, speed)
 	}
@@ -185,9 +185,9 @@ func (d *averageSpeed) Decor(st *Statistics) string {
 
 	switch d.unit {
 	case UnitKiB:
-		d.msg = fmt.Sprintf(d.fmt, sizePerSecond(SizeB1024(math.Round(speed))))
+		d.msg = fmt.Sprintf(d.fmt, speedPerSecond(SizeB1024(math.Round(speed))))
 	case UnitKB:
-		d.msg = fmt.Sprintf(d.fmt, sizePerSecond(SizeB1000(math.Round(speed))))
+		d.msg = fmt.Sprintf(d.fmt, speedPerSecond(SizeB1000(math.Round(speed))))
 	default:
 		d.msg = fmt.Sprintf(d.fmt, speed)
 	}
