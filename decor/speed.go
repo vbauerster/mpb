@@ -9,25 +9,13 @@ import (
 	"github.com/VividCortex/ewma"
 )
 
-const (
-	perSecond = "/s"
-)
-
 type speedType struct {
-	sizeT     fmt.Formatter
-	perSecond string
+	fmt.Formatter
 }
 
 func (self *speedType) Format(st fmt.State, verb rune) {
-	self.sizeT.Format(st, verb)
-	io.WriteString(st, self.perSecond)
-}
-
-func speedPerSecond(sizeT fmt.Formatter) fmt.Formatter {
-	return &speedType{
-		sizeT:     sizeT,
-		perSecond: perSecond,
-	}
+	self.Formatter.Format(st, verb)
+	io.WriteString(st, "/s")
 }
 
 // EwmaSpeed exponential-weighted-moving-average based speed decorator.
@@ -93,14 +81,16 @@ func (d *movingAverageSpeed) Decor(st *Statistics) string {
 
 	speed := d.average.Value()
 
+	var val interface{}
 	switch d.unit {
 	case UnitKiB:
-		d.msg = fmt.Sprintf(d.fmt, speedPerSecond(SizeB1024(math.Round(speed))))
+		val = &speedType{SizeB1024(math.Round(speed))}
 	case UnitKB:
-		d.msg = fmt.Sprintf(d.fmt, speedPerSecond(SizeB1000(math.Round(speed))))
+		val = &speedType{SizeB1000(math.Round(speed))}
 	default:
-		d.msg = fmt.Sprintf(d.fmt, speed)
+		val = speed
 	}
+	d.msg = fmt.Sprintf(d.fmt, val)
 
 	return d.FormatMsg(d.msg)
 }
@@ -183,14 +173,16 @@ func (d *averageSpeed) Decor(st *Statistics) string {
 	timeElapsed := time.Since(d.startTime)
 	speed := float64(st.Current) / timeElapsed.Seconds()
 
+	var val interface{}
 	switch d.unit {
 	case UnitKiB:
-		d.msg = fmt.Sprintf(d.fmt, speedPerSecond(SizeB1024(math.Round(speed))))
+		val = &speedType{SizeB1024(math.Round(speed))}
 	case UnitKB:
-		d.msg = fmt.Sprintf(d.fmt, speedPerSecond(SizeB1000(math.Round(speed))))
+		val = &speedType{SizeB1000(math.Round(speed))}
 	default:
-		d.msg = fmt.Sprintf(d.fmt, speed)
+		val = speed
 	}
+	d.msg = fmt.Sprintf(d.fmt, val)
 
 	return d.FormatMsg(d.msg)
 }
