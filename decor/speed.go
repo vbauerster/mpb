@@ -2,11 +2,33 @@ package decor
 
 import (
 	"fmt"
+	"io"
 	"math"
 	"time"
 
 	"github.com/VividCortex/ewma"
 )
+
+const (
+	perSecond = "/s"
+)
+
+type speedType struct {
+	sizeT     fmt.Formatter
+	perSecond string
+}
+
+func (self *speedType) Format(st fmt.State, verb rune) {
+	self.sizeT.Format(st, verb)
+	io.WriteString(st, self.perSecond)
+}
+
+func sizePerSecond(sizeT fmt.Formatter) fmt.Formatter {
+	return &speedType{
+		sizeT:     sizeT,
+		perSecond: perSecond,
+	}
+}
 
 // EwmaSpeed exponential-weighted-moving-average based speed decorator.
 // Note that it's necessary to supply bar.Incr* methods with incremental
@@ -42,9 +64,6 @@ func MovingAverageSpeed(unit int, fmt string, average MovingAverage, wcc ...WC) 
 	wc.Init()
 	if fmt == "" {
 		fmt = "%.0f"
-	}
-	if unit > 0 {
-		fmt += "/s"
 	}
 	d := &movingAverageSpeed{
 		WC:      wc,
@@ -135,9 +154,6 @@ func NewAverageSpeed(unit int, fmt string, startTime time.Time, wcc ...WC) Decor
 	if fmt == "" {
 		fmt = "%.0f"
 	}
-	if unit > 0 {
-		fmt += "/s"
-	}
 	d := &averageSpeed{
 		WC:        wc,
 		unit:      unit,
@@ -169,9 +185,9 @@ func (d *averageSpeed) Decor(st *Statistics) string {
 
 	switch d.unit {
 	case UnitKiB:
-		d.msg = fmt.Sprintf(d.fmt, SizeB1024(math.Round(speed)))
+		d.msg = fmt.Sprintf(d.fmt, sizePerSecond(SizeB1024(math.Round(speed))))
 	case UnitKB:
-		d.msg = fmt.Sprintf(d.fmt, SizeB1000(math.Round(speed)))
+		d.msg = fmt.Sprintf(d.fmt, sizePerSecond(SizeB1000(math.Round(speed))))
 	default:
 		d.msg = fmt.Sprintf(d.fmt, speed)
 	}

@@ -5,7 +5,6 @@ import (
 	"io"
 	"math"
 	"strconv"
-	"strings"
 )
 
 //go:generate stringer -type=SizeB1024 -trimprefix=_i
@@ -52,29 +51,12 @@ func (self SizeB1024) Format(st fmt.State, verb rune) {
 		unit = _iTiB
 	}
 
-	var b strings.Builder
-	b.WriteString(strconv.FormatFloat(float64(self)/float64(unit), 'f', prec, 64))
+	io.WriteString(st, strconv.FormatFloat(float64(self)/float64(unit), 'f', prec, 64))
 
 	if st.Flag(' ') {
-		b.WriteString(" ")
+		io.WriteString(st, " ")
 	}
-	b.WriteString(unit.String())
-
-	if w, ok := st.Width(); ok {
-		if l := b.Len(); l < w {
-			pad := strings.Repeat(" ", w-l)
-			if st.Flag('-') {
-				b.WriteString(pad)
-			} else {
-				tmp := b.String()
-				b.Reset()
-				b.WriteString(pad)
-				b.WriteString(tmp)
-			}
-		}
-	}
-
-	io.WriteString(st, b.String())
+	io.WriteString(st, unit.String())
 }
 
 const (
@@ -118,27 +100,10 @@ func (self SizeB1000) Format(st fmt.State, verb rune) {
 		unit = _TB
 	}
 
-	var b strings.Builder
-	b.WriteString(strconv.FormatFloat(float64(self)/float64(unit), 'f', prec, 64))
+	io.WriteString(st, strconv.FormatFloat(float64(self)/float64(unit), 'f', prec, 64))
 
 	if st.Flag(' ') {
-		b.WriteString(" ")
+		io.WriteString(st, " ")
 	}
-	b.WriteString(unit.String())
-
-	if w, ok := st.Width(); ok {
-		if l := b.Len(); l < w {
-			pad := strings.Repeat(" ", w-l)
-			if st.Flag('-') {
-				b.WriteString(pad)
-			} else {
-				tmp := b.String()
-				b.Reset()
-				b.WriteString(pad)
-				b.WriteString(tmp)
-			}
-		}
-	}
-
-	io.WriteString(st, b.String())
+	io.WriteString(st, unit.String())
 }
