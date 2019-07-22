@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"strconv"
-	"strings"
 
 	"github.com/vbauerster/mpb/v4/internal"
 )
@@ -27,29 +26,12 @@ func (s PercentageType) Format(st fmt.State, verb rune) {
 		}
 	}
 
-	var b strings.Builder
-	b.WriteString(strconv.FormatFloat(float64(s), 'f', prec, 64))
+	io.WriteString(st, strconv.FormatFloat(float64(s), 'f', prec, 64))
 
 	if st.Flag(' ') {
-		b.WriteString(" ")
+		io.WriteString(st, " ")
 	}
-	b.WriteString("%")
-
-	if w, ok := st.Width(); ok {
-		if l := b.Len(); l < w {
-			pad := strings.Repeat(" ", w-l)
-			if st.Flag('-') {
-				b.WriteString(pad)
-			} else {
-				tmp := b.String()
-				b.Reset()
-				b.WriteString(pad)
-				b.WriteString(tmp)
-			}
-		}
-	}
-
-	io.WriteString(st, b.String())
+	io.WriteString(st, "%")
 }
 
 // Percentage returns percentage decorator. It's a wrapper of NewPercentage.
