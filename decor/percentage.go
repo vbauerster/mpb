@@ -8,11 +8,9 @@ import (
 	"github.com/vbauerster/mpb/v4/internal"
 )
 
-// PercentageType named type, which implements fmt.Formatter interface.
-// It appends `%` sign to its value.
-type PercentageType float64
+type percentageType float64
 
-func (s PercentageType) Format(st fmt.State, verb rune) {
+func (s percentageType) Format(st fmt.State, verb rune) {
 	var prec int
 	switch verb {
 	case 'd':
@@ -75,7 +73,7 @@ func (d *percentageDecorator) Decor(st *Statistics) string {
 		return d.FormatMsg(*d.completeMsg)
 	}
 	p := internal.Percentage(st.Total, st.Current, 100)
-	return d.FormatMsg(fmt.Sprintf(d.fmt, PercentageType(p)))
+	return d.FormatMsg(fmt.Sprintf(d.fmt, percentageType(p)))
 }
 
 func (d *percentageDecorator) OnCompleteMessage(msg string) {
