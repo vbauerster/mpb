@@ -23,7 +23,13 @@ func (self *speedType) Format(st fmt.State, verb rune) {
 // work duration as second argument, in order for this decorator to
 // work correctly. This decorator is a wrapper of MovingAverageSpeed.
 func EwmaSpeed(unit int, format string, age float64, wcc ...WC) Decorator {
-	return MovingAverageSpeed(unit, format, ewma.NewMovingAverage(age), wcc...)
+	var average MovingAverage
+	if age == 0.0 {
+		average = ewma.NewMovingAverage()
+	} else {
+		average = ewma.NewMovingAverage(age)
+	}
+	return MovingAverageSpeed(unit, format, average, wcc...)
 }
 
 // MovingAverageSpeed decorator relies on MovingAverage implementation
@@ -54,22 +60,9 @@ func MovingAverageSpeed(unit int, format string, average MovingAverage, wcc ...W
 	}
 	wc.Init()
 	d := &movingAverageSpeed{
-		WC:      wc,
-		average: average,
-	}
-	switch unit {
-	case UnitKiB:
-		d.producer = func(speed float64) string {
-			return fmt.Sprintf(format, &speedType{SizeB1024(math.Round(speed))})
-		}
-	case UnitKB:
-		d.producer = func(speed float64) string {
-			return fmt.Sprintf(format, &speedType{SizeB1000(math.Round(speed))})
-		}
-	default:
-		d.producer = func(speed float64) string {
-			return fmt.Sprintf(format, speed)
-		}
+		WC:       wc,
+		average:  average,
+		producer: chooseSpeedProducer(unit, format),
 	}
 	return d
 }
@@ -147,20 +140,7 @@ func NewAverageSpeed(unit int, format string, startTime time.Time, wcc ...WC) De
 	d := &averageSpeed{
 		WC:        wc,
 		startTime: startTime,
-	}
-	switch unit {
-	case UnitKiB:
-		d.producer = func(speed float64) string {
-			return fmt.Sprintf(format, &speedType{SizeB1024(math.Round(speed))})
-		}
-	case UnitKB:
-		d.producer = func(speed float64) string {
-			return fmt.Sprintf(format, &speedType{SizeB1000(math.Round(speed))})
-		}
-	default:
-		d.producer = func(speed float64) string {
-			return fmt.Sprintf(format, speed)
-		}
+		producer:  chooseSpeedProducer(unit, format),
 	}
 	return d
 }
@@ -193,4 +173,21 @@ func (d *averageSpeed) OnCompleteMessage(msg string) {
 
 func (d *averageSpeed) AverageAdjust(startTime time.Time) {
 	d.startTime = startTime
+}
+
+func chooseSpeedProducer(unit int, format string) func(float64) string {
+	switch unit {
+	case UnitKiB:
+		return func(speed float64) string {
+			return fmt.Sprintf(format, &speedType{SizeB1024(math.Round(speed))})
+		}
+	case UnitKB:
+		return func(speed float64) string {
+			return fmt.Sprintf(format, &speedType{SizeB1000(math.Round(speed))})
+		}
+	default:
+		return func(speed float64) string {
+			return fmt.Sprintf(format, speed)
+		}
+	}
 }

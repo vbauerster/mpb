@@ -55,7 +55,7 @@ func MovingAverageETA(style TimeStyle, average MovingAverage, normalizer TimeNor
 		WC:         wc,
 		average:    average,
 		normalizer: normalizer,
-		producer:   chooseProducer(style),
+		producer:   chooseEtaProducer(style),
 	}
 	return d
 }
@@ -122,7 +122,7 @@ func NewAverageETA(style TimeStyle, startTime time.Time, wcc ...WC) Decorator {
 	d := &averageETA{
 		WC:        wc,
 		startTime: startTime,
-		producer:  chooseProducer(style),
+		producer:  chooseEtaProducer(style),
 	}
 	return d
 }
@@ -192,7 +192,7 @@ func FixedIntervalTimeNormalizer(updInterval int) TimeNormalizer {
 	})
 }
 
-func chooseProducer(style TimeStyle) func(time.Duration) string {
+func chooseEtaProducer(style TimeStyle) func(time.Duration) string {
 	switch style {
 	case ET_STYLE_HHMMSS:
 		return func(remaining time.Duration) string {
