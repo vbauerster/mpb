@@ -47,19 +47,19 @@ func MovingAverageETA(style TimeStyle, average MovingAverage, normalizer TimeNor
 	wc.Init()
 	d := &movingAverageETA{
 		WC:         wc,
-		style:      style,
 		average:    average,
 		normalizer: normalizer,
+		producer:   chooseProducer(style),
 	}
 	return d
 }
 
 type movingAverageETA struct {
 	WC
-	style       TimeStyle
 	average     ewma.MovingAverage
-	completeMsg *string
 	normalizer  TimeNormalizer
+	producer    func(time.Duration) string
+	completeMsg *string
 }
 
 func (d *movingAverageETA) Decor(st *Statistics) string {
@@ -67,32 +67,12 @@ func (d *movingAverageETA) Decor(st *Statistics) string {
 		return d.FormatMsg(*d.completeMsg)
 	}
 
-	v := math.Round(d.average.Value())
-	remaining := time.Duration((st.Total - st.Current) * int64(v))
+	v := d.average.Value()
+	remaining := time.Duration((st.Total - st.Current) * int64(math.Round(v)))
 	if d.normalizer != nil {
 		remaining = d.normalizer.Normalize(remaining)
 	}
-	hours := int64((remaining / time.Hour) % 60)
-	minutes := int64((remaining / time.Minute) % 60)
-	seconds := int64((remaining / time.Second) % 60)
-
-	var str string
-	switch d.style {
-	case ET_STYLE_GO:
-		str = fmt.Sprint(time.Duration(remaining.Seconds()) * time.Second)
-	case ET_STYLE_HHMMSS:
-		str = fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
-	case ET_STYLE_HHMM:
-		str = fmt.Sprintf("%02d:%02d", hours, minutes)
-	case ET_STYLE_MMSS:
-		if hours > 0 {
-			str = fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
-		} else {
-			str = fmt.Sprintf("%02d:%02d", minutes, seconds)
-		}
-	}
-
-	return d.FormatMsg(str)
+	return d.FormatMsg(d.producer(remaining))
 }
 
 func (d *movingAverageETA) NextAmount(n int64, wdd ...time.Duration) {
@@ -135,16 +115,16 @@ func NewAverageETA(style TimeStyle, startTime time.Time, wcc ...WC) Decorator {
 	wc.Init()
 	d := &averageETA{
 		WC:        wc,
-		style:     style,
 		startTime: startTime,
+		producer:  chooseProducer(style),
 	}
 	return d
 }
 
 type averageETA struct {
 	WC
-	style       TimeStyle
 	startTime   time.Time
+	producer    func(time.Duration) string
 	completeMsg *string
 }
 
@@ -153,33 +133,13 @@ func (d *averageETA) Decor(st *Statistics) string {
 		return d.FormatMsg(*d.completeMsg)
 	}
 
-	var str string
 	timeElapsed := time.Since(d.startTime)
-	v := math.Round(float64(timeElapsed) / float64(st.Current))
+	v := float64(timeElapsed) / float64(st.Current)
 	if math.IsInf(v, 0) || math.IsNaN(v) {
 		v = 0
 	}
-	remaining := time.Duration((st.Total - st.Current) * int64(v))
-	hours := int64((remaining / time.Hour) % 60)
-	minutes := int64((remaining / time.Minute) % 60)
-	seconds := int64((remaining / time.Second) % 60)
-
-	switch d.style {
-	case ET_STYLE_GO:
-		str = fmt.Sprint(time.Duration(remaining.Seconds()) * time.Second)
-	case ET_STYLE_HHMMSS:
-		str = fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
-	case ET_STYLE_HHMM:
-		str = fmt.Sprintf("%02d:%02d", hours, minutes)
-	case ET_STYLE_MMSS:
-		if hours > 0 {
-			str = fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
-		} else {
-			str = fmt.Sprintf("%02d:%02d", minutes, seconds)
-		}
-	}
-
-	return d.FormatMsg(str)
+	remaining := time.Duration((st.Total - st.Current) * int64(math.Round(v)))
+	return d.FormatMsg(d.producer(remaining))
 }
 
 func (d *averageETA) OnCompleteMessage(msg string) {
@@ -224,4 +184,37 @@ func FixedIntervalTimeNormalizer(updInterval int) TimeNormalizer {
 		}
 		return remaining
 	})
+}
+
+func chooseProducer(style TimeStyle) func(time.Duration) string {
+	switch style {
+	case ET_STYLE_HHMMSS:
+		return func(remaining time.Duration) string {
+			hours := int64(remaining/time.Hour) % 60
+			minutes := int64(remaining/time.Minute) % 60
+			seconds := int64(remaining/time.Second) % 60
+			return fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
+		}
+	case ET_STYLE_HHMM:
+		return func(remaining time.Duration) string {
+			hours := int64(remaining/time.Hour) % 60
+			minutes := int64(remaining/time.Minute) % 60
+			return fmt.Sprintf("%02d:%02d", hours, minutes)
+		}
+	case ET_STYLE_MMSS:
+		return func(remaining time.Duration) string {
+			hours := int64(remaining/time.Hour) % 60
+			minutes := int64(remaining/time.Minute) % 60
+			seconds := int64(remaining/time.Second) % 60
+			if hours > 0 {
+				return fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
+			}
+			return fmt.Sprintf("%02d:%02d", minutes, seconds)
+		}
+	default:
+		return func(remaining time.Duration) string {
+			// strip off nanoseconds
+			return ((remaining / time.Second) * time.Second).String()
+		}
+	}
 }
