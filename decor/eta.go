@@ -27,7 +27,13 @@ func (f TimeNormalizerFunc) Normalize(src time.Duration) time.Duration {
 // work duration as second argument, in order for this decorator to
 // work correctly. This decorator is a wrapper of MovingAverageETA.
 func EwmaETA(style TimeStyle, age float64, wcc ...WC) Decorator {
-	return MovingAverageETA(style, ewma.NewMovingAverage(age), nil, wcc...)
+	var average MovingAverage
+	if age == 0.0 {
+		average = ewma.NewMovingAverage()
+	} else {
+		average = ewma.NewMovingAverage(age)
+	}
+	return MovingAverageETA(style, average, nil, wcc...)
 }
 
 // MovingAverageETA decorator relies on MovingAverage implementation to calculate its average.
