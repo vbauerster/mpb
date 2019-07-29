@@ -32,7 +32,7 @@ func main() {
 		bar := p.AddBar(int64(total),
 			mpb.PrependDecorators(
 				decor.Name(name),
-				decor.EwmaETA(decor.ET_STYLE_GO, 60, decor.WCSyncSpace),
+				decor.Elapsed(decor.ET_STYLE_GO, decor.WCSyncSpace),
 			),
 			mpb.AppendDecorators(
 				decor.OnComplete(
