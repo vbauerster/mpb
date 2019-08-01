@@ -8,8 +8,8 @@ import (
 	"github.com/VividCortex/ewma"
 )
 
-// TimeNormalizer interface
-// Implementors meant to normalize ETA.
+// TimeNormalizer interface. Implementors could be passed into
+// MovingAverageETA, in order to affect i.e. normalize its output.
 type TimeNormalizer interface {
 	Normalize(time.Duration) time.Duration
 }
@@ -156,6 +156,7 @@ func (d *averageETA) AverageAdjust(startTime time.Time) {
 	d.startTime = startTime
 }
 
+// MaxTolerateTimeNormalizer returns implementation of TimeNormalizer.
 func MaxTolerateTimeNormalizer(maxTolerate time.Duration) TimeNormalizer {
 	var normalized time.Duration
 	var lastCall time.Time
@@ -171,6 +172,7 @@ func MaxTolerateTimeNormalizer(maxTolerate time.Duration) TimeNormalizer {
 	})
 }
 
+// FixedIntervalTimeNormalizer returns implementation of TimeNormalizer.
 func FixedIntervalTimeNormalizer(updInterval int) TimeNormalizer {
 	var normalized time.Duration
 	var lastCall time.Time
