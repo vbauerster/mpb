@@ -48,7 +48,7 @@ type step struct {
 func TestPercentageDwidthSync(t *testing.T) {
 
 	testCases := [][]step{
-		[]step{
+		{
 			{
 				&decor.Statistics{Total: 100, Current: 8},
 				decor.Percentage(decor.WCSyncWidth),
@@ -60,7 +60,7 @@ func TestPercentageDwidthSync(t *testing.T) {
 				"9 %",
 			},
 		},
-		[]step{
+		{
 			{
 				&decor.Statistics{Total: 100, Current: 9},
 				decor.Percentage(decor.WCSyncWidth),
@@ -72,7 +72,7 @@ func TestPercentageDwidthSync(t *testing.T) {
 				"10 %",
 			},
 		},
-		[]step{
+		{
 			{
 				&decor.Statistics{Total: 100, Current: 9},
 				decor.Percentage(decor.WCSyncWidth),
@@ -92,7 +92,7 @@ func TestPercentageDwidthSync(t *testing.T) {
 func TestPercentageDwidthSyncDidentRight(t *testing.T) {
 
 	testCases := [][]step{
-		[]step{
+		{
 			{
 				&decor.Statistics{Total: 100, Current: 8},
 				decor.Percentage(decor.WCSyncWidthR),
@@ -104,7 +104,7 @@ func TestPercentageDwidthSyncDidentRight(t *testing.T) {
 				"9 %",
 			},
 		},
-		[]step{
+		{
 			{
 				&decor.Statistics{Total: 100, Current: 9},
 				decor.Percentage(decor.WCSyncWidthR),
@@ -116,7 +116,7 @@ func TestPercentageDwidthSyncDidentRight(t *testing.T) {
 				"10 %",
 			},
 		},
-		[]step{
+		{
 			{
 				&decor.Statistics{Total: 100, Current: 9},
 				decor.Percentage(decor.WCSyncWidthR),
@@ -136,7 +136,7 @@ func TestPercentageDwidthSyncDidentRight(t *testing.T) {
 func TestPercentageDSyncSpace(t *testing.T) {
 
 	testCases := [][]step{
-		[]step{
+		{
 			{
 				&decor.Statistics{Total: 100, Current: 8},
 				decor.Percentage(decor.WCSyncSpace),
@@ -148,7 +148,7 @@ func TestPercentageDSyncSpace(t *testing.T) {
 				" 9 %",
 			},
 		},
-		[]step{
+		{
 			{
 				&decor.Statistics{Total: 100, Current: 9},
 				decor.Percentage(decor.WCSyncSpace),
@@ -160,7 +160,7 @@ func TestPercentageDSyncSpace(t *testing.T) {
 				" 10 %",
 			},
 		},
-		[]step{
+		{
 			{
 				&decor.Statistics{Total: 100, Current: 9},
 				decor.Percentage(decor.WCSyncSpace),
