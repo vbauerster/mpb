@@ -18,5 +18,9 @@ func (pr *proxyReader) Read(p []byte) (n int, err error) {
 		pr.bar.IncrBy(n, time.Since(pr.iT))
 		pr.iT = time.Now()
 	}
+	if err == io.EOF {
+		current := pr.bar.Current()
+		pr.bar.SetTotal(current, true)
+	}
 	return
 }
