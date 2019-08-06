@@ -1,11 +1,9 @@
 package main
 
 import (
-	"fmt"
+	"crypto/rand"
 	"io"
-	"net/http"
-	"os"
-	"path/filepath"
+	"io/ioutil"
 	"time"
 
 	"github.com/vbauerster/mpb/v4"
@@ -13,51 +11,31 @@ import (
 )
 
 func main() {
-	url := "https://github.com/onivim/oni/releases/download/v0.3.4/Oni-0.3.4-amd64-linux.deb"
-
-	resp, err := http.Get(url)
-	if err != nil {
-		panic(err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		fmt.Printf("Server return non-200 status: %s\n", resp.Status)
-		return
-	}
-
-	size := resp.ContentLength
-
-	// create dest
-	destName := filepath.Base(url)
-	dest, err := os.Create(destName)
-	if err != nil {
-		fmt.Printf("Can't create %s: %v\n", destName, err)
-		return
-	}
-	defer dest.Close()
+	var total int64 = 1024 * 1024 * 500
+	reader := io.LimitReader(rand.Reader, total)
 
 	p := mpb.New(
 		mpb.WithWidth(60),
 		mpb.WithRefreshRate(180*time.Millisecond),
 	)
 
-	bar := p.AddBar(size, mpb.BarStyle("[=>-|"),
+	bar := p.AddBar(total, mpb.BarStyle("[=>-|"),
 		mpb.PrependDecorators(
-			decor.CountersKibiByte("% 6.1f / % 6.1f"),
+			decor.CountersKibiByte("% .2f / % .2f"),
 		),
 		mpb.AppendDecorators(
-			decor.EwmaETA(decor.ET_STYLE_MMSS, float64(size)/2048),
+			decor.EwmaETA(decor.ET_STYLE_GO, float64(total)/2048),
 			decor.Name(" ] "),
 			decor.AverageSpeed(decor.UnitKiB, "% .2f"),
 		),
 	)
 
 	// create proxy reader
-	reader := bar.ProxyReader(resp.Body)
+	proxyReader := bar.ProxyReader(reader)
+	defer proxyReader.Close()
 
-	// and copy from reader, ignoring errors
-	io.Copy(dest, reader)
+	// copy from proxyReader, ignoring errors
+	io.Copy(ioutil.Discard, proxyReader)
 
 	p.Wait()
 }
