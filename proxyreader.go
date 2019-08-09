@@ -19,8 +19,10 @@ func (pr *proxyReader) Read(p []byte) (n int, err error) {
 		pr.iT = time.Now()
 	}
 	if err == io.EOF {
-		current := pr.bar.Current()
-		pr.bar.SetTotal(current, true)
+		go func() {
+			current := pr.bar.Current()
+			pr.bar.SetTotal(current, true)
+		}()
 	}
 	return
 }
