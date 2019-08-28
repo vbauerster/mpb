@@ -83,8 +83,13 @@ func (d *movingAverageSpeed) Decor(st *Statistics) string {
 		return d.FormatMsg(d.msg)
 	}
 
-	d.msg = d.producer(d.average.Value())
+	var speed float64
+	if v := math.Round(d.average.Value()); v != 0 {
+		current := float64(st.Current)
+		speed = current / (current * time.Duration(v).Seconds())
+	}
 
+	d.msg = d.producer(speed)
 	return d.FormatMsg(d.msg)
 }
 
@@ -93,11 +98,11 @@ func (d *movingAverageSpeed) NextAmount(n int64, wdd ...time.Duration) {
 	for _, wd := range wdd {
 		workDuration = wd
 	}
-	speed := float64(n) / workDuration.Seconds() / 1000
-	if math.IsInf(speed, 0) || math.IsNaN(speed) {
+	durPerByte := float64(workDuration) / float64(n)
+	if math.IsInf(durPerByte, 0) || math.IsNaN(durPerByte) {
 		return
 	}
-	d.average.Add(speed)
+	d.average.Add(durPerByte)
 }
 
 func (d *movingAverageSpeed) OnCompleteMessage(msg string) {
