@@ -24,7 +24,7 @@ func (self *speedType) Format(st fmt.State, verb rune) {
 // work correctly. This decorator is a wrapper of MovingAverageSpeed.
 func EwmaSpeed(unit int, format string, age float64, wcc ...WC) Decorator {
 	var average MovingAverage
-	if age == 0.0 {
+	if age == 0 {
 		average = ewma.NewMovingAverage()
 	} else {
 		average = ewma.NewMovingAverage(age)
