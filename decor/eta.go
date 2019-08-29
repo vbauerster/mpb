@@ -73,8 +73,8 @@ func (d *movingAverageETA) Decor(st *Statistics) string {
 		return d.FormatMsg(*d.completeMsg)
 	}
 
-	v := d.average.Value()
-	remaining := time.Duration((st.Total - st.Current) * int64(math.Round(v)))
+	v := math.Round(d.average.Value())
+	remaining := time.Duration((st.Total - st.Current) * int64(v))
 	if d.normalizer != nil {
 		remaining = d.normalizer.Normalize(remaining)
 	}
@@ -86,11 +86,11 @@ func (d *movingAverageETA) NextAmount(n int64, wdd ...time.Duration) {
 	for _, wd := range wdd {
 		workDuration = wd
 	}
-	lastItemEstimate := float64(workDuration) / float64(n)
-	if math.IsInf(lastItemEstimate, 0) || math.IsNaN(lastItemEstimate) {
+	durPerByte := float64(workDuration) / float64(n)
+	if math.IsInf(durPerByte, 0) || math.IsNaN(durPerByte) {
 		return
 	}
-	d.average.Add(lastItemEstimate)
+	d.average.Add(durPerByte)
 }
 
 func (d *movingAverageETA) OnCompleteMessage(msg string) {
