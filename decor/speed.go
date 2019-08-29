@@ -85,8 +85,7 @@ func (d *movingAverageSpeed) Decor(st *Statistics) string {
 
 	var speed float64
 	if v := math.Round(d.average.Value()); v != 0 {
-		current := float64(st.Current)
-		speed = current / (current * time.Duration(v).Seconds())
+		speed = 1 / time.Duration(v).Seconds()
 	}
 
 	d.msg = d.producer(speed)
