@@ -86,11 +86,11 @@ func (d *movingAverageETA) NextAmount(n int64, wdd ...time.Duration) {
 	for _, wd := range wdd {
 		workDuration = wd
 	}
-	durPerByte := float64(workDuration) / float64(n)
-	if math.IsInf(durPerByte, 0) || math.IsNaN(durPerByte) {
+	durPerItem := float64(workDuration) / float64(n)
+	if math.IsInf(durPerItem, 0) || math.IsNaN(durPerItem) {
 		return
 	}
-	d.average.Add(durPerByte)
+	d.average.Add(durPerItem)
 }
 
 func (d *movingAverageETA) OnCompleteMessage(msg string) {
