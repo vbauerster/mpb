@@ -103,7 +103,7 @@ func (d *movingAverageETA) OnCompleteMessage(msg string) {
 //
 //	`wcc` optional WC config
 func AverageETA(style TimeStyle, wcc ...WC) Decorator {
-	return NewAverageETA(style, time.Now(), wcc...)
+	return NewAverageETA(style, time.Now(), nil, wcc...)
 }
 
 // NewAverageETA decorator with user provided start time.
@@ -112,17 +112,20 @@ func AverageETA(style TimeStyle, wcc ...WC) Decorator {
 //
 //	`startTime` start time
 //
+//	`normalizer` available implementations are [FixedIntervalTimeNormalizer|MaxTolerateTimeNormalizer]
+//
 //	`wcc` optional WC config
-func NewAverageETA(style TimeStyle, startTime time.Time, wcc ...WC) Decorator {
+func NewAverageETA(style TimeStyle, startTime time.Time, normalizer TimeNormalizer, wcc ...WC) Decorator {
 	var wc WC
 	for _, widthConf := range wcc {
 		wc = widthConf
 	}
 	wc.Init()
 	d := &averageETA{
-		WC:        wc,
-		startTime: startTime,
-		producer:  chooseTimeProducer(style),
+		WC:         wc,
+		startTime:  startTime,
+		normalizer: normalizer,
+		producer:   chooseTimeProducer(style),
 	}
 	return d
 }
@@ -130,6 +133,7 @@ func NewAverageETA(style TimeStyle, startTime time.Time, wcc ...WC) Decorator {
 type averageETA struct {
 	WC
 	startTime   time.Time
+	normalizer  TimeNormalizer
 	producer    func(time.Duration) string
 	completeMsg *string
 }
@@ -139,12 +143,15 @@ func (d *averageETA) Decor(st *Statistics) string {
 		return d.FormatMsg(*d.completeMsg)
 	}
 
-	timeElapsed := time.Since(d.startTime)
-	v := float64(timeElapsed) / float64(st.Current)
-	if math.IsInf(v, 0) || math.IsNaN(v) {
-		v = 0
+	var remaining time.Duration
+	if st.Current != 0 {
+		durPerItem := float64(time.Since(d.startTime)) / float64(st.Current)
+		durPerItem = math.Round(durPerItem)
+		remaining = time.Duration((st.Total - st.Current) * int64(durPerItem))
+		if d.normalizer != nil {
+			remaining = d.normalizer.Normalize(remaining)
+		}
 	}
-	remaining := time.Duration((st.Total - st.Current) * int64(math.Round(v)))
 	return d.FormatMsg(d.producer(remaining))
 }
 
