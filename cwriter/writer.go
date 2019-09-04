@@ -10,6 +10,7 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 )
 
+// NotATTY not a TeleTYpewriter error
 var NotATTY = errors.New("not a terminal")
 
 var cuuAndEd = fmt.Sprintf("%c[%%dA%[1]c[J", 27)
