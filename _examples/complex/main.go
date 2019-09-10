@@ -72,7 +72,7 @@ func newTask(wg *sync.WaitGroup, b *mpb.Bar, incrBy int) {
 	for !b.Completed() {
 		start := time.Now()
 		time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
-		// ewma based decorators require work duration measurement
+		// since ewma decorator is used, we need to pass time.Since(start)
 		b.IncrBy(incrBy, time.Since(start))
 	}
 }

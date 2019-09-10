@@ -42,10 +42,8 @@ func main() {
 			defer wg.Done()
 			max := 100 * time.Millisecond
 			for i := 0; i < total; i++ {
-				start := time.Now()
 				time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
-				// ewma based decorators require work duration measurement
-				bar.IncrBy(1, time.Since(start))
+				bar.Increment()
 			}
 		}()
 	}

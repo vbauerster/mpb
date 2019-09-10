@@ -43,8 +43,8 @@ func main() {
 					priority := total - int(b.Current())
 					b.SetPriority(priority)
 				}
-				// ewma based decorators require work duration measurement
-				b.IncrBy(1, time.Since(start))
+				// since ewma decorator is used, we need to pass time.Since(start)
+				b.Increment(time.Since(start))
 			}
 		}()
 	}

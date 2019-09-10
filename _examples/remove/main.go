@@ -41,8 +41,8 @@ func main() {
 					b.Abort(true)
 				}
 				time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
-				// ewma based decorators require work duration measurement
-				b.IncrBy(1, time.Since(start))
+				// since ewma decorator is used, we need to pass time.Since(start)
+				b.Increment(time.Since(start))
 			}
 		}()
 	}

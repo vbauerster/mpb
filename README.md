@@ -55,8 +55,8 @@ func main() {
     for i := 0; i < total; i++ {
         start := time.Now()
         time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
-        // ewma based decorators require work duration measurement
-        bar.IncrBy(1, time.Since(start))
+        // since ewma decorator is used, we need to pass time.Since(start)
+        bar.Increment(time.Since(start))
     }
     // wait for our bar to complete and flush
     p.Wait()
@@ -95,8 +95,8 @@ func main() {
             for i := 0; i < total; i++ {
                 start := time.Now()
                 time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
-                // ewma based decorators require work duration measurement
-                bar.IncrBy(1, time.Since(start))
+                // since ewma decorator is used, we need to pass time.Since(start)
+                bar.Increment(time.Since(start))
             }
         }()
     }
