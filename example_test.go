@@ -1,10 +1,10 @@
 package mpb_test
 
 import (
+	crand "crypto/rand"
 	"io"
 	"io/ioutil"
 	"math/rand"
-	"net/http"
 	"time"
 
 	"github.com/vbauerster/mpb/v4"
@@ -33,10 +33,11 @@ func Example() {
 		mpb.AppendDecorators(decor.Percentage()),
 	)
 	// simulating some work
+	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 	max := 100 * time.Millisecond
 	for i := 0; i < total; i++ {
 		start := time.Now()
-		time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
+		time.Sleep(time.Duration(rng.Intn(10)+1) * max / 10)
 		// since ewma decorator is used, we need to pass time.Since(start)
 		bar.Increment(time.Since(start))
 	}
@@ -48,9 +49,10 @@ func ExampleBar_Completed() {
 	p := mpb.New()
 	bar := p.AddBar(100)
 
+	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 	max := 100 * time.Millisecond
 	for !bar.Completed() {
-		time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
+		time.Sleep(time.Duration(rng.Intn(10)+1) * max / 10)
 		bar.Increment()
 	}
 
@@ -58,23 +60,23 @@ func ExampleBar_Completed() {
 }
 
 func ExampleBar_ProxyReader() {
-	p := mpb.New()
-	// make http get request, ignoring errors
-	resp, _ := http.Get("https://homebrew.bintray.com/bottles/libtiff-4.0.7.sierra.bottle.tar.gz")
-	defer resp.Body.Close()
+	var total int64 = 1024 * 1024 * 500
+	// crand is "crypto/rand"
+	reader := io.LimitReader(crand.Reader, total)
 
-	// Assuming ContentLength > 0
-	bar := p.AddBar(resp.ContentLength,
+	p := mpb.New()
+	bar := p.AddBar(total,
 		mpb.AppendDecorators(
-			decor.CountersKibiByte("%6.1f / %6.1f"),
+			decor.CountersKibiByte("% .2f / % .2f"),
 		),
 	)
 
 	// create proxy reader
-	reader := bar.ProxyReader(resp.Body)
+	proxyReader := bar.ProxyReader(reader)
+	defer proxyReader.Close()
 
 	// and copy from reader, ignoring errors
-	io.Copy(ioutil.Discard, reader)
+	io.Copy(ioutil.Discard, proxyReader)
 
 	p.Wait()
 }
