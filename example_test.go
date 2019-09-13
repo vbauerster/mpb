@@ -33,11 +33,10 @@ func Example() {
 		mpb.AppendDecorators(decor.Percentage()),
 	)
 	// simulating some work
-	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 	max := 100 * time.Millisecond
 	for i := 0; i < total; i++ {
 		start := time.Now()
-		time.Sleep(time.Duration(rng.Intn(10)+1) * max / 10)
+		time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
 		// since ewma decorator is used, we need to pass time.Since(start)
 		bar.Increment(time.Since(start))
 	}
@@ -49,10 +48,9 @@ func ExampleBar_Completed() {
 	p := mpb.New()
 	bar := p.AddBar(100)
 
-	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 	max := 100 * time.Millisecond
 	for !bar.Completed() {
-		time.Sleep(time.Duration(rng.Intn(10)+1) * max / 10)
+		time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
 		bar.Increment()
 	}
 

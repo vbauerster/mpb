@@ -14,10 +14,6 @@ const (
 	totalBars = 32
 )
 
-func init() {
-	rand.Seed(time.Now().UnixNano())
-}
-
 func main() {
 	var wg sync.WaitGroup
 	p := mpb.New(
@@ -43,9 +39,10 @@ func main() {
 
 		go func() {
 			defer wg.Done()
+			rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 			max := 100 * time.Millisecond
 			for !bar.Completed() {
-				time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
+				time.Sleep(time.Duration(rng.Intn(10)+1) * max / 10)
 				bar.Increment()
 			}
 		}()

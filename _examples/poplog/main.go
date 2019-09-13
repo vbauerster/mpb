@@ -12,7 +12,6 @@ import (
 )
 
 func main() {
-	rand.Seed(time.Now().UnixNano())
 	p := mpb.New(mpb.PopCompletedMode())
 
 	total, numBars := 100, 2
@@ -32,10 +31,11 @@ func main() {
 		)
 		// simulating some work
 		go func() {
+			rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 			max := 100 * time.Millisecond
 			for i := 0; i < total; i++ {
 				start := time.Now()
-				time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
+				time.Sleep(time.Duration(rng.Intn(10)+1) * max / 10)
 				bar.Increment(time.Since(start))
 			}
 		}()
@@ -45,10 +45,11 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
+		rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 		max := 3000 * time.Millisecond
 		for i := 0; i < 10; i++ {
 			p.Add(0, makeLogBar(fmt.Sprintf("some log: %d", i))).SetTotal(0, true)
-			time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
+			time.Sleep(time.Duration(rng.Intn(10)+1) * max / 10)
 		}
 	}()
 

@@ -14,7 +14,6 @@ import (
 var quietMode bool
 
 func init() {
-	rand.Seed(time.Now().UnixNano())
 	flag.BoolVar(&quietMode, "q", false, "quiet mode")
 }
 
@@ -56,10 +55,11 @@ func main() {
 		// simulating some work
 		go func() {
 			defer wg.Done()
+			rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 			max := 100 * time.Millisecond
 			for i := 0; i < total; i++ {
 				start := time.Now()
-				time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
+				time.Sleep(time.Duration(rng.Intn(10)+1) * max / 10)
 				// since ewma decorator is used, we need to pass time.Since(start)
 				bar.Increment(time.Since(start))
 			}

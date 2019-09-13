@@ -11,10 +11,6 @@ import (
 	"github.com/vbauerster/mpb/v4/decor"
 )
 
-func init() {
-	rand.Seed(time.Now().UnixNano())
-}
-
 func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
@@ -40,10 +36,11 @@ func main() {
 
 		go func() {
 			defer wg.Done()
+			rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 			max := 100 * time.Millisecond
 			for !bar.Completed() {
 				start := time.Now()
-				time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
+				time.Sleep(time.Duration(rng.Intn(10)+1) * max / 10)
 				// since ewma decorator is used, we need to pass time.Since(start)
 				bar.Increment(time.Since(start))
 			}

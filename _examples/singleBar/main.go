@@ -39,5 +39,4 @@ func main() {
 	}
 	// wait for our bar to complete and flush
 	p.Wait()
-	p.Wait()
 }
