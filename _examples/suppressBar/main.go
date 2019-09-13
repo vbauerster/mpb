@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"math/rand"
@@ -15,7 +16,8 @@ func main() {
 
 	total := 100
 	msgCh := make(chan string)
-	filler, nextCh := makeCustomFiller(15, msgCh)
+	resumeCh := make(chan struct{})
+	filler, nextCh := makeCustomFiller(msgCh, resumeCh)
 	bar := p.Add(int64(total), filler,
 		mpb.PrependDecorators(
 			decor.Name("my bar:"),
@@ -28,10 +30,18 @@ func main() {
 	go func() {
 		rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 		max := 100 * time.Millisecond
+		var err error
 		for i := 0; i < total; i++ {
-			time.Sleep(time.Duration(rng.Intn(10)+1) * max / 10)
+			if err != nil {
+				time.Sleep(3 * time.Second)
+				resumeCh <- struct{}{}
+				err = nil
+			} else {
+				time.Sleep(time.Duration(rng.Intn(10)+1) * max / 10)
+			}
 			if i == 33 {
-				msgCh <- "some error, retrying..."
+				err = errors.New("some error")
+				msgCh <- fmt.Sprintf("%s retrying...", err.Error())
 			}
 			bar.Increment()
 		}
@@ -40,32 +50,34 @@ func main() {
 	p.Wait()
 }
 
-func makeCustomFiller(maxFlash int, ch <-chan string) (mpb.FillerFunc, <-chan struct{}) {
+func makeCustomFiller(ch <-chan string, resume <-chan struct{}) (mpb.FillerFunc, <-chan struct{}) {
 	type refiller interface {
 		SetRefill(int64)
 	}
 	filler := mpb.NewBarFiller()
 	nextCh := make(chan struct{}, 1)
-	var msg string
-	var count int
+	var msg *string
 	return func(w io.Writer, width int, st *decor.Statistics) {
-		if count != 0 {
-			nextCh <- struct{}{}
-			limitFmt := fmt.Sprintf("%%.%ds", width)
-			fmt.Fprintf(w, limitFmt, msg)
-			count--
-			return
-		}
 		select {
-		case msg = <-ch:
-			nextCh <- struct{}{}
+		case m := <-ch:
 			if f, ok := filler.(refiller); ok {
 				defer f.SetRefill(st.Current)
 			}
-			count = maxFlash
+			defer func() {
+				msg = &m
+			}()
+			nextCh <- struct{}{}
+		case <-resume:
+			msg = nil
 		default:
 		}
-		filler.Fill(w, width, st)
+		if msg != nil {
+			limitFmt := fmt.Sprintf("%%.%ds", width)
+			fmt.Fprintf(w, limitFmt, *msg)
+			nextCh <- struct{}{}
+		} else {
+			filler.Fill(w, width, st)
+		}
 	}, nextCh
 }
 
