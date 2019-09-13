@@ -395,7 +395,7 @@ func TestDraw(t *testing.T) {
 				}
 			}
 			tmpBuf.Reset()
-			tmpBuf.ReadFrom(s.draw(termWidth))
+			tmpBuf.ReadFrom(s.draw(termWidth, newStatistics(s)))
 			by := tmpBuf.Bytes()
 			by = by[:len(by)-1]
 
@@ -413,7 +413,7 @@ func TestDraw(t *testing.T) {
 
 func newTestState() *bState {
 	s := &bState{
-		filler: newDefaultBarFiller(),
+		filler: NewBarFiller(),
 		bufP:   new(bytes.Buffer),
 		bufB:   new(bytes.Buffer),
 		bufA:   new(bytes.Buffer),

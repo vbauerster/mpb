@@ -61,9 +61,10 @@ type Bar struct {
 	recoveredPanic interface{}
 }
 
+type extFunc func(in io.Reader, tw int, st *decor.Statistics) (out io.Reader, lines int)
+
 type bState struct {
 	filler            Filler
-	extender          Filler
 	id                int
 	width             int
 	total             int64
@@ -71,7 +72,6 @@ type bState struct {
 	trimSpace         bool
 	toComplete        bool
 	completeFlushed   bool
-	noBufBOnComplete  bool
 	noPop             bool
 	aDecorators       []decor.Decorator
 	pDecorators       []decor.Decorator
@@ -80,7 +80,7 @@ type bState struct {
 	shutdownListeners []decor.ShutdownListener
 	averageAdjusters  []decor.AverageAdjuster
 	bufP, bufB, bufA  *bytes.Buffer
-	bufE              *bytes.Buffer
+	extender          extFunc
 
 	// priority overrides *Bar's priority, if set
 	priority int
@@ -93,16 +93,9 @@ type bState struct {
 }
 
 func newBar(container *Progress, bs *bState) *Bar {
-
-	bs.bufP = bytes.NewBuffer(make([]byte, 0, bs.width))
-	bs.bufB = bytes.NewBuffer(make([]byte, 0, bs.width))
-	bs.bufA = bytes.NewBuffer(make([]byte, 0, bs.width))
-	if bs.extender != nil {
-		bs.bufE = bytes.NewBuffer(make([]byte, 0, bs.width))
-	}
-
 	logPrefix := fmt.Sprintf("%sbar#%02d ", container.dlogger.Prefix(), bs.id)
 	ctx, cancel := context.WithCancel(container.ctx)
+
 	bar := &Bar{
 		container:    container,
 		priority:     bs.priority,
@@ -302,15 +295,6 @@ func (b *Bar) Completed() bool {
 	}
 }
 
-func (b *Bar) wSyncTable() [][]chan int {
-	select {
-	case b.operateState <- func(s *bState) { b.syncTableCh <- s.wSyncTable() }:
-		return <-b.syncTableCh
-	case <-b.done:
-		return b.cacheState.wSyncTable()
-	}
-}
-
 func (b *Bar) serve(ctx context.Context, s *bState) {
 	defer b.container.bwg.Done()
 	for {
@@ -347,27 +331,19 @@ func (b *Bar) render(tw int) {
 			}
 		}()
 
-		frame := s.draw(tw)
-
-		if s.extender != nil {
-			s.extender.Fill(s.bufE, tw, newStatistics(s))
-			b.extendedLines = countLines(s.bufE.Bytes())
-			frame = io.MultiReader(frame, s.bufE)
-		}
+		st := newStatistics(s)
+		frame := s.draw(tw, st)
+		frame, b.extendedLines = s.extender(frame, tw, st)
 
 		b.toShutdown = s.toComplete && !s.completeFlushed
 		s.completeFlushed = s.toComplete
-
 		b.frameCh <- frame
 	}:
 	case <-b.done:
 		s := b.cacheState
-		frame := s.draw(tw)
-		if s.extender != nil {
-			s.extender.Fill(s.bufE, tw, newStatistics(s))
-			b.extendedLines = countLines(s.bufE.Bytes())
-			frame = io.MultiReader(frame, s.bufE)
-		}
+		st := newStatistics(s)
+		frame := s.draw(tw, st)
+		frame, b.extendedLines = s.extender(frame, tw, st)
 		b.frameCh <- frame
 	}
 }
@@ -376,10 +352,48 @@ func (b *Bar) panicToFrame(termWidth int) io.Reader {
 	return strings.NewReader(fmt.Sprintf(fmt.Sprintf("%%.%dv\n", termWidth), b.recoveredPanic))
 }
 
-func (s *bState) draw(termWidth int) io.Reader {
+func (b *Bar) subscribeDecorators() {
+	var amountReceivers []decor.AmountReceiver
+	var shutdownListeners []decor.ShutdownListener
+	var averageAdjusters []decor.AverageAdjuster
+	b.TraverseDecorators(func(d decor.Decorator) {
+		if d, ok := d.(decor.AmountReceiver); ok {
+			amountReceivers = append(amountReceivers, d)
+		}
+		if d, ok := d.(decor.ShutdownListener); ok {
+			shutdownListeners = append(shutdownListeners, d)
+		}
+		if d, ok := d.(decor.AverageAdjuster); ok {
+			averageAdjusters = append(averageAdjusters, d)
+		}
+	})
+	b.operateState <- func(s *bState) {
+		s.amountReceivers = amountReceivers
+		s.shutdownListeners = shutdownListeners
+		s.averageAdjusters = averageAdjusters
+	}
+}
 
-	stat := newStatistics(s)
+func (b *Bar) refreshNowTillShutdown() {
+	for {
+		select {
+		case b.container.forceRefresh <- time.Now():
+		case <-b.done:
+			return
+		}
+	}
+}
 
+func (b *Bar) wSyncTable() [][]chan int {
+	select {
+	case b.operateState <- func(s *bState) { b.syncTableCh <- s.wSyncTable() }:
+		return <-b.syncTableCh
+	case <-b.done:
+		return b.cacheState.wSyncTable()
+	}
+}
+
+func (s *bState) draw(termWidth int, stat *decor.Statistics) io.Reader {
 	for _, d := range s.pDecorators {
 		s.bufP.WriteString(d.Decor(stat))
 	}
@@ -389,9 +403,6 @@ func (s *bState) draw(termWidth int) io.Reader {
 	}
 
 	s.bufA.WriteByte('\n')
-	if s.noBufBOnComplete && s.completeFlushed {
-		return io.MultiReader(s.bufP, s.bufA)
-	}
 
 	prependCount := utf8.RuneCount(s.bufP.Bytes())
 	appendCount := utf8.RuneCount(s.bufA.Bytes()) - 1
@@ -434,16 +445,6 @@ func (s *bState) wSyncTable() [][]chan int {
 	return table
 }
 
-func (b *Bar) refreshNowTillShutdown() {
-	for {
-		select {
-		case b.container.forceRefresh <- time.Now():
-		case <-b.done:
-			return
-		}
-	}
-}
-
 func newStatistics(s *bState) *decor.Statistics {
 	return &decor.Statistics{
 		ID:        s.id,
@@ -451,8 +452,4 @@ func newStatistics(s *bState) *decor.Statistics {
 		Total:     s.total,
 		Current:   s.current,
 	}
-}
-
-func countLines(b []byte) int {
-	return bytes.Count(b, []byte("\n"))
 }

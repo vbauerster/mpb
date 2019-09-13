@@ -1,6 +1,7 @@
 package mpb
 
 import (
+	"bytes"
 	"container/heap"
 	"context"
 	"io"
@@ -65,7 +66,6 @@ func New(options ...ContainerOption) *Progress {
 // context. It's not possible to reuse instance after *Progress.Wait()
 // method has been called.
 func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
-
 	s := &pState{
 		bHeap:      priorityQueue{},
 		width:      pwidth,
@@ -91,6 +91,7 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 		done:         make(chan struct{}),
 		dlogger:      log.New(s.debugOut, "[mpb] ", log.Lshortfile),
 	}
+
 	p.cwg.Add(1)
 	go p.serve(s, cwriter.New(s.output))
 	return p
@@ -116,19 +117,7 @@ func (p *Progress) Add(total int64, filler Filler, options ...BarOption) *Bar {
 	result := make(chan *Bar)
 	select {
 	case p.operateState <- func(ps *pState) {
-		bs := &bState{
-			total:    total,
-			filler:   filler,
-			priority: ps.idCount,
-			id:       ps.idCount,
-			width:    ps.width,
-			debugOut: ps.debugOut,
-		}
-		for _, opt := range options {
-			if opt != nil {
-				opt(bs)
-			}
-		}
+		bs := ps.makeBarState(total, filler, options...)
 		bar := newBar(p, bs)
 		if bs.runningBar != nil {
 			bs.runningBar.noPop = true
@@ -140,26 +129,8 @@ func (p *Progress) Add(total int64, filler Filler, options ...BarOption) *Bar {
 		ps.idCount++
 		result <- bar
 	}:
-		var amountReceivers []decor.AmountReceiver
-		var shutdownListeners []decor.ShutdownListener
-		var averageAdjusters []decor.AverageAdjuster
 		bar := <-result
-		bar.TraverseDecorators(func(d decor.Decorator) {
-			if d, ok := d.(decor.AmountReceiver); ok {
-				amountReceivers = append(amountReceivers, d)
-			}
-			if d, ok := d.(decor.ShutdownListener); ok {
-				shutdownListeners = append(shutdownListeners, d)
-			}
-			if d, ok := d.(decor.AverageAdjuster); ok {
-				averageAdjusters = append(averageAdjusters, d)
-			}
-		})
-		bar.operateState <- func(s *bState) {
-			s.amountReceivers = amountReceivers
-			s.shutdownListeners = shutdownListeners
-			s.averageAdjusters = averageAdjusters
-		}
+		bar.subscribeDecorators()
 		return bar
 	case <-p.done:
 		p.bwg.Done()
@@ -356,6 +327,32 @@ func (s *pState) updateSyncMatrix() {
 			s.aMatrix[i] = append(s.aMatrix[i], ch)
 		}
 	}
+}
+
+func (s *pState) makeBarState(total int64, filler Filler, options ...BarOption) *bState {
+	bs := &bState{
+		total:    total,
+		filler:   filler,
+		priority: s.idCount,
+		id:       s.idCount,
+		width:    s.width,
+		debugOut: s.debugOut,
+		extender: func(r io.Reader, tw int, st *decor.Statistics) (io.Reader, int) {
+			return r, 0
+		},
+	}
+
+	for _, opt := range options {
+		if opt != nil {
+			opt(bs)
+		}
+	}
+
+	bs.bufP = bytes.NewBuffer(make([]byte, 0, bs.width))
+	bs.bufB = bytes.NewBuffer(make([]byte, 0, bs.width))
+	bs.bufA = bytes.NewBuffer(make([]byte, 0, bs.width))
+
+	return bs
 }
 
 func syncWidth(matrix map[int][]chan int) {

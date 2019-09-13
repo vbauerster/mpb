@@ -1,6 +1,9 @@
 package mpb
 
 import (
+	"bytes"
+	"io"
+
 	"github.com/vbauerster/mpb/v4/decor"
 )
 
@@ -78,7 +81,17 @@ func BarParkTo(runningBar *Bar) BarOption {
 // BarClearOnComplete clears bar part of bar line on complete event.
 func BarClearOnComplete() BarOption {
 	return func(s *bState) {
-		s.noBufBOnComplete = true
+		s.filler = makeClearOnCompleteFiller(s.filler)
+	}
+}
+
+func makeClearOnCompleteFiller(filler Filler) FillerFunc {
+	return func(w io.Writer, width int, st *decor.Statistics) {
+		if st.Completed {
+			w.Write([]byte{})
+		} else {
+			filler.Fill(w, width, st)
+		}
 	}
 }
 
@@ -94,8 +107,20 @@ func BarPriority(priority int) BarOption {
 // BarExtender is an option to extend bar to the next new line, with
 // arbitrary output.
 func BarExtender(extender Filler) BarOption {
+	if extender == nil {
+		return nil
+	}
 	return func(s *bState) {
-		s.extender = extender
+		s.extender = makeExtFunc(extender)
+	}
+}
+
+func makeExtFunc(extender Filler) extFunc {
+	buf := new(bytes.Buffer)
+	nl := []byte("\n")
+	return func(r io.Reader, tw int, st *decor.Statistics) (io.Reader, int) {
+		extender.Fill(buf, tw, st)
+		return io.MultiReader(r, buf), bytes.Count(buf.Bytes(), nl)
 	}
 }
 
