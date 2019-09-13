@@ -98,23 +98,19 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 
 // AddBar creates a new progress bar and adds to the container.
 func (p *Progress) AddBar(total int64, options ...BarOption) *Bar {
-	return p.Add(total, newDefaultBarFiller(), options...)
+	return p.Add(total, NewBarFiller(), options...)
 }
 
 // AddSpinner creates a new spinner bar and adds to the container.
 func (p *Progress) AddSpinner(total int64, alignment SpinnerAlignment, options ...BarOption) *Bar {
-	filler := &spinnerFiller{
-		frames:    defaultSpinnerStyle,
-		alignment: alignment,
-	}
-	return p.Add(total, filler, options...)
+	return p.Add(total, NewSpinnerFiller(alignment), options...)
 }
 
 // Add creates a bar which renders itself by provided filler.
 // Set total to 0, if you plan to update it later.
 func (p *Progress) Add(total int64, filler Filler, options ...BarOption) *Bar {
 	if filler == nil {
-		filler = newDefaultBarFiller()
+		filler = NewBarFiller()
 	}
 	p.bwg.Add(1)
 	result := make(chan *Bar)

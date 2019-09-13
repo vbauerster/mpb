@@ -27,12 +27,13 @@ type barFiller struct {
 	noBrackets   bool
 }
 
-func newDefaultBarFiller() Filler {
-	bf := &barFiller{
+// NewBarFiller bar Filler used with *Progress.AddBar
+func NewBarFiller() Filler {
+	filler := &barFiller{
 		format: make([][]byte, utf8.RuneCountInString(defaultBarStyle)),
 	}
-	bf.setStyle(defaultBarStyle)
-	return bf
+	filler.setStyle(defaultBarStyle)
+	return filler
 }
 
 func (s *barFiller) setStyle(style string) {
