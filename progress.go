@@ -337,7 +337,7 @@ func (s *pState) makeBarState(total int64, filler Filler, options ...BarOption) 
 		id:       s.idCount,
 		width:    s.width,
 		debugOut: s.debugOut,
-		extender: func(r io.Reader, tw int, st *decor.Statistics) (io.Reader, int) {
+		extender: func(r io.Reader, _ int, _ *decor.Statistics) (io.Reader, int) {
 			return r, 0
 		},
 	}
