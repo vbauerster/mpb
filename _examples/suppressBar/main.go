@@ -60,10 +60,10 @@ func makeCustomFiller(ch <-chan string, resume <-chan struct{}) (mpb.FillerFunc,
 	return func(w io.Writer, width int, st *decor.Statistics) {
 		select {
 		case m := <-ch:
-			if f, ok := filler.(refiller); ok {
-				defer f.SetRefill(st.Current)
-			}
 			defer func() {
+				if f, ok := filler.(refiller); ok {
+					f.SetRefill(st.Current)
+				}
 				msg = &m
 			}()
 			nextCh <- struct{}{}
