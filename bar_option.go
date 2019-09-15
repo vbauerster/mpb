@@ -53,9 +53,8 @@ func BarWidth(width int) BarOption {
 	}
 }
 
-// BarRemoveOnComplete removes whole bar line on complete event. Any
-// decorators attached to the bar, having OnComplete action will not
-// have a chance to run its OnComplete action, because of this option.
+// BarRemoveOnComplete removes bar filler and decorators if any, on
+// complete event.
 func BarRemoveOnComplete() BarOption {
 	return func(s *bState) {
 		s.dropOnComplete = true
@@ -78,7 +77,7 @@ func BarParkTo(runningBar *Bar) BarOption {
 	}
 }
 
-// BarClearOnComplete clears bar part of bar line on complete event.
+// BarClearOnComplete clears bar filler only, on complete event.
 func BarClearOnComplete() BarOption {
 	return func(s *bState) {
 		s.filler = makeClearOnCompleteFiller(s.filler)

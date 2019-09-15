@@ -18,7 +18,7 @@ import (
 // Filler interface.
 // Bar renders by calling Filler's Fill method. You can literally have
 // any bar kind, by implementing this interface and passing it to the
-// Add method.
+// mpb.Add function.
 type Filler interface {
 	Fill(w io.Writer, width int, stat *decor.Statistics)
 }
