@@ -43,7 +43,7 @@ type Bar struct {
 	syncTableCh   chan [][]chan int
 	completed     chan bool
 
-	// concel is called either by user or on complete event
+	// cancel is called either by user or on complete event
 	cancel func()
 	// done is closed after cacheState is assigned
 	done chan struct{}
