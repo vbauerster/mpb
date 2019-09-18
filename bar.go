@@ -8,7 +8,6 @@ import (
 	"io/ioutil"
 	"log"
 	"strings"
-	"sync"
 	"time"
 	"unicode/utf8"
 
@@ -50,11 +49,6 @@ type Bar struct {
 	done chan struct{}
 	// cacheState is populated, right after close(shutdown)
 	cacheState *bState
-
-	arbitraryCurrent struct {
-		sync.Mutex
-		current int64
-	}
 
 	container      *Progress
 	dlogger        *log.Logger
@@ -220,14 +214,20 @@ func (b *Bar) SetTotal(total int64, complete bool) {
 
 // SetCurrent sets progress' current to arbitrary amount.
 func (b *Bar) SetCurrent(current int64, wdd ...time.Duration) {
-	if current <= 0 {
-		return
+	select {
+	case b.operateState <- func(s *bState) {
+		for _, ar := range s.amountReceivers {
+			ar.NextAmount(current-s.current, wdd...)
+		}
+		s.current = current
+		if s.total > 0 && s.current >= s.total {
+			s.current = s.total
+			s.toComplete = true
+			go b.refreshNowTillShutdown()
+		}
+	}:
+	case <-b.done:
 	}
-	b.arbitraryCurrent.Lock()
-	last := b.arbitraryCurrent.current
-	b.IncrBy(int(current-last), wdd...)
-	b.arbitraryCurrent.current = current
-	b.arbitraryCurrent.Unlock()
 }
 
 // Increment is a shorthand for b.IncrInt64(1, wdd...).
@@ -246,14 +246,14 @@ func (b *Bar) IncrBy(n int, wdd ...time.Duration) {
 func (b *Bar) IncrInt64(n int64, wdd ...time.Duration) {
 	select {
 	case b.operateState <- func(s *bState) {
+		for _, ar := range s.amountReceivers {
+			ar.NextAmount(n, wdd...)
+		}
 		s.current += n
 		if s.total > 0 && s.current >= s.total {
 			s.current = s.total
 			s.toComplete = true
 			go b.refreshNowTillShutdown()
-		}
-		for _, ar := range s.amountReceivers {
-			ar.NextAmount(n, wdd...)
 		}
 	}:
 	case <-b.done:
