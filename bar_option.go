@@ -84,14 +84,14 @@ func BarClearOnComplete() BarOption {
 	}
 }
 
-func makeClearOnCompleteFiller(filler Filler) FillerFunc {
-	return func(w io.Writer, width int, st *decor.Statistics) {
+func makeClearOnCompleteFiller(filler Filler) Filler {
+	return FillerFunc(func(w io.Writer, width int, st *decor.Statistics) {
 		if st.Completed {
 			w.Write([]byte{})
 		} else {
 			filler.Fill(w, width, st)
 		}
-	}
+	})
 }
 
 // BarPriority sets bar's priority. Zero is highest priority, i.e. bar
