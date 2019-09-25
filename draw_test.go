@@ -234,7 +234,7 @@ func TestDraw(t *testing.T) {
 				want:      "[===============================>------------------------------------------------------------------]",
 			},
 			{
-				name:      "t,c,bw,trim{100,33,100,true}",
+				name:      "t,c,bw,trim,rev{100,33,100,true,true}",
 				total:     100,
 				current:   33,
 				barWidth:  100,
@@ -260,7 +260,7 @@ func TestDraw(t *testing.T) {
 				want:      "[+++++++++++++++++++++++++++++++>------------------------------------------------------------------]",
 			},
 			{
-				name:      "t,c,bw,rup,trim{100,33,100,33,true}",
+				name:      "t,c,bw,rup,trim,rev{100,33,100,33,true,true}",
 				total:     100,
 				current:   33,
 				barWidth:  100,
