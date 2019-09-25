@@ -54,7 +54,7 @@ func makeCustomFiller(ch <-chan string, resume <-chan struct{}) (mpb.FillerFunc,
 	type refiller interface {
 		SetRefill(int64)
 	}
-	filler := mpb.NewBarFiller()
+	filler := mpb.NewBarFiller(mpb.DefaultBarStyle, false)
 	nextCh := make(chan struct{}, 1)
 	var msg *string
 	return func(w io.Writer, width int, st *decor.Statistics) {
