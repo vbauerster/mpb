@@ -130,50 +130,21 @@ func TrimSpace() BarOption {
 	}
 }
 
-// BarStyle sets custom bar style, default one is "[=>-]<+".
-//
-//	'[' left bracket rune
-//
-//	'=' fill rune
-//
-//	'>' tip rune
-//
-//	'-' empty rune
-//
-//	']' right bracket rune
-//
-//	'<' reverse tip rune, used when BarReverse option is set
-//
-//	'+' refill rune, used when *Bar.SetRefill(int64) is called
-//
-// It's ok to provide first five runes only, for example BarStyle("╢▌▌░╟").
-// To omit left and right bracket runes, either set style as " =>- "
-// or use BarNoBrackets option.
+// BarStyle overrides mpb.DefaultBarStyle, for example BarStyle("╢▌▌░╟").
+// If you need to override `reverse tip` and `refill rune` set 6th and
+// 7th rune respectively, for example BarStyle("[=>-]<+").
 func BarStyle(style string) BarOption {
-	chk := func(filler Filler) (interface{}, bool) {
-		if style == "" {
-			return nil, false
+	if style == "" {
+		return nil
+	}
+	type styleSetter interface {
+		SetStyle(string)
+	}
+	return func(s *bState) {
+		if t, ok := s.filler.(styleSetter); ok {
+			t.SetStyle(style)
 		}
-		t, ok := filler.(*barFiller)
-		return t, ok
 	}
-	cb := func(t interface{}) {
-		t.(*barFiller).setStyle(style)
-	}
-	return MakeFillerTypeSpecificBarOption(chk, cb)
-}
-
-// BarNoBrackets omits left and right edge runes of the bar. Edges are
-// brackets in default bar style, hence the name of the option.
-func BarNoBrackets() BarOption {
-	chk := func(filler Filler) (interface{}, bool) {
-		t, ok := filler.(*barFiller)
-		return t, ok
-	}
-	cb := func(t interface{}) {
-		t.(*barFiller).noBrackets = true
-	}
-	return MakeFillerTypeSpecificBarOption(chk, cb)
 }
 
 // BarNoPop disables bar pop out of container. Effective when
@@ -186,14 +157,14 @@ func BarNoPop() BarOption {
 
 // BarReverse reverse mode, bar will progress from right to left.
 func BarReverse() BarOption {
-	chk := func(filler Filler) (interface{}, bool) {
-		t, ok := filler.(*barFiller)
-		return t, ok
+	type revSetter interface {
+		SetReverse(bool)
 	}
-	cb := func(t interface{}) {
-		t.(*barFiller).reverse = true
+	return func(s *bState) {
+		if t, ok := s.filler.(revSetter); ok {
+			t.SetReverse(true)
+		}
 	}
-	return MakeFillerTypeSpecificBarOption(chk, cb)
 }
 
 // SpinnerStyle sets custom spinner style.

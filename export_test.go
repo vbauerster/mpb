@@ -1,6 +1,4 @@
 package mpb
 
-var (
-	SyncWidth       = syncWidth
-	DefaultBarStyle = defaultBarStyle
-)
+// make syncWidth func public in test
+var SyncWidth = syncWidth
