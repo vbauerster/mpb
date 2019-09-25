@@ -58,6 +58,7 @@ type Bar struct {
 type extFunc func(in io.Reader, tw int, st *decor.Statistics) (out io.Reader, lines int)
 
 type bState struct {
+	baseF             Filler
 	filler            Filler
 	id                int
 	width             int
@@ -165,7 +166,7 @@ func (b *Bar) SetRefill(amount int64) {
 		SetRefill(int64)
 	}
 	b.operateState <- func(s *bState) {
-		if f, ok := s.filler.(refiller); ok {
+		if f, ok := s.baseF.(refiller); ok {
 			f.SetRefill(amount)
 		}
 	}

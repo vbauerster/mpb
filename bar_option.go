@@ -80,7 +80,7 @@ func BarParkTo(runningBar *Bar) BarOption {
 // BarClearOnComplete clears bar filler only, on complete event.
 func BarClearOnComplete() BarOption {
 	return func(s *bState) {
-		s.filler = makeClearOnCompleteFiller(s.filler)
+		s.filler = makeClearOnCompleteFiller(s.baseF)
 	}
 }
 
@@ -141,7 +141,7 @@ func BarStyle(style string) BarOption {
 		SetStyle(string)
 	}
 	return func(s *bState) {
-		if t, ok := s.filler.(styleSetter); ok {
+		if t, ok := s.baseF.(styleSetter); ok {
 			t.SetStyle(style)
 		}
 	}
@@ -161,7 +161,7 @@ func BarReverse() BarOption {
 		SetReverse(bool)
 	}
 	return func(s *bState) {
-		if t, ok := s.filler.(revSetter); ok {
+		if t, ok := s.baseF.(revSetter); ok {
 			t.SetReverse(true)
 		}
 	}
@@ -191,7 +191,7 @@ func MakeFillerTypeSpecificBarOption(
 	cb func(interface{}),
 ) BarOption {
 	return func(s *bState) {
-		if t, ok := typeChecker(s.filler); ok {
+		if t, ok := typeChecker(s.baseF); ok {
 			cb(t)
 		}
 	}

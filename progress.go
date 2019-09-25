@@ -332,6 +332,7 @@ func (s *pState) updateSyncMatrix() {
 func (s *pState) makeBarState(total int64, filler Filler, options ...BarOption) *bState {
 	bs := &bState{
 		total:    total,
+		baseF:    filler,
 		filler:   filler,
 		priority: s.idCount,
 		id:       s.idCount,
