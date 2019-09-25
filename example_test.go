@@ -19,7 +19,7 @@ func Example() {
 	name := "Single Bar:"
 	// adding a single bar, which will inherit container's width
 	bar := p.AddBar(int64(total),
-		// set custom bar style, default one is "[=>-]"
+		// override DefaultBarStyle, which is "[=>-]<+"
 		mpb.BarStyle("╢▌▌░╟"),
 		mpb.PrependDecorators(
 			// display our name with one space on the right
