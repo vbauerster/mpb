@@ -24,7 +24,7 @@ func main() {
 		var bar *mpb.Bar
 		if i == 0 {
 			bar = p.AddBar(int64(total),
-				// set custom bar style, default one is "[=>-]"
+				// override mpb.DefaultBarStyle, which is "[=>-]<+"
 				mpb.BarStyle("╢▌▌░╟"),
 				mpb.PrependDecorators(
 					// simple name decorator
@@ -40,7 +40,7 @@ func main() {
 			)
 		} else {
 			bar = p.AddSpinner(int64(total), mpb.SpinnerOnMiddle,
-				// set custom spinner style, default one is {"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
+				// override mpb.DefaultSpinnerStyle
 				mpb.SpinnerStyle([]string{"∙∙∙", "●∙∙", "∙●∙", "∙∙●", "∙∙∙"}),
 				mpb.PrependDecorators(
 					// simple name decorator
