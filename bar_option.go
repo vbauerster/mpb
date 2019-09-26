@@ -175,10 +175,10 @@ func BarReverse() BarOption {
 // SpinnerStyle sets custom spinner style.
 // Effective when Filler type is spinner.
 func SpinnerStyle(frames []string) BarOption {
+	if len(frames) == 0 {
+		return nil
+	}
 	chk := func(filler Filler) (interface{}, bool) {
-		if len(frames) == 0 {
-			return nil, false
-		}
 		t, ok := filler.(*spinnerFiller)
 		return t, ok
 	}
