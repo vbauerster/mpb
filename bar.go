@@ -17,7 +17,7 @@ import (
 // Filler interface.
 // Bar renders by calling Filler's Fill method. You can literally have
 // any bar kind, by implementing this interface and passing it to the
-// mpb.Add function.
+// *Progress.Add method.
 type Filler interface {
 	Fill(w io.Writer, width int, stat *decor.Statistics)
 }
@@ -27,6 +27,14 @@ type FillerFunc func(w io.Writer, width int, stat *decor.Statistics)
 
 func (f FillerFunc) Fill(w io.Writer, width int, stat *decor.Statistics) {
 	f(w, width, stat)
+}
+
+// BaseFiller interface.
+// If you ever need to implement a custom Filler based on mpb.NewBarFiller,
+// then you may need to implement this one as well, in order to retain
+// functionality of some `BarOption`s and method like *Bar.SetRefill.
+type BaseFiller interface {
+	BaseFiller() Filler
 }
 
 // Bar represents a progress Bar.

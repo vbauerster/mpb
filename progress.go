@@ -343,6 +343,10 @@ func (s *pState) makeBarState(total int64, filler Filler, options ...BarOption) 
 		},
 	}
 
+	if f, ok := filler.(BaseFiller); ok {
+		bs.baseF = f.BaseFiller()
+	}
+
 	for _, opt := range options {
 		if opt != nil {
 			opt(bs)
