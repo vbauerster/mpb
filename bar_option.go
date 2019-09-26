@@ -53,14 +53,6 @@ func BarWidth(width int) BarOption {
 	}
 }
 
-// BarRemoveOnComplete removes bar filler and decorators if any, on
-// complete event.
-func BarRemoveOnComplete() BarOption {
-	return func(s *bState) {
-		s.dropOnComplete = true
-	}
-}
-
 // BarReplaceOnComplete is deprecated. Use BarParkTo instead.
 func BarReplaceOnComplete(runningBar *Bar) BarOption {
 	return BarParkTo(runningBar)
@@ -77,17 +69,30 @@ func BarParkTo(runningBar *Bar) BarOption {
 	}
 }
 
-// BarClearOnComplete clears bar filler only, on complete event.
-func BarClearOnComplete() BarOption {
+// BarRemoveOnComplete removes bar filler and decorators if any, on
+// complete event.
+func BarRemoveOnComplete() BarOption {
 	return func(s *bState) {
-		s.filler = makeClearOnCompleteFiller(s.baseF)
+		s.dropOnComplete = true
 	}
 }
 
-func makeClearOnCompleteFiller(filler Filler) Filler {
+// BarClearOnComplete clears bar filler only, on complete event.
+func BarClearOnComplete() BarOption {
+	return BarOnComplete("")
+}
+
+// BarOnComplete replaces bar filler with message, on complete event.
+func BarOnComplete(message string) BarOption {
+	return func(s *bState) {
+		s.filler = makeClearOnCompleteFiller(s.baseF, message)
+	}
+}
+
+func makeClearOnCompleteFiller(filler Filler, message string) Filler {
 	return FillerFunc(func(w io.Writer, width int, st *decor.Statistics) {
 		if st.Completed {
-			w.Write([]byte{})
+			io.WriteString(w, message)
 		} else {
 			filler.Fill(w, width, st)
 		}
