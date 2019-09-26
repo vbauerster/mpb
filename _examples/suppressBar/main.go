@@ -17,7 +17,7 @@ func main() {
 	total := 100
 	msgCh := make(chan string)
 	resumeCh := make(chan struct{})
-	filler, nextCh := makeCustomFiller(msgCh, resumeCh)
+	filler, nextCh := newCustomFiller(msgCh, resumeCh)
 	bar := p.Add(int64(total), filler,
 		mpb.PrependDecorators(
 			decor.Name("my bar:"),
@@ -33,6 +33,7 @@ func main() {
 		var err error
 		for i := 0; i < total; i++ {
 			if err != nil {
+				bar.SetRefill(int64(i))
 				time.Sleep(3 * time.Second)
 				resumeCh <- struct{}{}
 				err = nil
@@ -50,20 +51,24 @@ func main() {
 	p.Wait()
 }
 
-func makeCustomFiller(ch <-chan string, resume <-chan struct{}) (mpb.FillerFunc, <-chan struct{}) {
-	type refiller interface {
-		SetRefill(int64)
-	}
-	filler := mpb.NewBarFiller(mpb.DefaultBarStyle, false)
+type customFiller struct {
+	mpb.Filler
+	base mpb.Filler
+}
+
+// implementing mpb.BaseFiller, so bar.SetRefill works
+func (cf *customFiller) BaseFiller() mpb.Filler {
+	return cf.base
+}
+
+func newCustomFiller(ch <-chan string, resume <-chan struct{}) (mpb.Filler, <-chan struct{}) {
+	base := mpb.NewBarFiller(mpb.DefaultBarStyle, false)
 	nextCh := make(chan struct{}, 1)
 	var msg *string
-	return func(w io.Writer, width int, st *decor.Statistics) {
+	filler := mpb.FillerFunc(func(w io.Writer, width int, st *decor.Statistics) {
 		select {
 		case m := <-ch:
 			defer func() {
-				if f, ok := filler.(refiller); ok {
-					f.SetRefill(st.Current)
-				}
 				msg = &m
 			}()
 			nextCh <- struct{}{}
@@ -76,9 +81,14 @@ func makeCustomFiller(ch <-chan string, resume <-chan struct{}) (mpb.FillerFunc,
 			fmt.Fprintf(w, limitFmt, *msg)
 			nextCh <- struct{}{}
 		} else {
-			filler.Fill(w, width, st)
+			base.Fill(w, width, st)
 		}
-	}, nextCh
+	})
+	cf := &customFiller{
+		Filler: filler,
+		base:   base,
+	}
+	return cf, nextCh
 }
 
 type myPercentageDecorator struct {
