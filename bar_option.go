@@ -85,11 +85,11 @@ func BarClearOnComplete() BarOption {
 // BarOnComplete replaces bar filler with message, on complete event.
 func BarOnComplete(message string) BarOption {
 	return func(s *bState) {
-		s.filler = makeClearOnCompleteFiller(s.baseF, message)
+		s.filler = makeBarOnCompleteFiller(s.baseF, message)
 	}
 }
 
-func makeClearOnCompleteFiller(filler Filler, message string) Filler {
+func makeBarOnCompleteFiller(filler Filler, message string) Filler {
 	return FillerFunc(func(w io.Writer, width int, st *decor.Statistics) {
 		if st.Completed {
 			io.WriteString(w, message)
