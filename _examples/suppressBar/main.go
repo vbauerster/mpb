@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"math/rand"
+	"sync"
 	"time"
 
 	"github.com/vbauerster/mpb/v4"
@@ -26,29 +27,53 @@ func main() {
 			newCustomPercentage(decor.Percentage(), nextCh),
 		),
 	)
+	ew := &errorWrapper{}
+	time.AfterFunc(2*time.Second, func() {
+		ew.reset(errors.New("timeout"))
+	})
 	// simulating some work
 	go func() {
 		rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 		max := 100 * time.Millisecond
-		var err error
 		for i := 0; i < total; i++ {
-			if err != nil {
+			time.Sleep(time.Duration(rng.Intn(10)+1) * max / 10)
+			if ew.isErr() {
+				msgCh <- fmt.Sprintf("%s at %d, retrying...", ew.Error(), i)
+				go ew.reset(nil)
+				i--
 				bar.SetRefill(int64(i))
 				time.Sleep(3 * time.Second)
 				resumeCh <- struct{}{}
-				err = nil
-			} else {
-				time.Sleep(time.Duration(rng.Intn(10)+1) * max / 10)
-			}
-			if i == 33 {
-				err = errors.New("some error")
-				msgCh <- fmt.Sprintf("%s retrying...", err.Error())
+				continue
 			}
 			bar.Increment()
 		}
 	}()
 
 	p.Wait()
+}
+
+type errorWrapper struct {
+	sync.RWMutex
+	err error
+}
+
+func (ew *errorWrapper) Error() string {
+	ew.RLock()
+	defer ew.RUnlock()
+	return ew.err.Error()
+}
+
+func (ew *errorWrapper) isErr() bool {
+	ew.RLock()
+	defer ew.RUnlock()
+	return ew.err != nil
+}
+
+func (ew *errorWrapper) reset(err error) {
+	ew.Lock()
+	ew.err = err
+	ew.Unlock()
 }
 
 type customFiller struct {
@@ -65,7 +90,7 @@ func newCustomFiller(ch <-chan string, resume <-chan struct{}) (mpb.Filler, <-ch
 	base := mpb.NewBarFiller(mpb.DefaultBarStyle, false)
 	nextCh := make(chan struct{}, 1)
 	var msg *string
-	filler := mpb.FillerFunc(func(w io.Writer, width int, st *decor.Statistics) {
+	filler := func(w io.Writer, width int, st *decor.Statistics) {
 		select {
 		case m := <-ch:
 			defer func() {
@@ -83,9 +108,9 @@ func newCustomFiller(ch <-chan string, resume <-chan struct{}) (mpb.Filler, <-ch
 		} else {
 			base.Fill(w, width, st)
 		}
-	})
+	}
 	cf := &customFiller{
-		Filler: filler,
+		Filler: mpb.FillerFunc(filler),
 		base:   base,
 	}
 	return cf, nextCh
