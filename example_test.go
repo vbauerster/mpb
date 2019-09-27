@@ -58,8 +58,9 @@ func ExampleBar_Completed() {
 }
 
 func ExampleBar_ProxyReader() {
+	// import crand "crypto/rand"
+
 	var total int64 = 1024 * 1024 * 500
-	// crand is "crypto/rand"
 	reader := io.LimitReader(crand.Reader, total)
 
 	p := mpb.New()
