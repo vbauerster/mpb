@@ -67,7 +67,7 @@ type Synchronizer interface {
 	Sync() (chan int, bool)
 }
 
-// ConfigSetter interface
+// ConfigSetter interface.
 type ConfigSetter interface {
 	SetConfig(config WC) (old WC)
 }
