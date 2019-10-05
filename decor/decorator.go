@@ -80,8 +80,7 @@ type OnCompleteMessenger interface {
 }
 
 // AmountReceiver interface.
-// If decorator needs to receive increment amount, so this is the right
-// interface to implement.
+// EWMA based decorators must implement this one.
 type AmountReceiver interface {
 	NextAmount(int64, ...time.Duration)
 }
