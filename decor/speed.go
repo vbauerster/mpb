@@ -9,11 +9,12 @@ import (
 	"github.com/VividCortex/ewma"
 )
 
-type speedType struct {
+// SpeedFormatter is wrapper for SizeB1024 and SizeB1000 to format value as speed/s.
+type SpeedFormatter struct {
 	fmt.Formatter
 }
 
-func (self *speedType) Format(st fmt.State, verb rune) {
+func (self *SpeedFormatter) Format(st fmt.State, verb rune) {
 	self.Formatter.Format(st, verb)
 	io.WriteString(st, "/s")
 }
@@ -183,11 +184,11 @@ func chooseSpeedProducer(unit int, format string) func(float64) string {
 	switch unit {
 	case UnitKiB:
 		return func(speed float64) string {
-			return fmt.Sprintf(format, &speedType{SizeB1024(math.Round(speed))})
+			return fmt.Sprintf(format, &SpeedFormatter{SizeB1024(math.Round(speed))})
 		}
 	case UnitKB:
 		return func(speed float64) string {
-			return fmt.Sprintf(format, &speedType{SizeB1000(math.Round(speed))})
+			return fmt.Sprintf(format, &SpeedFormatter{SizeB1000(math.Round(speed))})
 		}
 	default:
 		return func(speed float64) string {
