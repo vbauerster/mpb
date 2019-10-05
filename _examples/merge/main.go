@@ -23,7 +23,6 @@ func main() {
 			pdecorators = mpb.PrependDecorators(
 				// Merge to sync width with decorators on lines 37 and 38
 				decor.Merge(
-					// decor.OnComplete(newVariadicSpinner(decor.WCSyncSpace), "done"),
 					newVariadicSpinner(decor.WCSyncSpace),
 					decor.WCSyncSpace, // Placeholder
 				),
