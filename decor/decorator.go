@@ -52,10 +52,11 @@ type Statistics struct {
 }
 
 // Decorator interface.
-// A decorator must implement this interface, in order to be used with
-// mpb library.
+// Implementors should embed WC type, that way only single method
+// Decor(*Statistics) needs to be implemented, the rest will be handled
+// by WC type.
 type Decorator interface {
-	ConfigSetter
+	Configurator
 	Synchronizer
 	Decor(*Statistics) string
 }
@@ -67,20 +68,14 @@ type Synchronizer interface {
 	Sync() (chan int, bool)
 }
 
-// ConfigSetter interface.
-type ConfigSetter interface {
-	SetConfig(config WC) (old WC)
-}
-
-// OnCompleteMessenger interface.
-// Decorators implementing this interface suppose to return provided
-// string on complete event.
-type OnCompleteMessenger interface {
-	OnCompleteMessage(string)
+// Configurator interface.
+type Configurator interface {
+	GetConf() WC
+	SetConf(*WC)
 }
 
 // AmountReceiver interface.
-// EWMA based decorators must implement this one.
+// EWMA based decorators need to implement this one.
 type AmountReceiver interface {
 	NextAmount(int64, ...time.Duration)
 }
@@ -136,7 +131,7 @@ func (wc *WC) FormatMsg(msg string) string {
 }
 
 // Init initializes width related config.
-func (wc *WC) Init() {
+func (wc *WC) Init() WC {
 	wc.dynFormat = "%%"
 	if (wc.C & DidentRight) != 0 {
 		wc.dynFormat += "-"
@@ -144,8 +139,11 @@ func (wc *WC) Init() {
 	wc.dynFormat += "%ds"
 	wc.staticFormat = fmt.Sprintf(wc.dynFormat, wc.W)
 	if (wc.C & DSyncWidth) != 0 {
+		// it's deliberate choice to override wsync on each Init() call,
+		// this way globals like WCSyncSpace can be reused
 		wc.wsync = make(chan int)
 	}
+	return *wc
 }
 
 // Sync is implementation of Synchronizer interface.
@@ -153,23 +151,12 @@ func (wc *WC) Sync() (chan int, bool) {
 	return wc.wsync, (wc.C & DSyncWidth) != 0
 }
 
-// SetConfig sets new conf and returns old one.
-func (wc *WC) SetConfig(conf WC) (old WC) {
-	conf.Init()
-	old = *wc
-	*wc = conf
-	return old
+// GetConf is implementation of Configurator interface.
+func (wc *WC) GetConf() WC {
+	return *wc
 }
 
-// OnComplete returns decorator, which wraps provided decorator, with
-// sole purpose to display provided message on complete event.
-//
-//	`decorator` Decorator to wrap
-//
-//	`message` message to display on complete event
-func OnComplete(decorator Decorator, message string) Decorator {
-	if d, ok := decorator.(OnCompleteMessenger); ok {
-		d.OnCompleteMessage(message)
-	}
-	return decorator
+// SetConf is implementation of Configurator interface.
+func (wc *WC) SetConf(conf *WC) {
+	*wc = conf.Init()
 }

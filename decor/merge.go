@@ -20,13 +20,13 @@ func Merge(decorator Decorator, placeholders ...WC) Decorator {
 	}
 	md := &mergeDecorator{
 		Decorator:    decorator,
+		wc:           decorator.GetConf(),
 		placeHolders: make([]*placeHolderDecorator, len(placeholders)),
 	}
-	md.wc = decorator.SetConfig(md.wc)
+	decorator.SetConf(&WC{})
 	for i, wc := range placeholders {
-		wc.Init()
 		md.placeHolders[i] = &placeHolderDecorator{
-			WC:    wc,
+			WC:    wc.Init(),
 			wsync: make(chan int),
 		}
 	}

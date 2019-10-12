@@ -59,9 +59,8 @@ func MovingAverageSpeed(unit int, format string, average MovingAverage, wcc ...W
 	if format == "" {
 		format = "%.0f"
 	}
-	wc.Init()
 	d := &movingAverageSpeed{
-		WC:       wc,
+		WC:       wc.Init(),
 		average:  average,
 		producer: chooseSpeedProducer(unit, format),
 	}
@@ -70,26 +69,19 @@ func MovingAverageSpeed(unit int, format string, average MovingAverage, wcc ...W
 
 type movingAverageSpeed struct {
 	WC
-	producer    func(float64) string
-	average     ewma.MovingAverage
-	msg         string
-	completeMsg *string
+	producer func(float64) string
+	average  ewma.MovingAverage
+	msg      string
 }
 
 func (d *movingAverageSpeed) Decor(st *Statistics) string {
-	if st.Completed {
-		if d.completeMsg != nil {
-			return d.FormatMsg(*d.completeMsg)
+	if !st.Completed {
+		var speed float64
+		if v := math.Round(d.average.Value()); v != 0 {
+			speed = 1 / time.Duration(v).Seconds()
 		}
-		return d.FormatMsg(d.msg)
+		d.msg = d.producer(speed)
 	}
-
-	var speed float64
-	if v := math.Round(d.average.Value()); v != 0 {
-		speed = 1 / time.Duration(v).Seconds()
-	}
-
-	d.msg = d.producer(speed)
 	return d.FormatMsg(d.msg)
 }
 
@@ -103,10 +95,6 @@ func (d *movingAverageSpeed) NextAmount(n int64, wdd ...time.Duration) {
 		return
 	}
 	d.average.Add(durPerByte)
-}
-
-func (d *movingAverageSpeed) OnCompleteMessage(msg string) {
-	d.completeMsg = &msg
 }
 
 // AverageSpeed decorator with dynamic unit measure adjustment. It's
@@ -141,9 +129,8 @@ func NewAverageSpeed(unit int, format string, startTime time.Time, wcc ...WC) De
 	if format == "" {
 		format = "%.0f"
 	}
-	wc.Init()
 	d := &averageSpeed{
-		WC:        wc,
+		WC:        wc.Init(),
 		startTime: startTime,
 		producer:  chooseSpeedProducer(unit, format),
 	}
@@ -152,28 +139,18 @@ func NewAverageSpeed(unit int, format string, startTime time.Time, wcc ...WC) De
 
 type averageSpeed struct {
 	WC
-	startTime   time.Time
-	producer    func(float64) string
-	msg         string
-	completeMsg *string
+	startTime time.Time
+	producer  func(float64) string
+	msg       string
 }
 
 func (d *averageSpeed) Decor(st *Statistics) string {
-	if st.Completed {
-		if d.completeMsg != nil {
-			return d.FormatMsg(*d.completeMsg)
-		}
-		return d.FormatMsg(d.msg)
+	if !st.Completed {
+		speed := float64(st.Current) / time.Since(d.startTime).Seconds()
+		d.msg = d.producer(speed)
 	}
 
-	speed := float64(st.Current) / time.Since(d.startTime).Seconds()
-	d.msg = d.producer(speed)
-
 	return d.FormatMsg(d.msg)
-}
-
-func (d *averageSpeed) OnCompleteMessage(msg string) {
-	d.completeMsg = &msg
 }
 
 func (d *averageSpeed) AverageAdjust(startTime time.Time) {

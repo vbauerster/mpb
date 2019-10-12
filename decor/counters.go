@@ -47,12 +47,11 @@ func Counters(unit int, pairFmt string, wcc ...WC) Decorator {
 	for _, widthConf := range wcc {
 		wc = widthConf
 	}
-	wc.Init()
 	if pairFmt == "" {
 		pairFmt = "%d / %d"
 	}
 	d := &countersDecorator{
-		WC:      wc,
+		WC:      wc.Init(),
 		unit:    unit,
 		pairFmt: pairFmt,
 	}
@@ -61,16 +60,11 @@ func Counters(unit int, pairFmt string, wcc ...WC) Decorator {
 
 type countersDecorator struct {
 	WC
-	unit        int
-	pairFmt     string
-	completeMsg *string
+	unit    int
+	pairFmt string
 }
 
 func (d *countersDecorator) Decor(st *Statistics) string {
-	if st.Completed && d.completeMsg != nil {
-		return d.FormatMsg(*d.completeMsg)
-	}
-
 	var res string
 	switch d.unit {
 	case UnitKiB:
@@ -82,8 +76,4 @@ func (d *countersDecorator) Decor(st *Statistics) string {
 	}
 
 	return d.FormatMsg(res)
-}
-
-func (d *countersDecorator) OnCompleteMessage(msg string) {
-	d.completeMsg = &msg
 }
