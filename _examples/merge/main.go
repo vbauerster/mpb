@@ -57,9 +57,8 @@ func main() {
 }
 
 func newVariadicSpinner(wc decor.WC) decor.Decorator {
-	wc.Init()
 	d := &variadicSpinner{
-		WC: wc,
+		WC: wc.Init(),
 		d:  decor.Spinner(nil),
 	}
 	return d
