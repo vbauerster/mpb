@@ -60,7 +60,7 @@ type countersDecorator struct {
 }
 
 func (d *countersDecorator) Decor(st *Statistics) string {
-	return d.producer(st)
+	return d.FormatMsg(d.producer(st))
 }
 
 func chooseSizeProducer(unit int, format string) func(*Statistics) string {
