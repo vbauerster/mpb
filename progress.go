@@ -332,7 +332,7 @@ func (s *pState) updateSyncMatrix() {
 func (s *pState) makeBarState(total int64, filler Filler, options ...BarOption) *bState {
 	bs := &bState{
 		total:    total,
-		baseF:    filler,
+		baseF:    extractBaseFiller(filler),
 		filler:   filler,
 		priority: s.idCount,
 		id:       s.idCount,
@@ -341,10 +341,6 @@ func (s *pState) makeBarState(total int64, filler Filler, options ...BarOption) 
 		extender: func(r io.Reader, _ int, _ *decor.Statistics) (io.Reader, int) {
 			return r, 0
 		},
-	}
-
-	if f, ok := filler.(BaseFiller); ok {
-		bs.baseF = f.BaseFiller()
 	}
 
 	for _, opt := range options {
@@ -411,4 +407,11 @@ func fanInRefreshSrc(done <-chan struct{}, channels ...<-chan time.Time) <-chan 
 	}()
 
 	return multiplexedStream
+}
+
+func extractBaseFiller(f Filler) Filler {
+	if f, ok := f.(Wrapper); ok {
+		return extractBaseFiller(f.Base())
+	}
+	return f
 }

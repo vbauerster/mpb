@@ -29,12 +29,12 @@ func (f FillerFunc) Fill(w io.Writer, width int, stat *decor.Statistics) {
 	f(w, width, stat)
 }
 
-// BaseFiller interface.
-// If you ever need to implement a custom Filler based on mpb.NewBarFiller,
-// then you may need to implement this one as well, in order to retain
-// functionality of some `BarOption`s and method like *Bar.SetRefill.
-type BaseFiller interface {
-	BaseFiller() Filler
+// Wrapper interface.
+// If you're implementing custom Filler by wrapping a built-in one,
+// it is necessary to implement this interface to retain functionality
+// of built-in Filler.
+type Wrapper interface {
+	Base() Filler
 }
 
 // Bar represents a progress Bar.
