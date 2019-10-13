@@ -78,7 +78,6 @@ type bState struct {
 	noPop             bool
 	aDecorators       []decor.Decorator
 	pDecorators       []decor.Decorator
-	mDecorators       []decor.Decorator
 	amountReceivers   []decor.AmountReceiver
 	shutdownListeners []decor.ShutdownListener
 	averageAdjusters  []decor.AverageAdjuster
@@ -196,10 +195,9 @@ func (b *Bar) TraverseDecorators(cb decor.CBFunc) {
 		for _, decorators := range [...][]decor.Decorator{
 			s.pDecorators,
 			s.aDecorators,
-			s.mDecorators,
 		} {
 			for _, d := range decorators {
-				cb(d)
+				cb(extractBaseDecorator(d))
 			}
 		}
 	}
@@ -461,4 +459,11 @@ func newStatistics(s *bState) *decor.Statistics {
 		Total:     s.total,
 		Current:   s.current,
 	}
+}
+
+func extractBaseDecorator(d decor.Decorator) decor.Decorator {
+	if d, ok := d.(decor.Wrapper); ok {
+		return extractBaseDecorator(d.Base())
+	}
+	return d
 }

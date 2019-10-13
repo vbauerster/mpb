@@ -74,6 +74,14 @@ type Configurator interface {
 	SetConf(*WC)
 }
 
+// Wrapper interface.
+// If you're implementing custom Decorator by wrapping a built-in one,
+// it is necessary to implement this interface to retain functionality
+// of built-in Decorator.
+type Wrapper interface {
+	Base() Decorator
+}
+
 // AmountReceiver interface.
 // EWMA based decorators need to implement this one.
 type AmountReceiver interface {
