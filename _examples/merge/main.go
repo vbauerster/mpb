@@ -21,9 +21,11 @@ func main() {
 		var pdecorators mpb.BarOption
 		if i == 0 {
 			pdecorators = mpb.PrependDecorators(
-				// Merge to sync width with decorators on lines 37 and 38
 				decor.Merge(
-					newVariadicSpinner(decor.WCSyncSpace),
+					decor.OnComplete(
+						newVariadicSpinner(decor.WCSyncSpace),
+						"done",
+					),
 					decor.WCSyncSpace, // Placeholder
 				),
 			)
@@ -58,27 +60,19 @@ func main() {
 
 func newVariadicSpinner(wc decor.WC) decor.Decorator {
 	d := &variadicSpinner{
-		WC: wc.Init(),
-		d:  decor.Spinner(nil),
+		WC:   wc.Init(),
+		base: decor.Spinner(nil),
 	}
 	return d
 }
 
 type variadicSpinner struct {
 	decor.WC
-	d        decor.Decorator
-	complete *string
+	base decor.Decorator
 }
 
 func (d *variadicSpinner) Decor(st *decor.Statistics) string {
-	if st.Completed && d.complete != nil {
-		return d.FormatMsg(*d.complete)
-	}
-	msg := d.d.Decor(st)
+	msg := d.base.Decor(st)
 	msg = strings.Repeat(msg, int(st.Current/3))
 	return d.FormatMsg(msg)
-}
-
-func (d *variadicSpinner) OnCompleteMessage(msg string) {
-	d.complete = &msg
 }

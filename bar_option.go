@@ -17,9 +17,7 @@ type mergeWrapper interface {
 func (s *bState) addDecorators(dest *[]decor.Decorator, decorators ...decor.Decorator) {
 	for _, decorator := range decorators {
 		if mw, ok := decorator.(mergeWrapper); ok {
-			dd := mw.MergeUnwrap()
-			s.mDecorators = append(s.mDecorators, dd[0])
-			*dest = append(*dest, dd[1:]...)
+			*dest = append(*dest, mw.MergeUnwrap()...)
 		}
 		*dest = append(*dest, decorator)
 	}

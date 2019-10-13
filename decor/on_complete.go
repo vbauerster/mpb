@@ -9,7 +9,6 @@ package decor
 func OnComplete(decorator Decorator, message string) Decorator {
 	d := &onCompleteWrapper{
 		Decorator: decorator,
-		wc:        decorator.GetConf(),
 		msg:       message,
 	}
 	return d
@@ -17,13 +16,17 @@ func OnComplete(decorator Decorator, message string) Decorator {
 
 type onCompleteWrapper struct {
 	Decorator
-	wc  WC
 	msg string
 }
 
 func (d *onCompleteWrapper) Decor(st *Statistics) string {
 	if st.Completed {
-		return d.wc.FormatMsg(d.msg)
+		wc := d.GetConf()
+		return wc.FormatMsg(d.msg)
 	}
 	return d.Decorator.Decor(st)
+}
+
+func (d *onCompleteWrapper) Base() Decorator {
+	return d.Decorator
 }
