@@ -49,7 +49,8 @@ type pState struct {
 	popCompleted     bool
 	rr               time.Duration
 	uwg              *sync.WaitGroup
-	manualRefreshCh  <-chan time.Time
+	manualRefresh    <-chan time.Time
+	renderDelay      <-chan struct{}
 	shutdownNotifier chan struct{}
 	parkedBars       map[*Bar]*Bar
 	output           io.Writer
@@ -208,7 +209,7 @@ func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 	manualOrTickCh, cleanUp := s.manualOrTick()
 	defer cleanUp()
 
-	refreshCh := fanInRefreshSrc(p.done, p.forceRefresh, manualOrTickCh)
+	refreshCh := fanInRefreshSrc(p.done, s.renderDelay, p.forceRefresh, manualOrTickCh)
 
 	for {
 		select {
@@ -304,8 +305,8 @@ func (s *pState) flush(cw *cwriter.Writer) error {
 }
 
 func (s *pState) manualOrTick() (<-chan time.Time, func()) {
-	if s.manualRefreshCh != nil {
-		return s.manualRefreshCh, func() {}
+	if s.manualRefresh != nil {
+		return s.manualRefresh, func() {}
 	}
 	ticker := time.NewTicker(s.rr)
 	return ticker.C, ticker.Stop
@@ -373,12 +374,14 @@ func syncWidth(matrix map[int][]chan int) {
 	}
 }
 
-func fanInRefreshSrc(done <-chan struct{}, channels ...<-chan time.Time) <-chan time.Time {
+func fanInRefreshSrc(done, delay <-chan struct{}, channels ...<-chan time.Time) <-chan time.Time {
 	var wg sync.WaitGroup
 	multiplexedStream := make(chan time.Time)
+	start := make(chan struct{})
 
 	multiplex := func(c <-chan time.Time) {
 		defer wg.Done()
+		<-start
 		// source channels are never closed (time.Ticker never closes associated
 		// channel), so we cannot simply range over a c, instead we use select
 		// inside infinite loop
@@ -394,6 +397,15 @@ func fanInRefreshSrc(done <-chan struct{}, channels ...<-chan time.Time) <-chan 
 				return
 			}
 		}
+	}
+
+	if delay != nil {
+		go func() {
+			<-delay
+			close(start)
+		}()
+	} else {
+		close(start)
 	}
 
 	wg.Add(len(channels))
