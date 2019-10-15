@@ -71,7 +71,7 @@ type Synchronizer interface {
 // Configurator interface.
 type Configurator interface {
 	GetConf() WC
-	SetConf(*WC)
+	SetConf(WC)
 }
 
 // Wrapper interface.
@@ -168,6 +168,6 @@ func (wc *WC) GetConf() WC {
 }
 
 // SetConf is implementation of Configurator interface.
-func (wc *WC) SetConf(conf *WC) {
+func (wc *WC) SetConf(conf WC) {
 	*wc = conf.Init()
 }
