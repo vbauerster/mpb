@@ -23,7 +23,7 @@ func Merge(decorator Decorator, placeholders ...WC) Decorator {
 		wc:           decorator.GetConf(),
 		placeHolders: make([]*placeHolderDecorator, len(placeholders)),
 	}
-	decorator.SetConf(&WC{})
+	decorator.SetConf(WC{})
 	for i, wc := range placeholders {
 		if (wc.C & DSyncWidth) == 0 {
 			return decorator
@@ -40,6 +40,14 @@ type mergeDecorator struct {
 	Decorator
 	wc           WC
 	placeHolders []*placeHolderDecorator
+}
+
+func (d *mergeDecorator) GetConf() WC {
+	return d.wc
+}
+
+func (d *mergeDecorator) SetConf(conf WC) {
+	d.wc = conf.Init()
 }
 
 func (d *mergeDecorator) MergeUnwrap() []Decorator {
