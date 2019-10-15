@@ -11,6 +11,10 @@ func OnComplete(decorator Decorator, message string) Decorator {
 		Decorator: decorator,
 		msg:       message,
 	}
+	if md, ok := decorator.(*mergeDecorator); ok {
+		d.Decorator, md.Decorator = md.Decorator, d
+		return md
+	}
 	return d
 }
 
