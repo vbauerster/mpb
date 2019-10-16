@@ -43,7 +43,7 @@ func WithRefreshRate(d time.Duration) ContainerOption {
 // Refresh will occur upon receive value from provided ch.
 func WithManualRefresh(ch <-chan time.Time) ContainerOption {
 	return func(s *pState) {
-		s.manualRefresh = ch
+		s.refreshSrc = ch
 	}
 }
 
@@ -71,7 +71,7 @@ func WithShutdownNotifier(ch chan struct{}) ContainerOption {
 func WithOutput(w io.Writer) ContainerOption {
 	return func(s *pState) {
 		if w == nil {
-			s.manualRefresh = make(chan time.Time)
+			s.refreshSrc = make(chan time.Time)
 			s.output = ioutil.Discard
 			return
 		}

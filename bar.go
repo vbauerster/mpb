@@ -384,7 +384,7 @@ func (b *Bar) subscribeDecorators() {
 func (b *Bar) refreshNowTillShutdown() {
 	for {
 		select {
-		case b.container.forceRefresh <- time.Now():
+		case b.container.refreshCh <- time.Now():
 		case <-b.done:
 			return
 		}
