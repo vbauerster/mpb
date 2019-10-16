@@ -141,7 +141,11 @@ func (b *Bar) ProxyReader(r io.Reader) io.ReadCloser {
 	if !ok {
 		rc = ioutil.NopCloser(r)
 	}
-	return &proxyReader{rc, b, time.Now()}
+	prox := &proxyReader{rc, b, time.Now()}
+	if wt, ok := r.(io.WriterTo); ok {
+		return &proxyWriterTo{prox, wt}
+	}
+	return prox
 }
 
 // ID returs id of the bar.

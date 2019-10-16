@@ -1,6 +1,7 @@
 package mpb_test
 
 import (
+	"bytes"
 	"io"
 	"io/ioutil"
 	"strings"
@@ -28,26 +29,62 @@ func (r *testReader) Read(p []byte) (n int, err error) {
 }
 
 func TestProxyReader(t *testing.T) {
-
 	p := mpb.New(mpb.WithOutput(ioutil.Discard))
 
-	reader := &testReader{Reader: strings.NewReader(content)}
+	tReader := &testReader{strings.NewReader(content), false}
 
-	total := len(content)
-	bar := p.AddBar(100, mpb.TrimSpace())
+	bar := p.AddBar(int64(len(content)), mpb.TrimSpace())
 
-	written, err := io.Copy(ioutil.Discard, bar.ProxyReader(reader))
+	var buf bytes.Buffer
+	_, err := io.Copy(&buf, bar.ProxyReader(tReader))
 	if err != nil {
 		t.Errorf("Error copying from reader: %+v\n", err)
 	}
 
 	p.Wait()
 
-	if !reader.called {
+	if !tReader.called {
 		t.Error("Read not called")
 	}
 
-	if written != int64(total) {
-		t.Errorf("Expected written: %d, got: %d\n", total, written)
+	if got := buf.String(); got != content {
+		t.Errorf("Expected content: %s, got: %s\n", content, got)
+	}
+}
+
+type testWriterTo struct {
+	io.Reader
+	wt     io.WriterTo
+	called bool
+}
+
+func (wt *testWriterTo) WriteTo(w io.Writer) (n int64, err error) {
+	wt.called = true
+	return wt.wt.WriteTo(w)
+}
+
+func TestProxyWriterTo(t *testing.T) {
+	p := mpb.New(mpb.WithOutput(ioutil.Discard))
+
+	var reader io.Reader = strings.NewReader(content)
+	wt := reader.(io.WriterTo)
+	tReader := &testWriterTo{reader, wt, false}
+
+	bar := p.AddBar(int64(len(content)), mpb.TrimSpace())
+
+	var buf bytes.Buffer
+	_, err := io.Copy(&buf, bar.ProxyReader(tReader))
+	if err != nil {
+		t.Errorf("Error copying from reader: %+v\n", err)
+	}
+
+	p.Wait()
+
+	if !tReader.called {
+		t.Error("WriteTo not called")
+	}
+
+	if got := buf.String(); got != content {
+		t.Errorf("Expected content: %s, got: %s\n", content, got)
 	}
 }
