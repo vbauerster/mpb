@@ -252,9 +252,6 @@ func (s *pState) flush(cw *cwriter.Writer) error {
 			// this ensures no bar ends up with less than 100% rendered
 			defer func() {
 				s.barShutdownQueue = append(s.barShutdownQueue, b)
-				if !b.noPop && s.popCompleted {
-					b.priority = -1
-				}
 			}()
 		}
 		lineCount += b.extendedLines + 1
@@ -359,6 +356,10 @@ func (s *pState) makeBarState(total int64, filler Filler, options ...BarOption) 
 		if opt != nil {
 			opt(bs)
 		}
+	}
+
+	if s.popCompleted && !bs.noPop {
+		bs.priority = -1
 	}
 
 	bs.bufP = bytes.NewBuffer(make([]byte, 0, bs.width))
