@@ -212,7 +212,11 @@ func (b *Bar) TraverseDecorators(cb decor.CBFunc) {
 func (b *Bar) SetTotal(total int64, complete bool) {
 	select {
 	case b.operateState <- func(s *bState) {
-		s.total = total
+		if total <= 0 {
+			s.total = s.current
+		} else {
+			s.total = total
+		}
 		if complete && !s.toComplete {
 			s.current = s.total
 			s.toComplete = true
