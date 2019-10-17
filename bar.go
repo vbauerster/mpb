@@ -220,7 +220,7 @@ func (b *Bar) SetTotal(total int64, complete bool) {
 		if complete && !s.toComplete {
 			s.current = s.total
 			s.toComplete = true
-			go b.refreshNowTillShutdown()
+			go b.refreshTillShutdown()
 		}
 	}:
 	case <-b.done:
@@ -238,7 +238,7 @@ func (b *Bar) SetCurrent(current int64, wdd ...time.Duration) {
 		if s.total > 0 && s.current >= s.total {
 			s.current = s.total
 			s.toComplete = true
-			go b.refreshNowTillShutdown()
+			go b.refreshTillShutdown()
 		}
 	}:
 	case <-b.done:
@@ -268,7 +268,7 @@ func (b *Bar) IncrInt64(n int64, wdd ...time.Duration) {
 		if s.total > 0 && s.current >= s.total {
 			s.current = s.total
 			s.toComplete = true
-			go b.refreshNowTillShutdown()
+			go b.refreshTillShutdown()
 		}
 	}:
 	case <-b.done:
@@ -389,7 +389,7 @@ func (b *Bar) subscribeDecorators() {
 	}
 }
 
-func (b *Bar) refreshNowTillShutdown() {
+func (b *Bar) refreshTillShutdown() {
 	for {
 		select {
 		case b.container.refreshCh <- time.Now():
