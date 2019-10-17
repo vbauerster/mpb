@@ -49,7 +49,7 @@ func main() {
 		max := 3000 * time.Millisecond
 		for i := 0; i < 10; i++ {
 			filler := makeLogBar(fmt.Sprintf("some log: %d", i))
-			p.Add(0, filler, mpb.BarPriority(-1)).SetTotal(0, true)
+			p.Add(0, filler).SetTotal(0, true)
 			time.Sleep(time.Duration(rng.Intn(10)+1) * max / 10)
 		}
 	}()
