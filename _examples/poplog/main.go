@@ -48,7 +48,8 @@ func main() {
 		rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 		max := 3000 * time.Millisecond
 		for i := 0; i < 10; i++ {
-			p.Add(0, makeLogBar(fmt.Sprintf("some log: %d", i))).SetTotal(0, true)
+			filler := makeLogBar(fmt.Sprintf("some log: %d", i))
+			p.Add(0, filler, mpb.BarPriority(-1)).SetTotal(0, true)
 			time.Sleep(time.Duration(rng.Intn(10)+1) * max / 10)
 		}
 	}()
@@ -57,9 +58,9 @@ func main() {
 	p.Wait()
 }
 
-func makeLogBar(msg string) mpb.FillerFunc {
+func makeLogBar(msg string) mpb.Filler {
 	limit := "%%.%ds"
-	return func(w io.Writer, width int, st *decor.Statistics) {
+	return mpb.FillerFunc(func(w io.Writer, width int, st *decor.Statistics) {
 		fmt.Fprintf(w, fmt.Sprintf(limit, width), msg)
-	}
+	})
 }
