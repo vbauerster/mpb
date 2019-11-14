@@ -77,7 +77,7 @@ type movingAverageSpeed struct {
 func (d *movingAverageSpeed) Decor(st *Statistics) string {
 	if !st.Completed {
 		var speed float64
-		if v := d.average.Value(); v < 0 {
+		if v := d.average.Value(); v > 0 {
 			speed = 1 / v
 		}
 		d.msg = d.producer(speed * 1e9)
