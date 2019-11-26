@@ -135,9 +135,9 @@ func (wc *WC) FormatMsg(msg string) string {
 		if (wc.C & DextraSpace) != 0 {
 			max++
 		}
-		return fmt.Sprintf(fmt.Sprintf(wc.dynFormat, max), msg)
+	} else {
+		max = (utf8.RuneCountInString(msg) - max) + wc.W
 	}
-	max = (utf8.RuneCountInString(msg) - max) + wc.W
 	return fmt.Sprintf(fmt.Sprintf(wc.dynFormat, max), msg)
 }
 
