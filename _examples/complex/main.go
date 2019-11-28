@@ -44,7 +44,7 @@ func main() {
 		i := i
 		go func() {
 			task := fmt.Sprintf("Task#%02d:", i)
-			job := "installing"
+			job := "\x1b[31;1;4minstalling\x1b[0m"
 			// preparing delayed bars
 			b := p.AddBar(rand.Int63n(101)+100,
 				mpb.BarParkTo(bars[i]),
@@ -52,7 +52,8 @@ func main() {
 				mpb.PrependDecorators(
 					decor.Name(task, decor.WC{W: len(task) + 1, C: decor.DidentRight}),
 					decor.OnComplete(decor.Name(job, decor.WCSyncSpaceR), "done!"),
-					decor.OnComplete(decor.EwmaETA(decor.ET_STYLE_MMSS, 0, decor.WCSyncWidth), "")),
+					decor.OnComplete(decor.EwmaETA(decor.ET_STYLE_MMSS, 0, decor.WCSyncWidth), ""),
+				),
 				mpb.AppendDecorators(
 					decor.OnComplete(decor.Percentage(decor.WC{W: 5}), ""),
 				),
