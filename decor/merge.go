@@ -2,6 +2,7 @@ package decor
 
 import (
 	"fmt"
+	"strings"
 	"unicode/utf8"
 )
 
@@ -70,13 +71,28 @@ func (d *mergeDecorator) Decor(st *Statistics) string {
 	msg := d.Decorator.Decor(st)
 	msgLen := utf8.RuneCountInString(msg)
 
+	pw := msgLen / (len(d.placeHolders) + 1)
+
+	for _, ph := range d.placeHolders {
+		ph := ph
+		width := pw
+		go func() {
+			if (ph.WC.C & DextraSpace) != 0 {
+				width--
+				if width < 0 {
+					width = 0
+				}
+			}
+			ph.wch <- utf8.RuneCountInString(ph.FormatMsg(strings.Repeat(" ", width)))
+		}()
+	}
+
 	var space int
 	for _, ph := range d.placeHolders {
 		space += <-ph.wch
 	}
 
 	d.wc.wsync <- msgLen - space
-
 	max := <-d.wc.wsync
 	if (d.wc.C & DextraSpace) != 0 {
 		max++
@@ -89,9 +105,6 @@ type placeHolderDecorator struct {
 	wch chan int
 }
 
-func (d *placeHolderDecorator) Decor(st *Statistics) string {
-	go func() {
-		d.wch <- utf8.RuneCountInString(d.FormatMsg(""))
-	}()
+func (d *placeHolderDecorator) Decor(_ *Statistics) string {
 	return ""
 }
