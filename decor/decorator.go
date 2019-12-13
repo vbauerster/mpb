@@ -128,17 +128,20 @@ type WC struct {
 // FormatMsg formats final message according to WC.W and WC.C.
 // Should be called by any Decorator implementation.
 func (wc *WC) FormatMsg(msg string) string {
-	max := utf8.RuneCountInString(stripansi.Strip(msg))
+	var format string
+	runeCount := utf8.RuneCountInString(stripansi.Strip(msg))
+	ansiCount := utf8.RuneCountInString(msg) - runeCount
 	if (wc.C & DSyncWidth) != 0 {
-		wc.wsync <- max
-		max = (utf8.RuneCountInString(msg) - max) + <-wc.wsync
+		wc.wsync <- runeCount
+		max := <-wc.wsync
 		if (wc.C & DextraSpace) != 0 {
 			max++
 		}
+		format = fmt.Sprintf(wc.dynFormat, ansiCount+max)
 	} else {
-		max = (utf8.RuneCountInString(msg) - max) + wc.W
+		format = fmt.Sprintf(wc.dynFormat, ansiCount+wc.W)
 	}
-	return fmt.Sprintf(fmt.Sprintf(wc.dynFormat, max), msg)
+	return fmt.Sprintf(format, msg)
 }
 
 // Init initializes width related config.
