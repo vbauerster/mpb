@@ -132,11 +132,11 @@ func (wc *WC) FormatMsg(msg string) string {
 	runeCount := utf8.RuneCountInString(stripansi.Strip(msg))
 	ansiCount := utf8.RuneCountInString(msg) - runeCount
 	if (wc.C & DSyncWidth) != 0 {
+		if (wc.C & DextraSpace) != 0 {
+			runeCount++
+		}
 		wc.wsync <- runeCount
 		max := <-wc.wsync
-		if (wc.C & DextraSpace) != 0 {
-			max++
-		}
 		format = fmt.Sprintf(wc.dynFormat, ansiCount+max)
 	} else {
 		format = fmt.Sprintf(wc.dynFormat, ansiCount+wc.W)
