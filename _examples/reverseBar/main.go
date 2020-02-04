@@ -21,7 +21,7 @@ func main() {
 		name := fmt.Sprintf("Bar#%d:", i)
 		bar := p.AddBar(int64(total),
 			// reverse Bar#1
-			mpb.BarOptOnCond(mpb.BarReverse(), func() bool { return i == 1 }),
+			mpb.BarOptOn(mpb.BarReverse(), func() bool { return i == 1 }),
 			mpb.PrependDecorators(
 				// simple name decorator
 				decor.Name(name),

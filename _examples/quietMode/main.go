@@ -23,7 +23,7 @@ func main() {
 	// pass &wg (optional), so p will wait for it eventually
 	p := mpb.New(
 		mpb.WithWaitGroup(&wg),
-		mpb.ContainerOptOnCond(
+		mpb.ContainerOptOn(
 			// setting to nil will:
 			// set output to ioutil.Discard and disable internal refresh rate
 			// cycling, in order to not consume much CPU, hovewer a single refresh
