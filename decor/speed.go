@@ -52,15 +52,11 @@ func EwmaSpeed(unit int, format string, age float64, wcc ...WC) Decorator {
 //	unit=UnitKB,  format="% .1f" output: "1.0 MB/s"
 //
 func MovingAverageSpeed(unit int, format string, average MovingAverage, wcc ...WC) Decorator {
-	var wc WC
-	for _, widthConf := range wcc {
-		wc = widthConf
-	}
 	if format == "" {
 		format = "%.0f"
 	}
 	d := &movingAverageSpeed{
-		WC:       wc.Init(),
+		WC:       initWC(wcc...),
 		average:  average,
 		producer: chooseSpeedProducer(unit, format),
 	}
@@ -74,8 +70,8 @@ type movingAverageSpeed struct {
 	msg      string
 }
 
-func (d *movingAverageSpeed) Decor(st *Statistics) string {
-	if !st.Completed {
+func (d *movingAverageSpeed) Decor(s *Statistics) string {
+	if !s.Completed {
 		var speed float64
 		if v := d.average.Value(); v > 0 {
 			speed = 1 / v
@@ -122,15 +118,11 @@ func AverageSpeed(unit int, format string, wcc ...WC) Decorator {
 //	unit=UnitKB,  format="% .1f" output: "1.0 MB/s"
 //
 func NewAverageSpeed(unit int, format string, startTime time.Time, wcc ...WC) Decorator {
-	var wc WC
-	for _, widthConf := range wcc {
-		wc = widthConf
-	}
 	if format == "" {
 		format = "%.0f"
 	}
 	d := &averageSpeed{
-		WC:        wc.Init(),
+		WC:        initWC(wcc...),
 		startTime: startTime,
 		producer:  chooseSpeedProducer(unit, format),
 	}
@@ -144,9 +136,9 @@ type averageSpeed struct {
 	msg       string
 }
 
-func (d *averageSpeed) Decor(st *Statistics) string {
-	if !st.Completed {
-		speed := float64(st.Current) / float64(time.Since(d.startTime))
+func (d *averageSpeed) Decor(s *Statistics) string {
+	if !s.Completed {
+		speed := float64(s.Current) / float64(time.Since(d.startTime))
 		d.msg = d.producer(speed * 1e9)
 	}
 
