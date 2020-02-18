@@ -24,7 +24,7 @@ func main() {
 			decor.Name("my bar:"),
 		),
 		mpb.AppendDecorators(
-			newCustomPercentage(decor.Percentage(), nextCh),
+			newCustomPercentage(nextCh),
 		),
 	)
 	ew := &errorWrapper{}
@@ -116,23 +116,15 @@ func newCustomFiller(ch <-chan string, resume <-chan struct{}) (mpb.Filler, <-ch
 	return cf, nextCh
 }
 
-type myPercentageDecorator struct {
-	decor.Decorator
-	ch <-chan struct{}
-}
-
-func (d *myPercentageDecorator) Decor(st *decor.Statistics) string {
-	select {
-	case <-d.ch:
-		return ""
-	default:
-		return d.Decorator.Decor(st)
+func newCustomPercentage(ch <-chan struct{}) decor.Decorator {
+	base := decor.Percentage()
+	f := func(s *decor.Statistics) string {
+		select {
+		case <-ch:
+			return ""
+		default:
+			return base.Decor(s)
+		}
 	}
-}
-
-func newCustomPercentage(base decor.Decorator, ch <-chan struct{}) decor.Decorator {
-	return &myPercentageDecorator{
-		Decorator: base,
-		ch:        ch,
-	}
+	return decor.Any(f)
 }

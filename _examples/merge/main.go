@@ -59,20 +59,9 @@ func main() {
 }
 
 func newVariadicSpinner(wc decor.WC) decor.Decorator {
-	d := &variadicSpinner{
-		WC:   wc.Init(),
-		base: decor.Spinner(nil),
+	spinner := decor.Spinner(nil)
+	f := func(s *decor.Statistics) string {
+		return strings.Repeat(spinner.Decor(s), int(s.Current/3))
 	}
-	return d
-}
-
-type variadicSpinner struct {
-	decor.WC
-	base decor.Decorator
-}
-
-func (d *variadicSpinner) Decor(st *decor.Statistics) string {
-	msg := d.base.Decor(st)
-	msg = strings.Repeat(msg, int(st.Current/3))
-	return d.FormatMsg(msg)
+	return decor.Any(f, wc)
 }

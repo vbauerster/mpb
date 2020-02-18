@@ -35,23 +35,10 @@ func main() {
 }
 
 func panicDecorator(name, panicMsg string) decor.Decorator {
-	d := &decorator{
-		msg:      name,
-		panicMsg: panicMsg,
-	}
-	d.Init()
-	return d
-}
-
-type decorator struct {
-	decor.WC
-	msg      string
-	panicMsg string
-}
-
-func (d *decorator) Decor(st *decor.Statistics) string {
-	if st.ID == 1 && st.Current >= 42 {
-		panic(d.panicMsg)
-	}
-	return d.FormatMsg(d.msg)
+	return decor.Any(func(s *decor.Statistics) string {
+		if s.ID == 1 && s.Current >= 42 {
+			panic(panicMsg)
+		}
+		return name
+	})
 }
