@@ -389,7 +389,7 @@ func syncWidth(matrix map[int][]chan int) {
 }
 
 func extractBaseFiller(f Filler) Filler {
-	if f, ok := f.(Wrapper); ok {
+	if f, ok := f.(WrapFiller); ok {
 		return extractBaseFiller(f.Base())
 	}
 	return f

@@ -81,8 +81,8 @@ type customFiller struct {
 	base mpb.Filler
 }
 
-// implementing mpb.BaseFiller, so bar.SetRefill works
-func (cf *customFiller) BaseFiller() mpb.Filler {
+// implementing mpb.WrapFiller, so bar.SetRefill works
+func (cf *customFiller) Base() mpb.Filler {
 	return cf.base
 }
 
