@@ -6,6 +6,7 @@ package decor
 //	`decorator` Decorator to wrap
 //
 //	`message` message to display on complete event
+//
 func OnComplete(decorator Decorator, message string) Decorator {
 	d := &onCompleteWrapper{
 		Decorator: decorator,
