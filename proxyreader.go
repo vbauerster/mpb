@@ -11,16 +11,17 @@ type proxyReader struct {
 	iT  time.Time
 }
 
-func (prox *proxyReader) Read(p []byte) (n int, err error) {
-	n, err = prox.ReadCloser.Read(p)
+func (prox *proxyReader) Read(p []byte) (int, error) {
+	n, err := prox.ReadCloser.Read(p)
 	if n > 0 {
-		prox.bar.IncrBy(n, time.Since(prox.iT))
+		prox.bar.IncrBy(n)
+		prox.bar.DecoratorEwmaUpdate(time.Since(prox.iT))
 		prox.iT = time.Now()
 	}
 	if err == io.EOF {
 		go prox.bar.SetTotal(0, true)
 	}
-	return
+	return n, err
 }
 
 type proxyWriterTo struct {
@@ -28,14 +29,15 @@ type proxyWriterTo struct {
 	wt io.WriterTo
 }
 
-func (prox *proxyWriterTo) WriteTo(w io.Writer) (n int64, err error) {
-	n, err = prox.wt.WriteTo(w)
+func (prox *proxyWriterTo) WriteTo(w io.Writer) (int64, error) {
+	n, err := prox.wt.WriteTo(w)
 	if n > 0 {
-		prox.bar.IncrInt64(n, time.Since(prox.iT))
+		prox.bar.IncrInt64(n)
+		prox.bar.DecoratorEwmaUpdate(time.Since(prox.iT))
 		prox.iT = time.Now()
 	}
 	if err == io.EOF {
 		go prox.bar.SetTotal(0, true)
 	}
-	return
+	return n, err
 }
