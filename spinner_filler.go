@@ -5,7 +5,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/vbauerster/mpb/v4/decor"
+	"github.com/vbauerster/mpb/v5/decor"
 )
 
 // SpinnerAlignment enum.
@@ -28,7 +28,7 @@ type spinnerFiller struct {
 }
 
 // NewSpinnerFiller constucts mpb.Filler, to be used with *Progress.Add method.
-func NewSpinnerFiller(style []string, alignment SpinnerAlignment) Filler {
+func NewSpinnerFiller(style []string, alignment SpinnerAlignment) BarFiller {
 	if len(style) == 0 {
 		style = DefaultSpinnerStyle
 	}
