@@ -85,16 +85,16 @@ type Wrapper interface {
 }
 
 // EwmaDecorator interface.
-// EWMA based decorators must to implement this one.
+// EWMA based decorators should implement this one.
 type EwmaDecorator interface {
-	IterationUpdate(int64, time.Duration)
+	EwmaUpdate(int64, time.Duration)
 }
 
 // AverageDecorator interface.
 // Average decorators should implement this interface to provide start
 // time adjustment facility, for resume-able tasks.
 type AverageDecorator interface {
-	Adjust(time.Time)
+	AverageAdjust(time.Time)
 }
 
 // ShutdownListener interface.
