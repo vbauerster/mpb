@@ -1,4 +1,4 @@
-module github.com/vbauerster/mpb/v4
+module github.com/vbauerster/mpb/v5
 
 require (
 	github.com/VividCortex/ewma v1.1.1
@@ -7,4 +7,4 @@ require (
 	golang.org/x/sys v0.0.0-20200217220822-9197077df867 // indirect
 )
 
-go 1.13
+go 1.14
