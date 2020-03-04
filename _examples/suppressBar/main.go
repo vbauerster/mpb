@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/vbauerster/mpb/v4"
-	"github.com/vbauerster/mpb/v4/decor"
+	"github.com/vbauerster/mpb/v5"
+	"github.com/vbauerster/mpb/v5/decor"
 )
 
 func main() {
@@ -76,21 +76,20 @@ func (ew *errorWrapper) reset(err error) {
 	ew.Unlock()
 }
 
-type customFiller struct {
-	mpb.Filler
-	base mpb.Filler
+type myBarFiller struct {
+	mpb.BarFiller
+	base mpb.BarFiller
 }
 
-// implementing mpb.WrapFiller, so bar.SetRefill works
-func (cf *customFiller) Base() mpb.Filler {
+func (cf *myBarFiller) Base() mpb.BarFiller {
 	return cf.base
 }
 
-func newCustomFiller(ch <-chan string, resume <-chan struct{}) (mpb.Filler, <-chan struct{}) {
+func newCustomFiller(ch <-chan string, resume <-chan struct{}) (mpb.BarFiller, <-chan struct{}) {
 	base := mpb.NewBarFiller(mpb.DefaultBarStyle, false)
 	nextCh := make(chan struct{}, 1)
 	var msg *string
-	filler := func(w io.Writer, width int, st *decor.Statistics) {
+	filler := mpb.BarFillerFunc(func(w io.Writer, width int, st *decor.Statistics) {
 		select {
 		case m := <-ch:
 			defer func() {
@@ -108,10 +107,10 @@ func newCustomFiller(ch <-chan string, resume <-chan struct{}) (mpb.Filler, <-ch
 		} else {
 			base.Fill(w, width, st)
 		}
-	}
-	cf := &customFiller{
-		Filler: mpb.FillerFunc(filler),
-		base:   base,
+	})
+	cf := &myBarFiller{
+		BarFiller: filler,
+		base:      base,
 	}
 	return cf, nextCh
 }

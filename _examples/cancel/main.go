@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/vbauerster/mpb/v4"
-	"github.com/vbauerster/mpb/v4/decor"
+	"github.com/vbauerster/mpb/v5"
+	"github.com/vbauerster/mpb/v5/decor"
 )
 
 func main() {
@@ -39,10 +39,13 @@ func main() {
 			rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 			max := 100 * time.Millisecond
 			for !bar.Completed() {
+				// start variable is solely for EWMA calculation
+				// EWMA's unit of measure is an iteration's taken time
 				start := time.Now()
 				time.Sleep(time.Duration(rng.Intn(10)+1) * max / 10)
-				// since ewma decorator is used, we need to pass time.Since(start)
-				bar.Increment(time.Since(start))
+				bar.Increment()
+				// since EWMA based decorator is used, DecoratorEwmaUpdate should be called
+				bar.DecoratorEwmaUpdate(time.Since(start))
 			}
 		}()
 	}

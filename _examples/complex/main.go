@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/vbauerster/mpb/v4"
-	"github.com/vbauerster/mpb/v4/decor"
+	"github.com/vbauerster/mpb/v5"
+	"github.com/vbauerster/mpb/v5/decor"
 )
 
 func init() {
@@ -47,8 +47,8 @@ func main() {
 			job := "\x1b[31;1;4minstalling\x1b[0m"
 			// preparing delayed bars
 			b := p.AddBar(rand.Int63n(101)+100,
-				mpb.BarParkTo(bars[i]),
-				mpb.BarClearOnComplete(),
+				mpb.BarQueueAfter(bars[i]),
+				mpb.BarFillerClearOnComplete(),
 				mpb.PrependDecorators(
 					decor.Name(task, decor.WC{W: len(task) + 1, C: decor.DidentRight}),
 					decor.OnComplete(decor.Name(job, decor.WCSyncSpaceR), "done!"),
@@ -67,13 +67,16 @@ func main() {
 	p.Wait()
 }
 
-func newTask(wg *sync.WaitGroup, b *mpb.Bar, incrBy int) {
+func newTask(wg *sync.WaitGroup, bar *mpb.Bar, incrBy int) {
 	defer wg.Done()
 	max := 100 * time.Millisecond
-	for !b.Completed() {
+	for !bar.Completed() {
+		// start variable is solely for EWMA calculation
+		// EWMA's unit of measure is an iteration's taken time
 		start := time.Now()
 		time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
-		// since ewma decorator is used, we need to pass time.Since(start)
-		b.IncrBy(incrBy, time.Since(start))
+		bar.IncrBy(incrBy)
+		// we need to call DecoratorEwmaUpdate to fulfill ewma decorator's contract
+		bar.DecoratorEwmaUpdate(time.Since(start))
 	}
 }

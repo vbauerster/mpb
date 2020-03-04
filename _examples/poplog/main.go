@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/vbauerster/mpb/v4"
-	"github.com/vbauerster/mpb/v4/decor"
+	"github.com/vbauerster/mpb/v5"
+	"github.com/vbauerster/mpb/v5/decor"
 )
 
 func main() {
@@ -34,9 +34,13 @@ func main() {
 			rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 			max := 100 * time.Millisecond
 			for i := 0; i < total; i++ {
+				// start variable is solely for EWMA calculation
+				// EWMA's unit of measure is an iteration's taken time
 				start := time.Now()
 				time.Sleep(time.Duration(rng.Intn(10)+1) * max / 10)
-				bar.Increment(time.Since(start))
+				bar.Increment()
+				// we need to call DecoratorEwmaUpdate to fulfill ewma decorator's contract
+				bar.DecoratorEwmaUpdate(time.Since(start))
 			}
 		}()
 	}
@@ -58,9 +62,9 @@ func main() {
 	p.Wait()
 }
 
-func makeLogBar(msg string) mpb.Filler {
+func makeLogBar(msg string) mpb.BarFiller {
 	limit := "%%.%ds"
-	return mpb.FillerFunc(func(w io.Writer, width int, st *decor.Statistics) {
+	return mpb.BarFillerFunc(func(w io.Writer, width int, st *decor.Statistics) {
 		fmt.Fprintf(w, fmt.Sprintf(limit, width), msg)
 	})
 }
