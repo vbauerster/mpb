@@ -34,14 +34,16 @@ type Bar struct {
 	priority int // used by heap
 	index    int // used by heap
 
-	extendedLines int
-	toShutdown    bool
-	toDrop        bool
-	noPop         bool
-	operateState  chan func(*bState)
-	frameCh       chan io.Reader
-	syncTableCh   chan [][]chan int
-	completed     chan bool
+	extendedLines        int
+	toShutdown           bool
+	toDrop               bool
+	noPop                bool
+	hasAverageDecorators bool
+	hasEwmaDecorators    bool
+	operateState         chan func(*bState)
+	frameCh              chan io.Reader
+	syncTableCh          chan [][]chan int
+	completed            chan bool
 
 	// cancel is called either by user or on complete event
 	cancel func()
@@ -261,6 +263,9 @@ func (b *Bar) IncrInt64(n int64) {
 // iteration's duration. Panics if called before *Bar.Incr... family
 // methods.
 func (b *Bar) DecoratorEwmaUpdate(dur time.Duration) {
+	if !b.hasEwmaDecorators {
+		return
+	}
 	select {
 	case b.operateState <- func(s *bState) {
 		ewmaIterationUpdate(false, s, dur)
@@ -274,6 +279,9 @@ func (b *Bar) DecoratorEwmaUpdate(dur time.Duration) {
 // if you need to adjust start time of all average based decorators
 // or after progress resume.
 func (b *Bar) DecoratorAverageAdjust(start time.Time) {
+	if !b.hasAverageDecorators {
+		return
+	}
 	select {
 	case b.operateState <- func(s *bState) {
 		for _, d := range s.averageDecorators {
@@ -396,6 +404,8 @@ func (b *Bar) subscribeDecorators() {
 		s.ewmaDecorators = ewmaDecorators
 		s.shutdownListeners = shutdownListeners
 	}
+	b.hasAverageDecorators = len(averageDecorators) != 0
+	b.hasEwmaDecorators = len(ewmaDecorators) != 0
 }
 
 func (b *Bar) refreshTillShutdown() {
