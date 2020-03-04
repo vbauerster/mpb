@@ -2,6 +2,7 @@ package decor
 
 import (
 	"sort"
+	"sync"
 
 	"github.com/VividCortex/ewma"
 )
@@ -10,6 +11,30 @@ import (
 // a time-series stream of numbers. The average may be over a window
 // or exponentially decaying.
 type MovingAverage = ewma.MovingAverage
+
+// ThreadSafeMovingAverage is a thread safe wrapper for ewma.MovingAverage.
+type ThreadSafeMovingAverage struct {
+	ewma.MovingAverage
+	mu sync.Mutex
+}
+
+func (s *ThreadSafeMovingAverage) Add(value float64) {
+	s.mu.Lock()
+	s.MovingAverage.Add(value)
+	s.mu.Unlock()
+}
+
+func (s *ThreadSafeMovingAverage) Value() float64 {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.MovingAverage.Value()
+}
+
+func (s *ThreadSafeMovingAverage) Set(value float64) {
+	s.mu.Lock()
+	s.MovingAverage.Set(value)
+	s.mu.Unlock()
+}
 
 type medianWindow [3]float64
 
@@ -36,5 +61,5 @@ func (s *medianWindow) Set(value float64) {
 
 // NewMedian is fixed last 3 samples median MovingAverage.
 func NewMedian() MovingAverage {
-	return new(medianWindow)
+	return &ThreadSafeMovingAverage{MovingAverage: new(medianWindow)}
 }
