@@ -72,7 +72,7 @@ func newTask(wg *sync.WaitGroup, bar *mpb.Bar, incrBy int) {
 	max := 100 * time.Millisecond
 	for !bar.Completed() {
 		// start variable is solely for EWMA calculation
-		// EWMA's unit of measure is an iteration's taken time
+		// EWMA's unit of measure is an iteration's duration
 		start := time.Now()
 		time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
 		bar.IncrBy(incrBy)

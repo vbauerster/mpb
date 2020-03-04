@@ -54,7 +54,7 @@ func main() {
     max := 100 * time.Millisecond
     for i := 0; i < total; i++ {
         // start variable is solely for EWMA calculation
-        // EWMA's unit of measure is an iteration's taken time
+        // EWMA's unit of measure is an iteration's duration
         start := time.Now()
         time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
         bar.Increment()

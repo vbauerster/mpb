@@ -258,7 +258,7 @@ func (b *Bar) IncrInt64(n int64) {
 
 // DecoratorEwmaUpdate updates all EWMA based decorators. Should be
 // called on each iteration, because EWMA's unit of measure is an
-// iteration's taken time. Panics if called before *Bar.Incr... family
+// iteration's duration. Panics if called before *Bar.Incr... family
 // methods.
 func (b *Bar) DecoratorEwmaUpdate(dur time.Duration) {
 	select {
