@@ -7,28 +7,36 @@ import (
 	"github.com/VividCortex/ewma"
 )
 
-// ThreadSafeMovingAverage is a thread safe wrapper for ewma.MovingAverage.
-type ThreadSafeMovingAverage struct {
+type threadSafeMovingAverage struct {
 	ewma.MovingAverage
 	mu sync.Mutex
 }
 
-func (s *ThreadSafeMovingAverage) Add(value float64) {
+func (s *threadSafeMovingAverage) Add(value float64) {
 	s.mu.Lock()
 	s.MovingAverage.Add(value)
 	s.mu.Unlock()
 }
 
-func (s *ThreadSafeMovingAverage) Value() float64 {
+func (s *threadSafeMovingAverage) Value() float64 {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.MovingAverage.Value()
 }
 
-func (s *ThreadSafeMovingAverage) Set(value float64) {
+func (s *threadSafeMovingAverage) Set(value float64) {
 	s.mu.Lock()
 	s.MovingAverage.Set(value)
 	s.mu.Unlock()
+}
+
+// NewThreadSafeMovingAverage converts provided ewma.MovingAverage
+// into thread safe ewma.MovingAverage.
+func NewThreadSafeMovingAverage(average ewma.MovingAverage) ewma.MovingAverage {
+	if tsma, ok := average.(*threadSafeMovingAverage); ok {
+		return tsma
+	}
+	return &threadSafeMovingAverage{MovingAverage: average}
 }
 
 type medianWindow [3]float64
@@ -56,5 +64,5 @@ func (s *medianWindow) Set(value float64) {
 
 // NewMedian is fixed last 3 samples median MovingAverage.
 func NewMedian() ewma.MovingAverage {
-	return &ThreadSafeMovingAverage{MovingAverage: new(medianWindow)}
+	return NewThreadSafeMovingAverage(new(medianWindow))
 }

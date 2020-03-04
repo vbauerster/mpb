@@ -23,9 +23,9 @@ func (f TimeNormalizerFunc) Normalize(src time.Duration) time.Duration {
 }
 
 // EwmaETA exponential-weighted-moving-average based ETA decorator.
-// Note that it's necessary to supply bar.Incr* methods with incremental
-// work duration as second argument, in order for this decorator to
-// work correctly. This decorator is a wrapper of MovingAverageETA.
+// For this decorator to work correctly you have to measure each
+// iteration's duration and pass it to the
+// *Bar.DecoratorEwmaUpdate(time.Duration) method after each increment.
 func EwmaETA(style TimeStyle, age float64, wcc ...WC) Decorator {
 	var average ewma.MovingAverage
 	if age == 0 {
@@ -33,8 +33,7 @@ func EwmaETA(style TimeStyle, age float64, wcc ...WC) Decorator {
 	} else {
 		average = ewma.NewMovingAverage(age)
 	}
-	average = &ThreadSafeMovingAverage{MovingAverage: average}
-	return MovingAverageETA(style, average, nil, wcc...)
+	return MovingAverageETA(style, NewThreadSafeMovingAverage(average), nil, wcc...)
 }
 
 // MovingAverageETA decorator relies on MovingAverage implementation to calculate its average.
