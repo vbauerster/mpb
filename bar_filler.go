@@ -20,11 +20,11 @@ const (
 
 // DefaultBarStyle is applied when bar constructed with *Progress.AddBar method.
 //
-//	'1th rune' stands for left boundary rune
+//	'1st rune' stands for left boundary rune
 //
-//	'2th rune' stands for fill rune
+//	'2nd rune' stands for fill rune
 //
-//	'3th rune' stands for tip rune
+//	'3rd rune' stands for tip rune
 //
 //	'4th rune' stands for empty rune
 //
@@ -50,10 +50,10 @@ func NewBarFiller(style string, reverse bool) BarFiller {
 		style = DefaultBarStyle
 	}
 	bf := &barFiller{
-		format: make([][]byte, utf8.RuneCountInString(style)),
+		format:  make([][]byte, utf8.RuneCountInString(style)),
+		reverse: reverse,
 	}
 	bf.SetStyle(style)
-	bf.SetReverse(reverse)
 	return bf
 }
 
@@ -66,28 +66,16 @@ func (s *barFiller) SetStyle(style string) {
 		src = append(src, []byte(string(r)))
 	}
 	copy(s.format, src)
-	if s.reverse {
-		s.tip = s.format[rRevTip]
-	} else {
-		s.tip = s.format[rTip]
-	}
+	s.SetReverse(s.reverse)
 }
 
 func (s *barFiller) SetReverse(reverse bool) {
 	if reverse {
 		s.tip = s.format[rRevTip]
-		s.flush = func(w io.Writer, bb [][]byte) {
-			for i := len(bb) - 1; i >= 0; i-- {
-				w.Write(bb[i])
-			}
-		}
+		s.flush = reverseFlush
 	} else {
 		s.tip = s.format[rTip]
-		s.flush = func(w io.Writer, bb [][]byte) {
-			for i := 0; i < len(bb); i++ {
-				w.Write(bb[i])
-			}
-		}
+		s.flush = normalFlush
 	}
 	s.reverse = reverse
 }
@@ -134,4 +122,16 @@ func (s *barFiller) Fill(w io.Writer, width int, stat *decor.Statistics) {
 	}
 
 	s.flush(w, bb)
+}
+
+func normalFlush(w io.Writer, bb [][]byte) {
+	for i := 0; i < len(bb); i++ {
+		w.Write(bb[i])
+	}
+}
+
+func reverseFlush(w io.Writer, bb [][]byte) {
+	for i := len(bb) - 1; i >= 0; i-- {
+		w.Write(bb[i])
+	}
 }
