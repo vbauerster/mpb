@@ -128,9 +128,9 @@ func TrimSpace() BarOption {
 	}
 }
 
-// BarStyle overrides mpb.DefaultBarStyle, for example BarStyle("╢▌▌░╟").
-// If you need to override `reverse tip` and `refill rune` set 6th and
-// 7th rune respectively, for example mpb.BarStyle("[=>-]<+").
+// BarStyle overrides mpb.DefaultBarStyle which is "[=>-]<+".
+// It's ok to pass string containing 5 runes only, for example "╢▌▌░╟",
+// if you don't need to override '<' (reverse tip) and '+' (refill rune).
 func BarStyle(style string) BarOption {
 	if style == "" {
 		return nil
