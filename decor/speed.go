@@ -38,8 +38,7 @@ func EwmaSpeed(unit int, format string, age float64, wcc ...WC) Decorator {
 	} else {
 		average = ewma.NewMovingAverage(age)
 	}
-	average = &ThreadSafeMovingAverage{MovingAverage: average}
-	return MovingAverageSpeed(unit, format, average, wcc...)
+	return MovingAverageSpeed(unit, format, NewThreadSafeMovingAverage(average), wcc...)
 }
 
 // MovingAverageSpeed decorator relies on MovingAverage implementation

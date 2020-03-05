@@ -33,8 +33,7 @@ func EwmaETA(style TimeStyle, age float64, wcc ...WC) Decorator {
 	} else {
 		average = ewma.NewMovingAverage(age)
 	}
-	average = &ThreadSafeMovingAverage{MovingAverage: average}
-	return MovingAverageETA(style, average, nil, wcc...)
+	return MovingAverageETA(style, NewThreadSafeMovingAverage(average), nil, wcc...)
 }
 
 // MovingAverageETA decorator relies on MovingAverage implementation to calculate its average.
