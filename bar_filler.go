@@ -18,7 +18,8 @@ const (
 	rRefill
 )
 
-// DefaultBarStyle is applied when bar constructed with *Progress.AddBar method.
+// DefaultBarStyle is a string containing 7 runes.
+// Each rune is a building block of a progress bar.
 //
 //	'1st rune' stands for left boundary rune
 //
@@ -44,8 +45,8 @@ type barFiller struct {
 	flush   func(w io.Writer, bb [][]byte)
 }
 
-// NewBarFiller constucts mpb.Filler, to be used with *Progress.Add method.
-func NewBarFiller(style string, reverse bool) BarFiller {
+// NewBarFiller constucts mpb.Filler, to be used with *Progress.Add(...) *Bar method.
+func NewBarFiller(style string, reverse bool) Filler {
 	if style == "" {
 		style = DefaultBarStyle
 	}
