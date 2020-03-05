@@ -112,22 +112,6 @@ func newBar(container *Progress, bs *bState) *Bar {
 	return bar
 }
 
-// RemoveAllPrependers removes all prepend functions.
-func (b *Bar) RemoveAllPrependers() {
-	select {
-	case b.operateState <- func(s *bState) { s.pDecorators = nil }:
-	case <-b.done:
-	}
-}
-
-// RemoveAllAppenders removes all append functions.
-func (b *Bar) RemoveAllAppenders() {
-	select {
-	case b.operateState <- func(s *bState) { s.aDecorators = nil }:
-	case <-b.done:
-	}
-}
-
 // ProxyReader wraps r with metrics required for progress tracking.
 func (b *Bar) ProxyReader(r io.Reader) io.ReadCloser {
 	if r == nil {
