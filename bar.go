@@ -150,8 +150,9 @@ func (b *Bar) Current() int64 {
 	}
 }
 
-// SetRefill sets refill, if supported by underlying Filler.
-// Useful for resume-able tasks.
+// SetRefill fills bar with refill rune up to amount argument.
+// Given default bar style is "[=>-]<+", refill rune is '+'.
+// To set bar style use mpb.BarStyle(string) BarOption.
 func (b *Bar) SetRefill(amount int64) {
 	type refiller interface {
 		SetRefill(int64)

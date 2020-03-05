@@ -166,7 +166,7 @@ func (p *Progress) setBarPriority(b *Bar, priority int) {
 	}
 }
 
-// UpdateBarPriority same as *Bar.SetPriority.
+// UpdateBarPriority same as *Bar.SetPriority(int).
 func (p *Progress) UpdateBarPriority(b *Bar, priority int) {
 	p.setBarPriority(b, priority)
 }
