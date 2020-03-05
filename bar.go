@@ -17,7 +17,7 @@ import (
 // BarFiller interface.
 // Bar renders itself by calling BarFiller's Fill method. You can
 // literally have any bar kind, by implementing this interface and
-// passing it to the *Progress.Add method.
+// passing it to the *Progress.Add(...) *Bar method.
 type BarFiller interface {
 	Fill(w io.Writer, width int, stat *decor.Statistics)
 }
