@@ -66,7 +66,7 @@ func main() {
 }
 ```
 
-#### [Rendering multiple bars](_examples/multiBars//main.go)
+#### [Rendering multiple bars](_examples/multiBars/main.go)
 ```go
     var wg sync.WaitGroup
     // pass &wg (optional), so p will wait for it eventually
@@ -98,7 +98,7 @@ func main() {
             max := 100 * time.Millisecond
             for i := 0; i < total; i++ {
                 // start variable is solely for EWMA calculation
-                // EWMA's unit of measure is an iteration's taken time
+                // EWMA's unit of measure is an iteration's duration
                 start := time.Now()
                 time.Sleep(time.Duration(rng.Intn(10)+1) * max / 10)
                 bar.Increment()
