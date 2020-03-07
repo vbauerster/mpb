@@ -45,7 +45,7 @@ func main() {
             // replace ETA decorator with "done" message, OnComplete event
             decor.OnComplete(
                 // ETA decorator with ewma age of 60, and width reservation of 4
-                decor.EwmaETA(decor.ET_STYLE_GO, 60, decor.WC{W: 4}), "done",
+                decor.AverageETA(decor.ET_STYLE_GO, decor.WC{W: 4}), "done",
             ),
         ),
         mpb.AppendDecorators(decor.Percentage()),
@@ -53,13 +53,8 @@ func main() {
     // simulating some work
     max := 100 * time.Millisecond
     for i := 0; i < total; i++ {
-        // start variable is solely for EWMA calculation
-        // EWMA's unit of measure is an iteration's duration
-        start := time.Now()
         time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
         bar.Increment()
-        // we need to call DecoratorEwmaUpdate to fulfill ewma decorator's contract
-        bar.DecoratorEwmaUpdate(time.Since(start))
     }
     // wait for our bar to complete and flush
     p.Wait()
