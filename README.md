@@ -44,7 +44,6 @@ func main() {
             decor.Name(name, decor.WC{W: len(name) + 1, C: decor.DidentRight}),
             // replace ETA decorator with "done" message, OnComplete event
             decor.OnComplete(
-                // ETA decorator with ewma age of 60, and width reservation of 4
                 decor.AverageETA(decor.ET_STYLE_GO, decor.WC{W: 4}), "done",
             ),
         ),
