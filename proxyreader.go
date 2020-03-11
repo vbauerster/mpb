@@ -2,42 +2,90 @@ package mpb
 
 import (
 	"io"
+	"io/ioutil"
 	"time"
 )
 
 type proxyReader struct {
 	io.ReadCloser
 	bar *Bar
-	iT  time.Time
 }
 
-func (prox *proxyReader) Read(p []byte) (int, error) {
-	n, err := prox.ReadCloser.Read(p)
-	if n > 0 {
-		prox.bar.IncrBy(n)
-		prox.bar.DecoratorEwmaUpdate(time.Since(prox.iT))
-		prox.iT = time.Now()
-	}
+func (x *proxyReader) Read(p []byte) (int, error) {
+	n, err := x.ReadCloser.Read(p)
+	x.bar.IncrBy(n)
 	if err == io.EOF {
-		go prox.bar.SetTotal(0, true)
+		go x.bar.SetTotal(0, true)
 	}
 	return n, err
 }
 
 type proxyWriterTo struct {
-	*proxyReader
-	wt io.WriterTo
+	io.ReadCloser // *proxyReader
+	wt            io.WriterTo
+	bar           *Bar
 }
 
-func (prox *proxyWriterTo) WriteTo(w io.Writer) (int64, error) {
-	n, err := prox.wt.WriteTo(w)
-	if n > 0 {
-		prox.bar.IncrInt64(n)
-		prox.bar.DecoratorEwmaUpdate(time.Since(prox.iT))
-		prox.iT = time.Now()
-	}
+func (x *proxyWriterTo) WriteTo(w io.Writer) (int64, error) {
+	n, err := x.wt.WriteTo(w)
+	x.bar.IncrInt64(n)
 	if err == io.EOF {
-		go prox.bar.SetTotal(0, true)
+		go x.bar.SetTotal(0, true)
 	}
 	return n, err
+}
+
+type ewmaProxyReader struct {
+	io.ReadCloser // *proxyReader
+	bar           *Bar
+	iT            time.Time
+}
+
+func (x *ewmaProxyReader) Read(p []byte) (int, error) {
+	n, err := x.ReadCloser.Read(p)
+	if n > 0 {
+		x.bar.DecoratorEwmaUpdate(time.Since(x.iT))
+		x.iT = time.Now()
+	}
+	return n, err
+}
+
+type ewmaProxyWriterTo struct {
+	io.ReadCloser             // *ewmaProxyReader
+	wt            io.WriterTo // *proxyWriterTo
+	bar           *Bar
+	iT            time.Time
+}
+
+func (x *ewmaProxyWriterTo) WriteTo(w io.Writer) (int64, error) {
+	n, err := x.wt.WriteTo(w)
+	if n > 0 {
+		x.bar.DecoratorEwmaUpdate(time.Since(x.iT))
+		x.iT = time.Now()
+	}
+	return n, err
+}
+
+func newProxyReader(r io.Reader, bar *Bar) io.ReadCloser {
+	wt, isWriterTo := r.(io.WriterTo)
+	rc := toReadCloser(r)
+	rc = &proxyReader{rc, bar}
+
+	if bar.hasEwmaDecorators {
+		now := time.Now()
+		rc = &ewmaProxyReader{rc, bar, now}
+		if isWriterTo {
+			rc = &ewmaProxyWriterTo{rc, wt, bar, now}
+		}
+	} else if isWriterTo {
+		rc = &proxyWriterTo{rc, wt, bar}
+	}
+	return rc
+}
+
+func toReadCloser(r io.Reader) io.ReadCloser {
+	if rc, ok := r.(io.ReadCloser); ok {
+		return rc
+	}
+	return ioutil.NopCloser(r)
 }

@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"strings"
 	"time"
@@ -34,16 +33,15 @@ type Bar struct {
 	priority int // used by heap
 	index    int // used by heap
 
-	extendedLines        int
-	toShutdown           bool
-	toDrop               bool
-	noPop                bool
-	hasAverageDecorators bool
-	hasEwmaDecorators    bool
-	operateState         chan func(*bState)
-	frameCh              chan io.Reader
-	syncTableCh          chan [][]chan int
-	completed            chan bool
+	extendedLines     int
+	toShutdown        bool
+	toDrop            bool
+	noPop             bool
+	hasEwmaDecorators bool
+	operateState      chan func(*bState)
+	frameCh           chan io.Reader
+	syncTableCh       chan [][]chan int
+	completed         chan bool
 
 	// cancel is called either by user or on complete event
 	cancel func()
@@ -113,19 +111,12 @@ func newBar(container *Progress, bs *bState) *Bar {
 }
 
 // ProxyReader wraps r with metrics required for progress tracking.
+// Panics if r is nil.
 func (b *Bar) ProxyReader(r io.Reader) io.ReadCloser {
 	if r == nil {
-		return nil
+		panic("expected non nil io.Reader")
 	}
-	rc, ok := r.(io.ReadCloser)
-	if !ok {
-		rc = ioutil.NopCloser(r)
-	}
-	prox := &proxyReader{rc, b, time.Now()}
-	if wt, ok := r.(io.WriterTo); ok {
-		return &proxyWriterTo{prox, wt}
-	}
-	return prox
+	return newProxyReader(r, b)
 }
 
 // ID returs id of the bar.
@@ -248,9 +239,6 @@ func (b *Bar) IncrInt64(n int64) {
 // iteration's duration. Panics if called before *Bar.Incr... family
 // methods.
 func (b *Bar) DecoratorEwmaUpdate(dur time.Duration) {
-	if !b.hasEwmaDecorators {
-		return
-	}
 	select {
 	case b.operateState <- func(s *bState) {
 		ewmaIterationUpdate(false, s, dur)
@@ -264,9 +252,6 @@ func (b *Bar) DecoratorEwmaUpdate(dur time.Duration) {
 // if you need to adjust start time of all average based decorators
 // or after progress resume.
 func (b *Bar) DecoratorAverageAdjust(start time.Time) {
-	if !b.hasAverageDecorators {
-		return
-	}
 	select {
 	case b.operateState <- func(s *bState) {
 		for _, d := range s.averageDecorators {
@@ -389,7 +374,6 @@ func (b *Bar) subscribeDecorators() {
 		s.ewmaDecorators = ewmaDecorators
 		s.shutdownListeners = shutdownListeners
 	}
-	b.hasAverageDecorators = len(averageDecorators) != 0
 	b.hasEwmaDecorators = len(ewmaDecorators) != 0
 }
 
