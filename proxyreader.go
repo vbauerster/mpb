@@ -67,11 +67,10 @@ func (x *ewmaProxyWriterTo) WriteTo(w io.Writer) (int64, error) {
 }
 
 func newProxyReader(r io.Reader, bar *Bar) io.ReadCloser {
-	wt, isWriterTo := r.(io.WriterTo)
 	rc := toReadCloser(r)
 	rc = &proxyReader{rc, bar}
 
-	if bar.hasEwmaDecorators {
+	if wt, isWriterTo := r.(io.WriterTo); bar.hasEwmaDecorators {
 		now := time.Now()
 		rc = &ewmaProxyReader{rc, bar, now}
 		if isWriterTo {
