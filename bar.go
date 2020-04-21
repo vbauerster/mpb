@@ -209,25 +209,32 @@ func (b *Bar) SetCurrent(current int64) {
 
 // Increment is a shorthand for b.IncrInt64(1).
 func (b *Bar) Increment() {
-	b.IncrInt64(1)
+	b.IncrInt64(1, true)
+}
+
+// Increment is a shorthand for b.IncrInt64(1).
+func (b *Bar) IncrementNotComplete() {
+	b.IncrInt64(1, false)
 }
 
 // IncrBy is a shorthand for b.IncrInt64(int64(n)).
 func (b *Bar) IncrBy(n int) {
-	b.IncrInt64(int64(n))
+	b.IncrInt64(int64(n), true)
 }
 
 // IncrInt64 increments progress by amount of n.
-func (b *Bar) IncrInt64(n int64) {
+func (b *Bar) IncrInt64(n int64, complete bool) {
 	select {
 	case b.operateState <- func(s *bState) {
 		s.iterated = true
 		s.lastN = n
 		s.current += n
-		if s.total > 0 && s.current >= s.total {
-			s.current = s.total
-			s.toComplete = true
-			go b.refreshTillShutdown()
+		if (complete == true) {
+			if s.total > 0 && s.current >= s.total {
+				s.current = s.total
+				s.toComplete = true
+				go b.refreshTillShutdown()
+			}
 		}
 	}:
 	case <-b.done:

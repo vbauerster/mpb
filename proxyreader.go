@@ -28,7 +28,7 @@ type proxyWriterTo struct {
 
 func (x *proxyWriterTo) WriteTo(w io.Writer) (int64, error) {
 	n, err := x.wt.WriteTo(w)
-	x.bar.IncrInt64(n)
+	x.bar.IncrInt64(n, true)
 	if err == io.EOF {
 		go x.bar.SetTotal(0, true)
 	}
