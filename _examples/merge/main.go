@@ -63,7 +63,7 @@ func main() {
 
 func newVariadicSpinner(wc decor.WC) decor.Decorator {
 	spinner := decor.Spinner(nil)
-	f := func(s *decor.Statistics) string {
+	f := func(s decor.Statistics) string {
 		return strings.Repeat(spinner.Decor(s), int(s.Current/3))
 	}
 	return decor.Any(f, wc)

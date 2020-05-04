@@ -35,7 +35,7 @@ func main() {
 }
 
 func panicDecorator(name, panicMsg string) decor.Decorator {
-	return decor.Any(func(s *decor.Statistics) string {
+	return decor.Any(func(s decor.Statistics) string {
 		if s.ID == 1 && s.Current >= 42 {
 			panic(panicMsg)
 		}

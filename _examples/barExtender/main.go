@@ -19,7 +19,7 @@ func main() {
 
 	for i := 0; i < numBars; i++ {
 		name := fmt.Sprintf("Bar#%d:", i)
-		efn := func(w io.Writer, width int, s *decor.Statistics) {
+		efn := func(w io.Writer, width int, s decor.Statistics) {
 			if s.Completed {
 				fmt.Fprintf(w, "Bar id: %d has been completed\n", s.ID)
 			}

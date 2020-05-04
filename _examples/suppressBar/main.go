@@ -89,7 +89,7 @@ func newCustomFiller(ch <-chan string, resume <-chan struct{}) (mpb.BarFiller, <
 	base := mpb.NewBarFiller(mpb.DefaultBarStyle, false)
 	nextCh := make(chan struct{}, 1)
 	var msg *string
-	filler := mpb.BarFillerFunc(func(w io.Writer, width int, st *decor.Statistics) {
+	filler := mpb.BarFillerFunc(func(w io.Writer, width int, st decor.Statistics) {
 		select {
 		case m := <-ch:
 			defer func() {
@@ -117,7 +117,7 @@ func newCustomFiller(ch <-chan string, resume <-chan struct{}) (mpb.BarFiller, <
 
 func newCustomPercentage(ch <-chan struct{}) decor.Decorator {
 	base := decor.Percentage()
-	f := func(s *decor.Statistics) string {
+	fn := func(s decor.Statistics) string {
 		select {
 		case <-ch:
 			return ""
@@ -125,5 +125,5 @@ func newCustomPercentage(ch <-chan struct{}) decor.Decorator {
 			return base.Decor(s)
 		}
 	}
-	return decor.Any(f)
+	return decor.Any(fn)
 }
