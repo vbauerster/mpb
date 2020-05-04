@@ -62,7 +62,7 @@ type Statistics struct {
 // meet your needs, you're free to implement your own one by implementing
 // this particular interface. The easy way to go is to convert a
 // `DecorFunc` into a `Decorator` interface by using provided
-// `func Any`(DecorFunc, ...WC) Decorator`.
+// `func Any(DecorFunc, ...WC) Decorator`.
 type Decorator interface {
 	Configurator
 	Synchronizer
