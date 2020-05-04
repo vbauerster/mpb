@@ -26,7 +26,7 @@ func TestDraw(t *testing.T) {
 				want:     "",
 			},
 			{
-				name:      "t,c,bw{60,20,80}",
+				name:      "t,c,bw{60,20,80}trim",
 				total:     60,
 				current:   20,
 				barWidth:  80,
@@ -43,7 +43,7 @@ func TestDraw(t *testing.T) {
 				want:     "",
 			},
 			{
-				name:      "t,c,bw{60,20,80}",
+				name:      "t,c,bw{60,20,80}trim",
 				total:     60,
 				current:   20,
 				barWidth:  80,
@@ -60,7 +60,7 @@ func TestDraw(t *testing.T) {
 				want:     "  ",
 			},
 			{
-				name:      "t,c,bw,trim{60,20,80,true}",
+				name:      "t,c,bw{60,20,80}trim",
 				total:     60,
 				current:   20,
 				barWidth:  80,
@@ -77,7 +77,7 @@ func TestDraw(t *testing.T) {
 				want:     "  ",
 			},
 			{
-				name:      "t,c,bw,trim{60,20,80,true}",
+				name:      "t,c,bw{60,20,80}trim",
 				total:     60,
 				current:   20,
 				barWidth:  80,
@@ -94,7 +94,7 @@ func TestDraw(t *testing.T) {
 				want:     "  ",
 			},
 			{
-				name:      "t,c,bw,trim{60,20,80,true}",
+				name:      "t,c,bw{60,20,80}trim",
 				total:     60,
 				current:   20,
 				barWidth:  80,
@@ -111,7 +111,7 @@ func TestDraw(t *testing.T) {
 				want:     "  ",
 			},
 			{
-				name:      "t,c,bw,trim{60,20,80,true}",
+				name:      "t,c,bw{60,20,80}trim",
 				total:     60,
 				current:   20,
 				barWidth:  80,
@@ -128,7 +128,7 @@ func TestDraw(t *testing.T) {
 				want:     " [>-] ",
 			},
 			{
-				name:      "t,c,bw,trim{60,20,80,true}",
+				name:      "t,c,bw{60,20,80}trim",
 				total:     60,
 				current:   20,
 				barWidth:  80,
@@ -145,7 +145,7 @@ func TestDraw(t *testing.T) {
 				want:     " [>--] ",
 			},
 			{
-				name:      "t,c,bw,trim{60,20,80,true}",
+				name:      "t,c,bw{60,20,80}trim",
 				total:     60,
 				current:   20,
 				barWidth:  80,
@@ -162,7 +162,7 @@ func TestDraw(t *testing.T) {
 				want:     " [>---] ",
 			},
 			{
-				name:      "t,c,bw,trim{60,20,80,true}",
+				name:      "t,c,bw{60,20,80}trim",
 				total:     60,
 				current:   20,
 				barWidth:  80,
@@ -179,7 +179,7 @@ func TestDraw(t *testing.T) {
 				want:     " [========================>---------------------------------------------------] ",
 			},
 			{
-				name:      "t,c,bw,trim{60,20,80,true}",
+				name:      "t,c,bw{60,20,80}trim",
 				total:     60,
 				current:   20,
 				barWidth:  80,
@@ -196,7 +196,7 @@ func TestDraw(t *testing.T) {
 				want:     " [------------------------------------------------------------------------------------------------] ",
 			},
 			{
-				name:      "t,c,bw,trim{100,100,0,true}",
+				name:      "t,c,bw{100,100,0}trim",
 				total:     100,
 				current:   0,
 				barWidth:  100,
@@ -211,7 +211,7 @@ func TestDraw(t *testing.T) {
 				want:     " [>-----------------------------------------------------------------------------------------------] ",
 			},
 			{
-				name:      "t,c,bw,trim{100,1,100,true}",
+				name:      "t,c,bw{100,1,100}trim",
 				total:     100,
 				current:   1,
 				barWidth:  100,
@@ -226,7 +226,7 @@ func TestDraw(t *testing.T) {
 				want:     " [===============================>----------------------------------------------------------------] ",
 			},
 			{
-				name:      "t,c,bw,trim{100,33,100,true}",
+				name:      "t,c,bw{100,33,100}trim",
 				total:     100,
 				current:   33,
 				barWidth:  100,
@@ -234,7 +234,7 @@ func TestDraw(t *testing.T) {
 				want:      "[===============================>------------------------------------------------------------------]",
 			},
 			{
-				name:      "t,c,bw,trim,rev{100,33,100,true,true}",
+				name:      "t,c,bw,rev{100,33,100}trim",
 				total:     100,
 				current:   33,
 				barWidth:  100,
@@ -251,7 +251,7 @@ func TestDraw(t *testing.T) {
 				want:     " [+++++++++++++++++++++++++++++++>----------------------------------------------------------------] ",
 			},
 			{
-				name:      "t,c,bw,rup,trim{100,33,100,33,true}",
+				name:      "t,c,bw,rup{100,33,100,33}trim",
 				total:     100,
 				current:   33,
 				barWidth:  100,
@@ -260,7 +260,7 @@ func TestDraw(t *testing.T) {
 				want:      "[+++++++++++++++++++++++++++++++>------------------------------------------------------------------]",
 			},
 			{
-				name:      "t,c,bw,rup,trim,rev{100,33,100,33,true,true}",
+				name:      "t,c,bw,rup,rev{100,33,100,33}trim",
 				total:     100,
 				current:   33,
 				barWidth:  100,
@@ -278,7 +278,7 @@ func TestDraw(t *testing.T) {
 				want:     " [++++++++++++++++++++++++++++++++=====>----------------------------------------------------------] ",
 			},
 			{
-				name:      "t,c,bw,rup,trim{100,40,100,32,true}",
+				name:      "t,c,bw,rup{100,40,100,32}trim",
 				total:     100,
 				current:   40,
 				barWidth:  100,
@@ -294,7 +294,7 @@ func TestDraw(t *testing.T) {
 				want:     " [==============================================================================================>-] ",
 			},
 			{
-				name:      "t,c,bw,trim{100,99,100,true}",
+				name:      "t,c,bw{100,99,100}trim",
 				total:     100,
 				current:   99,
 				barWidth:  100,
@@ -309,7 +309,7 @@ func TestDraw(t *testing.T) {
 				want:     " [================================================================================================] ",
 			},
 			{
-				name:      "t,c,bw,trim{100,100,100,true}",
+				name:      "t,c,bw{100,100,100}trim",
 				total:     100,
 				current:   100,
 				barWidth:  100,
@@ -333,7 +333,7 @@ func TestDraw(t *testing.T) {
 				}
 			}
 			tmpBuf.Reset()
-			tmpBuf.ReadFrom(s.draw(termWidth, newStatistics(s)))
+			tmpBuf.ReadFrom(s.draw(newStatistics(termWidth, s)))
 			by := tmpBuf.Bytes()
 			by = by[:len(by)-1]
 

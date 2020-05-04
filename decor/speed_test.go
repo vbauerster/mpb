@@ -122,7 +122,7 @@ func TestSpeedKiBDecor(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			decor := NewAverageSpeed(tc.unit, tc.fmt, time.Now().Add(-tc.elapsed))
-			stat := &Statistics{
+			stat := Statistics{
 				Current: tc.current,
 			}
 			res := decor.Decor(stat)
@@ -250,7 +250,7 @@ func TestSpeedKBDecor(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			decor := NewAverageSpeed(tc.unit, tc.fmt, time.Now().Add(-tc.elapsed))
-			stat := &Statistics{
+			stat := Statistics{
 				Current: tc.current,
 			}
 			res := decor.Decor(stat)

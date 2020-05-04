@@ -10,23 +10,9 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/acarl005/stripansi"
 	"github.com/vbauerster/mpb/v5/decor"
 )
-
-// BarFiller interface.
-// Bar renders itself by calling BarFiller's Fill method. You can
-// literally have any bar kind, by implementing this interface and
-// passing it to the *Progress.Add(...) *Bar method.
-type BarFiller interface {
-	Fill(w io.Writer, width int, stat *decor.Statistics)
-}
-
-// BarFillerFunc is function type adapter to convert function into Filler.
-type BarFillerFunc func(w io.Writer, width int, stat *decor.Statistics)
-
-func (f BarFillerFunc) Fill(w io.Writer, width int, stat *decor.Statistics) {
-	f(w, width, stat)
-}
 
 // Bar represents a progress Bar.
 type Bar struct {
@@ -55,7 +41,7 @@ type Bar struct {
 	recoveredPanic interface{}
 }
 
-type extFunc func(in io.Reader, tw int, st *decor.Statistics) (out io.Reader, lines int)
+type extFunc func(in io.Reader, reqWidth int, st decor.Statistics) (out io.Reader, lines int)
 
 type bState struct {
 	baseF             BarFiller
@@ -335,9 +321,9 @@ func (b *Bar) render(tw int) {
 			}
 		}()
 
-		st := newStatistics(s)
-		frame := s.draw(tw, st)
-		frame, b.extendedLines = s.extender(frame, tw, st)
+		st := newStatistics(tw, s)
+		frame, lines := s.extender(s.draw(st), s.width, st)
+		b.extendedLines = lines
 
 		b.toShutdown = s.toComplete && !s.completeFlushed
 		s.completeFlushed = s.toComplete
@@ -345,9 +331,9 @@ func (b *Bar) render(tw int) {
 	}:
 	case <-b.done:
 		s := b.cacheState
-		st := newStatistics(s)
-		frame := s.draw(tw, st)
-		frame, b.extendedLines = s.extender(frame, tw, st)
+		st := newStatistics(tw, s)
+		frame, lines := s.extender(s.draw(st), s.width, st)
+		b.extendedLines = lines
 		b.frameCh <- frame
 	}
 }
@@ -398,32 +384,28 @@ func (b *Bar) wSyncTable() [][]chan int {
 	}
 }
 
-func (s *bState) draw(termWidth int, stat *decor.Statistics) io.Reader {
+func (s *bState) draw(stat decor.Statistics) io.Reader {
 	for _, d := range s.pDecorators {
-		s.bufP.WriteString(d.Decor(stat))
+		str := d.Decor(stat)
+		stat.OccupiedWidth += utf8.RuneCountInString(stripansi.Strip(str))
+		s.bufP.WriteString(str)
 	}
 
 	for _, d := range s.aDecorators {
-		s.bufA.WriteString(d.Decor(stat))
+		str := d.Decor(stat)
+		stat.OccupiedWidth += utf8.RuneCountInString(stripansi.Strip(str))
+		s.bufA.WriteString(str)
 	}
 
 	s.bufA.WriteByte('\n')
 
-	prependCount := utf8.RuneCount(s.bufP.Bytes())
-	appendCount := utf8.RuneCount(s.bufA.Bytes()) - 1
-
-	if fitWidth := s.width; termWidth > 1 {
-		if !s.trimSpace {
-			// reserve space for edge spaces
-			termWidth -= 2
-			s.bufB.WriteByte(' ')
-			defer s.bufB.WriteByte(' ')
-		}
-		if prependCount+s.width+appendCount > termWidth {
-			fitWidth = termWidth - prependCount - appendCount
-		}
-		s.filler.Fill(s.bufB, fitWidth, stat)
+	if !s.trimSpace && stat.TermWidth >= 2 {
+		defer s.bufB.WriteByte(' ')
+		s.bufB.WriteByte(' ')
+		stat.OccupiedWidth += 2
 	}
+
+	s.filler.Fill(s.bufB, s.width, stat)
 
 	return io.MultiReader(s.bufP, s.bufB, s.bufA)
 }
@@ -450,12 +432,13 @@ func (s *bState) wSyncTable() [][]chan int {
 	return table
 }
 
-func newStatistics(s *bState) *decor.Statistics {
-	return &decor.Statistics{
+func newStatistics(tw int, s *bState) decor.Statistics {
+	return decor.Statistics{
 		ID:        s.id,
 		Completed: s.completeFlushed,
 		Total:     s.total,
 		Current:   s.current,
+		TermWidth: tw,
 	}
 }
 

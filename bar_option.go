@@ -83,7 +83,7 @@ func BarFillerOnComplete(message string) BarOption {
 }
 
 func makeBarFillerOnComplete(filler BarFiller, message string) BarFiller {
-	return BarFillerFunc(func(w io.Writer, width int, st *decor.Statistics) {
+	return BarFillerFunc(func(w io.Writer, width int, st decor.Statistics) {
 		if st.Completed {
 			io.WriteString(w, message)
 		} else {
@@ -103,21 +103,20 @@ func BarPriority(priority int) BarOption {
 
 // BarExtender is an option to extend bar to the next new line, with
 // arbitrary output.
-func BarExtender(extender BarFiller) BarOption {
-	if extender == nil {
+func BarExtender(filler BarFiller) BarOption {
+	if filler == nil {
 		return nil
 	}
 	return func(s *bState) {
-		s.extender = makeExtFunc(extender)
+		s.extender = makeExtFunc(filler)
 	}
 }
 
-func makeExtFunc(extender BarFiller) extFunc {
+func makeExtFunc(filler BarFiller) extFunc {
 	buf := new(bytes.Buffer)
-	nl := []byte("\n")
-	return func(r io.Reader, tw int, st *decor.Statistics) (io.Reader, int) {
-		extender.Fill(buf, tw, st)
-		return io.MultiReader(r, buf), bytes.Count(buf.Bytes(), nl)
+	return func(r io.Reader, reqWidth int, st decor.Statistics) (io.Reader, int) {
+		filler.Fill(buf, reqWidth, st)
+		return io.MultiReader(r, buf), bytes.Count(buf.Bytes(), []byte("\n"))
 	}
 }
 

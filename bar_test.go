@@ -177,7 +177,7 @@ func TestBarPanicBeforeComplete(t *testing.T) {
 	var pCount uint32
 	bar := p.AddBar(int64(total),
 		PrependDecorators(panicDecorator(panicMsg,
-			func(st *decor.Statistics) bool {
+			func(st decor.Statistics) bool {
 				if st.Current >= 42 {
 					atomic.AddUint32(&pCount, 1)
 					return true
@@ -213,7 +213,7 @@ func TestBarPanicAfterComplete(t *testing.T) {
 	var pCount uint32
 	bar := p.AddBar(int64(total),
 		PrependDecorators(panicDecorator(panicMsg,
-			func(st *decor.Statistics) bool {
+			func(st decor.Statistics) bool {
 				if st.Completed {
 					atomic.AddUint32(&pCount, 1)
 					return true
@@ -240,7 +240,7 @@ func TestBarPanicAfterComplete(t *testing.T) {
 	}
 }
 
-func panicDecorator(panicMsg string, cond func(*decor.Statistics) bool) decor.Decorator {
+func panicDecorator(panicMsg string, cond func(decor.Statistics) bool) decor.Decorator {
 	d := &decorator{
 		panicMsg: panicMsg,
 		cond:     cond,
@@ -252,10 +252,10 @@ func panicDecorator(panicMsg string, cond func(*decor.Statistics) bool) decor.De
 type decorator struct {
 	decor.WC
 	panicMsg string
-	cond     func(*decor.Statistics) bool
+	cond     func(decor.Statistics) bool
 }
 
-func (d *decorator) Decor(st *decor.Statistics) string {
+func (d *decorator) Decor(st decor.Statistics) string {
 	if d.cond(st) {
 		panic(d.panicMsg)
 	}

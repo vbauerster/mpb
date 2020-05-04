@@ -47,21 +47,31 @@ const (
 // Statistics consists of progress related statistics, that Decorator
 // may need.
 type Statistics struct {
-	ID        int
-	Completed bool
-	Total     int64
-	Current   int64
+	ID            int
+	Completed     bool
+	Total         int64
+	Current       int64
+	TermWidth     int
+	OccupiedWidth int
 }
 
 // Decorator interface.
-// Implementors should embed WC type, that way only single method
-// Decor(*Statistics) needs to be implemented, the rest will be handled
-// by WC type.
+// Most of the time there is no need to implement this interface
+// manually, as decor package already provides a wide range of decorators
+// which implement this interface. If however built-in decorators don't
+// meet your needs, you're free to implement your own one by implementing
+// this particular interface. The easy way to go is to convert a
+// `DecorFunc` into a `Decorator` interface by using provided
+// `func Any`(DecorFunc, ...WC) Decorator`.
 type Decorator interface {
 	Configurator
 	Synchronizer
-	Decor(*Statistics) string
+	Decor(Statistics) string
 }
+
+// DecorFunc func type.
+// To be used with `func Any`(DecorFunc, ...WC) Decorator`.
+type DecorFunc func(Statistics) string
 
 // Synchronizer interface.
 // All decorators implement this interface implicitly. Its Sync

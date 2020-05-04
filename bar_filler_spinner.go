@@ -39,7 +39,11 @@ func NewSpinnerFiller(style []string, alignment SpinnerAlignment) BarFiller {
 	return filler
 }
 
-func (s *spinnerFiller) Fill(w io.Writer, width int, stat *decor.Statistics) {
+func (s *spinnerFiller) Fill(w io.Writer, width int, stat decor.Statistics) {
+	// auto shrink
+	if stat.OccupiedWidth+width > stat.TermWidth {
+		width = stat.TermWidth - stat.OccupiedWidth
+	}
 
 	frame := s.frames[s.count%uint(len(s.frames))]
 	frameWidth := utf8.RuneCountInString(frame)

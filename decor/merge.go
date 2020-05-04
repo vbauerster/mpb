@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 	"unicode/utf8"
+
+	"github.com/acarl005/stripansi"
 )
 
 // Merge wraps its decorator argument with intention to sync width
@@ -64,9 +66,9 @@ func (d *mergeDecorator) Base() Decorator {
 	return d.Decorator
 }
 
-func (d *mergeDecorator) Decor(s *Statistics) string {
+func (d *mergeDecorator) Decor(s Statistics) string {
 	msg := d.Decorator.Decor(s)
-	msgLen := utf8.RuneCountInString(msg)
+	msgLen := utf8.RuneCountInString(stripansi.Strip(msg))
 	if (d.wc.C & DextraSpace) != 0 {
 		msgLen++
 	}
@@ -101,6 +103,6 @@ type placeHolderDecorator struct {
 	WC
 }
 
-func (d *placeHolderDecorator) Decor(*Statistics) string {
+func (d *placeHolderDecorator) Decor(Statistics) string {
 	return ""
 }
