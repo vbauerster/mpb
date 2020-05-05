@@ -38,8 +38,8 @@ func main() {
 }
 
 func nlBarFiller(filler mpb.BarFiller) mpb.BarFiller {
-	return mpb.BarFillerFunc(func(w io.Writer, width int, s decor.Statistics) {
-		filler.Fill(w, width, s)
+	return mpb.BarFillerFunc(func(w io.Writer, reqWidth int, s decor.Statistics) {
+		filler.Fill(w, reqWidth, s)
 		w.Write([]byte("\n"))
 	})
 }
