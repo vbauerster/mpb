@@ -14,7 +14,6 @@ func main() {
 
 	total := 100
 	bar := p.Add(int64(total), nil,
-		mpb.BarExtender(nlBarFiller(mpb.NewBarFiller("╢▌▌░╟", false))),
 		mpb.PrependDecorators(
 			decor.Name("Percentage: "),
 			decor.NewPercentage("%d"),
@@ -25,6 +24,7 @@ func main() {
 				decor.AverageETA(decor.ET_STYLE_GO), "done",
 			),
 		),
+		mpb.BarExtender(nlBarFiller(mpb.NewBarFiller("╢▌▌░╟", false))),
 	)
 	// simulating some work
 	max := 100 * time.Millisecond
