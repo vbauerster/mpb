@@ -144,8 +144,8 @@ func TestBarHas100PercentWithBarRemoveOnComplete(t *testing.T) {
 func TestBarStyle(t *testing.T) {
 	var buf bytes.Buffer
 	customFormat := "╢▌▌░╟"
-	p := New(WithOutput(&buf))
 	total := 80
+	p := New(WithOutput(&buf), WithWidth(total))
 	bar := p.AddBar(int64(total), BarStyle(customFormat), TrimSpace())
 
 	for i := 0; i < total; i++ {

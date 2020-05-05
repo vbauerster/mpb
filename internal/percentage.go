@@ -16,3 +16,10 @@ func Percentage(total, current int64, width int) float64 {
 func PercentageRound(total, current int64, width int) float64 {
 	return math.Round(Percentage(total, current, width))
 }
+
+func CalcWidthForBarFiller(reqWidth, available int) int {
+	if reqWidth <= 0 || reqWidth >= available {
+		return available
+	}
+	return reqWidth
+}

@@ -85,13 +85,10 @@ func (s *barFiller) SetRefill(amount int64) {
 	s.refill = amount
 }
 
-func (s *barFiller) Fill(w io.Writer, width int, stat decor.Statistics) {
-	// auto shrink
-	if stat.OccupiedWidth+width > stat.TermWidth {
-		width = stat.TermWidth - stat.OccupiedWidth
-	}
-	// don't count rLeft and rRight as progress
-	width -= 2
+func (s *barFiller) Fill(w io.Writer, reqWidth int, stat decor.Statistics) {
+	width := internal.CalcWidthForBarFiller(reqWidth, stat.TermWidth-stat.OccupiedWidth)
+
+	width -= 2 // don't count rLeft and rRight as progress
 	if width < 2 {
 		return
 	}

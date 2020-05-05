@@ -46,7 +46,7 @@ func BarID(id int) BarOption {
 // BarWidth sets bar width independent of the container.
 func BarWidth(width int) BarOption {
 	return func(s *bState) {
-		s.width = width
+		s.reqWidth = width
 	}
 }
 

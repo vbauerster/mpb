@@ -3,7 +3,6 @@ package mpb
 import (
 	"bytes"
 	"testing"
-	"unicode/utf8"
 )
 
 func TestDraw(t *testing.T) {
@@ -23,7 +22,7 @@ func TestDraw(t *testing.T) {
 				total:    60,
 				current:  20,
 				barWidth: 80,
-				want:     "",
+				want:     "  ",
 			},
 			{
 				name:      "t,c,bw{60,20,80}trim",
@@ -40,7 +39,7 @@ func TestDraw(t *testing.T) {
 				total:    60,
 				current:  20,
 				barWidth: 80,
-				want:     "",
+				want:     "  ",
 			},
 			{
 				name:      "t,c,bw{60,20,80}trim",
@@ -323,7 +322,7 @@ func TestDraw(t *testing.T) {
 	for termWidth, cases := range testSuite {
 		for _, tc := range cases {
 			s := newTestState(tc.reverse)
-			s.width = tc.barWidth
+			s.reqWidth = tc.barWidth
 			s.total = tc.total
 			s.current = tc.current
 			s.trimSpace = tc.trimSpace
@@ -336,10 +335,6 @@ func TestDraw(t *testing.T) {
 			tmpBuf.ReadFrom(s.draw(newStatistics(termWidth, s)))
 			by := tmpBuf.Bytes()
 			by = by[:len(by)-1]
-
-			if utf8.RuneCount(by) > termWidth {
-				t.Errorf("termWidth:%d %q barWidth:%d overflow termWidth\n", termWidth, tc.name, utf8.RuneCount(by))
-			}
 
 			got := string(by)
 			if got != tc.want {

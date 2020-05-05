@@ -47,7 +47,7 @@ type bState struct {
 	baseF             BarFiller
 	filler            BarFiller
 	id                int
-	width             int
+	reqWidth          int
 	total             int64
 	current           int64
 	lastN             int64
@@ -322,7 +322,7 @@ func (b *Bar) render(tw int) {
 		}()
 
 		st := newStatistics(tw, s)
-		frame, lines := s.extender(s.draw(st), s.width, st)
+		frame, lines := s.extender(s.draw(st), s.reqWidth, st)
 		b.extendedLines = lines
 
 		b.toShutdown = s.toComplete && !s.completeFlushed
@@ -332,7 +332,7 @@ func (b *Bar) render(tw int) {
 	case <-b.done:
 		s := b.cacheState
 		st := newStatistics(tw, s)
-		frame, lines := s.extender(s.draw(st), s.width, st)
+		frame, lines := s.extender(s.draw(st), s.reqWidth, st)
 		b.extendedLines = lines
 		b.frameCh <- frame
 	}
@@ -399,13 +399,13 @@ func (s *bState) draw(stat decor.Statistics) io.Reader {
 
 	s.bufA.WriteByte('\n')
 
-	if !s.trimSpace && stat.TermWidth >= 2 {
+	if !s.trimSpace {
 		defer s.bufB.WriteByte(' ')
 		s.bufB.WriteByte(' ')
 		stat.OccupiedWidth += 2
 	}
 
-	s.filler.Fill(s.bufB, s.width, stat)
+	s.filler.Fill(s.bufB, s.reqWidth, stat)
 
 	return io.MultiReader(s.bufP, s.bufB, s.bufA)
 }

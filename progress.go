@@ -19,8 +19,6 @@ import (
 const (
 	// default RefreshRate
 	prr = 120 * time.Millisecond
-	// default width
-	pwidth = 80
 )
 
 // Progress represents the container that renders Progress bars
@@ -46,7 +44,7 @@ type pState struct {
 
 	// following are provided/overrided by user
 	idCount          int
-	width            int
+	reqWidth         int
 	popCompleted     bool
 	rr               time.Duration
 	uwg              *sync.WaitGroup
@@ -70,7 +68,6 @@ func New(options ...ContainerOption) *Progress {
 func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 	s := &pState{
 		bHeap:      priorityQueue{},
-		width:      pwidth,
 		rr:         prr,
 		parkedBars: make(map[*Bar]*Bar),
 		output:     os.Stdout,
@@ -113,7 +110,7 @@ func (p *Progress) AddSpinner(total int64, alignment SpinnerAlignment, options .
 // Panics if *Progress instance is done, i.e. called after *Progress.Wait().
 func (p *Progress) Add(total int64, filler BarFiller, options ...BarOption) *Bar {
 	if filler == nil {
-		filler = NewBarFiller(DefaultBarStyle, false)
+		filler = BarFillerFunc(func(io.Writer, int, decor.Statistics) {})
 	}
 	p.bwg.Add(1)
 	result := make(chan *Bar)
@@ -233,7 +230,7 @@ func (s *pState) render(cw *cwriter.Writer) error {
 
 	tw, err := cw.GetWidth()
 	if err != nil {
-		tw = s.width
+		tw = s.reqWidth
 	}
 	for i := 0; i < s.bHeap.Len(); i++ {
 		bar := s.bHeap[i]
@@ -347,7 +344,7 @@ func (s *pState) makeBarState(total int64, filler BarFiller, options ...BarOptio
 		filler:   filler,
 		priority: s.idCount,
 		id:       s.idCount,
-		width:    s.width,
+		reqWidth: s.reqWidth,
 		debugOut: s.debugOut,
 		extender: func(r io.Reader, _ int, _ decor.Statistics) (io.Reader, int) {
 			return r, 0
@@ -364,9 +361,9 @@ func (s *pState) makeBarState(total int64, filler BarFiller, options ...BarOptio
 		bs.priority = -1
 	}
 
-	bs.bufP = bytes.NewBuffer(make([]byte, 0, bs.width))
-	bs.bufB = bytes.NewBuffer(make([]byte, 0, bs.width))
-	bs.bufA = bytes.NewBuffer(make([]byte, 0, bs.width))
+	bs.bufP = bytes.NewBuffer(make([]byte, 0, 64))
+	bs.bufB = bytes.NewBuffer(make([]byte, 0, 128))
+	bs.bufA = bytes.NewBuffer(make([]byte, 0, 64))
 
 	return bs
 }
