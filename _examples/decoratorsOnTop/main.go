@@ -15,7 +15,6 @@ func main() {
 	total := 100
 	bar := p.Add(int64(total), nil,
 		mpb.BarExtender(nlBarFiller(mpb.NewBarFiller("╢▌▌░╟", false))),
-		// mpb.BarExtender(nlBarFiller(mpb.NewBarFiller("", false))),
 		mpb.PrependDecorators(
 			decor.Name("Percentage: "),
 			decor.NewPercentage("%d"),
