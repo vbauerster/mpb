@@ -361,9 +361,9 @@ func (s *pState) makeBarState(total int64, filler BarFiller, options ...BarOptio
 		bs.priority = -1
 	}
 
-	bs.bufP = bytes.NewBuffer(make([]byte, 0, 64))
-	bs.bufB = bytes.NewBuffer(make([]byte, 0, 128))
-	bs.bufA = bytes.NewBuffer(make([]byte, 0, 64))
+	bs.bufP = bytes.NewBuffer(make([]byte, 0, 128))
+	bs.bufB = bytes.NewBuffer(make([]byte, 0, 256))
+	bs.bufA = bytes.NewBuffer(make([]byte, 0, 128))
 
 	return bs
 }
