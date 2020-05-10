@@ -16,7 +16,7 @@ func init() {
 
 func main() {
 	doneWg := new(sync.WaitGroup)
-	p := mpb.New(mpb.WithWidth(64), mpb.WithWaitGroup(doneWg))
+	p := mpb.New(mpb.WithWaitGroup(doneWg))
 	numBars := 4
 
 	var bars []*mpb.Bar
@@ -44,6 +44,7 @@ func main() {
 		i := i
 		go func() {
 			task := fmt.Sprintf("Task#%02d:", i)
+			// ANSI escape sequences are not supported on Windows OS
 			job := "\x1b[31;1;4minstalling\x1b[0m"
 			// preparing delayed bars
 			b := p.AddBar(rand.Int63n(101)+100,
