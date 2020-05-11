@@ -27,11 +27,13 @@ func main() {
 						"done",
 					),
 					decor.WCSyncSpace, // Placeholder
+					decor.WCSyncSpace, // Placeholder
 				),
 			)
 		} else {
 			pdecorators = mpb.PrependDecorators(
 				decor.CountersNoUnit("% .1d / % .1d", decor.WCSyncSpace),
+				decor.OnComplete(decor.Spinner(nil, decor.WCSyncSpace), "done"),
 				decor.OnComplete(decor.Spinner(nil, decor.WCSyncSpace), "done"),
 			)
 		}
