@@ -67,7 +67,7 @@ func NewBarFiller(style string, reverse bool) BarFiller {
 
 func (s *barFiller) SetStyle(style string) {
 	if !utf8.ValidString(style) {
-		return
+		panic("invalid bar style")
 	}
 	if style == "" {
 		style = DefaultBarStyle
