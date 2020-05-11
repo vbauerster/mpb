@@ -1,6 +1,7 @@
 package mpb
 
 import (
+	"bytes"
 	"io"
 	"unicode/utf8"
 
@@ -150,6 +151,13 @@ func (s *barFiller) Fill(w io.Writer, reqWidth int, stat decor.Statistics) {
 		bb[index] = s.format[rRefill]
 		rwidth -= s.rwidth[rRefill]
 		index++
+	}
+
+	if index != len(bb) {
+		buf := new(bytes.Buffer)
+		s.flush(buf, space, bb[:index])
+		io.WriteString(w, runewidth.Truncate(buf.String(), width, "!"))
+		return
 	}
 
 	s.flush(w, space, bb)
