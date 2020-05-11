@@ -45,7 +45,7 @@ func main() {
 		go func() {
 			task := fmt.Sprintf("Task#%02d:", i)
 			// ANSI escape sequences are not supported on Windows OS
-			job := "\x1b[31;1;4minstalling\x1b[0m"
+			job := "\x1b[31;1;4mつのだ☆HIRO\x1b[0m"
 			// preparing delayed bars
 			b := p.AddBar(rand.Int63n(101)+100,
 				mpb.BarQueueAfter(bars[i]),
