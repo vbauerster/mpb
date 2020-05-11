@@ -4,6 +4,7 @@ import (
 	"io"
 	"unicode/utf8"
 
+	"github.com/mattn/go-runewidth"
 	"github.com/vbauerster/mpb/v5/decor"
 	"github.com/vbauerster/mpb/v5/internal"
 )
@@ -12,7 +13,7 @@ const (
 	rLeft = iota
 	rFill
 	rTip
-	rEmpty
+	rSpace
 	rRight
 	rRevTip
 	rRefill
@@ -27,7 +28,7 @@ const (
 //
 //	'3rd rune' stands for tip rune
 //
-//	'4th rune' stands for empty rune
+//	'4th rune' stands for space rune
 //
 //	'5th rune' stands for right boundary rune
 //
@@ -39,19 +40,24 @@ const DefaultBarStyle string = "[=>-]<+"
 
 type barFiller struct {
 	format  [][]byte
+	rwidth  []int
 	tip     []byte
 	refill  int64
 	reverse bool
-	flush   func(w io.Writer, bb [][]byte)
+	flush   func(io.Writer, *space, [][]byte)
+}
+
+type space struct {
+	space []byte
+	width int
+	count int
 }
 
 // NewBarFiller constucts mpb.BarFiller, to be used with *Progress.Add(...) *Bar method.
 func NewBarFiller(style string, reverse bool) BarFiller {
-	if style == "" {
-		style = DefaultBarStyle
-	}
 	bf := &barFiller{
-		format:  make([][]byte, utf8.RuneCountInString(style)),
+		format:  make([][]byte, len(DefaultBarStyle)),
+		rwidth:  make([]int, len(DefaultBarStyle)),
 		reverse: reverse,
 	}
 	bf.SetStyle(style)
@@ -62,9 +68,15 @@ func (s *barFiller) SetStyle(style string) {
 	if !utf8.ValidString(style) {
 		return
 	}
-	src := make([][]byte, 0, utf8.RuneCountInString(style))
+	if style == "" {
+		style = DefaultBarStyle
+	}
+	src := make([][]byte, utf8.RuneCountInString(style))
+	i := 0
 	for _, r := range style {
-		src = append(src, []byte(string(r)))
+		s.rwidth[i] = runewidth.RuneWidth(r)
+		src[i] = []byte(string(r))
+		i++
 	}
 	copy(s.format, src)
 	s.SetReverse(s.reverse)
@@ -88,52 +100,77 @@ func (s *barFiller) SetRefill(amount int64) {
 func (s *barFiller) Fill(w io.Writer, reqWidth int, stat decor.Statistics) {
 	width := internal.CalcWidthForBarFiller(reqWidth, stat.TermWidth-stat.OccupiedWidth)
 
-	width -= 2 // don't count rLeft and rRight as progress
-	if width < 2 {
+	// don't count rLeft and rRight as progress
+	brackets := s.rwidth[rLeft] + s.rwidth[rRight]
+	width -= brackets
+	if width < brackets {
 		return
 	}
 	w.Write(s.format[rLeft])
 	defer w.Write(s.format[rRight])
 
-	bb := make([][]byte, width)
-
 	cwidth := int(internal.PercentageRound(stat.Total, stat.Current, width))
-
-	for i := 0; i < cwidth; i++ {
-		bb[i] = s.format[rFill]
+	bb := make([][]byte, cwidth)
+	space := &space{
+		space: s.format[rSpace],
+		width: s.rwidth[rSpace],
+		count: width - cwidth,
+	}
+	if cwidth == 0 {
+		s.flush(w, space, bb)
+		return
 	}
 
+	index := 0
+	if space.count != 0 {
+		bb[index] = s.tip
+		cwidth -= s.rwidth[rTip]
+	} else {
+		bb[index] = s.format[rFill]
+		cwidth -= s.rwidth[rFill]
+	}
+	index++
+
+	rwidth := 0
 	if s.refill > 0 {
-		var rwidth int
-		if s.refill > stat.Current {
-			rwidth = cwidth
-		} else {
+		rwidth = cwidth
+		if s.refill < stat.Current {
 			rwidth = int(internal.PercentageRound(stat.Total, int64(s.refill), width))
 		}
-		for i := 0; i < rwidth; i++ {
-			bb[i] = s.format[rRefill]
-		}
+		cwidth -= rwidth
 	}
 
-	if cwidth > 0 && cwidth < width {
-		bb[cwidth-1] = s.tip
+	for cwidth > 0 {
+		bb[index] = s.format[rFill]
+		cwidth -= s.rwidth[rFill]
+		index++
 	}
 
-	for i := cwidth; i < width; i++ {
-		bb[i] = s.format[rEmpty]
+	for rwidth > 0 {
+		bb[index] = s.format[rRefill]
+		rwidth -= s.rwidth[rRefill]
+		index++
 	}
 
-	s.flush(w, bb)
+	s.flush(w, space, bb)
 }
 
-func regularFlush(w io.Writer, bb [][]byte) {
-	for i := 0; i < len(bb); i++ {
+func regularFlush(w io.Writer, space *space, bb [][]byte) {
+	for i := len(bb) - 1; i >= 0; i-- {
 		w.Write(bb[i])
 	}
+	for space.count > 0 {
+		w.Write(space.space)
+		space.count -= space.width
+	}
 }
 
-func reverseFlush(w io.Writer, bb [][]byte) {
-	for i := len(bb) - 1; i >= 0; i-- {
+func reverseFlush(w io.Writer, space *space, bb [][]byte) {
+	for space.count > 0 {
+		w.Write(space.space)
+		space.count -= space.width
+	}
+	for i := 0; i < len(bb); i++ {
 		w.Write(bb[i])
 	}
 }

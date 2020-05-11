@@ -8,9 +8,9 @@ import (
 	"log"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	"github.com/acarl005/stripansi"
+	"github.com/mattn/go-runewidth"
 	"github.com/vbauerster/mpb/v5/decor"
 )
 
@@ -387,13 +387,13 @@ func (b *Bar) wSyncTable() [][]chan int {
 func (s *bState) draw(stat decor.Statistics) io.Reader {
 	for _, d := range s.pDecorators {
 		str := d.Decor(stat)
-		stat.OccupiedWidth += utf8.RuneCountInString(stripansi.Strip(str))
+		stat.OccupiedWidth += runewidth.StringWidth(stripansi.Strip(str))
 		s.bufP.WriteString(str)
 	}
 
 	for _, d := range s.aDecorators {
 		str := d.Decor(stat)
-		stat.OccupiedWidth += utf8.RuneCountInString(stripansi.Strip(str))
+		stat.OccupiedWidth += runewidth.StringWidth(stripansi.Strip(str))
 		s.bufA.WriteString(str)
 	}
 

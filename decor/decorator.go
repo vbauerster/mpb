@@ -3,9 +3,9 @@ package decor
 import (
 	"fmt"
 	"time"
-	"unicode/utf8"
 
 	"github.com/acarl005/stripansi"
+	"github.com/mattn/go-runewidth"
 )
 
 const (
@@ -127,38 +127,35 @@ var (
 // W represents width and C represents bit set of width related config.
 // A decorator should embed WC, to enable width synchronization.
 type WC struct {
-	W         int
-	C         int
-	dynFormat string
-	wsync     chan int
+	W     int
+	C     int
+	fill  func(s string, w int) string
+	wsync chan int
 }
 
 // FormatMsg formats final message according to WC.W and WC.C.
 // Should be called by any Decorator implementation.
 func (wc *WC) FormatMsg(msg string) string {
-	var format string
-	runeCount := utf8.RuneCountInString(stripansi.Strip(msg))
-	ansiCount := utf8.RuneCountInString(msg) - runeCount
+	pureWidth := runewidth.StringWidth(msg)
+	stripWidth := runewidth.StringWidth(stripansi.Strip(msg))
+	maxCell := wc.W
 	if (wc.C & DSyncWidth) != 0 {
+		cellCount := stripWidth
 		if (wc.C & DextraSpace) != 0 {
-			runeCount++
+			cellCount++
 		}
-		wc.wsync <- runeCount
-		max := <-wc.wsync
-		format = fmt.Sprintf(wc.dynFormat, ansiCount+max)
-	} else {
-		format = fmt.Sprintf(wc.dynFormat, ansiCount+wc.W)
+		wc.wsync <- cellCount
+		maxCell = <-wc.wsync
 	}
-	return fmt.Sprintf(format, msg)
+	return wc.fill(msg, maxCell+(pureWidth-stripWidth))
 }
 
 // Init initializes width related config.
 func (wc *WC) Init() WC {
-	wc.dynFormat = "%%"
+	wc.fill = runewidth.FillLeft
 	if (wc.C & DidentRight) != 0 {
-		wc.dynFormat += "-"
+		wc.fill = runewidth.FillRight
 	}
-	wc.dynFormat += "%ds"
 	if (wc.C & DSyncWidth) != 0 {
 		// it's deliberate choice to override wsync on each Init() call,
 		// this way globals like WCSyncSpace can be reused
