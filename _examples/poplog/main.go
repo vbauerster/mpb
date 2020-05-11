@@ -64,7 +64,7 @@ func main() {
 
 func makeLogBar(msg string) mpb.BarFiller {
 	limit := "%%.%ds"
-	return mpb.BarFillerFunc(func(w io.Writer, width int, st decor.Statistics) {
-		fmt.Fprintf(w, fmt.Sprintf(limit, width), msg)
+	return mpb.BarFillerFunc(func(w io.Writer, _ int, st decor.Statistics) {
+		fmt.Fprintf(w, fmt.Sprintf(limit, st.TermWidth-st.OccupiedWidth), msg)
 	})
 }

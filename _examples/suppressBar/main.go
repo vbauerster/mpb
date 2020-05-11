@@ -101,7 +101,7 @@ func newCustomFiller(ch <-chan string, resume <-chan struct{}) (mpb.BarFiller, <
 		default:
 		}
 		if msg != nil {
-			limitFmt := fmt.Sprintf("%%.%ds", width)
+			limitFmt := fmt.Sprintf("%%.%ds", st.TermWidth-st.OccupiedWidth)
 			fmt.Fprintf(w, limitFmt, *msg)
 			nextCh <- struct{}{}
 		} else {
