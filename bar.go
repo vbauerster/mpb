@@ -385,22 +385,21 @@ func (b *Bar) wSyncTable() [][]chan int {
 }
 
 func (s *bState) draw(stat decor.Statistics) io.Reader {
-	btrim, tw := 0, stat.AvailableWidth
 	if !s.trimSpace {
-		btrim = 2
-		stat.AvailableWidth -= btrim
+		stat.AvailableWidth -= 2
 		s.bufB.WriteByte(' ')
 		defer s.bufB.WriteByte(' ')
 	}
 
 	nlr := strings.NewReader("\n")
+	tw := stat.AvailableWidth
 	for _, d := range s.pDecorators {
 		str := d.Decor(stat)
 		stat.AvailableWidth -= runewidth.StringWidth(stripansi.Strip(str))
 		s.bufP.WriteString(str)
 	}
 	if stat.AvailableWidth <= 0 {
-		trunc := strings.NewReader(runewidth.Truncate(stripansi.Strip(s.bufP.String()), tw-btrim, "…"))
+		trunc := strings.NewReader(runewidth.Truncate(stripansi.Strip(s.bufP.String()), tw, "…"))
 		return io.MultiReader(trunc, s.bufB, nlr)
 	}
 
@@ -411,7 +410,7 @@ func (s *bState) draw(stat decor.Statistics) io.Reader {
 		s.bufA.WriteString(str)
 	}
 	if stat.AvailableWidth <= 0 {
-		trunc := strings.NewReader(runewidth.Truncate(stripansi.Strip(s.bufA.String()), tw-btrim, "…"))
+		trunc := strings.NewReader(runewidth.Truncate(stripansi.Strip(s.bufA.String()), tw, "…"))
 		return io.MultiReader(s.bufP, s.bufB, trunc, nlr)
 	}
 
