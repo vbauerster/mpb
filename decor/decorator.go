@@ -47,12 +47,11 @@ const (
 // Statistics consists of progress related statistics, that Decorator
 // may need.
 type Statistics struct {
-	ID            int
-	Completed     bool
-	Total         int64
-	Current       int64
-	TermWidth     int
-	OccupiedWidth int
+	ID             int
+	Completed      bool
+	Total          int64
+	Current        int64
+	AvailableWidth int
 }
 
 // Decorator interface.

@@ -387,26 +387,25 @@ func (b *Bar) wSyncTable() [][]chan int {
 func (s *bState) draw(stat decor.Statistics) io.Reader {
 	for _, d := range s.pDecorators {
 		str := d.Decor(stat)
-		stat.OccupiedWidth += runewidth.StringWidth(stripansi.Strip(str))
+		stat.AvailableWidth -= runewidth.StringWidth(stripansi.Strip(str))
 		s.bufP.WriteString(str)
 	}
 
 	for _, d := range s.aDecorators {
 		str := d.Decor(stat)
-		stat.OccupiedWidth += runewidth.StringWidth(stripansi.Strip(str))
+		stat.AvailableWidth -= runewidth.StringWidth(stripansi.Strip(str))
 		s.bufA.WriteString(str)
 	}
-
-	s.bufA.WriteByte('\n')
 
 	if !s.trimSpace {
 		defer s.bufB.WriteByte(' ')
 		s.bufB.WriteByte(' ')
-		stat.OccupiedWidth += 2
+		stat.AvailableWidth -= 2
 	}
 
 	s.filler.Fill(s.bufB, s.reqWidth, stat)
 
+	s.bufA.WriteByte('\n')
 	return io.MultiReader(s.bufP, s.bufB, s.bufA)
 }
 
@@ -434,11 +433,11 @@ func (s *bState) wSyncTable() [][]chan int {
 
 func newStatistics(tw int, s *bState) decor.Statistics {
 	return decor.Statistics{
-		ID:        s.id,
-		Completed: s.completeFlushed,
-		Total:     s.total,
-		Current:   s.current,
-		TermWidth: tw,
+		ID:             s.id,
+		Completed:      s.completeFlushed,
+		Total:          s.total,
+		Current:        s.current,
+		AvailableWidth: tw,
 	}
 }
 
