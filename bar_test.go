@@ -91,7 +91,7 @@ func TestBarSetRefill(t *testing.T) {
 func TestBarHas100PercentWithOnCompleteDecorator(t *testing.T) {
 	var buf bytes.Buffer
 
-	p := New(WithOutput(&buf))
+	p := New(WithOutput(&buf), WithWidth(80))
 
 	total := 50
 
@@ -119,7 +119,7 @@ func TestBarHas100PercentWithOnCompleteDecorator(t *testing.T) {
 func TestBarHas100PercentWithBarRemoveOnComplete(t *testing.T) {
 	var buf bytes.Buffer
 
-	p := New(WithOutput(&buf))
+	p := New(WithOutput(&buf), WithWidth(80))
 
 	total := 50
 

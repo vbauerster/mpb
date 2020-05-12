@@ -22,7 +22,7 @@ func TestDraw(t *testing.T) {
 				total:    60,
 				current:  20,
 				barWidth: 80,
-				want:     "  ",
+				want:     "…  ",
 			},
 			{
 				name:      "t,c,bw{60,20,80}trim",
@@ -39,7 +39,7 @@ func TestDraw(t *testing.T) {
 				total:    60,
 				current:  20,
 				barWidth: 80,
-				want:     "  ",
+				want:     "…  ",
 			},
 			{
 				name:      "t,c,bw{60,20,80}trim",
@@ -319,7 +319,7 @@ func TestDraw(t *testing.T) {
 	}
 
 	var tmpBuf bytes.Buffer
-	for termWidth, cases := range testSuite {
+	for tw, cases := range testSuite {
 		for _, tc := range cases {
 			s := newTestState(tc.reverse)
 			s.reqWidth = tc.barWidth
@@ -332,13 +332,13 @@ func TestDraw(t *testing.T) {
 				}
 			}
 			tmpBuf.Reset()
-			tmpBuf.ReadFrom(s.draw(newStatistics(termWidth, s)))
+			tmpBuf.ReadFrom(s.draw(newStatistics(tw, s)))
 			by := tmpBuf.Bytes()
 			by = by[:len(by)-1]
 
 			got := string(by)
 			if got != tc.want {
-				t.Errorf("termWidth:%d %q want: %q %d, got: %q %d\n", termWidth, tc.name, tc.want, len(tc.want), got, len(got))
+				t.Errorf("termWidth:%d %q want: %q %d, got: %q %d\n", tw, tc.name, tc.want, len(tc.want), got, len(got))
 			}
 		}
 	}
