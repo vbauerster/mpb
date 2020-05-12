@@ -156,7 +156,7 @@ func (s *barFiller) Fill(w io.Writer, reqWidth int, stat decor.Statistics) {
 	if index != len(bb) {
 		buf := new(bytes.Buffer)
 		s.flush(buf, space, bb[:index])
-		io.WriteString(w, runewidth.Truncate(buf.String(), width, "!"))
+		io.WriteString(w, runewidth.Truncate(buf.String(), width, "…"))
 		return
 	}
 
