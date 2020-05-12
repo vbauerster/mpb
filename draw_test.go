@@ -64,7 +64,7 @@ func TestDraw(t *testing.T) {
 				current:   20,
 				barWidth:  80,
 				trimSpace: true,
-				want:      "",
+				want:      "[]",
 			},
 		},
 		3: {
@@ -81,7 +81,7 @@ func TestDraw(t *testing.T) {
 				current:   20,
 				barWidth:  80,
 				trimSpace: true,
-				want:      "",
+				want:      "[-]",
 			},
 		},
 		4: {
@@ -90,7 +90,7 @@ func TestDraw(t *testing.T) {
 				total:    60,
 				current:  20,
 				barWidth: 80,
-				want:     "  ",
+				want:     " [] ",
 			},
 			{
 				name:      "t,c,bw{60,20,80}trim",
@@ -107,7 +107,7 @@ func TestDraw(t *testing.T) {
 				total:    60,
 				current:  20,
 				barWidth: 80,
-				want:     "  ",
+				want:     " [-] ",
 			},
 			{
 				name:      "t,c,bw{60,20,80}trim",
