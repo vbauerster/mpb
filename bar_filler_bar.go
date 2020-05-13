@@ -49,9 +49,9 @@ type barFiller struct {
 }
 
 type space struct {
-	space []byte
-	width int
-	count int
+	space  []byte
+	rwidth int
+	count  int
 }
 
 // NewBarFiller constucts mpb.BarFiller, to be used with *Progress.Add(...) *Bar method.
@@ -113,9 +113,9 @@ func (s *barFiller) Fill(w io.Writer, reqWidth int, stat decor.Statistics) {
 	cwidth := int(internal.PercentageRound(stat.Total, stat.Current, width))
 	bb := make([][]byte, cwidth)
 	space := &space{
-		space: s.format[rSpace],
-		width: s.rwidth[rSpace],
-		count: width - cwidth,
+		space:  s.format[rSpace],
+		rwidth: s.rwidth[rSpace],
+		count:  width - cwidth,
 	}
 	if cwidth == 0 {
 		s.flush(w, space, bb)
@@ -153,7 +153,7 @@ func (s *barFiller) Fill(w io.Writer, reqWidth int, stat decor.Statistics) {
 		index++
 	}
 
-	if index != len(bb) {
+	if index != len(bb) || space.rwidth > 1 {
 		buf := new(bytes.Buffer)
 		s.flush(buf, space, bb[:index])
 		io.WriteString(w, runewidth.Truncate(buf.String(), width, "…"))
@@ -169,14 +169,14 @@ func regularFlush(w io.Writer, space *space, bb [][]byte) {
 	}
 	for space.count > 0 {
 		w.Write(space.space)
-		space.count -= space.width
+		space.count -= space.rwidth
 	}
 }
 
 func reverseFlush(w io.Writer, space *space, bb [][]byte) {
 	for space.count > 0 {
 		w.Write(space.space)
-		space.count -= space.width
+		space.count -= space.rwidth
 	}
 	for i := 0; i < len(bb); i++ {
 		w.Write(bb[i])
