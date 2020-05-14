@@ -3,12 +3,14 @@ package mpb
 import (
 	"bytes"
 	"testing"
+	"unicode/utf8"
 )
 
 func TestDraw(t *testing.T) {
 	// key is termWidth
 	testSuite := map[int][]struct {
 		name           string
+		style          string
 		total, current int64
 		barWidth       int
 		trimSpace      bool
@@ -18,302 +20,288 @@ func TestDraw(t *testing.T) {
 	}{
 		0: {
 			{
-				name:     "t,c,bw{60,20,80}",
-				total:    60,
-				current:  20,
-				barWidth: 80,
-				want:     "…  ",
+				name:    "t,c{60,20}",
+				total:   60,
+				current: 20,
+				want:    "…  ",
 			},
 			{
-				name:      "t,c,bw{60,20,80}trim",
+				name:      "t,c{60,20}trim",
 				total:     60,
 				current:   20,
-				barWidth:  80,
 				trimSpace: true,
 				want:      "",
 			},
 		},
 		1: {
 			{
-				name:     "t,c,bw{60,20,80}",
-				total:    60,
-				current:  20,
-				barWidth: 80,
-				want:     "…  ",
+				name:    "t,c{60,20}",
+				total:   60,
+				current: 20,
+				want:    "…  ",
 			},
 			{
-				name:      "t,c,bw{60,20,80}trim",
+				name:      "t,c{60,20}trim",
 				total:     60,
 				current:   20,
-				barWidth:  80,
 				trimSpace: true,
 				want:      "",
 			},
 		},
 		2: {
 			{
-				name:     "t,c,bw{60,20,80}",
-				total:    60,
-				current:  20,
-				barWidth: 80,
-				want:     "  ",
+				name:    "t,c{60,20}",
+				total:   60,
+				current: 20,
+				want:    "  ",
 			},
 			{
-				name:      "t,c,bw{60,20,80}trim",
+				name:      "t,c{60,20}trim",
 				total:     60,
 				current:   20,
-				barWidth:  80,
 				trimSpace: true,
 				want:      "[]",
 			},
 		},
 		3: {
 			{
-				name:     "t,c,bw{60,20,80}",
-				total:    60,
-				current:  20,
-				barWidth: 80,
-				want:     "  ",
+				name:    "t,c{60,20}",
+				total:   60,
+				current: 20,
+				want:    "  ",
 			},
 			{
-				name:      "t,c,bw{60,20,80}trim",
+				name:      "t,c{60,20}trim",
 				total:     60,
 				current:   20,
-				barWidth:  80,
 				trimSpace: true,
 				want:      "[-]",
 			},
 		},
 		4: {
 			{
-				name:     "t,c,bw{60,20,80}",
-				total:    60,
-				current:  20,
-				barWidth: 80,
-				want:     " [] ",
+				name:    "t,c{60,20}",
+				total:   60,
+				current: 20,
+				want:    " [] ",
 			},
 			{
-				name:      "t,c,bw{60,20,80}trim",
+				name:      "t,c{60,20}trim",
 				total:     60,
 				current:   20,
-				barWidth:  80,
 				trimSpace: true,
 				want:      "[>-]",
 			},
 		},
 		5: {
 			{
-				name:     "t,c,bw{60,20,80}",
-				total:    60,
-				current:  20,
-				barWidth: 80,
-				want:     " [-] ",
+				name:    "t,c{60,20}",
+				total:   60,
+				current: 20,
+				want:    " [-] ",
 			},
 			{
-				name:      "t,c,bw{60,20,80}trim",
+				name:      "t,c{60,20}trim",
 				total:     60,
 				current:   20,
-				barWidth:  80,
 				trimSpace: true,
 				want:      "[>--]",
 			},
 		},
 		6: {
 			{
-				name:     "t,c,bw{60,20,80}",
-				total:    60,
-				current:  20,
-				barWidth: 80,
-				want:     " [>-] ",
+				name:    "t,c{60,20}",
+				total:   60,
+				current: 20,
+				want:    " [>-] ",
 			},
 			{
-				name:      "t,c,bw{60,20,80}trim",
+				name:      "t,c{60,20}trim",
 				total:     60,
 				current:   20,
-				barWidth:  80,
 				trimSpace: true,
 				want:      "[>---]",
 			},
 		},
 		7: {
 			{
-				name:     "t,c,bw{60,20,80}",
-				total:    60,
-				current:  20,
-				barWidth: 80,
-				want:     " [>--] ",
+				name:    "t,c{60,20}",
+				total:   60,
+				current: 20,
+				want:    " [>--] ",
 			},
 			{
-				name:      "t,c,bw{60,20,80}trim",
+				name:      "t,c{60,20}trim",
 				total:     60,
 				current:   20,
-				barWidth:  80,
 				trimSpace: true,
 				want:      "[=>---]",
 			},
 		},
 		8: {
 			{
-				name:     "t,c,bw{60,20,80}",
-				total:    60,
-				current:  20,
-				barWidth: 80,
-				want:     " [>---] ",
+				name:    "t,c{60,20}",
+				total:   60,
+				current: 20,
+				want:    " [>---] ",
 			},
 			{
-				name:      "t,c,bw{60,20,80}trim",
+				name:      "t,c{60,20}trim",
 				total:     60,
 				current:   20,
-				barWidth:  80,
 				trimSpace: true,
 				want:      "[=>----]",
 			},
 		},
 		80: {
 			{
-				name:     "t,c,bw{60,20,80}",
-				total:    60,
-				current:  20,
-				barWidth: 80,
-				want:     " [========================>---------------------------------------------------] ",
+				name:    "t,c{60,20}",
+				total:   60,
+				current: 20,
+				want:    " [========================>---------------------------------------------------] ",
 			},
 			{
-				name:      "t,c,bw{60,20,80}trim",
+				name:      "t,c{60,20}trim",
 				total:     60,
 				current:   20,
-				barWidth:  80,
 				trimSpace: true,
 				want:      "[=========================>----------------------------------------------------]",
+			},
+			{
+				name:     "t,c,bw{60,20,60}",
+				total:    60,
+				current:  20,
+				barWidth: 60,
+				want:     " [==================>---------------------------------------] ",
+			},
+			{
+				name:      "t,c,bw{60,20,60}trim",
+				total:     60,
+				current:   20,
+				barWidth:  60,
+				trimSpace: true,
+				want:      "[==================>---------------------------------------]",
 			},
 		},
 		100: {
 			{
-				name:     "t,c,bw{100,100,0}",
-				total:    100,
-				current:  0,
-				barWidth: 100,
-				want:     " [------------------------------------------------------------------------------------------------] ",
+				name:    "t,c{100,0}",
+				total:   100,
+				current: 0,
+				want:    " [------------------------------------------------------------------------------------------------] ",
 			},
 			{
-				name:      "t,c,bw{100,100,0}trim",
+				name:      "t,c{100,0}trim",
 				total:     100,
 				current:   0,
-				barWidth:  100,
 				trimSpace: true,
 				want:      "[--------------------------------------------------------------------------------------------------]",
 			},
 			{
-				name:     "t,c,bw{100,1,100}",
-				total:    100,
-				current:  1,
-				barWidth: 100,
-				want:     " [>-----------------------------------------------------------------------------------------------] ",
+				name:    "t,c{100,1}",
+				total:   100,
+				current: 1,
+				want:    " [>-----------------------------------------------------------------------------------------------] ",
 			},
 			{
-				name:      "t,c,bw{100,1,100}trim",
+				name:      "t,c{100,1}trim",
 				total:     100,
 				current:   1,
-				barWidth:  100,
 				trimSpace: true,
 				want:      "[>-------------------------------------------------------------------------------------------------]",
 			},
 			{
-				name:     "t,c,bw{100,33,100}",
-				total:    100,
-				current:  33,
-				barWidth: 100,
-				want:     " [===============================>----------------------------------------------------------------] ",
+				name:    "t,c{100,33}",
+				total:   100,
+				current: 33,
+				want:    " [===============================>----------------------------------------------------------------] ",
 			},
 			{
-				name:      "t,c,bw{100,33,100}trim",
+				name:      "t,c{100,33}trim",
 				total:     100,
 				current:   33,
-				barWidth:  100,
 				trimSpace: true,
 				want:      "[===============================>------------------------------------------------------------------]",
 			},
 			{
-				name:      "t,c,bw,rev{100,33,100}trim",
+				name:      "t,c{100,33}trim,rev",
 				total:     100,
 				current:   33,
-				barWidth:  100,
 				trimSpace: true,
 				reverse:   true,
 				want:      "[------------------------------------------------------------------<===============================]",
 			},
 			{
-				name:     "t,c,bw,rup{100,33,100,33}",
-				total:    100,
-				current:  33,
-				barWidth: 100,
-				rup:      33,
-				want:     " [+++++++++++++++++++++++++++++++>----------------------------------------------------------------] ",
+				name:    "t,c,rup{100,33,33}",
+				total:   100,
+				current: 33,
+				rup:     33,
+				want:    " [+++++++++++++++++++++++++++++++>----------------------------------------------------------------] ",
 			},
 			{
-				name:      "t,c,bw,rup{100,33,100,33}trim",
+				name:      "t,c,rup{100,33,33}trim",
 				total:     100,
 				current:   33,
-				barWidth:  100,
 				rup:       33,
 				trimSpace: true,
 				want:      "[+++++++++++++++++++++++++++++++>------------------------------------------------------------------]",
 			},
 			{
-				name:      "t,c,bw,rup,rev{100,33,100,33}trim",
+				name:      "t,c,rup{100,33,33}trim,rev",
 				total:     100,
 				current:   33,
-				barWidth:  100,
 				rup:       33,
 				trimSpace: true,
 				reverse:   true,
 				want:      "[------------------------------------------------------------------<+++++++++++++++++++++++++++++++]",
 			},
 			{
-				name:     "t,c,bw,rup{100,40,100,32}",
-				total:    100,
-				current:  40,
-				barWidth: 100,
-				rup:      33,
-				want:     " [++++++++++++++++++++++++++++++++=====>----------------------------------------------------------] ",
+				name:    "t,c,rup{100,40,33}",
+				total:   100,
+				current: 40,
+				rup:     33,
+				want:    " [++++++++++++++++++++++++++++++++=====>----------------------------------------------------------] ",
 			},
 			{
-				name:      "t,c,bw,rup{100,40,100,32}trim",
+				name:      "t,c,rup{100,40,33}trim",
 				total:     100,
 				current:   40,
-				barWidth:  100,
 				rup:       33,
 				trimSpace: true,
 				want:      "[++++++++++++++++++++++++++++++++======>-----------------------------------------------------------]",
 			},
 			{
-				name:     "t,c,bw{100,99,100}",
-				total:    100,
-				current:  99,
-				barWidth: 100,
-				want:     " [==============================================================================================>-] ",
+				name:    "t,c{100,99}",
+				total:   100,
+				current: 99,
+				want:    " [==============================================================================================>-] ",
 			},
 			{
-				name:      "t,c,bw{100,99,100}trim",
+				name:      "t,c{100,99}trim",
 				total:     100,
 				current:   99,
-				barWidth:  100,
 				trimSpace: true,
 				want:      "[================================================================================================>-]",
 			},
 			{
-				name:     "t,c,bw{100,100,100}",
-				total:    100,
-				current:  100,
-				barWidth: 100,
-				want:     " [================================================================================================] ",
+				name:    "t,c{100,100}",
+				total:   100,
+				current: 100,
+				want:    " [================================================================================================] ",
 			},
 			{
-				name:      "t,c,bw{100,100,100}trim",
+				name:      "t,c{100,100}trim",
 				total:     100,
 				current:   100,
-				barWidth:  100,
 				trimSpace: true,
 				want:      "[==================================================================================================]",
+			},
+			{
+				name:    "[=の-] t,c{100,100}",
+				style:   "[=の-]",
+				total:   100,
+				current: 1,
+				want:    " [の---------------------------------------------------------------------------------------------…] ",
 			},
 		},
 	}
@@ -321,7 +309,7 @@ func TestDraw(t *testing.T) {
 	var tmpBuf bytes.Buffer
 	for tw, cases := range testSuite {
 		for _, tc := range cases {
-			s := newTestState(tc.reverse)
+			s := newTestState(tc.style, tc.reverse)
 			s.reqWidth = tc.barWidth
 			s.total = tc.total
 			s.current = tc.current
@@ -334,19 +322,24 @@ func TestDraw(t *testing.T) {
 			tmpBuf.Reset()
 			tmpBuf.ReadFrom(s.draw(newStatistics(tw, s)))
 			by := tmpBuf.Bytes()
-			by = by[:len(by)-1]
 
-			got := string(by)
+			got := string(by[:len(by)-1])
+			if !utf8.ValidString(got) {
+				t.Fail()
+			}
 			if got != tc.want {
-				t.Errorf("termWidth:%d %q want: %q %d, got: %q %d\n", tw, tc.name, tc.want, len(tc.want), got, len(got))
+				t.Errorf("termWidth:%d %q want: %q %d, got: %q %d\n", tw, tc.name, tc.want, utf8.RuneCountInString(tc.want), got, utf8.RuneCountInString(got))
 			}
 		}
 	}
 }
 
-func newTestState(reverse bool) *bState {
+func newTestState(style string, reverse bool) *bState {
+	if style == "" {
+		style = DefaultBarStyle
+	}
 	s := &bState{
-		filler: NewBarFiller(DefaultBarStyle, reverse),
+		filler: NewBarFiller(style, reverse),
 		bufP:   new(bytes.Buffer),
 		bufB:   new(bytes.Buffer),
 		bufA:   new(bytes.Buffer),
