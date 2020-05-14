@@ -99,7 +99,7 @@ func (s *barFiller) SetRefill(amount int64) {
 }
 
 func (s *barFiller) Fill(w io.Writer, reqWidth int, stat decor.Statistics) {
-	width := internal.CalcWidthForBarFiller(reqWidth, stat.AvailableWidth)
+	width := internal.WidthForBarFiller(reqWidth, stat.AvailableWidth)
 
 	if brackets := s.rwidth[rLeft] + s.rwidth[rRight]; width < brackets {
 		return
