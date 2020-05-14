@@ -111,34 +111,27 @@ func (s *barFiller) Fill(w io.Writer, reqWidth int, stat decor.Statistics) {
 	defer w.Write(s.format[rRight])
 
 	cwidth := int(internal.PercentageRound(stat.Total, stat.Current, width))
-	bb := make([][]byte, cwidth)
 	space := &space{
 		space:  s.format[rSpace],
 		rwidth: s.rwidth[rSpace],
 		count:  width - cwidth,
 	}
-	if cwidth == 0 {
-		s.flush(w, space, bb)
-		return
-	}
 
-	index := 0
-	if space.count != 0 {
+	index, refill := 0, 0
+	bb := make([][]byte, cwidth)
+
+	if cwidth > 0 && cwidth != width {
 		bb[index] = s.tip
 		cwidth -= s.rwidth[rTip]
-	} else {
-		bb[index] = s.format[rFill]
-		cwidth -= s.rwidth[rFill]
+		index++
 	}
-	index++
 
-	rwidth := 0
 	if s.refill > 0 {
-		rwidth = cwidth
+		refill = cwidth
 		if s.refill < stat.Current {
-			rwidth = int(internal.PercentageRound(stat.Total, int64(s.refill), width))
+			refill = int(internal.PercentageRound(stat.Total, int64(s.refill), width))
 		}
-		cwidth -= rwidth
+		cwidth -= refill
 	}
 
 	for cwidth > 0 {
@@ -147,13 +140,13 @@ func (s *barFiller) Fill(w io.Writer, reqWidth int, stat decor.Statistics) {
 		index++
 	}
 
-	for rwidth > 0 {
+	for refill > 0 {
 		bb[index] = s.format[rRefill]
-		rwidth -= s.rwidth[rRefill]
+		refill -= s.rwidth[rRefill]
 		index++
 	}
 
-	if index != len(bb) || space.rwidth > 1 {
+	if cwidth+refill < 0 || space.rwidth > 1 {
 		buf := new(bytes.Buffer)
 		s.flush(buf, space, bb[:index])
 		io.WriteString(w, runewidth.Truncate(buf.String(), width, "…"))
