@@ -15,7 +15,7 @@ func TestDraw(t *testing.T) {
 		barWidth       int
 		trimSpace      bool
 		reverse        bool
-		rup            int64
+		refill         int64
 		want           string
 	}{
 		0: {
@@ -232,41 +232,41 @@ func TestDraw(t *testing.T) {
 				want:      "[------------------------------------------------------------------<===============================]",
 			},
 			{
-				name:    "t,c,rup{100,33,33}",
+				name:    "t,c,refill{100,33,33}",
 				total:   100,
 				current: 33,
-				rup:     33,
+				refill:  33,
 				want:    " [+++++++++++++++++++++++++++++++>----------------------------------------------------------------] ",
 			},
 			{
-				name:      "t,c,rup{100,33,33}trim",
+				name:      "t,c,refill{100,33,33}trim",
 				total:     100,
 				current:   33,
-				rup:       33,
+				refill:    33,
 				trimSpace: true,
 				want:      "[+++++++++++++++++++++++++++++++>------------------------------------------------------------------]",
 			},
 			{
-				name:      "t,c,rup{100,33,33}trim,rev",
+				name:      "t,c,refill{100,33,33}trim,rev",
 				total:     100,
 				current:   33,
-				rup:       33,
+				refill:    33,
 				trimSpace: true,
 				reverse:   true,
 				want:      "[------------------------------------------------------------------<+++++++++++++++++++++++++++++++]",
 			},
 			{
-				name:    "t,c,rup{100,40,33}",
+				name:    "t,c,refill{100,40,33}",
 				total:   100,
 				current: 40,
-				rup:     33,
+				refill:  33,
 				want:    " [++++++++++++++++++++++++++++++++=====>----------------------------------------------------------] ",
 			},
 			{
-				name:      "t,c,rup{100,40,33}trim",
+				name:      "t,c,refill{100,40,33}trim",
 				total:     100,
 				current:   40,
-				rup:       33,
+				refill:    33,
 				trimSpace: true,
 				want:      "[++++++++++++++++++++++++++++++++======>-----------------------------------------------------------]",
 			},
@@ -297,7 +297,7 @@ func TestDraw(t *testing.T) {
 				want:      "[==================================================================================================]",
 			},
 			{
-				name:    "[=の-] t,c{100,100}",
+				name:    "[=の-] t,c{100,1}",
 				style:   "[=の-]",
 				total:   100,
 				current: 1,
@@ -314,9 +314,9 @@ func TestDraw(t *testing.T) {
 			s.total = tc.total
 			s.current = tc.current
 			s.trimSpace = tc.trimSpace
-			if tc.rup > 0 {
+			if tc.refill > 0 {
 				if f, ok := s.filler.(interface{ SetRefill(int64) }); ok {
-					f.SetRefill(tc.rup)
+					f.SetRefill(tc.refill)
 				}
 			}
 			tmpBuf.Reset()
