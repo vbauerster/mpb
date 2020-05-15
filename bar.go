@@ -400,6 +400,7 @@ func (s *bState) draw(stat decor.Statistics) io.Reader {
 	}
 	if stat.AvailableWidth <= 0 {
 		trunc := strings.NewReader(runewidth.Truncate(stripansi.Strip(s.bufP.String()), tw, "…"))
+		s.bufP.Reset()
 		return io.MultiReader(trunc, s.bufB, nlr)
 	}
 
@@ -411,6 +412,7 @@ func (s *bState) draw(stat decor.Statistics) io.Reader {
 	}
 	if stat.AvailableWidth <= 0 {
 		trunc := strings.NewReader(runewidth.Truncate(stripansi.Strip(s.bufA.String()), tw, "…"))
+		s.bufA.Reset()
 		return io.MultiReader(s.bufP, s.bufB, trunc, nlr)
 	}
 
