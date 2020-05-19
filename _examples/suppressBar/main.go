@@ -18,8 +18,30 @@ func main() {
 	total := 100
 	msgCh := make(chan string)
 	resumeCh := make(chan struct{})
-	filler, nextCh := newCustomFiller(msgCh, resumeCh)
-	bar := p.Add(int64(total), filler,
+	nextCh := make(chan struct{}, 1)
+	bar := p.AddBar(int64(total),
+		mpb.BarFillerMiddleware(func(base mpb.BarFiller) mpb.BarFiller {
+			var msg *string
+			return mpb.BarFillerFunc(func(w io.Writer, reqWidth int, st decor.Statistics) {
+				select {
+				case m := <-msgCh:
+					defer func() {
+						msg = &m
+					}()
+					nextCh <- struct{}{}
+				case <-resumeCh:
+					msg = nil
+				default:
+				}
+				if msg != nil {
+					limitFmt := fmt.Sprintf("%%.%ds", st.AvailableWidth)
+					fmt.Fprintf(w, limitFmt, *msg)
+					nextCh <- struct{}{}
+				} else {
+					base.Fill(w, reqWidth, st)
+				}
+			})
+		}),
 		mpb.PrependDecorators(
 			decor.Name("my bar:"),
 		),
@@ -76,50 +98,11 @@ func (ew *errorWrapper) reset(err error) {
 	ew.Unlock()
 }
 
-type myBarFiller struct {
-	mpb.BarFiller
-	base mpb.BarFiller
-}
-
-func (cf *myBarFiller) Base() mpb.BarFiller {
-	return cf.base
-}
-
-func newCustomFiller(ch <-chan string, resume <-chan struct{}) (mpb.BarFiller, <-chan struct{}) {
-	base := mpb.NewBarFiller(mpb.DefaultBarStyle, false)
-	nextCh := make(chan struct{}, 1)
-	var msg *string
-	filler := mpb.BarFillerFunc(func(w io.Writer, width int, st decor.Statistics) {
-		select {
-		case m := <-ch:
-			defer func() {
-				msg = &m
-			}()
-			nextCh <- struct{}{}
-		case <-resume:
-			msg = nil
-		default:
-		}
-		if msg != nil {
-			limitFmt := fmt.Sprintf("%%.%ds", st.AvailableWidth)
-			fmt.Fprintf(w, limitFmt, *msg)
-			nextCh <- struct{}{}
-		} else {
-			base.Fill(w, width, st)
-		}
-	})
-	cf := &myBarFiller{
-		BarFiller: filler,
-		base:      base,
-	}
-	return cf, nextCh
-}
-
-func newCustomPercentage(ch <-chan struct{}) decor.Decorator {
+func newCustomPercentage(nextCh <-chan struct{}) decor.Decorator {
 	base := decor.Percentage()
 	fn := func(s decor.Statistics) string {
 		select {
-		case <-ch:
+		case <-nextCh:
 			return ""
 		default:
 			return base.Decor(s)
