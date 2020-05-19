@@ -8,7 +8,7 @@ import (
 )
 
 func BenchmarkIncrSingleBar(b *testing.B) {
-	p := New(WithOutput(ioutil.Discard))
+	p := New(WithOutput(ioutil.Discard), WithWidth(80))
 	bar := p.AddBar(int64(b.N))
 	for i := 0; i < b.N; i++ {
 		bar.Increment()
@@ -16,7 +16,7 @@ func BenchmarkIncrSingleBar(b *testing.B) {
 }
 
 func BenchmarkIncrSingleBarWhileIsNotCompleted(b *testing.B) {
-	p := New(WithOutput(ioutil.Discard))
+	p := New(WithOutput(ioutil.Discard), WithWidth(80))
 	bar := p.AddBar(int64(b.N))
 	for !bar.Completed() {
 		bar.Increment()
@@ -24,7 +24,7 @@ func BenchmarkIncrSingleBarWhileIsNotCompleted(b *testing.B) {
 }
 
 func BenchmarkIncrSingleBarWithNameDecorator(b *testing.B) {
-	p := New(WithOutput(ioutil.Discard))
+	p := New(WithOutput(ioutil.Discard), WithWidth(80))
 	bar := p.AddBar(int64(b.N), PrependDecorators(decor.Name("test")))
 	for i := 0; i < b.N; i++ {
 		bar.Increment()
@@ -32,7 +32,7 @@ func BenchmarkIncrSingleBarWithNameDecorator(b *testing.B) {
 }
 
 func BenchmarkIncrSingleBarWithNameAndEwmaETADecorator(b *testing.B) {
-	p := New(WithOutput(ioutil.Discard))
+	p := New(WithOutput(ioutil.Discard), WithWidth(80))
 	bar := p.AddBar(int64(b.N),
 		PrependDecorators(decor.Name("test")),
 		AppendDecorators(decor.EwmaETA(decor.ET_STYLE_GO, 60)),
