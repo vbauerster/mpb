@@ -44,7 +44,6 @@ type Bar struct {
 type extFunc func(in io.Reader, reqWidth int, st decor.Statistics) (out io.Reader, lines int)
 
 type bState struct {
-	baseF             BarFiller
 	filler            BarFiller
 	id                int
 	reqWidth          int

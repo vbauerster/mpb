@@ -340,7 +340,6 @@ func (s *pState) updateSyncMatrix() {
 func (s *pState) makeBarState(total int64, filler BarFiller, options ...BarOption) *bState {
 	bs := &bState{
 		total:    total,
-		baseF:    extractBaseFiller(filler),
 		filler:   filler,
 		priority: s.idCount,
 		id:       s.idCount,
@@ -383,14 +382,4 @@ func syncWidth(matrix map[int][]chan int) {
 			}
 		}()
 	}
-}
-
-func extractBaseFiller(f BarFiller) BarFiller {
-	type wrapper interface {
-		Base() BarFiller
-	}
-	if f, ok := f.(wrapper); ok {
-		return extractBaseFiller(f.Base())
-	}
-	return f
 }
