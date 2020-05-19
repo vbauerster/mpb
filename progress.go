@@ -356,6 +356,7 @@ func (s *pState) makeBarState(total int64, filler BarFiller, options ...BarOptio
 
 	if bs.middleware != nil {
 		bs.filler = bs.middleware(filler)
+		bs.middleware = nil
 	}
 
 	if s.popCompleted && !bs.noPop {
