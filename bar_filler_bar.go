@@ -94,10 +94,6 @@ func (s *barFiller) SetReverse(reverse bool) {
 	s.reverse = reverse
 }
 
-func (s *barFiller) SetRefill(amount int64) {
-	s.refill = amount
-}
-
 func (s *barFiller) Fill(w io.Writer, reqWidth int, stat decor.Statistics) {
 	width := internal.WidthForBarFiller(reqWidth, stat.AvailableWidth)
 
@@ -126,8 +122,8 @@ func (s *barFiller) Fill(w io.Writer, reqWidth int, stat decor.Statistics) {
 		index++
 	}
 
-	if s.refill > 0 {
-		refill = int(internal.PercentageRound(stat.Total, int64(s.refill), width)) - index
+	if stat.Refill > 0 {
+		refill = int(internal.PercentageRound(stat.Total, int64(stat.Refill), width)) - index
 		if refill > cwidth {
 			refill = cwidth
 		}

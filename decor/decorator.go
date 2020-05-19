@@ -48,10 +48,11 @@ const (
 // may need.
 type Statistics struct {
 	ID             int
-	Completed      bool
+	AvailableWidth int
 	Total          int64
 	Current        int64
-	AvailableWidth int
+	Refill         int64
+	Completed      bool
 }
 
 // Decorator interface.

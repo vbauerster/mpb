@@ -50,6 +50,7 @@ type bState struct {
 	reqWidth          int
 	total             int64
 	current           int64
+	refill            int64
 	lastN             int64
 	iterated          bool
 	trimSpace         bool
@@ -132,13 +133,8 @@ func (b *Bar) Current() int64 {
 // Given default bar style is "[=>-]<+", refill rune is '+'.
 // To set bar style use mpb.BarStyle(string) BarOption.
 func (b *Bar) SetRefill(amount int64) {
-	type refiller interface {
-		SetRefill(int64)
-	}
 	b.operateState <- func(s *bState) {
-		if f, ok := s.baseF.(refiller); ok {
-			f.SetRefill(amount)
-		}
+		s.refill = amount
 	}
 }
 
@@ -446,10 +442,11 @@ func (s *bState) wSyncTable() [][]chan int {
 func newStatistics(tw int, s *bState) decor.Statistics {
 	return decor.Statistics{
 		ID:             s.id,
-		Completed:      s.completeFlushed,
+		AvailableWidth: tw,
 		Total:          s.total,
 		Current:        s.current,
-		AvailableWidth: tw,
+		Refill:         s.refill,
+		Completed:      s.completeFlushed,
 	}
 }
 
