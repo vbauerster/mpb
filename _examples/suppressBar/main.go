@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/mattn/go-runewidth"
 	"github.com/vbauerster/mpb/v5"
 	"github.com/vbauerster/mpb/v5/decor"
 )
@@ -34,8 +35,7 @@ func main() {
 				default:
 				}
 				if msg != nil {
-					limitFmt := fmt.Sprintf("%%.%ds", st.AvailableWidth)
-					fmt.Fprintf(w, limitFmt, *msg)
+					io.WriteString(w, runewidth.Truncate(*msg, st.AvailableWidth, "…"))
 					nextCh <- struct{}{}
 				} else {
 					base.Fill(w, reqWidth, st)
