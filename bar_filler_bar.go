@@ -127,9 +127,9 @@ func (s *barFiller) Fill(w io.Writer, reqWidth int, stat decor.Statistics) {
 	}
 
 	if s.refill > 0 {
-		refill = cwidth
-		if s.refill < stat.Current {
-			refill = int(internal.PercentageRound(stat.Total, int64(s.refill), width))
+		refill = int(internal.PercentageRound(stat.Total, int64(s.refill), width)) - index
+		if refill > cwidth {
+			refill = cwidth
 		}
 		cwidth -= refill
 	}
