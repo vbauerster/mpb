@@ -351,11 +351,7 @@ func TestDraw(t *testing.T) {
 			s.total = tc.total
 			s.current = tc.current
 			s.trimSpace = tc.trim
-			if tc.refill > 0 {
-				if f, ok := s.filler.(interface{ SetRefill(int64) }); ok {
-					f.SetRefill(tc.refill)
-				}
-			}
+			s.refill = tc.refill
 			tmpBuf.Reset()
 			tmpBuf.ReadFrom(s.draw(newStatistics(tw, s)))
 			by := tmpBuf.Bytes()
