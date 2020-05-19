@@ -339,21 +339,23 @@ func (s *pState) updateSyncMatrix() {
 
 func (s *pState) makeBarState(total int64, filler BarFiller, options ...BarOption) *bState {
 	bs := &bState{
+		id:       s.idCount,
+		priority: s.idCount,
+		reqWidth: s.reqWidth,
 		total:    total,
 		filler:   filler,
-		priority: s.idCount,
-		id:       s.idCount,
-		reqWidth: s.reqWidth,
+		extender: func(r io.Reader, _ int, _ decor.Statistics) (io.Reader, int) { return r, 0 },
 		debugOut: s.debugOut,
-		extender: func(r io.Reader, _ int, _ decor.Statistics) (io.Reader, int) {
-			return r, 0
-		},
 	}
 
 	for _, opt := range options {
 		if opt != nil {
 			opt(bs)
 		}
+	}
+
+	if bs.middleware != nil {
+		bs.filler = bs.middleware(filler)
 	}
 
 	if s.popCompleted && !bs.noPop {

@@ -44,8 +44,8 @@ type Bar struct {
 type extFunc func(in io.Reader, reqWidth int, st decor.Statistics) (out io.Reader, lines int)
 
 type bState struct {
-	filler            BarFiller
 	id                int
+	priority          int
 	reqWidth          int
 	total             int64
 	current           int64
@@ -56,6 +56,7 @@ type bState struct {
 	toComplete        bool
 	completeFlushed   bool
 	ignoreComplete    bool
+	dropOnComplete    bool
 	noPop             bool
 	aDecorators       []decor.Decorator
 	pDecorators       []decor.Decorator
@@ -63,12 +64,10 @@ type bState struct {
 	ewmaDecorators    []decor.EwmaDecorator
 	shutdownListeners []decor.ShutdownListener
 	bufP, bufB, bufA  *bytes.Buffer
+	filler            BarFiller
+	middleware        func(BarFiller) BarFiller
 	extender          extFunc
 
-	// priority overrides *Bar's priority, if set
-	priority int
-	// dropOnComplete propagates to *Bar
-	dropOnComplete bool
 	// runningBar is a key for *pState.parkedBars
 	runningBar *Bar
 

@@ -91,7 +91,7 @@ func BarFillerOnComplete(message string) BarOption {
 // BarFillerMiddleware provides a way to augment default BarFiller.
 func BarFillerMiddleware(middle func(BarFiller) BarFiller) BarOption {
 	return func(s *bState) {
-		s.filler = middle(s.filler)
+		s.middleware = middle
 	}
 }
 
