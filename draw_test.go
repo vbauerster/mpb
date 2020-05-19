@@ -9,14 +9,15 @@ import (
 func TestDraw(t *testing.T) {
 	// key is termWidth
 	testSuite := map[int][]struct {
-		name           string
-		style          string
-		total, current int64
-		barWidth       int
-		trim           bool
-		reverse        bool
-		refill         int64
-		want           string
+		name     string
+		style    string
+		total    int64
+		current  int64
+		refill   int64
+		barWidth int
+		trim     bool
+		reverse  bool
+		want     string
 	}{
 		0: {
 			{
