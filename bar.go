@@ -291,7 +291,7 @@ func (b *Bar) serve(ctx context.Context, s *bState) {
 			close(b.done)
 			// Notifying decorators about shutdown event
 			for _, sl := range s.shutdownListeners {
-				go sl.Shutdown()
+				sl.Shutdown()
 			}
 			return
 		}
