@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -14,7 +15,7 @@ func main() {
 	var wg sync.WaitGroup
 	p := mpb.New(mpb.WithWaitGroup(&wg), mpb.WithDebugOutput(os.Stderr))
 
-	wantPanic := "Some really long panic panic panic panic panic panic panic, really it is very long"
+	wantPanic := strings.Repeat("Panic ", 64)
 	numBars := 3
 	wg.Add(numBars)
 
@@ -35,8 +36,8 @@ func main() {
 }
 
 func panicDecorator(name, panicMsg string) decor.Decorator {
-	return decor.Any(func(s decor.Statistics) string {
-		if s.ID == 1 && s.Current >= 42 {
+	return decor.Any(func(st decor.Statistics) string {
+		if st.ID == 1 && st.Current >= 42 {
 			panic(panicMsg)
 		}
 		return name
