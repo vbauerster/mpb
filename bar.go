@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"runtime/debug"
 	"strings"
 	"time"
 
@@ -298,25 +299,29 @@ func (b *Bar) serve(ctx context.Context, s *bState) {
 }
 
 func (b *Bar) render(tw int) {
-	if b.recoveredPanic != nil {
-		b.toShutdown = false
-		b.frameCh <- b.panicToFrame(tw)
-		return
-	}
 	select {
 	case b.operateState <- func(s *bState) {
+		stat := newStatistics(tw, s)
 		defer func() {
 			// recovering if user defined decorator panics for example
 			if p := recover(); p != nil {
-				b.dlogger.Println(p)
+				var sb strings.Builder
+				fmt.Fprintf(&sb, "%#v\n", stat)
+				sb.Write(debug.Stack())
+				stack := sb.String()
+				nlc := strings.Count(stack, "\n")
+				s.extender = func(r io.Reader, _ int, _ decor.Statistics) (io.Reader, int) {
+					return io.MultiReader(r, strings.NewReader(stack)), nlc
+				}
 				b.recoveredPanic = p
-				b.toShutdown = !s.completeFlushed
-				b.frameCh <- b.panicToFrame(tw)
+				b.extendedLines = nlc
+				b.toShutdown = true
+				b.frameCh <- io.MultiReader(b.panicToFrame(tw), strings.NewReader(stack))
+				b.dlogger.Println(p)
 			}
 		}()
 
-		st := newStatistics(tw, s)
-		frame, lines := s.extender(s.draw(st), s.reqWidth, st)
+		frame, lines := s.extender(s.draw(stat), s.reqWidth, stat)
 		b.extendedLines = lines
 
 		b.toShutdown = s.toComplete && !s.completeFlushed
@@ -325,15 +330,21 @@ func (b *Bar) render(tw int) {
 	}:
 	case <-b.done:
 		s := b.cacheState
-		st := newStatistics(tw, s)
-		frame, lines := s.extender(s.draw(st), s.reqWidth, st)
+		stat := newStatistics(tw, s)
+		var r io.Reader
+		if b.recoveredPanic != nil {
+			r = b.panicToFrame(tw)
+		} else {
+			r = s.draw(stat)
+		}
+		frame, lines := s.extender(r, s.reqWidth, stat)
 		b.extendedLines = lines
 		b.frameCh <- frame
 	}
 }
 
-func (b *Bar) panicToFrame(termWidth int) io.Reader {
-	return strings.NewReader(fmt.Sprintf(fmt.Sprintf("%%.%dv\n", termWidth), b.recoveredPanic))
+func (b *Bar) panicToFrame(tw int) io.Reader {
+	return strings.NewReader(runewidth.Truncate(fmt.Sprint(b.recoveredPanic), tw, "…") + "\n")
 }
 
 func (b *Bar) subscribeDecorators() {

@@ -247,11 +247,16 @@ func (s *pState) flush(cw *cwriter.Writer) error {
 		b := heap.Pop(&s.bHeap).(*Bar)
 		cw.ReadFrom(<-b.frameCh)
 		if b.toShutdown {
-			// shutdown at next flush
-			// this ensures no bar ends up with less than 100% rendered
-			defer func() {
+			if b.recoveredPanic != nil {
 				s.barShutdownQueue = append(s.barShutdownQueue, b)
-			}()
+				b.toShutdown = false
+			} else {
+				// shutdown at next flush
+				// this ensures no bar ends up with less than 100% rendered
+				defer func() {
+					s.barShutdownQueue = append(s.barShutdownQueue, b)
+				}()
+			}
 		}
 		lineCount += b.extendedLines + 1
 		bm[b] = struct{}{}
