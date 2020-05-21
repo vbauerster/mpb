@@ -305,25 +305,17 @@ func (b *Bar) render(tw int) {
 		defer func() {
 			// recovering if user defined decorator panics for example
 			if p := recover(); p != nil {
-				var sb strings.Builder
-				fmt.Fprintf(&sb, "%#v\n", stat)
-				sb.Write(debug.Stack())
-				stack := sb.String()
-				nlc := strings.Count(stack, "\n")
-				s.extender = func(r io.Reader, _ int, _ decor.Statistics) (io.Reader, int) {
-					return io.MultiReader(r, strings.NewReader(stack)), nlc
-				}
-				b.recoveredPanic = p
-				b.extendedLines = nlc
+				go b.dlogger.Println(p)
+				s.extender = makePanicExtender(p)
+				frame, lines := s.extender(nil, s.reqWidth, stat)
+				b.extendedLines = lines
 				b.toShutdown = true
-				b.frameCh <- io.MultiReader(b.panicToFrame(tw), strings.NewReader(stack))
-				b.dlogger.Println(p)
+				b.recoveredPanic = p
+				b.frameCh <- frame
 			}
 		}()
-
 		frame, lines := s.extender(s.draw(stat), s.reqWidth, stat)
 		b.extendedLines = lines
-
 		b.toShutdown = s.toComplete && !s.completeFlushed
 		s.completeFlushed = s.toComplete
 		b.frameCh <- frame
@@ -332,19 +324,13 @@ func (b *Bar) render(tw int) {
 		s := b.cacheState
 		stat := newStatistics(tw, s)
 		var r io.Reader
-		if b.recoveredPanic != nil {
-			r = b.panicToFrame(tw)
-		} else {
+		if b.recoveredPanic == nil {
 			r = s.draw(stat)
 		}
 		frame, lines := s.extender(r, s.reqWidth, stat)
 		b.extendedLines = lines
 		b.frameCh <- frame
 	}
-}
-
-func (b *Bar) panicToFrame(tw int) io.Reader {
-	return strings.NewReader(runewidth.Truncate(fmt.Sprint(b.recoveredPanic), tw, "…") + "\n")
 }
 
 func (b *Bar) subscribeDecorators() {
@@ -474,5 +460,19 @@ func ewmaIterationUpdate(done bool, s *bState, dur time.Duration) {
 	}
 	for _, d := range s.ewmaDecorators {
 		d.EwmaUpdate(s.lastN, dur)
+	}
+}
+
+func makePanicExtender(p interface{}) extFunc {
+	pstr := fmt.Sprint(p)
+	stack := debug.Stack()
+	stackLines := bytes.Count(stack, []byte("\n"))
+	return func(_ io.Reader, _ int, st decor.Statistics) (io.Reader, int) {
+		mr := io.MultiReader(
+			strings.NewReader(runewidth.Truncate(pstr, st.AvailableWidth, "…")),
+			strings.NewReader(fmt.Sprintf("\n%#v\n", st)),
+			bytes.NewReader(stack),
+		)
+		return mr, stackLines + 1
 	}
 }
