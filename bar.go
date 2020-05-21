@@ -317,8 +317,8 @@ func (b *Bar) render(tw int) {
 		frame, lines := s.extender(s.draw(stat), s.reqWidth, stat)
 		b.extendedLines = lines
 		b.toShutdown = s.toComplete && !s.completeFlushed
-		s.completeFlushed = s.toComplete
 		b.frameCh <- frame
+		s.completeFlushed = s.toComplete
 	}:
 	case <-b.done:
 		s := b.cacheState
