@@ -212,9 +212,14 @@ func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 			op(s)
 		case <-p.refreshCh:
 			if err := s.render(cw); err != nil {
-				go p.dlogger.Println(err)
+				p.dlogger.Println(err)
 			}
 		case <-s.shutdownNotifier:
+			if s.heapUpdated {
+				if err := s.render(cw); err != nil {
+					p.dlogger.Println(err)
+				}
+			}
 			return
 		}
 	}
