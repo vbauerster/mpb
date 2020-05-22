@@ -308,17 +308,17 @@ func (b *Bar) render(tw int) {
 				s.extender = makePanicExtender(p)
 				frame, lines := s.extender(nil, s.reqWidth, stat)
 				b.extendedLines = lines
-				b.toShutdown = true
+				b.toShutdown = !b.toShutdown
 				b.recoveredPanic = p
 				b.frameCh <- frame
 				b.dlogger.Println(p)
 			}
+			s.completeFlushed = s.toComplete
 		}()
 		frame, lines := s.extender(s.draw(stat), s.reqWidth, stat)
 		b.extendedLines = lines
 		b.toShutdown = s.toComplete && !s.completeFlushed
 		b.frameCh <- frame
-		s.completeFlushed = s.toComplete
 	}:
 	case <-b.done:
 		s := b.cacheState
