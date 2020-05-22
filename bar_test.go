@@ -170,7 +170,11 @@ func TestBarStyle(t *testing.T) {
 
 func TestBarPanicBeforeComplete(t *testing.T) {
 	var buf bytes.Buffer
-	p := New(WithDebugOutput(&buf), WithOutput(ioutil.Discard))
+	p := New(
+		WithDebugOutput(&buf),
+		WithOutput(ioutil.Discard),
+		WithWidth(80),
+	)
 
 	total := 100
 	panicMsg := "Upps!!!"
@@ -206,7 +210,11 @@ func TestBarPanicBeforeComplete(t *testing.T) {
 
 func TestBarPanicAfterComplete(t *testing.T) {
 	var buf bytes.Buffer
-	p := New(WithDebugOutput(&buf), WithOutput(ioutil.Discard))
+	p := New(
+		WithDebugOutput(&buf),
+		WithOutput(ioutil.Discard),
+		WithWidth(80),
+	)
 
 	total := 100
 	panicMsg := "Upps!!!"
@@ -241,23 +249,10 @@ func TestBarPanicAfterComplete(t *testing.T) {
 }
 
 func panicDecorator(panicMsg string, cond func(decor.Statistics) bool) decor.Decorator {
-	d := &decorator{
-		panicMsg: panicMsg,
-		cond:     cond,
-	}
-	d.Init()
-	return d
-}
-
-type decorator struct {
-	decor.WC
-	panicMsg string
-	cond     func(decor.Statistics) bool
-}
-
-func (d *decorator) Decor(st decor.Statistics) string {
-	if d.cond(st) {
-		panic(d.panicMsg)
-	}
-	return d.FormatMsg("")
+	return decor.Any(func(st decor.Statistics) string {
+		if cond(st) {
+			panic(panicMsg)
+		}
+		return ""
+	})
 }
