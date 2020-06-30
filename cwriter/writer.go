@@ -3,7 +3,6 @@ package cwriter
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"io"
 	"os"
 
@@ -13,7 +12,7 @@ import (
 // NotATTY not a TeleTYpewriter error.
 var NotATTY = errors.New("not a terminal")
 
-var cuuAndEd = fmt.Sprintf("%c[%%dA%[1]c[J", 27)
+const cuuAndEd = "\x1b[%dA\x1b[J"
 
 // Writer is a buffered the writer that updates the terminal. The
 // contents of writer will be flushed when Flush is called.
