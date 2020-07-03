@@ -305,11 +305,13 @@ func (b *Bar) render(tw int) {
 		defer func() {
 			// recovering if user defined decorator panics for example
 			if p := recover(); p != nil {
-				s.extender = makePanicExtender(p)
+				if b.recoveredPanic == nil {
+					s.extender = makePanicExtender(p)
+					b.toShutdown = !b.toShutdown
+					b.recoveredPanic = p
+				}
 				frame, lines := s.extender(nil, s.reqWidth, stat)
 				b.extendedLines = lines
-				b.toShutdown = !b.toShutdown
-				b.recoveredPanic = p
 				b.frameCh <- frame
 				b.dlogger.Println(p)
 			}
