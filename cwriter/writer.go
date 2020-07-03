@@ -43,7 +43,10 @@ func New(out io.Writer) *Writer {
 func (w *Writer) Flush(lineCount int) (err error) {
 	// some terminals interpret clear 0 lines as clear 1
 	if w.lineCount > 0 {
-		w.clearLines()
+		err = w.clearLines()
+		if err != nil {
+			return
+		}
 	}
 	w.lineCount = lineCount
 	_, err = w.buf.WriteTo(w.out)
@@ -75,8 +78,9 @@ func (w *Writer) GetWidth() (int, error) {
 	return tw, err
 }
 
-func (w *Writer) ansiCuuAndEd() {
+func (w *Writer) ansiCuuAndEd() (err error) {
 	buf := make([]byte, 8)
 	buf = strconv.AppendInt(buf[:copy(buf, escOpen)], int64(w.lineCount), 10)
-	w.out.Write(append(buf, cuuAndEd...))
+	_, err = w.out.Write(append(buf, cuuAndEd...))
+	return
 }
