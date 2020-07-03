@@ -237,8 +237,8 @@ func TestBarPanicAfterComplete(t *testing.T) {
 
 	p.Wait()
 
-	if pCount != 1 {
-		t.Errorf("Decor called after panic %d times\n", pCount-1)
+	if pCount > 2 {
+		t.Error("Decor called after panic more than 2 times\n")
 	}
 
 	barStr := buf.String()
