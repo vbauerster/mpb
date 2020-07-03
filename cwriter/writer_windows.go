@@ -40,6 +40,7 @@ type consoleScreenBufferInfo struct {
 func (w *Writer) clearLines() {
 	if !w.isTerminal && isatty.IsCygwinTerminal(w.fd) {
 		w.ansiCuuAndEd()
+		return
 	}
 
 	info := new(consoleScreenBufferInfo)
