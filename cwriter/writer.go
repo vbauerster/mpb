@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"os"
+	"strconv"
 
 	"github.com/mattn/go-isatty"
 )
@@ -12,7 +13,11 @@ import (
 // NotATTY not a TeleTYpewriter error.
 var NotATTY = errors.New("not a terminal")
 
-const cuuAndEd = "\x1b[%dA\x1b[J"
+// http://ascii-table.com/ansi-escape-sequences.php
+const (
+	escOpen  = "\x1b["
+	cuuAndEd = "A\x1b[J"
+)
 
 // Writer is a buffered the writer that updates the terminal. The
 // contents of writer will be flushed when Flush is called.
@@ -68,4 +73,10 @@ func (w *Writer) GetWidth() (int, error) {
 	}
 	tw, _, err := GetSize(w.fd)
 	return tw, err
+}
+
+func (w *Writer) ansiCuuAndEd() {
+	buf := make([]byte, 8)
+	buf = strconv.AppendInt(buf[:copy(buf, escOpen)], int64(w.lineCount), 10)
+	w.out.Write(append(buf, cuuAndEd...))
 }

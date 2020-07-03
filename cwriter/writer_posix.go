@@ -3,13 +3,11 @@
 package cwriter
 
 import (
-	"fmt"
-
 	"golang.org/x/sys/unix"
 )
 
 func (w *Writer) clearLines() {
-	fmt.Fprintf(w.out, cuuAndEd, w.lineCount)
+	w.ansiCuuAndEd()
 }
 
 // GetSize returns the dimensions of the given terminal.

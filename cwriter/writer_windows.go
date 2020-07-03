@@ -3,9 +3,10 @@
 package cwriter
 
 import (
-	"fmt"
 	"syscall"
 	"unsafe"
+
+	"github.com/mattn/go-isatty"
 )
 
 var kernel32 = syscall.NewLazyDLL("kernel32.dll")
@@ -37,8 +38,8 @@ type consoleScreenBufferInfo struct {
 }
 
 func (w *Writer) clearLines() {
-	if !w.isTerminal {
-		fmt.Fprintf(w.out, cuuAndEd, w.lineCount)
+	if !w.isTerminal && isatty.IsCygwinTerminal(w.fd) {
+		w.ansiCuuAndEd()
 	}
 
 	info := new(consoleScreenBufferInfo)
