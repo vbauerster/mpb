@@ -59,8 +59,8 @@ func GetSize(fd uintptr) (width, height int, err error) {
 	if err := windows.GetConsoleScreenBufferInfo(windows.Handle(fd), &info); err != nil {
 		return 0, 0, err
 	}
-	// terminal.GetSize from crypto/ssh returns following line with both "+ 1",
-	// but looks like this causing issue #66. Removing both "+ 1" fixed the issue.
-	// return int(info.Window.Right - info.Window.Left + 1), int(info.Window.Bottom - info.Window.Top + 1), nil
+	// terminal.GetSize from crypto/ssh adds "+ 1" to both width and height:
+	// https://go.googlesource.com/crypto/+/refs/heads/release-branch.go1.14/ssh/terminal/util_windows.go#75
+	// but looks like this is a root cause of issue #66, so removing both "+ 1" have fixed it.
 	return int(info.Window.Right - info.Window.Left), int(info.Window.Bottom - info.Window.Top), nil
 }
