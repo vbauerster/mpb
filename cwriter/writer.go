@@ -6,8 +6,6 @@ import (
 	"io"
 	"os"
 	"strconv"
-
-	"github.com/mattn/go-isatty"
 )
 
 // NotATTY not a TeleTYpewriter error.
@@ -25,7 +23,7 @@ type Writer struct {
 	out        io.Writer
 	buf        bytes.Buffer
 	lineCount  int
-	fd         uintptr
+	fd         int
 	isTerminal bool
 }
 
@@ -33,8 +31,8 @@ type Writer struct {
 func New(out io.Writer) *Writer {
 	w := &Writer{out: out}
 	if f, ok := out.(*os.File); ok {
-		w.fd = f.Fd()
-		w.isTerminal = isatty.IsTerminal(w.fd)
+		w.fd = int(f.Fd())
+		w.isTerminal = IsTerminal(w.fd)
 	}
 	return w
 }

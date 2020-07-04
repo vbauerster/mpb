@@ -5,7 +5,6 @@ package cwriter
 import (
 	"unsafe"
 
-	"github.com/mattn/go-isatty"
 	"golang.org/x/sys/windows"
 )
 
@@ -17,7 +16,8 @@ var (
 )
 
 func (w *Writer) clearLines() error {
-	if !w.isTerminal && isatty.IsCygwinTerminal(w.fd) {
+	if !w.isTerminal {
+		// hope it's cygwin or similar
 		return w.ansiCuuAndEd()
 	}
 
@@ -31,7 +31,7 @@ func (w *Writer) clearLines() error {
 		info.CursorPosition.Y = 0
 	}
 	_, _, _ = procSetConsoleCursorPosition.Call(
-		w.fd,
+		uintptr(w.fd),
 		uintptr(uint32(uint16(info.CursorPosition.Y))<<16|uint32(uint16(info.CursorPosition.X))),
 	)
 
@@ -42,7 +42,7 @@ func (w *Writer) clearLines() error {
 	}
 	count := uint32(info.Size.X) * uint32(w.lineCount)
 	_, _, _ = procFillConsoleOutputCharacter.Call(
-		w.fd,
+		uintptr(w.fd),
 		uintptr(' '),
 		uintptr(count),
 		*(*uintptr)(unsafe.Pointer(cursor)),
@@ -54,7 +54,7 @@ func (w *Writer) clearLines() error {
 // GetSize returns the visible dimensions of the given terminal.
 //
 // These dimensions don't include any scrollback buffer height.
-func GetSize(fd uintptr) (width, height int, err error) {
+func GetSize(fd int) (width, height int, err error) {
 	var info windows.ConsoleScreenBufferInfo
 	if err := windows.GetConsoleScreenBufferInfo(windows.Handle(fd), &info); err != nil {
 		return 0, 0, err
@@ -63,4 +63,11 @@ func GetSize(fd uintptr) (width, height int, err error) {
 	// https://go.googlesource.com/crypto/+/refs/heads/release-branch.go1.14/ssh/terminal/util_windows.go#75
 	// but looks like this is a root cause of issue #66, so removing both "+ 1" have fixed it.
 	return int(info.Window.Right - info.Window.Left), int(info.Window.Bottom - info.Window.Top), nil
+}
+
+// IsTerminal returns whether the given file descriptor is a terminal.
+func IsTerminal(fd int) bool {
+	var st uint32
+	err := windows.GetConsoleMode(windows.Handle(fd), &st)
+	return err == nil
 }
