@@ -139,7 +139,8 @@ func (b *Bar) SetRefill(amount int64) {
 
 // TraverseDecorators traverses all available decorators and calls cb func on each.
 func (b *Bar) TraverseDecorators(cb func(decor.Decorator)) {
-	b.operateState <- func(s *bState) {
+	select {
+	case b.operateState <- func(s *bState) {
 		for _, decorators := range [...][]decor.Decorator{
 			s.pDecorators,
 			s.aDecorators,
@@ -148,6 +149,8 @@ func (b *Bar) TraverseDecorators(cb func(decor.Decorator)) {
 				cb(extractBaseDecorator(d))
 			}
 		}
+	}:
+	case <-b.done:
 	}
 }
 
@@ -350,12 +353,15 @@ func (b *Bar) subscribeDecorators() {
 			shutdownListeners = append(shutdownListeners, d)
 		}
 	})
-	b.operateState <- func(s *bState) {
+	select {
+	case b.operateState <- func(s *bState) {
 		s.averageDecorators = averageDecorators
 		s.ewmaDecorators = ewmaDecorators
 		s.shutdownListeners = shutdownListeners
+	}:
+		b.hasEwmaDecorators = len(ewmaDecorators) != 0
+	case <-b.done:
 	}
-	b.hasEwmaDecorators = len(ewmaDecorators) != 0
 }
 
 func (b *Bar) refreshTillShutdown() {
