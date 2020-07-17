@@ -86,7 +86,7 @@ func newBar(container *Progress, bs *bState) *Bar {
 		noPop:        bs.noPop,
 		operateState: make(chan func(*bState)),
 		frameCh:      make(chan io.Reader, 1),
-		syncTableCh:  make(chan [][]chan int),
+		syncTableCh:  make(chan [][]chan int, 1),
 		completed:    make(chan bool, 1),
 		done:         make(chan struct{}),
 		cancel:       cancel,
