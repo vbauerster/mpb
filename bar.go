@@ -132,8 +132,11 @@ func (b *Bar) Current() int64 {
 // Given default bar style is "[=>-]<+", refill rune is '+'.
 // To set bar style use mpb.BarStyle(string) BarOption.
 func (b *Bar) SetRefill(amount int64) {
-	b.operateState <- func(s *bState) {
+	select {
+	case b.operateState <- func(s *bState) {
 		s.refill = amount
+	}:
+	case <-b.done:
 	}
 }
 
