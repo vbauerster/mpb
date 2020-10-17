@@ -25,8 +25,8 @@ import (
     "math/rand"
     "time"
 
-    "github.com/vbauerster/mpb/v5"
-    "github.com/vbauerster/mpb/v5/decor"
+    "github.com/vbauerster/mpb"
+    "github.com/vbauerster/mpb/decor"
 )
 
 func main() {
