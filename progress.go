@@ -8,6 +8,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"math"
 	"os"
 	"sync"
 	"time"
@@ -370,7 +371,7 @@ func (s *pState) makeBarState(total int64, filler BarFiller, options ...BarOptio
 	}
 
 	if s.popCompleted && !bs.noPop {
-		bs.priority = -1
+		bs.priority = -(math.MaxInt32 - s.idCount)
 	}
 
 	bs.bufP = bytes.NewBuffer(make([]byte, 0, 128))
