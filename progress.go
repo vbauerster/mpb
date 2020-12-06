@@ -41,7 +41,6 @@ type pState struct {
 	pMatrix          map[int][]chan int
 	aMatrix          map[int][]chan int
 	barShutdownQueue []*Bar
-	barPopQueue      []*Bar
 
 	// following are provided/overrided by user
 	idCount          int
@@ -302,26 +301,16 @@ func (s *pState) flush(cw *cwriter.Writer) error {
 			delete(s.parkedBars, b)
 			b.toDrop = true
 		}
+		if s.popCompleted && !b.noPop {
+			lineCount -= b.extendedLines + 1
+			b.toDrop = true
+		}
 		if b.toDrop {
 			delete(bm, b)
-			s.heapUpdated = true
-		} else if s.popCompleted {
-			if b := b; !b.noPop {
-				defer func() {
-					s.barPopQueue = append(s.barPopQueue, b)
-				}()
-			}
 		}
 		b.cancel()
 	}
 	s.barShutdownQueue = s.barShutdownQueue[0:0]
-
-	for _, b := range s.barPopQueue {
-		delete(bm, b)
-		s.heapUpdated = true
-		lineCount -= b.extendedLines + 1
-	}
-	s.barPopQueue = s.barPopQueue[0:0]
 
 	for b := range bm {
 		heap.Push(&s.bHeap, b)
