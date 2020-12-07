@@ -38,12 +38,12 @@ func TestBarID(t *testing.T) {
 	wantID := 11
 	bar := p.AddBar(int64(total), BarID(wantID))
 
-	go func(total int) {
+	go func() {
 		for i := 0; i < total; i++ {
 			time.Sleep(50 * time.Millisecond)
 			bar.Increment()
 		}
-	}(total)
+	}()
 
 	gotID := bar.ID()
 	if gotID != wantID {

@@ -4,7 +4,7 @@ import (
 	"sync"
 	"testing"
 
-	. "github.com/vbauerster/mpb/v5"
+	"github.com/vbauerster/mpb/v5"
 	"github.com/vbauerster/mpb/v5/decor"
 )
 
@@ -182,18 +182,20 @@ func testDecoratorConcurrently(t *testing.T, testCases [][]step) {
 		t.Fail()
 	}
 
-	numBars := len(testCases[0])
-	var wg sync.WaitGroup
 	for _, columnCase := range testCases {
-		wg.Add(numBars)
-		SyncWidth(toSyncMatrix(columnCase))
+		mpb.SyncWidth(toSyncMatrix(columnCase))
+		numBars := len(columnCase)
 		gott := make([]chan string, numBars)
-		for i := 0; i < numBars; i++ {
-			gott[i] = make(chan string, 1)
-			go func(s step, ch chan string) {
+		wg := new(sync.WaitGroup)
+		wg.Add(numBars)
+		for i, step := range columnCase {
+			step := step
+			ch := make(chan string, 1)
+			go func() {
 				defer wg.Done()
-				ch <- s.decorator.Decor(s.stat)
-			}(columnCase[i], gott[i])
+				ch <- step.decorator.Decor(step.stat)
+			}()
+			gott[i] = ch
 		}
 		wg.Wait()
 
