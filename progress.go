@@ -179,7 +179,7 @@ func (p *Progress) BarCount() int {
 	}
 }
 
-// Wait waits far all bars to complete and finally shutdowns container.
+// Wait waits for all bars to complete and finally shutdowns container.
 // After this method has been called, there is no way to reuse *Progress
 // instance.
 func (p *Progress) Wait() {
