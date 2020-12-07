@@ -372,17 +372,18 @@ func (s *pState) makeBarState(total int64, filler BarFiller, options ...BarOptio
 
 func syncWidth(matrix map[int][]chan int) {
 	for _, column := range matrix {
-		column := column
-		go func() {
-			var maxWidth int
-			for _, ch := range column {
-				if w := <-ch; w > maxWidth {
-					maxWidth = w
-				}
-			}
-			for _, ch := range column {
-				ch <- maxWidth
-			}
-		}()
+		go maxWidthDistributor(column)
+	}
+}
+
+var maxWidthDistributor = func(column []chan int) {
+	var maxWidth int
+	for _, ch := range column {
+		if w := <-ch; w > maxWidth {
+			maxWidth = w
+		}
+	}
+	for _, ch := range column {
+		ch <- maxWidth
 	}
 }
