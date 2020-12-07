@@ -307,6 +307,7 @@ func (s *pState) flush(cw *cwriter.Writer) error {
 		}
 		if b.toDrop {
 			delete(bm, b)
+			s.heapUpdated = true
 		}
 		b.cancel()
 	}
