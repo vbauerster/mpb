@@ -3,8 +3,8 @@ package mpb
 import (
 	"io"
 	"strings"
-	"unicode/utf8"
 
+	"github.com/mattn/go-runewidth"
 	"github.com/vbauerster/mpb/v5/decor"
 	"github.com/vbauerster/mpb/v5/internal"
 )
@@ -44,7 +44,7 @@ func (s *spinnerFiller) Fill(w io.Writer, reqWidth int, stat decor.Statistics) {
 	width := internal.WidthForBarFiller(reqWidth, stat.AvailableWidth)
 
 	frame := s.frames[s.count%uint(len(s.frames))]
-	frameWidth := utf8.RuneCountInString(frame)
+	frameWidth := runewidth.StringWidth(frame)
 
 	if width < frameWidth {
 		return
