@@ -61,37 +61,35 @@ func NewBarFiller(style string, reverse bool) BarFiller {
 		rwidth:  make([]int, len(DefaultBarStyle)),
 		reverse: reverse,
 	}
-	bf.SetStyle(style)
+	bf.parse(DefaultBarStyle)
+	if style != DefaultBarStyle {
+		bf.parse(style)
+	}
 	return bf
 }
 
-func (s *barFiller) SetStyle(style string) {
+func (s *barFiller) parse(style string) {
 	if !utf8.ValidString(style) {
 		panic("invalid bar style")
 	}
-	if style == "" {
-		style = DefaultBarStyle
-	}
-	src := make([][]byte, utf8.RuneCountInString(style))
+	rcount := utf8.RuneCountInString(style)
+	srcFormat := make([][]byte, rcount)
+	srcRwidth := make([]int, rcount)
 	i := 0
 	for _, r := range style {
-		s.rwidth[i] = runewidth.RuneWidth(r)
-		src[i] = []byte(string(r))
+		srcRwidth[i] = runewidth.RuneWidth(r)
+		srcFormat[i] = []byte(string(r))
 		i++
 	}
-	copy(s.format, src)
-	s.SetReverse(s.reverse)
-}
-
-func (s *barFiller) SetReverse(reverse bool) {
-	if reverse {
+	copy(s.format, srcFormat)
+	copy(s.rwidth, srcRwidth)
+	if s.reverse {
 		s.tip = s.format[rRevTip]
 		s.flush = reverseFlush
 	} else {
 		s.tip = s.format[rTip]
 		s.flush = regularFlush
 	}
-	s.reverse = reverse
 }
 
 func (s *barFiller) Fill(w io.Writer, reqWidth int, stat decor.Statistics) {
