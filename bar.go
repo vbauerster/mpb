@@ -128,9 +128,10 @@ func (b *Bar) Current() int64 {
 	}
 }
 
-// SetRefill fills bar with refill rune up to amount argument.
-// Given default bar style is "[=>-]<+", refill rune is '+'.
-// To set bar style use mpb.BarStyle(string) BarOption.
+// SetRefill sets refill flag with specified amount.
+// The underlying BarFiller will change its visual representation, to
+// indicate refill event. Refill event may be referred to some retry
+// operation for example.
 func (b *Bar) SetRefill(amount int64) {
 	select {
 	case b.operateState <- func(s *bState) {
