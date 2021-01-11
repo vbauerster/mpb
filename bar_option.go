@@ -132,75 +132,11 @@ func BarFillerTrim() BarOption {
 	}
 }
 
-// TrimSpace is an alias to BarFillerTrim.
-func TrimSpace() BarOption {
-	return BarFillerTrim()
-}
-
-// BarStyle overrides mpb.DefaultBarStyle which is "[=>-]<+".
-// It's ok to pass string containing just 5 runes, for example "╢▌▌░╟",
-// if you don't need to override '<' (reverse tip) and '+' (refill rune).
-func BarStyle(style string) BarOption {
-	if style == "" {
-		return nil
-	}
-	type styleSetter interface {
-		SetStyle(string)
-	}
-	return func(s *bState) {
-		if t, ok := s.filler.(styleSetter); ok {
-			t.SetStyle(style)
-		}
-	}
-}
-
 // BarNoPop disables bar pop out of container. Effective when
 // PopCompletedMode of container is enabled.
 func BarNoPop() BarOption {
 	return func(s *bState) {
 		s.noPop = true
-	}
-}
-
-// BarReverse reverse mode, bar will progress from right to left.
-func BarReverse() BarOption {
-	type revSetter interface {
-		SetReverse(bool)
-	}
-	return func(s *bState) {
-		if t, ok := s.filler.(revSetter); ok {
-			t.SetReverse(true)
-		}
-	}
-}
-
-// SpinnerStyle sets custom spinner style.
-// Effective when Filler type is spinner.
-func SpinnerStyle(frames []string) BarOption {
-	if len(frames) == 0 {
-		return nil
-	}
-	chk := func(filler BarFiller) (interface{}, bool) {
-		t, ok := filler.(*spinnerFiller)
-		return t, ok
-	}
-	cb := func(t interface{}) {
-		t.(*spinnerFiller).frames = frames
-	}
-	return MakeFillerTypeSpecificBarOption(chk, cb)
-}
-
-// MakeFillerTypeSpecificBarOption makes BarOption specific to Filler's
-// actual type. If you implement your own Filler, so most probably
-// you'll need this. See BarStyle or SpinnerStyle for example.
-func MakeFillerTypeSpecificBarOption(
-	typeChecker func(BarFiller) (interface{}, bool),
-	cb func(interface{}),
-) BarOption {
-	return func(s *bState) {
-		if t, ok := typeChecker(s.filler); ok {
-			cb(t)
-		}
 	}
 }
 
