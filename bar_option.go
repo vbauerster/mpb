@@ -123,9 +123,7 @@ func makeExtFunc(filler BarFiller) extFunc {
 	}
 }
 
-// BarFillerTrim bar filler is rendered with leading and trailing space
-// like ' [===] ' by default. With this option leading and trailing
-// space will be removed.
+// BarFillerTrim removes leading and trailing space around the underlying BarFiller.
 func BarFillerTrim() BarOption {
 	return func(s *bState) {
 		s.trimSpace = true
