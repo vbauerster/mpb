@@ -8,16 +8,17 @@
 
 ## Features
 
-* __Multiple Bars__: Multiple progress bars are supported
-* __Dynamic Total__: Set total while bar is running
-* __Dynamic Add/Remove__: Dynamically add or remove bars
-* __Cancellation__: Cancel whole rendering process
-* __Predefined Decorators__: Elapsed time, [ewma](https://github.com/VividCortex/ewma) based ETA, Percentage, Bytes counter
-* __Decorator's width sync__:  Synchronized decorator's width among multiple bars
+- **Multiple Bars**: Multiple progress bars are supported
+- **Dynamic Total**: Set total while bar is running
+- **Dynamic Add/Remove**: Dynamically add or remove bars
+- **Cancellation**: Cancel whole rendering process
+- **Predefined Decorators**: Elapsed time, [ewma](https://github.com/VividCortex/ewma) based ETA, Percentage, Bytes counter
+- **Decorator's width sync**: Synchronized decorator's width among multiple bars
 
 ## Usage
 
 #### [Rendering single bar](_examples/singleBar/main.go)
+
 ```go
 package main
 
@@ -36,9 +37,9 @@ func main() {
     total := 100
     name := "Single Bar:"
     // adding a single bar, which will inherit container's width
-    bar := p.AddBar(int64(total),
-        // override DefaultBarStyle, which is "[=>-]<+"
-        mpb.BarStyle("╢▌▌░╟"),
+    bar := p.Add(int64(total),
+        // progress bar filler with customized style
+        mpb.NewBarFiller("╢▌▌░╟"),
         mpb.PrependDecorators(
             // display our name with one space on the right
             decor.Name(name, decor.WC{W: len(name) + 1, C: decor.DidentRight}),
@@ -61,6 +62,7 @@ func main() {
 ```
 
 #### [Rendering multiple bars](_examples/multiBars/main.go)
+
 ```go
     var wg sync.WaitGroup
     // pass &wg (optional), so p will wait for it eventually
