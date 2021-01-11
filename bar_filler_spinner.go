@@ -28,7 +28,8 @@ type spinnerFiller struct {
 	alignment SpinnerAlignment
 }
 
-// NewSpinnerFiller constucts mpb.BarFiller, to be used with *Progress.Add(...) *Bar method.
+// NewSpinnerFiller returns a BarFiller implementation which renders a spinner.
+// To be used with *Progress.Add(...) *Bar method.
 func NewSpinnerFiller(style []string, alignment SpinnerAlignment) BarFiller {
 	if len(style) == 0 {
 		style = DefaultSpinnerStyle
