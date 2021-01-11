@@ -104,8 +104,7 @@ func BarPriority(priority int) BarOption {
 	}
 }
 
-// BarExtender is an option to extend bar to the next new line, with
-// arbitrary output.
+// BarExtender provides a way to extend bar to the next new line.
 func BarExtender(filler BarFiller) BarOption {
 	if filler == nil {
 		return nil
