@@ -24,7 +24,7 @@ func main() {
 				decor.AverageETA(decor.ET_STYLE_GO), "done",
 			),
 		),
-		mpb.BarExtender(nlBarFiller(mpb.NewBarFiller("╢▌▌░╟", false))),
+		mpb.BarExtender(nlBarFiller(mpb.NewBarFiller("╢▌▌░╟"))),
 	)
 	// simulating some work
 	max := 100 * time.Millisecond

@@ -14,18 +14,19 @@ func main() {
 	var wg sync.WaitGroup
 	p := mpb.New(
 		mpb.WithWaitGroup(&wg),
-		mpb.WithWidth(13),
+		mpb.WithWidth(14),
 	)
 	total, numBars := 101, 3
 	wg.Add(numBars)
+
+	spinnerStyle := []string{"∙∙∙", "●∙∙", "∙●∙", "∙∙●", "∙∙∙"}
 
 	for i := 0; i < numBars; i++ {
 		name := fmt.Sprintf("Bar#%d:", i)
 		var bar *mpb.Bar
 		if i == 0 {
-			bar = p.AddBar(int64(total),
-				// override mpb.DefaultBarStyle, which is "[=>-]<+"
-				mpb.BarStyle("╢▌▌░╟"),
+			bar = p.Add(int64(total),
+				mpb.NewBarFiller("╢▌▌░╟"),
 				mpb.PrependDecorators(
 					// simple name decorator
 					decor.Name(name),
@@ -39,9 +40,8 @@ func main() {
 				),
 			)
 		} else {
-			bar = p.AddSpinner(int64(total), mpb.SpinnerOnMiddle,
-				// override mpb.DefaultSpinnerStyle
-				mpb.SpinnerStyle([]string{"∙∙∙", "●∙∙", "∙●∙", "∙∙●", "∙∙∙"}),
+			bar = p.Add(int64(total),
+				mpb.NewSpinnerFiller(spinnerStyle, mpb.SpinnerOnMiddle),
 				mpb.PrependDecorators(
 					// simple name decorator
 					decor.Name(name),

@@ -42,12 +42,8 @@ func main() {
 				}
 			})
 		}),
-		mpb.PrependDecorators(
-			decor.Name("my bar:"),
-		),
-		mpb.AppendDecorators(
-			newCustomPercentage(nextCh),
-		),
+		mpb.PrependDecorators(decor.Name("my bar:")),
+		mpb.AppendDecorators(newCustomPercentage(nextCh)),
 	)
 	ew := &errorWrapper{}
 	time.AfterFunc(2*time.Second, func() {

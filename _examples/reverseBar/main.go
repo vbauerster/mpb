@@ -19,9 +19,9 @@ func main() {
 
 	for i := 0; i < numBars; i++ {
 		name := fmt.Sprintf("Bar#%d:", i)
-		bar := p.AddBar(int64(total),
+		bar := p.Add(int64(total),
 			// reverse Bar#1
-			mpb.BarOptOn(mpb.BarReverse(), func() bool { return i == 1 }),
+			mpb.NewBarFillerRev("", func() bool { return i == 1 }),
 			mpb.PrependDecorators(
 				// simple name decorator
 				decor.Name(name),
