@@ -106,7 +106,7 @@ func (p *Progress) AddSpinner(total int64, alignment SpinnerAlignment, options .
 }
 
 // Add creates a bar which renders itself by provided filler.
-// Set total to 0, if you plan to update it later.
+// If `total <= 0` trigger complete event is disabled until reset with *bar.SetTotal(int64, bool).
 // Panics if *Progress instance is done, i.e. called after *Progress.Wait().
 func (p *Progress) Add(total int64, filler BarFiller, options ...BarOption) *Bar {
 	if filler == nil {
@@ -347,6 +347,10 @@ func (s *pState) makeBarState(total int64, filler BarFiller, options ...BarOptio
 		filler:   filler,
 		extender: func(r io.Reader, _ int, _ decor.Statistics) (io.Reader, int) { return r, 0 },
 		debugOut: s.debugOut,
+	}
+
+	if total > 0 {
+		bs.triggerComplete = true
 	}
 
 	for _, opt := range options {
