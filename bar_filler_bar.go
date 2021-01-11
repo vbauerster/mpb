@@ -54,15 +54,21 @@ type space struct {
 	count  int
 }
 
-// NewBarFiller constucts mpb.BarFiller, to be used with *Progress.Add(...) *Bar method.
-func NewBarFiller(style string, reverse bool) BarFiller {
+// NewBarFiller returns a BarFiller implementation which renders a
+// classic progress bar. To be used with *Progress.Add(...) *Bar method.
+func NewBarFiller(style string) BarFiller {
+	return NewBarFillerRev(style, func() bool { return false })
+}
+
+// NewBarFillerRev same as NewBarFiller but with explicit reverse option.
+func NewBarFillerRev(style string, rev func() bool) BarFiller {
 	bf := &barFiller{
 		format:  make([][]byte, len(DefaultBarStyle)),
 		rwidth:  make([]int, len(DefaultBarStyle)),
-		reverse: reverse,
+		reverse: rev(),
 	}
 	bf.parse(DefaultBarStyle)
-	if style != DefaultBarStyle {
+	if style != "" && style != DefaultBarStyle {
 		bf.parse(style)
 	}
 	return bf

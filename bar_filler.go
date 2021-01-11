@@ -15,7 +15,7 @@ import (
 //
 // Default implementations can be obtained via:
 //
-//	func NewBarFiller(style string, reverse bool) BarFiller
+//	func NewBarFiller(style string) BarFiller
 //	func NewSpinnerFiller(style []string, alignment SpinnerAlignment) BarFiller
 //
 type BarFiller interface {

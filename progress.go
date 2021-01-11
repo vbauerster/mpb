@@ -97,7 +97,7 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 
 // AddBar creates a new progress bar and adds it to the rendering queue.
 func (p *Progress) AddBar(total int64, options ...BarOption) *Bar {
-	return p.Add(total, NewBarFiller(DefaultBarStyle, false), options...)
+	return p.Add(total, NewBarFiller(DefaultBarStyle), options...)
 }
 
 // AddSpinner creates a new spinner bar and adds it to the rendering queue.
