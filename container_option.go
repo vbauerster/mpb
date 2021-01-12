@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/vbauerster/mpb/v5/internal"
+	"github.com/vbauerster/mpb/v6/internal"
 )
 
 // ContainerOption is a function option which changes the default

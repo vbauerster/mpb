@@ -6,8 +6,8 @@ import (
 	"unicode/utf8"
 
 	"github.com/mattn/go-runewidth"
-	"github.com/vbauerster/mpb/v5/decor"
-	"github.com/vbauerster/mpb/v5/internal"
+	"github.com/vbauerster/mpb/v6/decor"
+	"github.com/vbauerster/mpb/v6/internal"
 )
 
 const (
