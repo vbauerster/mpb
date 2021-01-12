@@ -19,8 +19,8 @@ const (
 	SpinnerOnRight
 )
 
-// DefaultSpinnerStyle is a slice of strings, which makes a spinner.
-var DefaultSpinnerStyle = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
+// SpinnerDefaultStyle is a style for rendering a spinner.
+var SpinnerDefaultStyle = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
 
 type spinnerFiller struct {
 	frames    []string
@@ -33,7 +33,7 @@ type spinnerFiller struct {
 // applied. To be used with `*Progress.Add(...) *Bar` method.
 func NewSpinnerFiller(style []string, alignment SpinnerAlignment) BarFiller {
 	if len(style) == 0 {
-		style = DefaultSpinnerStyle
+		style = SpinnerDefaultStyle
 	}
 	filler := &spinnerFiller{
 		frames:    style,

@@ -102,7 +102,7 @@ func (p *Progress) AddBar(total int64, options ...BarOption) *Bar {
 
 // AddSpinner creates a new spinner bar and adds it to the rendering queue.
 func (p *Progress) AddSpinner(total int64, alignment SpinnerAlignment, options ...BarOption) *Bar {
-	return p.Add(total, NewSpinnerFiller(DefaultSpinnerStyle, alignment), options...)
+	return p.Add(total, NewSpinnerFiller(SpinnerDefaultStyle, alignment), options...)
 }
 
 // Add creates a bar which renders itself by provided filler.
