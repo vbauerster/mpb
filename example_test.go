@@ -18,9 +18,9 @@ func Example() {
 	total := 100
 	name := "Single Bar:"
 	// adding a single bar, which will inherit container's width
-	bar := p.AddBar(int64(total),
-		// override DefaultBarStyle, which is "[=>-]<+"
-		mpb.BarStyle("╢▌▌░╟"),
+	bar := p.Add(int64(total),
+		// progress bar filler with customized style
+		mpb.NewBarFiller("╢▌▌░╟"),
 		mpb.PrependDecorators(
 			// display our name with one space on the right
 			decor.Name(name, decor.WC{W: len(name) + 1, C: decor.DidentRight}),
