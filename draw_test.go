@@ -367,12 +367,9 @@ func TestDraw(t *testing.T) {
 	}
 }
 
-func newTestState(style string, reverse bool) *bState {
-	if style == "" {
-		style = DefaultBarStyle
-	}
+func newTestState(style string, rev bool) *bState {
 	s := &bState{
-		filler: NewBarFiller(style, reverse),
+		filler: PickBarFiller(style, rev),
 		bufP:   new(bytes.Buffer),
 		bufB:   new(bytes.Buffer),
 		bufA:   new(bytes.Buffer),

@@ -55,17 +55,32 @@ type space struct {
 }
 
 // NewBarFiller returns a BarFiller implementation which renders a
-// classic progress bar. To be used with *Progress.Add(...) *Bar method.
+// progress bar in regular direction. If style is empty string,
+// BarDefaultStyle is applied. To be used with `*Progress.Add(...)
+// *Bar` method.
 func NewBarFiller(style string) BarFiller {
-	return NewBarFillerRev(style, func() bool { return false })
+	return newBarFiller(style, false)
 }
 
-// NewBarFillerRev same as NewBarFiller but with explicit reverse option.
-func NewBarFillerRev(style string, rev func() bool) BarFiller {
+// NewBarFillerRev returns a BarFiller implementation which renders a
+// progress bar in reverse direction. If style is empty string,
+// BarDefaultStyle is applied. To be used with `*Progress.Add(...)
+// *Bar` method.
+func NewBarFillerRev(style string) BarFiller {
+	return newBarFiller(style, true)
+}
+
+// PickBarFiller pick between regular and reverse BarFiller implementation
+// based on rev param. To be used with `*Progress.Add(...) *Bar` method.
+func PickBarFiller(style string, rev bool) BarFiller {
+	return newBarFiller(style, rev)
+}
+
+func newBarFiller(style string, rev bool) BarFiller {
 	bf := &barFiller{
-		reverse: rev(),
 		format:  make([][]byte, len(BarDefaultStyle)),
 		rwidth:  make([]int, len(BarDefaultStyle)),
+		reverse: rev,
 	}
 	bf.parse(BarDefaultStyle)
 	if style != "" && style != BarDefaultStyle {
