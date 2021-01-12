@@ -8,8 +8,8 @@ import (
 	"strconv"
 )
 
-// NotATTY not a TeleTYpewriter error.
-var NotATTY = errors.New("not a terminal")
+// ErrNotTTY not a TeleTYpewriter error.
+var ErrNotTTY = errors.New("not a terminal")
 
 // http://ascii-table.com/ansi-escape-sequences.php
 const (
@@ -70,7 +70,7 @@ func (w *Writer) ReadFrom(r io.Reader) (n int64, err error) {
 // GetWidth returns width of underlying terminal.
 func (w *Writer) GetWidth() (int, error) {
 	if !w.isTerminal {
-		return -1, NotATTY
+		return -1, ErrNotTTY
 	}
 	tw, _, err := GetSize(w.fd)
 	return tw, err
