@@ -114,7 +114,7 @@ func (s *barFiller) parse(style string) {
 }
 
 func (s *barFiller) Fill(w io.Writer, reqWidth int, stat decor.Statistics) {
-	width := internal.WidthForBarFiller(reqWidth, stat.AvailableWidth)
+	width := internal.CheckRequestedWidth(reqWidth, stat.AvailableWidth)
 	brackets := s.rwidth[rLeft] + s.rwidth[rRight]
 	if width < brackets {
 		return

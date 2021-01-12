@@ -1,8 +1,10 @@
 package internal
 
-func WidthForBarFiller(reqWidth, available int) int {
-	if reqWidth <= 0 || reqWidth >= available {
+// CheckRequestedWidth checks that requested width doesn't overflow
+// available width
+func CheckRequestedWidth(requested, available int) int {
+	if requested <= 0 || requested >= available {
 		return available
 	}
-	return reqWidth
+	return requested
 }
