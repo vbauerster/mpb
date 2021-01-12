@@ -33,7 +33,7 @@ func TestProxyReader(t *testing.T) {
 
 	tReader := &testReader{strings.NewReader(content), false}
 
-	bar := p.AddBar(int64(len(content)), mpb.TrimSpace())
+	bar := p.AddBar(int64(len(content)), mpb.BarFillerTrim())
 
 	var buf bytes.Buffer
 	_, err := io.Copy(&buf, bar.ProxyReader(tReader))
@@ -70,7 +70,7 @@ func TestProxyWriterTo(t *testing.T) {
 	wt := reader.(io.WriterTo)
 	tReader := &testWriterTo{reader, wt, false}
 
-	bar := p.AddBar(int64(len(content)), mpb.TrimSpace())
+	bar := p.AddBar(int64(len(content)), mpb.BarFillerTrim())
 
 	var buf bytes.Buffer
 	_, err := io.Copy(&buf, bar.ProxyReader(tReader))

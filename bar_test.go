@@ -10,12 +10,12 @@ import (
 	"time"
 	"unicode/utf8"
 
-	. "github.com/vbauerster/mpb/v5"
+	"github.com/vbauerster/mpb/v5"
 	"github.com/vbauerster/mpb/v5/decor"
 )
 
 func TestBarCompleted(t *testing.T) {
-	p := New(WithWidth(80), WithOutput(ioutil.Discard))
+	p := mpb.New(mpb.WithWidth(80), mpb.WithOutput(ioutil.Discard))
 	total := 80
 	bar := p.AddBar(int64(total))
 
@@ -33,10 +33,10 @@ func TestBarCompleted(t *testing.T) {
 }
 
 func TestBarID(t *testing.T) {
-	p := New(WithWidth(80), WithOutput(ioutil.Discard))
+	p := mpb.New(mpb.WithWidth(80), mpb.WithOutput(ioutil.Discard))
 	total := 100
 	wantID := 11
-	bar := p.AddBar(int64(total), BarID(wantID))
+	bar := p.AddBar(int64(total), mpb.BarID(wantID))
 
 	go func() {
 		for i := 0; i < total; i++ {
@@ -57,13 +57,13 @@ func TestBarID(t *testing.T) {
 func TestBarSetRefill(t *testing.T) {
 	var buf bytes.Buffer
 
-	p := New(WithOutput(&buf), WithWidth(100))
+	p := mpb.New(mpb.WithOutput(&buf), mpb.WithWidth(100))
 
 	total := 100
 	till := 30
-	refillRune, _ := utf8.DecodeLastRuneInString(DefaultBarStyle)
+	refillRune, _ := utf8.DecodeLastRuneInString(mpb.BarDefaultStyle)
 
-	bar := p.AddBar(int64(total), TrimSpace())
+	bar := p.AddBar(int64(total), mpb.BarFillerTrim())
 
 	bar.SetRefill(int64(till))
 	bar.IncrBy(till)
@@ -90,12 +90,12 @@ func TestBarSetRefill(t *testing.T) {
 func TestBarHas100PercentWithOnCompleteDecorator(t *testing.T) {
 	var buf bytes.Buffer
 
-	p := New(WithWidth(80), WithOutput(&buf))
+	p := mpb.New(mpb.WithWidth(80), mpb.WithOutput(&buf))
 
 	total := 50
 
 	bar := p.AddBar(int64(total),
-		AppendDecorators(
+		mpb.AppendDecorators(
 			decor.OnComplete(
 				decor.Percentage(), "done",
 			),
@@ -118,13 +118,13 @@ func TestBarHas100PercentWithOnCompleteDecorator(t *testing.T) {
 func TestBarHas100PercentWithBarRemoveOnComplete(t *testing.T) {
 	var buf bytes.Buffer
 
-	p := New(WithWidth(80), WithOutput(&buf))
+	p := mpb.New(mpb.WithWidth(80), mpb.WithOutput(&buf))
 
 	total := 50
 
 	bar := p.AddBar(int64(total),
-		BarRemoveOnComplete(),
-		AppendDecorators(decor.Percentage()),
+		mpb.BarRemoveOnComplete(),
+		mpb.AppendDecorators(decor.Percentage()),
 	)
 
 	for i := 0; i < total; i++ {
@@ -144,8 +144,8 @@ func TestBarStyle(t *testing.T) {
 	var buf bytes.Buffer
 	customFormat := "╢▌▌░╟"
 	total := 80
-	p := New(WithWidth(total), WithOutput(&buf))
-	bar := p.AddBar(int64(total), BarStyle(customFormat), TrimSpace())
+	p := mpb.New(mpb.WithWidth(total), mpb.WithOutput(&buf))
+	bar := p.Add(int64(total), mpb.NewBarFiller(customFormat), mpb.BarFillerTrim())
 
 	for i := 0; i < total; i++ {
 		bar.Increment()
@@ -169,17 +169,17 @@ func TestBarStyle(t *testing.T) {
 
 func TestBarPanicBeforeComplete(t *testing.T) {
 	var buf bytes.Buffer
-	p := New(
-		WithWidth(80),
-		WithDebugOutput(&buf),
-		WithOutput(ioutil.Discard),
+	p := mpb.New(
+		mpb.WithWidth(80),
+		mpb.WithDebugOutput(&buf),
+		mpb.WithOutput(ioutil.Discard),
 	)
 
 	total := 100
 	panicMsg := "Upps!!!"
 	var pCount uint32
 	bar := p.AddBar(int64(total),
-		PrependDecorators(panicDecorator(panicMsg,
+		mpb.PrependDecorators(panicDecorator(panicMsg,
 			func(st decor.Statistics) bool {
 				if st.Current >= 42 {
 					atomic.AddUint32(&pCount, 1)
@@ -209,17 +209,17 @@ func TestBarPanicBeforeComplete(t *testing.T) {
 
 func TestBarPanicAfterComplete(t *testing.T) {
 	var buf bytes.Buffer
-	p := New(
-		WithWidth(80),
-		WithDebugOutput(&buf),
-		WithOutput(ioutil.Discard),
+	p := mpb.New(
+		mpb.WithWidth(80),
+		mpb.WithDebugOutput(&buf),
+		mpb.WithOutput(ioutil.Discard),
 	)
 
 	total := 100
 	panicMsg := "Upps!!!"
 	var pCount uint32
 	bar := p.AddBar(int64(total),
-		PrependDecorators(panicDecorator(panicMsg,
+		mpb.PrependDecorators(panicDecorator(panicMsg,
 			func(st decor.Statistics) bool {
 				if st.Completed {
 					atomic.AddUint32(&pCount, 1)
