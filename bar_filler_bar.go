@@ -20,8 +20,8 @@ const (
 	rRefill
 )
 
-// DefaultBarStyle is a string containing 7 runes.
-// Each rune is a building block of a progress bar.
+// BarDefaultStyle is a style for rendering a progress bar.
+// It consist of 7 ordered runes:
 //
 //	'1st rune' stands for left boundary rune
 //
@@ -37,7 +37,7 @@ const (
 //
 //	'7th rune' stands for refill rune
 //
-const DefaultBarStyle string = "[=>-]<+"
+const BarDefaultStyle string = "[=>-]<+"
 
 type barFiller struct {
 	format  [][]byte
@@ -63,12 +63,12 @@ func NewBarFiller(style string) BarFiller {
 // NewBarFillerRev same as NewBarFiller but with explicit reverse option.
 func NewBarFillerRev(style string, rev func() bool) BarFiller {
 	bf := &barFiller{
-		format:  make([][]byte, len(DefaultBarStyle)),
-		rwidth:  make([]int, len(DefaultBarStyle)),
 		reverse: rev(),
+		format:  make([][]byte, len(BarDefaultStyle)),
+		rwidth:  make([]int, len(BarDefaultStyle)),
 	}
-	bf.parse(DefaultBarStyle)
-	if style != "" && style != DefaultBarStyle {
+	bf.parse(BarDefaultStyle)
+	if style != "" && style != BarDefaultStyle {
 		bf.parse(style)
 	}
 	return bf
