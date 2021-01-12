@@ -5,6 +5,8 @@ import (
 	"io/ioutil"
 	"sync"
 	"time"
+
+	"github.com/vbauerster/mpb/v5/internal"
 )
 
 // ContainerOption is a function option which changes the default
@@ -93,9 +95,15 @@ func PopCompletedMode() ContainerOption {
 	}
 }
 
-// ContainerOptOn returns option when condition evaluates to true.
-func ContainerOptOn(option ContainerOption, condition func() bool) ContainerOption {
-	if condition() {
+// ContainerOptional will invoke provided option only when pick is true.
+func ContainerOptional(option ContainerOption, pick bool) ContainerOption {
+	return ContainerOptOn(option, internal.Predicate(pick))
+}
+
+// ContainerOptOn will invoke provided option only when higher order
+// predicate evaluates to true.
+func ContainerOptOn(option ContainerOption, predicate func() bool) ContainerOption {
+	if predicate() {
 		return option
 	}
 	return nil
