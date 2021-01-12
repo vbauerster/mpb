@@ -115,13 +115,13 @@ func (s *barFiller) parse(style string) {
 
 func (s *barFiller) Fill(w io.Writer, reqWidth int, stat decor.Statistics) {
 	width := internal.WidthForBarFiller(reqWidth, stat.AvailableWidth)
-
-	if brackets := s.rwidth[rLeft] + s.rwidth[rRight]; width < brackets {
+	brackets := s.rwidth[rLeft] + s.rwidth[rRight]
+	if width < brackets {
 		return
-	} else {
-		// don't count brackets as progress
-		width -= brackets
 	}
+	// don't count brackets as progress
+	width -= brackets
+
 	w.Write(s.format[rLeft])
 	defer w.Write(s.format[rRight])
 
