@@ -369,7 +369,7 @@ func TestDraw(t *testing.T) {
 
 func newTestState(style string, rev bool) *bState {
 	s := &bState{
-		filler: PickBarFiller(style, rev),
+		filler: NewBarFillerPick(style, rev),
 		bufP:   new(bytes.Buffer),
 		bufB:   new(bytes.Buffer),
 		bufA:   new(bytes.Buffer),

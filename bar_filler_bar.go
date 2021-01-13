@@ -70,9 +70,9 @@ func NewBarFillerRev(style string) BarFiller {
 	return newBarFiller(style, true)
 }
 
-// PickBarFiller pick between regular and reverse BarFiller implementation
+// NewBarFillerPick pick between regular and reverse BarFiller implementation
 // based on rev param. To be used with `*Progress.Add(...) *Bar` method.
-func PickBarFiller(style string, rev bool) BarFiller {
+func NewBarFillerPick(style string, rev bool) BarFiller {
 	return newBarFiller(style, rev)
 }
 
