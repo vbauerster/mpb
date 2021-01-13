@@ -4,5 +4,5 @@ go 1.14
 
 require (
 	github.com/mattn/go-runewidth v0.0.9
-	github.com/vbauerster/mpb/v6 v6.0.0
+	github.com/vbauerster/mpb/v6 v6.0.1
 )
