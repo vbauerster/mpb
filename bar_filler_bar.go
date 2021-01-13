@@ -6,6 +6,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/mattn/go-runewidth"
+	"github.com/rivo/uniseg"
 	"github.com/vbauerster/mpb/v6/decor"
 	"github.com/vbauerster/mpb/v6/internal"
 )
@@ -93,14 +94,12 @@ func (s *barFiller) parse(style string) {
 	if !utf8.ValidString(style) {
 		panic("invalid bar style")
 	}
-	rcount := utf8.RuneCountInString(style)
-	srcFormat := make([][]byte, rcount)
-	srcRwidth := make([]int, rcount)
-	i := 0
-	for _, r := range style {
-		srcRwidth[i] = runewidth.RuneWidth(r)
-		srcFormat[i] = []byte(string(r))
-		i++
+	srcFormat := make([][]byte, 0, len(BarDefaultStyle))
+	srcRwidth := make([]int, 0, len(BarDefaultStyle))
+	gr := uniseg.NewGraphemes(style)
+	for gr.Next() {
+		srcFormat = append(srcFormat, gr.Bytes())
+		srcRwidth = append(srcRwidth, runewidth.StringWidth(gr.Str()))
 	}
 	copy(s.format, srcFormat)
 	copy(s.rwidth, srcRwidth)
