@@ -9,8 +9,9 @@ import (
 	"github.com/vbauerster/mpb/v6/internal"
 )
 
-// ContainerOption is a function option which changes the default
-// behavior of progress container, if passed to mpb.New(...ContainerOption).
+// ContainerOption is a func option to alter default behavior of a bar
+// container. Container term refers to a Progress struct which can
+// hold one or more Bars.
 type ContainerOption func(*pState)
 
 // WithWaitGroup provides means to have a single joint point. If
@@ -23,8 +24,9 @@ func WithWaitGroup(wg *sync.WaitGroup) ContainerOption {
 	}
 }
 
-// WithWidth sets container width. If not set underlying bars will
-// occupy whole term width.
+// WithWidth sets container width. If not set it defaults to terminal
+// width. A bar added to the container will inherit its width, unless
+// overridden by `func BarWidth(int) BarOption`.
 func WithWidth(width int) ContainerOption {
 	return func(s *pState) {
 		s.reqWidth = width

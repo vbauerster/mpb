@@ -8,7 +8,7 @@ import (
 	"github.com/vbauerster/mpb/v6/internal"
 )
 
-// BarOption is a function option which changes the default behavior of a bar.
+// BarOption is a func option to alter default behavior of a bar.
 type BarOption func(*bState)
 
 func (s *bState) addDecorators(dest *[]decor.Decorator, decorators ...decor.Decorator) {
