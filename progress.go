@@ -46,9 +46,10 @@ type pState struct {
 	idCount          int
 	reqWidth         int
 	popCompleted     bool
+	outputDiscarded  bool
 	rr               time.Duration
 	uwg              *sync.WaitGroup
-	refreshSrc       <-chan time.Time
+	externalRefresh  <-chan interface{}
 	renderDelay      <-chan struct{}
 	shutdownNotifier chan struct{}
 	parkedBars       map[*Bar]*Bar
@@ -234,15 +235,26 @@ func (s *pState) newTicker(done <-chan struct{}) chan time.Time {
 		if s.renderDelay != nil {
 			<-s.renderDelay
 		}
-		if s.refreshSrc == nil {
-			ticker := time.NewTicker(s.rr)
-			defer ticker.Stop()
-			s.refreshSrc = ticker.C
+		var internalRefresh <-chan time.Time
+		if !s.outputDiscarded {
+			if s.externalRefresh == nil {
+				ticker := time.NewTicker(s.rr)
+				defer ticker.Stop()
+				internalRefresh = ticker.C
+			}
+		} else {
+			s.externalRefresh = nil
 		}
 		for {
 			select {
-			case tick := <-s.refreshSrc:
-				ch <- tick
+			case t := <-internalRefresh:
+				ch <- t
+			case x := <-s.externalRefresh:
+				if t, ok := x.(time.Time); ok {
+					ch <- t
+				} else {
+					ch <- time.Now()
+				}
 			case <-done:
 				close(s.shutdownNotifier)
 				return
