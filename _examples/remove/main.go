@@ -21,7 +21,7 @@ func main() {
 		name := fmt.Sprintf("Bar#%d:", i)
 		bar := p.AddBar(int64(total),
 			mpb.BarID(i),
-			mpb.BarOptOn(mpb.BarRemoveOnComplete(), func() bool { return i == 0 }),
+			mpb.BarOptional(mpb.BarRemoveOnComplete(), i == 0),
 			mpb.PrependDecorators(
 				decor.Name(name),
 				decor.EwmaETA(decor.ET_STYLE_GO, 60, decor.WCSyncSpace),

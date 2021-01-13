@@ -131,7 +131,7 @@ func TestMaxWidthDistributor(t *testing.T) {
 	p := mpb.New(mpb.WithOutput(ioutil.Discard))
 	for i := 0; i < numBars; i++ {
 		bar := p.AddBar(int64(total),
-			mpb.BarOptOn(mpb.BarRemoveOnComplete(), func() bool { return i == 0 }),
+			mpb.BarOptional(mpb.BarRemoveOnComplete(), i == 0),
 			mpb.PrependDecorators(
 				decor.EwmaETA(decor.ET_STYLE_GO, 60, decor.WCSyncSpace),
 			),

@@ -24,7 +24,7 @@ func main() {
 		name := fmt.Sprintf("Bar#%d:", i)
 		bar := p.AddBar(int64(total),
 			// set BarWidth 40 for bar 1 and 2
-			mpb.BarOptOn(mpb.BarWidth(40), func() bool { return i > 0 }),
+			mpb.BarOptional(mpb.BarWidth(40), i > 0),
 			mpb.PrependDecorators(
 				// simple name decorator
 				decor.Name(name),
