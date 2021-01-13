@@ -23,13 +23,13 @@ func main() {
 	// pass &wg (optional), so p will wait for it eventually
 	p := mpb.New(
 		mpb.WithWaitGroup(&wg),
-		mpb.ContainerOptOn(
+		mpb.ContainerOptional(
 			// setting to nil will:
-			// set output to ioutil.Discard and disable internal refresh rate
-			// cycling, in order to not consume much CPU, hovewer a single refresh
-			// still will be triggered on bar complete event, per each bar.
+			// set output to ioutil.Discard and disable refresh rate cycle, in
+			// order not to consume much CPU. Hovewer a single refresh still will
+			// be triggered on bar complete event, per each bar.
 			mpb.WithOutput(nil),
-			func() bool { return quietMode },
+			quietMode,
 		),
 	)
 	total, numBars := 100, 3
