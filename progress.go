@@ -96,12 +96,15 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 	return p
 }
 
-// AddBar creates a new progress bar and adds it to the rendering queue.
+// AddBar creates a bar with default bar filler. Different filler can
+// be choosen and applied via `*Progress.Add(...) *Bar` method.
 func (p *Progress) AddBar(total int64, options ...BarOption) *Bar {
 	return p.Add(total, NewBarFiller(BarDefaultStyle), options...)
 }
 
-// AddSpinner creates a new spinner bar and adds it to the rendering queue.
+// AddSpinner creates a bar with default spinner filler. Different
+// filler can be choosen and applied via `*Progress.Add(...) *Bar`
+// method.
 func (p *Progress) AddSpinner(total int64, alignment SpinnerAlignment, options ...BarOption) *Bar {
 	return p.Add(total, NewSpinnerFiller(SpinnerDefaultStyle, alignment), options...)
 }
