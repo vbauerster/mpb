@@ -22,7 +22,8 @@ const (
 	prr = 120 * time.Millisecond
 )
 
-// Progress represents the container that renders Progress bars
+// Progress represents a container that renders one or more progress
+// bars.
 type Progress struct {
 	ctx          context.Context
 	uwg          *sync.WaitGroup
@@ -35,6 +36,8 @@ type Progress struct {
 	dlogger      *log.Logger
 }
 
+// pState holds bars in its priorityQueue. It gets passed to
+// *Progress.serve(...) monitor goroutine.
 type pState struct {
 	bHeap            priorityQueue
 	heapUpdated      bool
@@ -172,7 +175,7 @@ func (p *Progress) UpdateBarPriority(b *Bar, priority int) {
 	p.setBarPriority(b, priority)
 }
 
-// BarCount returns bars count
+// BarCount returns bars count.
 func (p *Progress) BarCount() int {
 	result := make(chan int, 1)
 	select {

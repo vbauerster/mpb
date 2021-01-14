@@ -15,7 +15,7 @@ import (
 	"github.com/vbauerster/mpb/v6/decor"
 )
 
-// Bar represents a progress Bar.
+// Bar represents a progress bar.
 type Bar struct {
 	priority int // used by heap
 	index    int // used by heap
@@ -44,6 +44,8 @@ type Bar struct {
 
 type extenderFunc func(in io.Reader, reqWidth int, st decor.Statistics) (out io.Reader, lines int)
 
+// bState is actual bar state. It gets passed to *Bar.serve(...) monitor
+// goroutine.
 type bState struct {
 	id                int
 	priority          int
