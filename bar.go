@@ -42,7 +42,7 @@ type Bar struct {
 	recoveredPanic interface{}
 }
 
-type extFunc func(in io.Reader, reqWidth int, st decor.Statistics) (out io.Reader, lines int)
+type extenderFunc func(in io.Reader, reqWidth int, st decor.Statistics) (out io.Reader, lines int)
 
 type bState struct {
 	id                int
@@ -67,7 +67,7 @@ type bState struct {
 	bufP, bufB, bufA  *bytes.Buffer
 	filler            BarFiller
 	middleware        func(BarFiller) BarFiller
-	extender          extFunc
+	extender          extenderFunc
 
 	// runningBar is a key for *pState.parkedBars
 	runningBar *Bar
@@ -475,7 +475,7 @@ func ewmaIterationUpdate(done bool, s *bState, dur time.Duration) {
 	}
 }
 
-func makePanicExtender(p interface{}) extFunc {
+func makePanicExtender(p interface{}) extenderFunc {
 	pstr := fmt.Sprint(p)
 	stack := debug.Stack()
 	stackLines := bytes.Count(stack, []byte("\n"))

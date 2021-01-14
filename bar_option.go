@@ -111,11 +111,11 @@ func BarExtender(filler BarFiller) BarOption {
 		return nil
 	}
 	return func(s *bState) {
-		s.extender = makeExtFunc(filler)
+		s.extender = makeExtenderFunc(filler)
 	}
 }
 
-func makeExtFunc(filler BarFiller) extFunc {
+func makeExtenderFunc(filler BarFiller) extenderFunc {
 	buf := new(bytes.Buffer)
 	return func(r io.Reader, reqWidth int, st decor.Statistics) (io.Reader, int) {
 		filler.Fill(buf, reqWidth, st)
