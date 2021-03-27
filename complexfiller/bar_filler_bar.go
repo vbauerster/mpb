@@ -23,7 +23,7 @@ const (
 	rRefill
 )
 
-// BarComplexDefaultStyle is a style for rendering a progress bar.
+// BarDefaultStyle is a style for rendering a progress bar.
 // It consists of a slice containing 7 ordered strings:
 //
 //	'1st string' stands for left boundary string
@@ -57,43 +57,44 @@ type space struct {
 	count  int
 }
 
-// NewBarComplexFiller returns a BarComplexFiller implementation which renders a
+// NewBarFiller returns a BarFiller implementation which renders a
 // progress bar in regular direction. If style is empty string,
 // BarDefaultStyle is applied. To be used with `*Progress.Add(...)
 // *Bar` method.
-func NewBarComplexFiller(style ...string) BarFiller {
-	return newBarComplexFiller(false, style...)
+func NewBarFiller(style ...string) BarFiller {
+	return newBarFiller(false, style...)
 }
 
-// NewBarComplexFillerRev returns a BarComplexFiller implementation which renders a
+// NewBarFillerRev returns a BarFiller implementation which renders a
 // progress bar in reverse direction. If style is empty string,
 // BarDefaultStyle is applied. To be used with `*Progress.Add(...)
 // *Bar` method.
-func NewBarComplexFillerRev(style ...string) BarFiller {
-	return newBarComplexFiller(true, style...)
+func NewBarFillerRev(style ...string) BarFiller {
+	return newBarFiller(true, style...)
 }
 
-// NewBarComplexFillerPick pick between regular and reverse BarComplexFiller implementation
+// newBarFillerPick pick between regular and reverse BarFiller implementation
 // based on rev param. To be used with `*Progress.Add(...) *Bar` method.
-func NewBarComplexFillerPick(rev bool, style ...string) BarFiller {
-	return newBarComplexFiller(rev, style...)
+func NewBarFillerPick(rev bool, style ...string) BarFiller {
+	return newBarFiller(rev, style...)
 }
 
-func newBarComplexFiller(rev bool, style ...string) BarFiller {
+func newBarFiller(rev bool, style ...string) BarFiller {
 	bf := &barFiller{
 		format:  make([][]byte, len(BarDefaultStyle)),
 		rwidth:  make([]int, len(BarDefaultStyle)),
 		reverse: rev,
 	}
+	bf.parse(BarDefaultStyle)
 	if len(style) != 0 && !reflect.DeepEqual(style, BarDefaultStyle) {
-		bf.parseComplex(style)
+		bf.parse(style)
 	} else {
-		bf.parseComplex(BarDefaultStyle)
+		bf.parse(BarDefaultStyle)
 	}
 	return bf
 }
 
-func (s *barFiller) parseComplex(style []string) {
+func (s *barFiller) parse(style []string) {
 	srcFormat := make([][]byte, 0, len(BarDefaultStyle))
 	srcRwidth := make([]int, 0, len(BarDefaultStyle))
 	for _, el := range style {

@@ -17,9 +17,9 @@ import (
 //	func NewBarFiller(style string) BarFiller
 //	func NewBarFillerRev(style string) BarFiller
 //	func NewBarFillerPick(style string, rev bool) BarFiller
-//	func NewBarComplexFiller(style string) BarFiller
-//	func NewBarComplexFillerRev(style string) BarFiller
-//	func NewBarComplexFillerPick(style string, rev bool) BarFiller
+//	func NewBarFiller(style string) BarFiller
+//	func NewBarFillerRev(style string) BarFiller
+//	func NewBarFillerPick(style string, rev bool) BarFiller
 //	func NewSpinnerFiller(style []string, alignment SpinnerAlignment) BarFiller
 //
 type BarFiller interface {
