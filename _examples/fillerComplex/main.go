@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/vbauerster/mpb/v6"
-	"github.com/vbauerster/mpb/v6/complexfiller"
+	complexfiller "github.com/vbauerster/mpb/v6/complexfiller"
 	"github.com/vbauerster/mpb/v6/decor"
 )
 
