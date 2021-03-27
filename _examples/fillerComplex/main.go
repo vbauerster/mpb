@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/vbauerster/mpb/v6"
+	"github.com/vbauerster/mpb/v6/complexfiller"
 	"github.com/vbauerster/mpb/v6/decor"
 )
 
@@ -16,7 +17,7 @@ func main() {
 	name := "Complex Filler:"
 	bar := p.Add(int64(total),
 		// NewBarComplexFiller allows for multi-rune strings
-		mpb.NewBarComplexFiller("[\u001b[36;1m", "_", "\u001b[0m⛵\u001b[36;1m", "_", "\u001b[0m]"),
+		complexfiller.NewBarFiller("[\u001b[36;1m", "_", "\u001b[0m⛵\u001b[36;1m", "_", "\u001b[0m]", "\u001b[0m⛵\u001b[36;1m"),
 		mpb.PrependDecorators(
 			// simple name decorator
 			decor.Name(name),
