@@ -24,7 +24,7 @@ func TestDraw(t *testing.T) {
 				name:    "t,c{60,20}",
 				total:   60,
 				current: 20,
-				want:    "…  ",
+				want:    "",
 			},
 			{
 				name:    "t,c{60,20}trim",
@@ -39,7 +39,7 @@ func TestDraw(t *testing.T) {
 				name:    "t,c{60,20}",
 				total:   60,
 				current: 20,
-				want:    "…  ",
+				want:    "",
 			},
 			{
 				name:    "t,c{60,20}trim",

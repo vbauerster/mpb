@@ -390,32 +390,30 @@ func (b *Bar) wSyncTable() [][]chan int {
 }
 
 func (s *bState) draw(stat decor.Statistics) io.Reader {
-	if !s.trimSpace {
+	nlr := strings.NewReader("\n")
+	tw := stat.AvailableWidth
+	for _, d := range s.pDecorators {
+		s.bufP.WriteString(d.Decor(stat))
+	}
+	stat.AvailableWidth -= runewidth.StringWidth(stripansi.Strip(s.bufP.String()))
+	if stat.AvailableWidth < 1 {
+		trunc := strings.NewReader(runewidth.Truncate(stripansi.Strip(s.bufP.String()), tw, "…"))
+		s.bufP.Reset()
+		return io.MultiReader(trunc, nlr)
+	}
+
+	if !s.trimSpace && stat.AvailableWidth > 1 {
 		stat.AvailableWidth -= 2
 		s.bufB.WriteByte(' ')
 		defer s.bufB.WriteByte(' ')
 	}
 
-	nlr := strings.NewReader("\n")
-	tw := stat.AvailableWidth
-	for _, d := range s.pDecorators {
-		str := d.Decor(stat)
-		stat.AvailableWidth -= runewidth.StringWidth(stripansi.Strip(str))
-		s.bufP.WriteString(str)
-	}
-	if stat.AvailableWidth <= 0 {
-		trunc := strings.NewReader(runewidth.Truncate(stripansi.Strip(s.bufP.String()), tw, "…"))
-		s.bufP.Reset()
-		return io.MultiReader(trunc, s.bufB, nlr)
-	}
-
 	tw = stat.AvailableWidth
 	for _, d := range s.aDecorators {
-		str := d.Decor(stat)
-		stat.AvailableWidth -= runewidth.StringWidth(stripansi.Strip(str))
-		s.bufA.WriteString(str)
+		s.bufA.WriteString(d.Decor(stat))
 	}
-	if stat.AvailableWidth <= 0 {
+	stat.AvailableWidth -= runewidth.StringWidth(stripansi.Strip(s.bufA.String()))
+	if stat.AvailableWidth < 1 {
 		trunc := strings.NewReader(runewidth.Truncate(stripansi.Strip(s.bufA.String()), tw, "…"))
 		s.bufA.Reset()
 		return io.MultiReader(s.bufP, s.bufB, trunc, nlr)
