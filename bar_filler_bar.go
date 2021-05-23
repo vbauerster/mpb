@@ -3,189 +3,216 @@ package mpb
 import (
 	"bytes"
 	"io"
-	"unicode/utf8"
 
+	"github.com/acarl005/stripansi"
 	"github.com/mattn/go-runewidth"
-	"github.com/rivo/uniseg"
 	"github.com/vbauerster/mpb/v6/decor"
 	"github.com/vbauerster/mpb/v6/internal"
 )
 
 const (
-	rLeft = iota
-	rFill
-	rTip
-	rSpace
-	rRight
-	rRevTip
-	rRefill
+	iLbound = iota
+	iRbound
+	iFiller
+	iRefiller
+	iPadding
+	components
 )
 
-// BarDefaultStyle is a style for rendering a progress bar.
-// It consist of 7 ordered runes:
-//
-//	'1st rune' stands for left boundary rune
-//
-//	'2nd rune' stands for fill rune
-//
-//	'3rd rune' stands for tip rune
-//
-//	'4th rune' stands for space rune
-//
-//	'5th rune' stands for right boundary rune
-//
-//	'6th rune' stands for reverse tip rune
-//
-//	'7th rune' stands for refill rune
-//
-const BarDefaultStyle string = "[=>-]<+"
-
-type barFiller struct {
-	format  [][]byte
-	rwidth  []int
-	tip     []byte
-	refill  int64
-	reverse bool
-	flush   func(io.Writer, *space, [][]byte)
+// BarStyleComposer interface.
+type BarStyleComposer interface {
+	BarFillerBuilder
+	Lbound(string) BarStyleComposer
+	Rbound(string) BarStyleComposer
+	Filler(string) BarStyleComposer
+	Refiller(string) BarStyleComposer
+	Padding(string) BarStyleComposer
+	Tip(...string) BarStyleComposer
+	Reverse() BarStyleComposer
 }
 
-type space struct {
-	space  []byte
-	rwidth int
-	count  int
-}
-
-// NewBarFiller returns a BarFiller implementation which renders a
-// progress bar in regular direction. If style is empty string,
-// BarDefaultStyle is applied. To be used with `*Progress.Add(...)
-// *Bar` method.
-func NewBarFiller(style string) BarFiller {
-	return newBarFiller(style, false)
-}
-
-// NewBarFillerRev returns a BarFiller implementation which renders a
-// progress bar in reverse direction. If style is empty string,
-// BarDefaultStyle is applied. To be used with `*Progress.Add(...)
-// *Bar` method.
-func NewBarFillerRev(style string) BarFiller {
-	return newBarFiller(style, true)
-}
-
-// NewBarFillerPick pick between regular and reverse BarFiller implementation
-// based on rev param. To be used with `*Progress.Add(...) *Bar` method.
-func NewBarFillerPick(style string, rev bool) BarFiller {
-	return newBarFiller(style, rev)
-}
-
-func newBarFiller(style string, rev bool) BarFiller {
-	bf := &barFiller{
-		format:  make([][]byte, len(BarDefaultStyle)),
-		rwidth:  make([]int, len(BarDefaultStyle)),
-		reverse: rev,
+type bFiller struct {
+	components [components]*component
+	tip        struct {
+		count  uint
+		frames []*component
 	}
-	bf.parse(BarDefaultStyle)
-	if style != "" && style != BarDefaultStyle {
-		bf.parse(style)
+	flush func(dst io.Writer, src [][]byte, pad *component, padWidth int)
+}
+
+type component struct {
+	width int
+	bytes []byte
+}
+
+type barStyle struct {
+	lbound   string
+	rbound   string
+	filler   string
+	refiller string
+	padding  string
+	tip      []string
+	rev      bool
+}
+
+// BarStyle constructs default bar style which can be altered via
+// BarStyleComposer interface.
+func BarStyle() BarStyleComposer {
+	return &barStyle{
+		lbound:   "[",
+		rbound:   "]",
+		filler:   "=",
+		refiller: "+",
+		padding:  "-",
+		tip:      []string{">"},
+	}
+}
+
+func (s *barStyle) Lbound(bound string) BarStyleComposer {
+	s.lbound = bound
+	return s
+}
+
+func (s *barStyle) Rbound(bound string) BarStyleComposer {
+	s.rbound = bound
+	return s
+}
+
+func (s *barStyle) Filler(filler string) BarStyleComposer {
+	s.filler = filler
+	return s
+}
+
+func (s *barStyle) Refiller(refiller string) BarStyleComposer {
+	s.refiller = refiller
+	return s
+}
+
+func (s *barStyle) Padding(padding string) BarStyleComposer {
+	s.padding = padding
+	return s
+}
+
+func (s *barStyle) Tip(tip ...string) BarStyleComposer {
+	if len(tip) != 0 {
+		s.tip = append(s.tip[:0], tip...)
+	}
+	return s
+}
+
+func (s *barStyle) Reverse() BarStyleComposer {
+	s.rev = true
+	return s
+}
+
+func (s *barStyle) Build() BarFiller {
+	bf := &bFiller{
+		flush: regFlush,
+	}
+	if s.rev {
+		bf.flush = revFlush
+	}
+	bf.components[iLbound] = &component{
+		width: runewidth.StringWidth(stripansi.Strip(s.lbound)),
+		bytes: []byte(s.lbound),
+	}
+	bf.components[iRbound] = &component{
+		width: runewidth.StringWidth(stripansi.Strip(s.rbound)),
+		bytes: []byte(s.rbound),
+	}
+	bf.components[iFiller] = &component{
+		width: runewidth.StringWidth(stripansi.Strip(s.filler)),
+		bytes: []byte(s.filler),
+	}
+	bf.components[iRefiller] = &component{
+		width: runewidth.StringWidth(stripansi.Strip(s.refiller)),
+		bytes: []byte(s.refiller),
+	}
+	bf.components[iPadding] = &component{
+		width: runewidth.StringWidth(stripansi.Strip(s.padding)),
+		bytes: []byte(s.padding),
+	}
+	bf.tip.frames = make([]*component, len(s.tip))
+	for i, t := range s.tip {
+		bf.tip.frames[i] = &component{
+			width: runewidth.StringWidth(stripansi.Strip(t)),
+			bytes: []byte(t),
+		}
 	}
 	return bf
 }
 
-func (s *barFiller) parse(style string) {
-	if !utf8.ValidString(style) {
-		panic("invalid bar style")
-	}
-	srcFormat := make([][]byte, len(BarDefaultStyle))
-	srcRwidth := make([]int, len(BarDefaultStyle))
-	i := 0
-	for gr := uniseg.NewGraphemes(style); i < len(BarDefaultStyle) && gr.Next(); i++ {
-		srcFormat[i] = gr.Bytes()
-		srcRwidth[i] = runewidth.StringWidth(gr.Str())
-	}
-	copy(s.format, srcFormat[:i])
-	copy(s.rwidth, srcRwidth[:i])
-	if s.reverse {
-		s.tip = s.format[rRevTip]
-		s.flush = reverseFlush
-	} else {
-		s.tip = s.format[rTip]
-		s.flush = regularFlush
-	}
-}
-
-func (s *barFiller) Fill(w io.Writer, reqWidth int, stat decor.Statistics) {
-	width := internal.CheckRequestedWidth(reqWidth, stat.AvailableWidth)
-	brackets := s.rwidth[rLeft] + s.rwidth[rRight]
+func (s *bFiller) Fill(w io.Writer, width int, stat decor.Statistics) {
+	width = internal.CheckRequestedWidth(width, stat.AvailableWidth)
+	brackets := s.components[iLbound].width + s.components[iRbound].width
 	if width < brackets {
 		return
 	}
 	// don't count brackets as progress
 	width -= brackets
 
-	w.Write(s.format[rLeft])
-	defer w.Write(s.format[rRight])
+	w.Write(s.components[iLbound].bytes)
+	defer w.Write(s.components[iRbound].bytes)
 
-	cwidth := int(internal.PercentageRound(stat.Total, stat.Current, width))
-	space := &space{
-		space:  s.format[rSpace],
-		rwidth: s.rwidth[rSpace],
-		count:  width - cwidth,
-	}
-
+	curWidth := int(internal.PercentageRound(stat.Total, stat.Current, width))
+	padWidth := width - curWidth
 	index, refill := 0, 0
-	bb := make([][]byte, cwidth)
+	bb := make([][]byte, curWidth)
 
-	if cwidth > 0 && cwidth != width {
-		bb[index] = s.tip
-		cwidth -= s.rwidth[rTip]
+	if curWidth > 0 && curWidth != width {
+		tipFrame := s.tip.frames[s.tip.count%uint(len(s.tip.frames))]
+		bb[index] = tipFrame.bytes
+		curWidth -= tipFrame.width
+		s.tip.count++
 		index++
 	}
 
 	if stat.Refill > 0 {
 		refill = int(internal.PercentageRound(stat.Total, int64(stat.Refill), width))
-		if refill > cwidth {
-			refill = cwidth
+		if refill > curWidth {
+			refill = curWidth
 		}
-		cwidth -= refill
+		curWidth -= refill
 	}
 
-	for cwidth > 0 {
-		bb[index] = s.format[rFill]
-		cwidth -= s.rwidth[rFill]
+	for curWidth > 0 {
+		bb[index] = s.components[iFiller].bytes
+		curWidth -= s.components[iFiller].width
 		index++
 	}
 
 	for refill > 0 {
-		bb[index] = s.format[rRefill]
-		refill -= s.rwidth[rRefill]
+		bb[index] = s.components[iRefiller].bytes
+		refill -= s.components[iRefiller].width
 		index++
 	}
 
-	if cwidth+refill < 0 || space.rwidth > 1 {
+	if curWidth+refill < 0 || s.components[iPadding].width > 1 {
 		buf := new(bytes.Buffer)
-		s.flush(buf, space, bb[:index])
+		s.flush(buf, bb[:index], s.components[iPadding], padWidth)
 		io.WriteString(w, runewidth.Truncate(buf.String(), width, "…"))
 		return
 	}
 
-	s.flush(w, space, bb)
+	s.flush(w, bb, s.components[iPadding], padWidth)
 }
 
-func regularFlush(w io.Writer, space *space, bb [][]byte) {
-	for i := len(bb) - 1; i >= 0; i-- {
-		w.Write(bb[i])
+func regFlush(dst io.Writer, src [][]byte, pad *component, padWidth int) {
+	for i := len(src) - 1; i >= 0; i-- {
+		dst.Write(src[i])
 	}
-	for space.count > 0 {
-		w.Write(space.space)
-		space.count -= space.rwidth
+	for padWidth > 0 {
+		dst.Write(pad.bytes)
+		padWidth -= pad.width
 	}
 }
 
-func reverseFlush(w io.Writer, space *space, bb [][]byte) {
-	for space.count > 0 {
-		w.Write(space.space)
-		space.count -= space.rwidth
+func revFlush(dst io.Writer, src [][]byte, pad *component, padWidth int) {
+	for padWidth > 0 {
+		dst.Write(pad.bytes)
+		padWidth -= pad.width
 	}
-	for i := 0; i < len(bb); i++ {
-		w.Write(bb[i])
+	for i := 0; i < len(src); i++ {
+		dst.Write(src[i])
 	}
 }
