@@ -61,9 +61,9 @@ func TestBarSetRefill(t *testing.T) {
 
 	total := 100
 	till := 30
-	refillRune, _ := utf8.DecodeLastRuneInString(mpb.BarDefaultStyle)
+	refiller := "+"
 
-	bar := p.AddBar(int64(total), mpb.BarFillerTrim())
+	bar := p.Add(int64(total), mpb.NewBarFiller(mpb.BarStyle().Refiller(refiller)), mpb.BarFillerTrim())
 
 	bar.SetRefill(int64(till))
 	bar.IncrBy(till)
@@ -76,7 +76,7 @@ func TestBarSetRefill(t *testing.T) {
 	p.Wait()
 
 	wantBar := fmt.Sprintf("[%s%s]",
-		strings.Repeat(string(refillRune), till-1),
+		strings.Repeat(refiller, till-1),
 		strings.Repeat("=", total-till-1),
 	)
 
@@ -143,9 +143,16 @@ func TestBarHas100PercentWithBarRemoveOnComplete(t *testing.T) {
 func TestBarStyle(t *testing.T) {
 	var buf bytes.Buffer
 	customFormat := "╢▌▌░╟"
+	runes := []rune(customFormat)
 	total := 80
 	p := mpb.New(mpb.WithWidth(total), mpb.WithOutput(&buf))
-	bar := p.Add(int64(total), mpb.NewBarFiller(customFormat), mpb.BarFillerTrim())
+	bs := mpb.BarStyle()
+	bs.Lbound(string(runes[0]))
+	bs.Filler(string(runes[1]))
+	bs.Tip(string(runes[2]))
+	bs.Padding(string(runes[3]))
+	bs.Rbound(string(runes[4]))
+	bar := p.Add(int64(total), mpb.NewBarFiller(bs), mpb.BarFillerTrim())
 
 	for i := 0; i < total; i++ {
 		bar.Increment()
@@ -154,11 +161,11 @@ func TestBarStyle(t *testing.T) {
 
 	p.Wait()
 
-	runes := []rune(customFormat)
-	wantBar := fmt.Sprintf("%s%s%s",
+	wantBar := fmt.Sprintf("%s%s%s%s",
 		string(runes[0]),
-		strings.Repeat(string(runes[1]), total-2),
-		string(runes[len(runes)-1]),
+		strings.Repeat(string(runes[1]), total-3),
+		string(runes[2]),
+		string(runes[4]),
 	)
 	got := string(getLastLine(buf.Bytes()))
 
