@@ -26,7 +26,7 @@ func main() {
 		var bar *mpb.Bar
 		if i == 0 {
 			bar = p.Add(int64(total),
-				mpb.NewBarFiller("╢▌▌░╟"),
+				mpb.NewBarFiller(mpb.BarStyle().Lbound("╢").Filler("▌").Tip("▌").Padding("░").Rbound("╟")),
 				mpb.PrependDecorators(
 					// simple name decorator
 					decor.Name(name),
@@ -41,7 +41,7 @@ func main() {
 			)
 		} else {
 			bar = p.Add(int64(total),
-				mpb.NewSpinnerFiller(spinnerStyle, mpb.SpinnerOnMiddle),
+				mpb.NewBarFiller(mpb.SpinnerStyle(spinnerStyle...)),
 				mpb.PrependDecorators(
 					// simple name decorator
 					decor.Name(name),

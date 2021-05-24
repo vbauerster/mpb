@@ -19,9 +19,13 @@ func main() {
 
 	for i := 0; i < numBars; i++ {
 		name := fmt.Sprintf("Bar#%d:", i)
-		bar := p.Add(int64(total),
+		bs := mpb.BarStyle()
+		if i == 1 {
 			// reverse Bar#1
-			mpb.NewBarFillerPick("", i == 1),
+			bs = bs.Tip("<").Reverse()
+		}
+		bar := p.Add(int64(total),
+			mpb.NewBarFiller(bs),
 			mpb.PrependDecorators(
 				// simple name decorator
 				decor.Name(name),

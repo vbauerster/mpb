@@ -20,7 +20,7 @@ func main() {
 	)
 
 	bar := p.Add(total,
-		mpb.NewBarFiller("[=>-|"),
+		mpb.NewBarFiller(mpb.BarStyle().Rbound("|")),
 		mpb.PrependDecorators(
 			decor.CountersKibiByte("% .2f / % .2f"),
 		),
