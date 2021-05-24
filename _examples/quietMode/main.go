@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/vbauerster/mpb/v6"
-	"github.com/vbauerster/mpb/v6/decor"
+	"github.com/vbauerster/mpb/v7"
+	"github.com/vbauerster/mpb/v7/decor"
 )
 
 var quietMode bool
