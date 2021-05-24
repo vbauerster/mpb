@@ -102,14 +102,14 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 // AddBar creates a bar with default bar filler. Different filler can
 // be choosen and applied via `*Progress.Add(...) *Bar` method.
 func (p *Progress) AddBar(total int64, options ...BarOption) *Bar {
-	return p.Add(total, NewBarFiller(BarDefaultStyle), options...)
+	return p.Add(total, NewBarFiller(BarStyle()), options...)
 }
 
 // AddSpinner creates a bar with default spinner filler. Different
 // filler can be choosen and applied via `*Progress.Add(...) *Bar`
 // method.
-func (p *Progress) AddSpinner(total int64, alignment SpinnerAlignment, options ...BarOption) *Bar {
-	return p.Add(total, NewSpinnerFiller(SpinnerDefaultStyle, alignment), options...)
+func (p *Progress) AddSpinner(total int64, options ...BarOption) *Bar {
+	return p.Add(total, NewBarFiller(SpinnerStyle()), options...)
 }
 
 // Add creates a bar which renders itself by provided filler.
