@@ -10,8 +10,8 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/vbauerster/mpb/v6"
-	"github.com/vbauerster/mpb/v6/decor"
+	"github.com/vbauerster/mpb/v7"
+	"github.com/vbauerster/mpb/v7/decor"
 )
 
 func TestBarCompleted(t *testing.T) {

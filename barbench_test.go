@@ -4,7 +4,7 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/vbauerster/mpb/v6/decor"
+	"github.com/vbauerster/mpb/v7/decor"
 )
 
 func BenchmarkIncrSingleBar(b *testing.B) {

@@ -4,8 +4,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/vbauerster/mpb/v6"
-	"github.com/vbauerster/mpb/v6/decor"
+	"github.com/vbauerster/mpb/v7"
+	"github.com/vbauerster/mpb/v7/decor"
 )
 
 func TestNameDecorator(t *testing.T) {
