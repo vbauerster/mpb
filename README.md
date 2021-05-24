@@ -26,8 +26,8 @@ import (
     "math/rand"
     "time"
 
-    "github.com/vbauerster/mpb/v6"
-    "github.com/vbauerster/mpb/v6/decor"
+    "github.com/vbauerster/mpb/v7"
+    "github.com/vbauerster/mpb/v7/decor"
 )
 
 func main() {
@@ -39,7 +39,7 @@ func main() {
     // adding a single bar, which will inherit container's width
     bar := p.Add(int64(total),
         // progress bar filler with customized style
-        mpb.NewBarFiller("╢▌▌░╟"),
+        mpb.NewBarFiller(mpb.BarStyle().Lbound("╢").Filler("▌").Tip("▌").Padding("░").Rbound("╟")),
         mpb.PrependDecorators(
             // display our name with one space on the right
             decor.Name(name, decor.WC{W: len(name) + 1, C: decor.DidentRight}),
