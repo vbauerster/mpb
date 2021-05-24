@@ -4,62 +4,84 @@ import (
 	"io"
 	"strings"
 
+	"github.com/acarl005/stripansi"
 	"github.com/mattn/go-runewidth"
 	"github.com/vbauerster/mpb/v6/decor"
 	"github.com/vbauerster/mpb/v6/internal"
 )
 
-// SpinnerAlignment enum.
-type SpinnerAlignment int
-
-// SpinnerAlignment kinds.
 const (
-	SpinnerOnLeft SpinnerAlignment = iota
-	SpinnerOnMiddle
-	SpinnerOnRight
+	positionLeft = 1 + iota
+	positionRight
 )
 
-// SpinnerDefaultStyle is a style for rendering a spinner.
-var SpinnerDefaultStyle = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
-
-type spinnerFiller struct {
-	frames    []string
-	count     uint
-	alignment SpinnerAlignment
+// SpinnerStyleComposer interface.
+type SpinnerStyleComposer interface {
+	BarFillerBuilder
+	PositionLeft() SpinnerStyleComposer
+	PositionRight() SpinnerStyleComposer
 }
 
-// NewSpinnerFiller returns a BarFiller implementation which renders
-// a spinner. If style is nil or zero length, SpinnerDefaultStyle is
-// applied. To be used with `*Progress.Add(...) *Bar` method.
-func NewSpinnerFiller(style []string, alignment SpinnerAlignment) BarFiller {
-	if len(style) == 0 {
-		style = SpinnerDefaultStyle
-	}
-	filler := &spinnerFiller{
-		frames:    style,
-		alignment: alignment,
-	}
-	return filler
+type sFiller struct {
+	count    uint
+	position uint
+	frames   []string
 }
 
-func (s *spinnerFiller) Fill(w io.Writer, reqWidth int, stat decor.Statistics) {
-	width := internal.CheckRequestedWidth(reqWidth, stat.AvailableWidth)
+type spinnerStyle struct {
+	position uint
+	frames   []string
+}
+
+// SpinnerStyle constructs default spinner style which can be altered via
+// SpinnerStyleComposer interface.
+func SpinnerStyle(frames ...string) SpinnerStyleComposer {
+	ss := new(spinnerStyle)
+	if len(frames) != 0 {
+		ss.frames = append(ss.frames, frames...)
+	} else {
+		ss.frames = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
+	}
+	return ss
+}
+
+func (s *spinnerStyle) PositionLeft() SpinnerStyleComposer {
+	s.position = positionLeft
+	return s
+}
+
+func (s *spinnerStyle) PositionRight() SpinnerStyleComposer {
+	s.position = positionRight
+	return s
+}
+
+func (s *spinnerStyle) Build() BarFiller {
+	sf := &sFiller{
+		position: s.position,
+		frames:   s.frames,
+	}
+	return sf
+}
+
+func (s *sFiller) Fill(w io.Writer, width int, stat decor.Statistics) {
+	width = internal.CheckRequestedWidth(width, stat.AvailableWidth)
 
 	frame := s.frames[s.count%uint(len(s.frames))]
-	frameWidth := runewidth.StringWidth(frame)
+	frameWidth := runewidth.StringWidth(stripansi.Strip(frame))
 
 	if width < frameWidth {
 		return
 	}
 
-	switch rest := width - frameWidth; s.alignment {
-	case SpinnerOnLeft:
+	rest := width - frameWidth
+	switch s.position {
+	case positionLeft:
 		io.WriteString(w, frame+strings.Repeat(" ", rest))
-	case SpinnerOnMiddle:
+	case positionRight:
+		io.WriteString(w, strings.Repeat(" ", rest)+frame)
+	default:
 		str := strings.Repeat(" ", rest/2) + frame + strings.Repeat(" ", rest/2+rest%2)
 		io.WriteString(w, str)
-	case SpinnerOnRight:
-		io.WriteString(w, strings.Repeat(" ", rest)+frame)
 	}
 	s.count++
 }
