@@ -9,14 +9,13 @@ import (
 func TestDraw(t *testing.T) {
 	// key is termWidth
 	testSuite := map[int][]struct {
+		style    BarStyleComposer
 		name     string
-		style    string
 		total    int64
 		current  int64
 		refill   int64
 		barWidth int
 		trim     bool
-		reverse  bool
 		want     string
 	}{
 		0: {
@@ -259,11 +258,11 @@ func TestDraw(t *testing.T) {
 				want:    "[===============================>------------------------------------------------------------------]",
 			},
 			{
+				style:   BarStyle().Tip("<").Reverse(),
 				name:    "t,c{100,33}trim,rev",
 				total:   100,
 				current: 33,
 				trim:    true,
-				reverse: true,
 				want:    "[------------------------------------------------------------------<===============================]",
 			},
 			{
@@ -282,12 +281,12 @@ func TestDraw(t *testing.T) {
 				want:    "[+++++++++++++++++++++++++++++++>------------------------------------------------------------------]",
 			},
 			{
+				style:   BarStyle().Tip("<").Reverse(),
 				name:    "t,c,r{100,33,33}trim,rev",
 				total:   100,
 				current: 33,
 				refill:  33,
 				trim:    true,
-				reverse: true,
 				want:    "[------------------------------------------------------------------<+++++++++++++++++++++++++++++++]",
 			},
 			{
@@ -306,25 +305,25 @@ func TestDraw(t *testing.T) {
 				want:    "[++++++++++++++++++++++++++++++++======>-----------------------------------------------------------]",
 			},
 			{
+				style:   BarStyle().Tip("<").Reverse(),
 				name:    "t,c,r{100,40,33},rev",
 				total:   100,
 				current: 40,
 				refill:  33,
-				reverse: true,
 				want:    " [----------------------------------------------------------<=====++++++++++++++++++++++++++++++++] ",
 			},
 			{
+				style:   BarStyle().Tip("<").Reverse(),
 				name:    "t,c,r{100,40,33}trim,rev",
 				total:   100,
 				current: 40,
 				refill:  33,
 				trim:    true,
-				reverse: true,
 				want:    "[-----------------------------------------------------------<======++++++++++++++++++++++++++++++++]",
 			},
 			{
+				style:   BarStyle().Lbound("[").Filler("=").Tip("の").Padding("-").Rbound("]"),
 				name:    "[=の-] t,c{100,1}",
-				style:   "[=の-]",
 				total:   100,
 				current: 1,
 				want:    " [の---------------------------------------------------------------------------------------------…] ",
@@ -346,7 +345,10 @@ func TestDraw(t *testing.T) {
 	var tmpBuf bytes.Buffer
 	for tw, cases := range testSuite {
 		for _, tc := range cases {
-			s := newTestState(tc.style, tc.reverse)
+			if tc.style == nil {
+				tc.style = BarStyle()
+			}
+			s := newTestState(NewBarFiller(tc.style))
 			s.reqWidth = tc.barWidth
 			s.total = tc.total
 			s.current = tc.current
@@ -367,9 +369,9 @@ func TestDraw(t *testing.T) {
 	}
 }
 
-func newTestState(style string, rev bool) *bState {
+func newTestState(filler BarFiller) *bState {
 	s := &bState{
-		filler: NewBarFillerPick(style, rev),
+		filler: filler,
 		bufP:   new(bytes.Buffer),
 		bufB:   new(bytes.Buffer),
 		bufA:   new(bytes.Buffer),
