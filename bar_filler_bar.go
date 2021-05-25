@@ -1,7 +1,6 @@
 package mpb
 
 import (
-	"bytes"
 	"io"
 
 	"github.com/acarl005/stripansi"
@@ -37,7 +36,7 @@ type bFiller struct {
 		count  uint
 		frames []*component
 	}
-	flush func(dst io.Writer, src [][]byte, pad *component, padWidth int)
+	flush func(dst io.Writer, filling, padding [][]byte)
 }
 
 type component struct {
@@ -154,65 +153,78 @@ func (s *bFiller) Fill(w io.Writer, width int, stat decor.Statistics) {
 	w.Write(s.components[iLbound].bytes)
 	defer w.Write(s.components[iRbound].bytes)
 
+	refWidth, filled := 0, 0
 	curWidth := int(internal.PercentageRound(stat.Total, stat.Current, width))
-	padWidth := width - curWidth
-	index, refill := 0, 0
-	bb := make([][]byte, curWidth)
+	filling := make([][]byte, 0, curWidth)
 
 	if curWidth > 0 && curWidth != width {
 		tipFrame := s.tip.frames[s.tip.count%uint(len(s.tip.frames))]
-		bb[index] = tipFrame.bytes
+		filling = append(filling, tipFrame.bytes)
+		filled += tipFrame.width
 		curWidth -= tipFrame.width
 		s.tip.count++
-		index++
 	}
 
 	if stat.Refill > 0 {
-		refill = int(internal.PercentageRound(stat.Total, int64(stat.Refill), width))
-		if refill > curWidth {
-			refill = curWidth
+		refWidth = int(internal.PercentageRound(stat.Total, int64(stat.Refill), width))
+		if refWidth > curWidth {
+			refWidth = curWidth
 		}
-		curWidth -= refill
+		curWidth -= refWidth
 	}
 
-	for curWidth > 0 {
-		bb[index] = s.components[iFiller].bytes
+	for curWidth > 0 && curWidth >= s.components[iFiller].width {
+		filling = append(filling, s.components[iFiller].bytes)
+		filled += s.components[iFiller].width
 		curWidth -= s.components[iFiller].width
-		index++
+		if s.components[iFiller].width == 0 {
+			break
+		}
 	}
 
-	for refill > 0 {
-		bb[index] = s.components[iRefiller].bytes
-		refill -= s.components[iRefiller].width
-		index++
+	for refWidth > 0 && refWidth >= s.components[iRefiller].width {
+		filling = append(filling, s.components[iRefiller].bytes)
+		filled += s.components[iRefiller].width
+		refWidth -= s.components[iRefiller].width
+		if s.components[iRefiller].width == 0 {
+			break
+		}
 	}
 
-	if curWidth+refill < 0 || s.components[iPadding].width > 1 {
-		buf := new(bytes.Buffer)
-		s.flush(buf, bb[:index], s.components[iPadding], padWidth)
-		io.WriteString(w, runewidth.Truncate(buf.String(), width, "…"))
-		return
+	padWidth := width - filled
+	padding := make([][]byte, 0, padWidth)
+	for padWidth > 0 && padWidth >= s.components[iPadding].width {
+		padding = append(padding, s.components[iPadding].bytes)
+		filled += s.components[iPadding].width
+		padWidth -= s.components[iPadding].width
+		if s.components[iPadding].width == 0 {
+			break
+		}
 	}
 
-	s.flush(w, bb, s.components[iPadding], padWidth)
+	truncWidth := width - filled
+	for truncWidth > 0 {
+		padding = append(padding, []byte("…"))
+		truncWidth--
+	}
+
+	s.flush(w, filling, padding)
 }
 
-func regFlush(dst io.Writer, src [][]byte, pad *component, padWidth int) {
-	for i := len(src) - 1; i >= 0; i-- {
-		dst.Write(src[i])
+func regFlush(dst io.Writer, filling, padding [][]byte) {
+	for i := len(filling) - 1; i >= 0; i-- {
+		dst.Write(filling[i])
 	}
-	for padWidth > 0 {
-		dst.Write(pad.bytes)
-		padWidth -= pad.width
+	for i := 0; i < len(padding); i++ {
+		dst.Write(padding[i])
 	}
 }
 
-func revFlush(dst io.Writer, src [][]byte, pad *component, padWidth int) {
-	for padWidth > 0 {
-		dst.Write(pad.bytes)
-		padWidth -= pad.width
+func revFlush(dst io.Writer, filling, padding [][]byte) {
+	for i := len(padding) - 1; i >= 0; i-- {
+		dst.Write(padding[i])
 	}
-	for i := 0; i < len(src); i++ {
-		dst.Write(src[i])
+	for i := 0; i < len(filling); i++ {
+		dst.Write(filling[i])
 	}
 }

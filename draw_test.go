@@ -183,6 +183,57 @@ func TestDraw(t *testing.T) {
 				want:     "[==================>---------------------------------------]",
 			},
 		},
+		99: {
+			{
+				style:   BarStyle().Lbound("[").Filler("の").Tip("だ").Padding("つ").Rbound("]"),
+				name:    "[のだつ] t,c{99,1}",
+				total:   99,
+				current: 1,
+				want:    " [だつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつ…] ",
+			},
+			{
+				style:   BarStyle().Lbound("[").Filler("の").Tip("だ").Padding("つ").Rbound("]"),
+				name:    "[のだつ] t,c{99,2}",
+				total:   99,
+				current: 2,
+				want:    " [だつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつ…] ",
+			},
+			{
+				style:   BarStyle().Lbound("[").Filler("の").Tip("だ").Padding("つ").Rbound("]"),
+				name:    "[のだつ] t,c{99,3}",
+				total:   99,
+				current: 3,
+				want:    " [だつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつ…] ",
+			},
+			{
+				style:   BarStyle().Lbound("[").Filler("の").Tip("だ").Padding("つ").Rbound("]"),
+				name:    "[のだつ] t,c{99,4}",
+				total:   99,
+				current: 4,
+				want:    " [のだつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつ…] ",
+			},
+			{
+				style:   BarStyle().Lbound("[").Filler("の").Tip("だ").Padding("つ").Rbound("]"),
+				name:    "[のだつ] t,c{99,5}",
+				total:   99,
+				current: 5,
+				want:    " [のだつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつ…] ",
+			},
+			{
+				style:   BarStyle().Lbound("[").Filler("の").Tip("だ").Padding("つ").Rbound("]"),
+				name:    "[のだつ] t,c{99,6}",
+				total:   99,
+				current: 6,
+				want:    " [ののだつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつ…] ",
+			},
+			{
+				style:   BarStyle().Lbound("[").Filler("の").Tip("だ").Padding("つ").Rbound("]").Reverse(),
+				name:    "[のだつ] t,c{99,6}rev",
+				total:   99,
+				current: 6,
+				want:    " […つつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつだのの] ",
+			},
+		},
 		100: {
 			{
 				name:    "t,c{100,0}",
@@ -320,13 +371,6 @@ func TestDraw(t *testing.T) {
 				refill:  33,
 				trim:    true,
 				want:    "[-----------------------------------------------------------<======++++++++++++++++++++++++++++++++]",
-			},
-			{
-				style:   BarStyle().Lbound("[").Filler("=").Tip("の").Padding("-").Rbound("]"),
-				name:    "[=の-] t,c{100,1}",
-				total:   100,
-				current: 1,
-				want:    " [の---------------------------------------------------------------------------------------------…] ",
 			},
 		},
 		197: {
