@@ -66,7 +66,7 @@ func main() {
 
 ```go
     var wg sync.WaitGroup
-    // pass &wg (optional), so p will wait for it eventually
+    // passed &wg will be accounted at p.Wait() call
     p := mpb.New(mpb.WithWaitGroup(&wg))
     total, numBars := 100, 3
     wg.Add(numBars)
