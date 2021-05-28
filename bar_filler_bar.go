@@ -153,19 +153,18 @@ func (s *bFiller) Fill(w io.Writer, width int, stat decor.Statistics) {
 	w.Write(s.components[iLbound].bytes)
 	defer w.Write(s.components[iRbound].bytes)
 
-	refWidth, filled := 0, 0
 	curWidth := int(internal.PercentageRound(stat.Total, stat.Current, width))
+	refWidth, filled := 0, curWidth
 	filling := make([][]byte, 0, curWidth)
 
 	if curWidth > 0 && curWidth != width {
 		tipFrame := s.tip.frames[s.tip.count%uint(len(s.tip.frames))]
 		filling = append(filling, tipFrame.bytes)
-		filled += tipFrame.width
 		curWidth -= tipFrame.width
 		s.tip.count++
 	}
 
-	if stat.Refill > 0 {
+	if stat.Refill > 0 && curWidth > 0 {
 		refWidth = int(internal.PercentageRound(stat.Total, int64(stat.Refill), width))
 		if refWidth > curWidth {
 			refWidth = curWidth
@@ -175,7 +174,6 @@ func (s *bFiller) Fill(w io.Writer, width int, stat decor.Statistics) {
 
 	for curWidth > 0 && curWidth >= s.components[iFiller].width {
 		filling = append(filling, s.components[iFiller].bytes)
-		filled += s.components[iFiller].width
 		curWidth -= s.components[iFiller].width
 		if s.components[iFiller].width == 0 {
 			break
@@ -184,28 +182,26 @@ func (s *bFiller) Fill(w io.Writer, width int, stat decor.Statistics) {
 
 	for refWidth > 0 && refWidth >= s.components[iRefiller].width {
 		filling = append(filling, s.components[iRefiller].bytes)
-		filled += s.components[iRefiller].width
 		refWidth -= s.components[iRefiller].width
 		if s.components[iRefiller].width == 0 {
 			break
 		}
 	}
 
+	filled -= curWidth + refWidth
 	padWidth := width - filled
 	padding := make([][]byte, 0, padWidth)
 	for padWidth > 0 && padWidth >= s.components[iPadding].width {
 		padding = append(padding, s.components[iPadding].bytes)
-		filled += s.components[iPadding].width
 		padWidth -= s.components[iPadding].width
 		if s.components[iPadding].width == 0 {
 			break
 		}
 	}
 
-	truncWidth := width - filled
-	for truncWidth > 0 {
+	for padWidth > 0 {
 		padding = append(padding, []byte("…"))
-		truncWidth--
+		padWidth--
 	}
 
 	s.flush(w, filling, padding)
