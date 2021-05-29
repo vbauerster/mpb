@@ -105,11 +105,13 @@ func (s *barStyle) Reverse() BarStyleComposer {
 }
 
 func (s *barStyle) Build() BarFiller {
-	bf := &bFiller{
-		flush: regFlush,
-	}
+	bf := new(bFiller)
 	if s.rev {
-		bf.flush = revFlush
+		bf.flush = func(dst io.Writer, filling, padding [][]byte) {
+			flush(dst, padding, filling)
+		}
+	} else {
+		bf.flush = flush
 	}
 	bf.components[iLbound] = &component{
 		width: runewidth.StringWidth(stripansi.Strip(s.lbound)),
@@ -207,20 +209,11 @@ func (s *bFiller) Fill(w io.Writer, width int, stat decor.Statistics) {
 	s.flush(w, filling, padding)
 }
 
-func regFlush(dst io.Writer, filling, padding [][]byte) {
+func flush(dst io.Writer, filling, padding [][]byte) {
 	for i := len(filling) - 1; i >= 0; i-- {
 		dst.Write(filling[i])
 	}
 	for i := 0; i < len(padding); i++ {
 		dst.Write(padding[i])
-	}
-}
-
-func revFlush(dst io.Writer, filling, padding [][]byte) {
-	for i := len(padding) - 1; i >= 0; i-- {
-		dst.Write(padding[i])
-	}
-	for i := 0; i < len(filling); i++ {
-		dst.Write(filling[i])
 	}
 }
