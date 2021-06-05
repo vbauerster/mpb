@@ -254,6 +254,40 @@ func TestBarPanicAfterComplete(t *testing.T) {
 	}
 }
 
+func TestDecorStatisticsAvailableWidth(t *testing.T) {
+	td1 := func(s decor.Statistics) string {
+		if s.AvailableWidth != 80 {
+			t.Errorf("expected AvailableWidth %d got %d\n", 80, s.AvailableWidth)
+		}
+		return fmt.Sprintf("\x1b[31;1;4m%s\x1b[0m", strings.Repeat("1", 20))
+	}
+	td2 := func(s decor.Statistics) string {
+		if s.AvailableWidth != 60 {
+			t.Errorf("expected AvailableWidth %d got %d\n", 60, s.AvailableWidth)
+		}
+		return ""
+	}
+	total := 100
+	p := mpb.New(
+		mpb.WithWidth(100),
+		mpb.WithOutput(ioutil.Discard),
+	)
+	bar := p.AddBar(int64(total),
+		mpb.BarFillerTrim(),
+		mpb.PrependDecorators(
+			decor.Name(strings.Repeat("0", 20)),
+			decor.Any(td1),
+		),
+		mpb.AppendDecorators(
+			decor.Any(td2),
+		),
+	)
+	for i := 0; i < total; i++ {
+		time.Sleep(10 * time.Millisecond)
+		bar.Increment()
+	}
+}
+
 func panicDecorator(panicMsg string, cond func(decor.Statistics) bool) decor.Decorator {
 	return decor.Any(func(st decor.Statistics) string {
 		if cond(st) {
