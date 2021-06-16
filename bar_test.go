@@ -259,17 +259,23 @@ func TestDecorStatisticsAvailableWidth(t *testing.T) {
 		if s.AvailableWidth != 80 {
 			t.Errorf("expected AvailableWidth %d got %d\n", 80, s.AvailableWidth)
 		}
-		return fmt.Sprintf("\x1b[31;1;4m%s\x1b[0m", strings.Repeat("1", 20))
+		return fmt.Sprintf("\x1b[31;1;4m%s\x1b[0m", strings.Repeat("0", 20))
 	}
+	checkDone := make(chan struct{})
 	td2 := func(s decor.Statistics) string {
-		if s.AvailableWidth != 60 {
-			t.Errorf("expected AvailableWidth %d got %d\n", 60, s.AvailableWidth)
+		defer func() {
+			checkDone <- struct{}{}
+		}()
+		if s.AvailableWidth != 40 {
+			t.Errorf("expected AvailableWidth %d got %d\n", 40, s.AvailableWidth)
 		}
 		return ""
 	}
 	total := 100
+	down := make(chan struct{})
 	p := mpb.New(
 		mpb.WithWidth(100),
+		mpb.WithShutdownNotifier(down),
 		mpb.WithOutput(ioutil.Discard),
 	)
 	bar := p.AddBar(int64(total),
@@ -279,13 +285,24 @@ func TestDecorStatisticsAvailableWidth(t *testing.T) {
 			decor.Any(td1),
 		),
 		mpb.AppendDecorators(
+			decor.Name(strings.Repeat("0", 20)),
 			decor.Any(td2),
 		),
 	)
-	for i := 0; i < total; i++ {
-		time.Sleep(10 * time.Millisecond)
+	go func() {
+		for {
+			select {
+			case <-checkDone:
+				bar.Abort(false)
+			case <-down:
+				return
+			}
+		}
+	}()
+	for !bar.Completed() {
 		bar.Increment()
 	}
+	p.Wait()
 }
 
 func panicDecorator(panicMsg string, cond func(decor.Statistics) bool) decor.Decorator {
