@@ -222,10 +222,8 @@ func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 				p.dlogger.Println(err)
 			}
 		case <-s.shutdownNotifier:
-			for s.heapUpdated {
-				if err := s.render(cw); err != nil {
-					p.dlogger.Println(err)
-				}
+			if err := s.render(cw); err != nil {
+				p.dlogger.Println(err)
 			}
 			return
 		}
