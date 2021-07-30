@@ -300,12 +300,12 @@ func (b *Bar) serve(ctx context.Context, s *bState) {
 		case op := <-b.operateState:
 			op(s)
 		case <-ctx.Done():
-			b.cacheState = s
-			close(b.done)
 			// Notifying decorators about shutdown event
 			for _, sl := range s.shutdownListeners {
 				sl.Shutdown()
 			}
+			b.cacheState = s
+			close(b.done)
 			return
 		}
 	}
