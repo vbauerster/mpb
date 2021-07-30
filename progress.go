@@ -19,7 +19,7 @@ import (
 
 const (
 	// default RefreshRate
-	prr = 120 * time.Millisecond
+	prr = 150 * time.Millisecond
 )
 
 // Progress represents a container that renders one or more progress
