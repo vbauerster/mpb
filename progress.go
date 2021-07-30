@@ -291,11 +291,12 @@ func (s *pState) render(cw *cwriter.Writer) error {
 }
 
 func (s *pState) flush(cw *cwriter.Writer) error {
-	var lineCount int
-	bm := make(map[*Bar]struct{}, s.bHeap.Len())
+	var totalLines int
+	bm := make(map[*Bar]int, s.bHeap.Len())
 	for s.bHeap.Len() > 0 {
 		b := heap.Pop(&s.bHeap).(*Bar)
-		cw.ReadFrom(<-b.frameCh)
+		frame := <-b.frameCh
+		cw.ReadFrom(frame.reader)
 		if b.toShutdown {
 			if b.recoveredPanic != nil {
 				s.barShutdownQueue = append(s.barShutdownQueue, b)
@@ -308,8 +309,8 @@ func (s *pState) flush(cw *cwriter.Writer) error {
 				}()
 			}
 		}
-		lineCount += b.extendedLines + 1
-		bm[b] = struct{}{}
+		bm[b] = frame.lines
+		totalLines += frame.lines
 	}
 
 	for _, b := range s.barShutdownQueue {
@@ -320,7 +321,7 @@ func (s *pState) flush(cw *cwriter.Writer) error {
 			b.toDrop = true
 		}
 		if s.popCompleted && !b.noPop {
-			lineCount -= b.extendedLines + 1
+			totalLines -= bm[b]
 			b.toDrop = true
 		}
 		if b.toDrop {
@@ -335,7 +336,7 @@ func (s *pState) flush(cw *cwriter.Writer) error {
 		heap.Push(&s.bHeap, b)
 	}
 
-	return cw.Flush(lineCount)
+	return cw.Flush(totalLines)
 }
 
 func (s *pState) updateSyncMatrix() {

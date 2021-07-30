@@ -20,13 +20,12 @@ type Bar struct {
 	priority int // used by heap
 	index    int // used by heap
 
-	extendedLines     int
 	toShutdown        bool
 	toDrop            bool
 	noPop             bool
 	hasEwmaDecorators bool
 	operateState      chan func(*bState)
-	frameCh           chan io.Reader
+	frameCh           chan *frame
 	syncTableCh       chan [][]chan int
 	completed         chan bool
 
@@ -77,6 +76,11 @@ type bState struct {
 	debugOut io.Writer
 }
 
+type frame struct {
+	reader io.Reader
+	lines  int
+}
+
 func newBar(container *Progress, bs *bState) *Bar {
 	logPrefix := fmt.Sprintf("%sbar#%02d ", container.dlogger.Prefix(), bs.id)
 	ctx, cancel := context.WithCancel(container.ctx)
@@ -87,7 +91,7 @@ func newBar(container *Progress, bs *bState) *Bar {
 		toDrop:       bs.dropOnComplete,
 		noPop:        bs.noPop,
 		operateState: make(chan func(*bState)),
-		frameCh:      make(chan io.Reader, 1),
+		frameCh:      make(chan *frame, 1),
 		syncTableCh:  make(chan [][]chan int, 1),
 		completed:    make(chan bool, 1),
 		done:         make(chan struct{}),
@@ -319,17 +323,15 @@ func (b *Bar) render(tw int) {
 					b.toShutdown = !b.toShutdown
 					b.recoveredPanic = p
 				}
-				frame, lines := s.extender(nil, s.reqWidth, stat)
-				b.extendedLines = lines
-				b.frameCh <- frame
+				reader, lines := s.extender(nil, s.reqWidth, stat)
+				b.frameCh <- &frame{reader, lines}
 				b.dlogger.Println(p)
 			}
 			s.completeFlushed = s.completed
 		}()
-		frame, lines := s.extender(s.draw(stat), s.reqWidth, stat)
-		b.extendedLines = lines
+		reader, lines := s.extender(s.draw(stat), s.reqWidth, stat)
 		b.toShutdown = s.completed && !s.completeFlushed
-		b.frameCh <- frame
+		b.frameCh <- &frame{reader, lines + 1}
 	}:
 	case <-b.done:
 		s := b.cacheState
@@ -338,9 +340,8 @@ func (b *Bar) render(tw int) {
 		if b.recoveredPanic == nil {
 			r = s.draw(stat)
 		}
-		frame, lines := s.extender(r, s.reqWidth, stat)
-		b.extendedLines = lines
-		b.frameCh <- frame
+		reader, lines := s.extender(r, s.reqWidth, stat)
+		b.frameCh <- &frame{reader, lines + 1}
 	}
 }
 
