@@ -32,7 +32,7 @@ func BenchmarkWithAppend(b *testing.B) {
 
 func BenchmarkWithCopy(b *testing.B) {
 	w := New(ioutil.Discard)
-	w.lineCount = 4
+	w.lines = 4
 	for i := 0; i < b.N; i++ {
 		w.ansiCuuAndEd()
 	}
