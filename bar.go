@@ -33,7 +33,7 @@ type Bar struct {
 	cancel func()
 	// done is closed after cacheState is assigned
 	done chan struct{}
-	// cacheState is populated, right after close(shutdown)
+	// cacheState is populated, right after close(b.done)
 	cacheState *bState
 
 	container      *Progress
