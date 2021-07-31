@@ -177,7 +177,7 @@ func (p *Progress) UpdateBarPriority(b *Bar, priority int) {
 
 // BarCount returns bars count.
 func (p *Progress) BarCount() int {
-	result := make(chan int, 1)
+	result := make(chan int)
 	select {
 	case p.operateState <- func(s *pState) { result <- s.bHeap.Len() }:
 		return <-result
