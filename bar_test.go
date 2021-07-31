@@ -255,24 +255,27 @@ func TestBarPanicAfterComplete(t *testing.T) {
 }
 
 func TestDecorStatisticsAvailableWidth(t *testing.T) {
+	total := 100
+	down := make(chan struct{})
+	checkDone := make(chan struct{})
 	td1 := func(s decor.Statistics) string {
 		if s.AvailableWidth != 80 {
 			t.Errorf("expected AvailableWidth %d got %d\n", 80, s.AvailableWidth)
 		}
 		return fmt.Sprintf("\x1b[31;1;4m%s\x1b[0m", strings.Repeat("0", 20))
 	}
-	checkDone := make(chan struct{})
 	td2 := func(s decor.Statistics) string {
 		defer func() {
-			checkDone <- struct{}{}
+			select {
+			case checkDone <- struct{}{}:
+			default:
+			}
 		}()
 		if s.AvailableWidth != 40 {
 			t.Errorf("expected AvailableWidth %d got %d\n", 40, s.AvailableWidth)
 		}
 		return ""
 	}
-	total := 100
-	down := make(chan struct{})
 	p := mpb.New(
 		mpb.WithWidth(100),
 		mpb.WithShutdownNotifier(down),
@@ -293,7 +296,7 @@ func TestDecorStatisticsAvailableWidth(t *testing.T) {
 		for {
 			select {
 			case <-checkDone:
-				bar.Abort(false)
+				bar.Abort(true)
 			case <-down:
 				return
 			}
