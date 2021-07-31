@@ -324,7 +324,7 @@ func (b *Bar) render(tw int) {
 					b.recoveredPanic = p
 				}
 				reader, lines := s.extender(nil, s.reqWidth, stat)
-				b.frameCh <- &frame{reader, lines}
+				b.frameCh <- &frame{reader, lines + 1}
 				b.dlogger.Println(p)
 			}
 			s.completeFlushed = s.completed
