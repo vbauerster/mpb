@@ -27,7 +27,6 @@ type Bar struct {
 	operateState      chan func(*bState)
 	frameCh           chan *frame
 	syncTableCh       chan [][]chan int
-	completed         chan bool
 
 	// cancel is called either by user or on complete event
 	cancel func()
@@ -93,7 +92,6 @@ func newBar(container *Progress, bs *bState) *Bar {
 		operateState: make(chan func(*bState)),
 		frameCh:      make(chan *frame, 1),
 		syncTableCh:  make(chan [][]chan int, 1),
-		completed:    make(chan bool, 1),
 		done:         make(chan struct{}),
 		cancel:       cancel,
 		dlogger:      log.New(bs.debugOut, logPrefix, log.Lshortfile),
@@ -287,9 +285,10 @@ func (b *Bar) Abort(drop bool) {
 
 // Completed reports whether the bar is in completed state.
 func (b *Bar) Completed() bool {
+	result := make(chan bool)
 	select {
-	case b.operateState <- func(s *bState) { b.completed <- s.completed }:
-		return <-b.completed
+	case b.operateState <- func(s *bState) { result <- s.completed }:
+		return <-result
 	case <-b.done:
 		return true
 	}
