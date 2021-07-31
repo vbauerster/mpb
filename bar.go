@@ -278,6 +278,8 @@ func (b *Bar) Abort(drop bool) {
 	default:
 		if drop {
 			b.container.dropBar(b)
+		} else if b.container.BarCount() == 1 {
+			b.container.refreshCh <- time.Now()
 		}
 		b.cancel()
 	}
