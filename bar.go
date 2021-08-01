@@ -267,18 +267,20 @@ func (b *Bar) SetPriority(priority int) {
 // if bar is already in complete state. If drop is true bar will be
 // removed as well.
 func (b *Bar) Abort(drop bool) {
-	if b.Completed() {
-		return
-	}
 	select {
-	case <-b.done:
-	default:
+	case b.operateState <- func(s *bState) {
+		if s.completed == true {
+			return
+		}
 		if drop {
 			b.container.dropBar(b)
-		} else if b.container.BarCount() == 1 {
+		} else {
 			b.container.refreshCh <- time.Now()
 		}
 		b.cancel()
+	}:
+		<-b.done
+	case <-b.done:
 	}
 }
 
