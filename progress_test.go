@@ -69,7 +69,7 @@ func TestBarAbort(t *testing.T) {
 	wg.Wait()
 	count := p.BarCount()
 	if count != 2 {
-		t.Errorf("BarCount want: %q, got: %q\n", 2, count)
+		t.Errorf("BarCount want: %d, got: %d\n", 2, count)
 	}
 	bars[1].Abort(true)
 	bars[2].Abort(true)
