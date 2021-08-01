@@ -26,7 +26,7 @@ func main() {
 				decor.Name(name),
 				decor.EwmaETA(decor.ET_STYLE_GO, 60, decor.WCSyncSpace),
 			),
-			mpb.AppendDecorators(decor.Percentage()),
+			mpb.AppendDecorators(decor.Percentage(decor.WCSyncSpace)),
 		)
 		go func() {
 			defer wg.Done()
@@ -37,8 +37,7 @@ func main() {
 				// EWMA's unit of measure is an iteration's duration
 				start := time.Now()
 				if bar.ID() == 2 && i >= 42 {
-					// aborting and removing while bar is running
-					bar.Abort(true)
+					bar.Abort(false)
 				}
 				time.Sleep(time.Duration(rng.Intn(10)+1) * max / 10)
 				bar.Increment()
