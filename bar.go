@@ -263,10 +263,13 @@ func (b *Bar) SetPriority(priority int) {
 	b.container.setBarPriority(b, priority)
 }
 
-// Abort interrupts bar's running goroutine. Call this, if you'd like
-// to stop/remove bar before completion event. It has no effect after
-// completion event. If drop is true bar will be removed as well.
+// Abort interrupts bar's running goroutine. Abort won't be engaged
+// if bar is already in complete state. If drop is true bar will be
+// removed as well.
 func (b *Bar) Abort(drop bool) {
+	if b.Completed() {
+		return
+	}
 	select {
 	case <-b.done:
 	default:
