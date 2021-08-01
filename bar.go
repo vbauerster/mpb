@@ -26,7 +26,6 @@ type Bar struct {
 	hasEwmaDecorators bool
 	operateState      chan func(*bState)
 	frameCh           chan *frame
-	syncTableCh       chan [][]chan int
 
 	// cancel is called either by user or on complete event
 	cancel func()
@@ -91,7 +90,6 @@ func newBar(container *Progress, bs *bState) *Bar {
 		noPop:        bs.noPop,
 		operateState: make(chan func(*bState)),
 		frameCh:      make(chan *frame, 1),
-		syncTableCh:  make(chan [][]chan int, 1),
 		done:         make(chan struct{}),
 		cancel:       cancel,
 		dlogger:      log.New(bs.debugOut, logPrefix, log.Lshortfile),
@@ -384,9 +382,10 @@ func (b *Bar) refreshTillShutdown() {
 }
 
 func (b *Bar) wSyncTable() [][]chan int {
+	result := make(chan [][]chan int)
 	select {
-	case b.operateState <- func(s *bState) { b.syncTableCh <- s.wSyncTable() }:
-		return <-b.syncTableCh
+	case b.operateState <- func(s *bState) { result <- s.wSyncTable() }:
+		return <-result
 	case <-b.done:
 		return b.cacheState.wSyncTable()
 	}
