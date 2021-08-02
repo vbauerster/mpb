@@ -170,6 +170,23 @@ func (p *Progress) setBarPriority(b *Bar, priority int) {
 	}
 }
 
+func (p *Progress) traverseBars(cb func(b *Bar) bool) {
+	done := make(chan struct{})
+	select {
+	case p.operateState <- func(s *pState) {
+		for i := 0; i < s.bHeap.Len(); i++ {
+			bar := s.bHeap[i]
+			if !cb(bar) {
+				break
+			}
+		}
+		close(done)
+	}:
+		<-done
+	case <-p.done:
+	}
+}
+
 // UpdateBarPriority same as *Bar.SetPriority(int).
 func (p *Progress) UpdateBarPriority(b *Bar, priority int) {
 	p.setBarPriority(b, priority)

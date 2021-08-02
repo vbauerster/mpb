@@ -174,7 +174,7 @@ func (b *Bar) SetTotal(total int64, triggerComplete bool) {
 		if s.triggerComplete && !s.completed {
 			s.current = s.total
 			s.completed = true
-			go b.refreshTillShutdown()
+			go b.forceRefreshIfLastUncompleted()
 		}
 	}:
 	case <-b.done:
@@ -192,7 +192,7 @@ func (b *Bar) SetCurrent(current int64) {
 		if s.triggerComplete && s.current >= s.total {
 			s.current = s.total
 			s.completed = true
-			go b.refreshTillShutdown()
+			go b.forceRefreshIfLastUncompleted()
 		}
 	}:
 	case <-b.done:
@@ -219,7 +219,7 @@ func (b *Bar) IncrInt64(n int64) {
 		if s.triggerComplete && s.current >= s.total {
 			s.current = s.total
 			s.completed = true
-			go b.refreshTillShutdown()
+			go b.forceRefreshIfLastUncompleted()
 		}
 	}:
 	case <-b.done:
@@ -371,12 +371,24 @@ func (b *Bar) subscribeDecorators() {
 	}
 }
 
-func (b *Bar) refreshTillShutdown() {
-	for {
-		select {
-		case b.container.refreshCh <- time.Now():
-		case <-b.done:
-			return
+func (b *Bar) forceRefreshIfLastUncompleted() {
+	var uncompleted int
+	b.container.traverseBars(func(bar *Bar) bool {
+		if b != bar {
+			if !bar.Completed() {
+				uncompleted++
+				return false
+			}
+		}
+		return true
+	})
+	if uncompleted == 0 {
+		for {
+			select {
+			case b.container.refreshCh <- time.Now():
+			case <-b.done:
+				return
+			}
 		}
 	}
 }
