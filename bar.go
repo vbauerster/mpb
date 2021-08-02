@@ -145,6 +145,7 @@ func (b *Bar) SetRefill(amount int64) {
 
 // TraverseDecorators traverses all available decorators and calls cb func on each.
 func (b *Bar) TraverseDecorators(cb func(decor.Decorator)) {
+	done := make(chan struct{})
 	select {
 	case b.operateState <- func(s *bState) {
 		for _, decorators := range [...][]decor.Decorator{
@@ -155,7 +156,9 @@ func (b *Bar) TraverseDecorators(cb func(decor.Decorator)) {
 				cb(extractBaseDecorator(d))
 			}
 		}
+		close(done)
 	}:
+		<-done
 	case <-b.done:
 	}
 }
