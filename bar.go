@@ -261,7 +261,7 @@ func (b *Bar) DecoratorAverageAdjust(start time.Time) {
 // priority, i.e. bar will be on top. If you don't need to set priority
 // dynamically, better use BarPriority option.
 func (b *Bar) SetPriority(priority int) {
-	b.container.setBarPriority(b, priority)
+	b.container.UpdateBarPriority(b, priority)
 }
 
 // Abort interrupts bar's running goroutine. Abort won't be engaged

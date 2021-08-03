@@ -157,19 +157,6 @@ func (p *Progress) dropBar(b *Bar) {
 	}
 }
 
-func (p *Progress) setBarPriority(b *Bar, priority int) {
-	select {
-	case p.operateState <- func(s *pState) {
-		if b.index < 0 {
-			return
-		}
-		b.priority = priority
-		heap.Fix(&s.bHeap, b.index)
-	}:
-	case <-p.done:
-	}
-}
-
 func (p *Progress) traverseBars(cb func(b *Bar) bool) {
 	done := make(chan struct{})
 	select {
@@ -189,7 +176,16 @@ func (p *Progress) traverseBars(cb func(b *Bar) bool) {
 
 // UpdateBarPriority same as *Bar.SetPriority(int).
 func (p *Progress) UpdateBarPriority(b *Bar, priority int) {
-	p.setBarPriority(b, priority)
+	select {
+	case p.operateState <- func(s *pState) {
+		if b.index < 0 {
+			return
+		}
+		b.priority = priority
+		heap.Fix(&s.bHeap, b.index)
+	}:
+	case <-p.done:
+	}
 }
 
 // BarCount returns bars count.
