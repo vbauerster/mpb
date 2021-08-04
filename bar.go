@@ -376,13 +376,13 @@ func (b *Bar) subscribeDecorators() {
 			shutdownListeners = append(shutdownListeners, d)
 		}
 	})
+	b.hasEwmaDecorators = len(ewmaDecorators) != 0
 	select {
 	case b.operateState <- func(s *bState) {
 		s.averageDecorators = averageDecorators
 		s.ewmaDecorators = ewmaDecorators
 		s.shutdownListeners = shutdownListeners
 	}:
-		b.hasEwmaDecorators = len(ewmaDecorators) != 0
 	case <-b.done:
 	}
 }
