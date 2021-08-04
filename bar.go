@@ -275,10 +275,25 @@ func (b *Bar) Abort(drop bool) {
 		}
 		if drop {
 			b.container.dropBar(b)
-		} else {
-			b.container.refreshCh <- time.Now()
+			b.cancel()
+			return
 		}
-		b.cancel()
+		go func() {
+			var uncompleted int
+			b.container.traverseBars(func(bar *Bar) bool {
+				if b != bar {
+					if !bar.Completed() {
+						uncompleted++
+						return false
+					}
+				}
+				return true
+			})
+			if uncompleted == 0 {
+				b.container.refreshCh <- time.Now()
+			}
+			b.cancel()
+		}()
 	}:
 		<-b.done
 	case <-b.done:
