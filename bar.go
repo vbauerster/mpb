@@ -281,11 +281,9 @@ func (b *Bar) Abort(drop bool) {
 		go func() {
 			var uncompleted int
 			b.container.traverseBars(func(bar *Bar) bool {
-				if b != bar {
-					if !bar.Completed() {
-						uncompleted++
-						return false
-					}
+				if b != bar && !bar.Completed() {
+					uncompleted++
+					return false
 				}
 				return true
 			})
@@ -392,11 +390,9 @@ func (b *Bar) subscribeDecorators() {
 func (b *Bar) forceRefreshIfLastUncompleted() {
 	var uncompleted int
 	b.container.traverseBars(func(bar *Bar) bool {
-		if b != bar {
-			if !bar.Completed() {
-				uncompleted++
-				return false
-			}
+		if b != bar && !bar.Completed() {
+			uncompleted++
+			return false
 		}
 		return true
 	})
