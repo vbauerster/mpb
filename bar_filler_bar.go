@@ -167,7 +167,7 @@ func (s *bFiller) Fill(w io.Writer, width int, stat decor.Statistics) {
 	}
 
 	if stat.Refill > 0 && curWidth > 0 {
-		refWidth = int(internal.PercentageRound(stat.Total, int64(stat.Refill), width))
+		refWidth = int(internal.PercentageRound(stat.Total, stat.Refill, width))
 		if refWidth > curWidth {
 			refWidth = curWidth
 		}
