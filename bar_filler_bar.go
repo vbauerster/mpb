@@ -170,22 +170,20 @@ func (s *bFiller) Fill(w io.Writer, width int, stat decor.Statistics) {
 
 	var filling [][]byte
 	var padding [][]byte
-	var tip *component
 	var refWidth int
 	curWidth := int(internal.PercentageRound(stat.Total, stat.Current, width))
 	filled := curWidth
 
-	if stat.Current == stat.Total {
-		if s.tip.onCompleteIndex >= uint(len(s.tip.frames)) {
-			s.tip.onCompleteIndex = 0
-		}
-		tip = s.tip.frames[s.tip.onCompleteIndex]
-	} else {
-		tip = s.tip.frames[s.tip.count%uint(len(s.tip.frames))]
-	}
+	tip := s.tip.frames[s.tip.count%uint(len(s.tip.frames))]
 
 	if s.tip.inclusive {
 		if curWidth > 0 {
+			if stat.Current == stat.Total {
+				if s.tip.onCompleteIndex >= uint(len(s.tip.frames)) {
+					s.tip.onCompleteIndex = 0
+				}
+				tip = s.tip.frames[s.tip.onCompleteIndex]
+			}
 			filling = append(filling, tip.bytes)
 			curWidth -= tip.width
 			s.tip.count++
