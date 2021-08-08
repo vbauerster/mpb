@@ -2,4 +2,4 @@ module github.com/vbauerster/mpb/_examples/merge
 
 go 1.14
 
-require github.com/vbauerster/mpb/v7 v7.0.5
+require github.com/vbauerster/mpb/v7 v7.1.0
