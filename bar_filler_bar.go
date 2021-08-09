@@ -26,18 +26,18 @@ type BarStyleComposer interface {
 	Filler(string) BarStyleComposer
 	Refiller(string) BarStyleComposer
 	Padding(string) BarStyleComposer
-	Tip(...string) BarStyleComposer
-	Inclusive(tipOnCompleteIndex uint) BarStyleComposer
+	TipOnComplete(string) BarStyleComposer
+	Tip(frames ...string) BarStyleComposer
 	Reverse() BarStyleComposer
 }
 
 type bFiller struct {
 	components [components]*component
 	tip        struct {
-		count           uint
-		onCompleteIndex uint
-		inclusive       bool
-		frames          []*component
+		count      uint
+		inclusive  bool
+		onComplete *component
+		frames     []*component
 	}
 	flush func(dst io.Writer, filling, padding [][]byte)
 }
@@ -48,27 +48,26 @@ type component struct {
 }
 
 type barStyle struct {
-	lbound             string
-	rbound             string
-	filler             string
-	refiller           string
-	padding            string
-	tip                []string
-	tipOnCompleteIndex uint
-	tipInclusive       bool
-	rev                bool
+	lbound        string
+	rbound        string
+	filler        string
+	refiller      string
+	padding       string
+	tipOnComplete string
+	tipFrames     []string
+	rev           bool
 }
 
 // BarStyle constructs default bar style which can be altered via
 // BarStyleComposer interface.
 func BarStyle() BarStyleComposer {
 	return &barStyle{
-		lbound:   "[",
-		rbound:   "]",
-		filler:   "=",
-		refiller: "+",
-		padding:  "-",
-		tip:      []string{">"},
+		lbound:    "[",
+		rbound:    "]",
+		filler:    "=",
+		refiller:  "+",
+		padding:   "-",
+		tipFrames: []string{">"},
 	}
 }
 
@@ -97,16 +96,15 @@ func (s *barStyle) Padding(padding string) BarStyleComposer {
 	return s
 }
 
-func (s *barStyle) Tip(tip ...string) BarStyleComposer {
-	if len(tip) != 0 {
-		s.tip = append(s.tip[:0], tip...)
-	}
+func (s *barStyle) TipOnComplete(tip string) BarStyleComposer {
+	s.tipOnComplete = tip
 	return s
 }
 
-func (s *barStyle) Inclusive(tipOnCompleteIndex uint) BarStyleComposer {
-	s.tipInclusive = true
-	s.tipOnCompleteIndex = tipOnCompleteIndex
+func (s *barStyle) Tip(frames ...string) BarStyleComposer {
+	if len(frames) != 0 {
+		s.tipFrames = append(s.tipFrames[:0], frames...)
+	}
 	return s
 }
 
@@ -144,10 +142,12 @@ func (s *barStyle) Build() BarFiller {
 		width: runewidth.StringWidth(stripansi.Strip(s.padding)),
 		bytes: []byte(s.padding),
 	}
-	bf.tip.inclusive = s.tipInclusive
-	bf.tip.onCompleteIndex = s.tipOnCompleteIndex
-	bf.tip.frames = make([]*component, len(s.tip))
-	for i, t := range s.tip {
+	bf.tip.onComplete = &component{
+		width: runewidth.StringWidth(stripansi.Strip(s.tipOnComplete)),
+		bytes: []byte(s.tipOnComplete),
+	}
+	bf.tip.frames = make([]*component, len(s.tipFrames))
+	for i, t := range s.tipFrames {
 		bf.tip.frames[i] = &component{
 			width: runewidth.StringWidth(stripansi.Strip(t)),
 			bytes: []byte(t),
@@ -159,73 +159,62 @@ func (s *barStyle) Build() BarFiller {
 func (s *bFiller) Fill(w io.Writer, width int, stat decor.Statistics) {
 	width = internal.CheckRequestedWidth(width, stat.AvailableWidth)
 	brackets := s.components[iLbound].width + s.components[iRbound].width
-	if width < brackets {
-		return
-	}
 	// don't count brackets as progress
 	width -= brackets
+	if width < 0 {
+		return
+	}
 
 	w.Write(s.components[iLbound].bytes)
 	defer w.Write(s.components[iRbound].bytes)
 
+	if width == 0 {
+		return
+	}
+
 	var filling [][]byte
 	var padding [][]byte
-	var refWidth int
-	curWidth := int(internal.PercentageRound(stat.Total, stat.Current, width))
-	filled := curWidth
+	var tip *component
+	var filled int
+	curWidth := int(internal.PercentageRound(stat.Total, stat.Current, uint(width)))
 
-	tip := s.tip.frames[s.tip.count%uint(len(s.tip.frames))]
+	if stat.Current >= stat.Total {
+		tip = s.tip.onComplete
+	} else {
+		tip = s.tip.frames[s.tip.count%uint(len(s.tip.frames))]
+	}
 
-	if s.tip.inclusive {
-		if curWidth > 0 {
-			if stat.Current == stat.Total {
-				if s.tip.onCompleteIndex >= uint(len(s.tip.frames)) {
-					s.tip.onCompleteIndex = 0
-				}
-				tip = s.tip.frames[s.tip.onCompleteIndex]
-			}
-			filling = append(filling, tip.bytes)
-			curWidth -= tip.width
-			s.tip.count++
-		}
-	} else if curWidth < width {
+	if curWidth > 0 {
 		filling = append(filling, tip.bytes)
 		filled += tip.width
 		s.tip.count++
 	}
 
-	if stat.Refill > 0 && curWidth > 0 {
-		refWidth = int(internal.PercentageRound(stat.Total, stat.Refill, width))
-		if refWidth > curWidth {
-			refWidth = curWidth
-		}
-		curWidth -= refWidth
-	}
-
-	for curWidth > 0 && curWidth >= s.components[iFiller].width {
+	for filled < curWidth && curWidth-filled >= s.components[iFiller].width {
 		filling = append(filling, s.components[iFiller].bytes)
-		curWidth -= s.components[iFiller].width
 		if s.components[iFiller].width == 0 {
 			break
 		}
+		filled += s.components[iFiller].width
 	}
 
-	for refWidth > 0 && refWidth >= s.components[iRefiller].width {
-		filling = append(filling, s.components[iRefiller].bytes)
-		refWidth -= s.components[iRefiller].width
-		if s.components[iRefiller].width == 0 {
-			break
+	if stat.Refill > 0 {
+		refWidth := int(internal.PercentageRound(stat.Total, stat.Refill, uint(width)))
+		available := curWidth
+		bound := available - refWidth
+		for i := len(filling) - 1; available > bound && i > 0; i-- {
+			filling[i] = s.components[iRefiller].bytes
+			available -= s.components[iRefiller].width
 		}
 	}
 
-	filled -= curWidth + refWidth
 	padWidth := width - filled
 	for padWidth > 0 && padWidth >= s.components[iPadding].width {
 		padding = append(padding, s.components[iPadding].bytes)
-		padWidth -= s.components[iPadding].width
 		if s.components[iPadding].width == 0 {
 			break
 		}
+		padWidth -= s.components[iPadding].width
 	}
 
 	for padWidth > 0 {
