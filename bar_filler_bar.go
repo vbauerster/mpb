@@ -35,7 +35,6 @@ type bFiller struct {
 	components [components]*component
 	tip        struct {
 		count      uint
-		inclusive  bool
 		onComplete *component
 		frames     []*component
 	}
