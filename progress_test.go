@@ -127,7 +127,7 @@ func TestMaxWidthDistributor(t *testing.T) {
 	*mpb.MaxWidthDistributor = makeWrapper(*mpb.MaxWidthDistributor, start, end)
 
 	total := 80
-	numBars := 3
+	numBars := 6
 	p := mpb.New(mpb.WithOutput(ioutil.Discard))
 	for i := 0; i < numBars; i++ {
 		bar := p.AddBar(int64(total),
@@ -141,10 +141,14 @@ func TestMaxWidthDistributor(t *testing.T) {
 			rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 			for i := 0; i < total; i++ {
 				start := time.Now()
-				if bar.ID() >= numBars-1 && i >= 42 {
-					bar.Abort(true)
+				if id := bar.ID(); id > 1 && i >= 42 {
+					if id&1 == 1 {
+						bar.Abort(true)
+					} else {
+						bar.Abort(false)
+					}
 				}
-				time.Sleep((time.Duration(rng.Intn(10)+1) * (10 * time.Millisecond)) / 2)
+				time.Sleep((time.Duration(rng.Intn(10)+1) * (50 * time.Millisecond)) / 2)
 				bar.Increment()
 				bar.DecoratorEwmaUpdate(time.Since(start))
 			}
