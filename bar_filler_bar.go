@@ -199,11 +199,15 @@ func (s *bFiller) Fill(w io.Writer, width int, stat decor.Statistics) {
 
 	if stat.Refill > 0 {
 		refWidth := int(internal.PercentageRound(stat.Total, stat.Refill, uint(width)))
-		available := curWidth
-		bound := available - refWidth
-		for i := len(filling) - 1; available > bound && i > 0; i-- {
+		if refWidth == curWidth {
+			refWidth -= tip.width
+		}
+		for i := len(filling) - 1; i >= 0; i-- {
+			if refWidth < s.components[iRefiller].width {
+				break
+			}
 			filling[i] = s.components[iRefiller].bytes
-			available -= s.components[iRefiller].width
+			refWidth -= s.components[iRefiller].width
 		}
 	}
 
