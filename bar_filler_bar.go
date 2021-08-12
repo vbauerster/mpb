@@ -223,17 +223,17 @@ func (s *bFiller) Fill(w io.Writer, width int, stat decor.Statistics) {
 	}
 
 	padWidth := width - filled
-	for padWidth > 0 && padWidth >= s.components[iPadding].width {
-		padding = append(padding, s.components[iPadding].bytes)
-		if s.components[iPadding].width == 0 {
-			break
-		}
-		padWidth -= s.components[iPadding].width
-	}
-
 	for padWidth > 0 {
-		padding = append(padding, []byte("…"))
-		padWidth--
+		if padWidth >= s.components[iPadding].width {
+			padding = append(padding, s.components[iPadding].bytes)
+			if s.components[iPadding].width == 0 {
+				break
+			}
+			padWidth -= s.components[iPadding].width
+		} else {
+			padding = append(padding, []byte("…"))
+			padWidth--
+		}
 	}
 
 	s.flush(w, filling, padding)
