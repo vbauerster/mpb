@@ -149,7 +149,7 @@ func TestMaxWidthDistributor(t *testing.T) {
 					}
 				}
 				time.Sleep((time.Duration(rng.Intn(10)+1) * (50 * time.Millisecond)) / 2)
-				bar.Increment()
+				bar.IncrInt64(rand.Int63n(5) + 1)
 				bar.DecoratorEwmaUpdate(time.Since(start))
 			}
 		}()
