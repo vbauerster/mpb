@@ -274,24 +274,26 @@ func (b *Bar) Abort(drop bool) {
 			return
 		}
 		if drop {
-			b.container.dropBar(b)
-			b.cancel()
-			return
-		}
-		go func() {
-			var uncompleted int
-			b.container.traverseBars(func(bar *Bar) bool {
-				if b != bar && !bar.Completed() {
-					uncompleted++
-					return false
+			go b.container.dropBar(b)
+		} else {
+			go func() {
+				var uncompleted int
+				b.container.traverseBars(func(bar *Bar) bool {
+					if b != bar && !bar.Completed() {
+						uncompleted++
+						return false
+					}
+					return true
+				})
+				if uncompleted == 0 {
+					select {
+					case b.container.refreshCh <- time.Now():
+					case <-b.container.done:
+					}
 				}
-				return true
-			})
-			if uncompleted == 0 {
-				b.container.refreshCh <- time.Now()
-			}
-			b.cancel()
-		}()
+			}()
+		}
+		b.cancel()
 	}:
 		<-b.done
 	case <-b.done:
