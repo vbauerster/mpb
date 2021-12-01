@@ -26,7 +26,15 @@ func main() {
 				decor.Name(name),
 				decor.EwmaETA(decor.ET_STYLE_GO, 60, decor.WCSyncSpace),
 			),
-			mpb.AppendDecorators(decor.Percentage(decor.WCSyncSpace)),
+			mpb.AppendDecorators(
+				decor.Any(func(s decor.Statistics) string {
+					return fmt.Sprintf("completed: %v", s.Completed)
+				}, decor.WCSyncSpaceR),
+				decor.Any(func(s decor.Statistics) string {
+					return fmt.Sprintf("aborted: %v", s.Aborted)
+				}, decor.WCSyncSpaceR),
+				decor.OnComplete(decor.Percentage(decor.WCSyncSpace), "done"),
+			),
 		)
 		go func() {
 			defer wg.Done()

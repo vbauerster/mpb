@@ -55,6 +55,7 @@ type bState struct {
 	trimSpace         bool
 	completed         bool
 	completeFlushed   bool
+	aborted           bool
 	triggerComplete   bool
 	dropOnComplete    bool
 	noPop             bool
@@ -282,6 +283,8 @@ func (b *Bar) Abort(drop bool) {
 			close(done)
 			return
 		}
+		s.aborted = true
+		b.cancel()
 		// container must be run during lifetime of this inner goroutine
 		// we control this by done channel declared above
 		go func() {
@@ -302,7 +305,6 @@ func (b *Bar) Abort(drop bool) {
 			}
 			close(done) // release hold of Abort
 		}()
-		b.cancel()
 	}:
 		// guarantee: container is alive during lifetime of this hold
 		<-done
@@ -532,6 +534,7 @@ func newStatistics(tw int, s *bState) decor.Statistics {
 		Current:        s.current,
 		Refill:         s.refill,
 		Completed:      s.completeFlushed,
+		Aborted:        s.aborted,
 	}
 }
 
