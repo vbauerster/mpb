@@ -6,7 +6,7 @@ package decor
 //
 //	`decorator` Decorator to wrap
 //
-//	`message` message to display on complete event
+//	`message` message to display on abort event
 //
 func OnAbort(decorator Decorator, message string) Decorator {
 	d := &onAbortWrapper{
