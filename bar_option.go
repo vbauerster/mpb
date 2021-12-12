@@ -5,7 +5,6 @@ import (
 	"io"
 
 	"github.com/vbauerster/mpb/v7/decor"
-	"github.com/vbauerster/mpb/v7/internal"
 )
 
 // BarOption is a func option to alter default behavior of a bar.
@@ -149,7 +148,10 @@ func BarNoPop() BarOption {
 
 // BarOptional will invoke provided option only when pick is true.
 func BarOptional(option BarOption, pick bool) BarOption {
-	return BarOptOn(option, internal.Predicate(pick))
+	if pick {
+		return option
+	}
+	return nil
 }
 
 // BarOptOn will invoke provided option only when higher order predicate
