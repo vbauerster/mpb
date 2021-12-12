@@ -11,6 +11,15 @@ import (
 // BarOption is a func option to alter default behavior of a bar.
 type BarOption func(*bState)
 
+func skipNil(decorators []decor.Decorator) (filtered []decor.Decorator) {
+	for _, d := range decorators {
+		if d != nil {
+			filtered = append(filtered, d)
+		}
+	}
+	return
+}
+
 func (s *bState) addDecorators(dest *[]decor.Decorator, decorators ...decor.Decorator) {
 	type mergeWrapper interface {
 		MergeUnwrap() []decor.Decorator
@@ -26,14 +35,14 @@ func (s *bState) addDecorators(dest *[]decor.Decorator, decorators ...decor.Deco
 // AppendDecorators let you inject decorators to the bar's right side.
 func AppendDecorators(decorators ...decor.Decorator) BarOption {
 	return func(s *bState) {
-		s.addDecorators(&s.aDecorators, decorators...)
+		s.addDecorators(&s.aDecorators, skipNil(decorators)...)
 	}
 }
 
 // PrependDecorators let you inject decorators to the bar's left side.
 func PrependDecorators(decorators ...decor.Decorator) BarOption {
 	return func(s *bState) {
-		s.addDecorators(&s.pDecorators, decorators...)
+		s.addDecorators(&s.pDecorators, skipNil(decorators)...)
 	}
 }
 
