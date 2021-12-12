@@ -26,11 +26,20 @@ type BarFillerBuilder interface {
 	Build() BarFiller
 }
 
-// BarFillerFunc is function type adapter to convert function into BarFiller.
+// BarFillerFunc is function type adapter to convert compatible function
+// into BarFiller interface.
 type BarFillerFunc func(w io.Writer, reqWidth int, stat decor.Statistics)
 
 func (f BarFillerFunc) Fill(w io.Writer, reqWidth int, stat decor.Statistics) {
 	f(w, reqWidth, stat)
+}
+
+// BarFillerBuilderFunc is function type adapter to convert compatible
+// function into BarFillerBuilder interface.
+type BarFillerBuilderFunc func() BarFiller
+
+func (f BarFillerBuilderFunc) Build() BarFiller {
+	return f()
 }
 
 // NewBarFiller constructs a BarFiller from provided BarFillerBuilder.
