@@ -16,6 +16,7 @@ func init() {
 
 func main() {
 	doneWg := new(sync.WaitGroup)
+	// passed doneWg will be accounted at p.Wait() call
 	p := mpb.New(mpb.WithWaitGroup(doneWg))
 	numBars := 4
 
@@ -64,7 +65,7 @@ func main() {
 			go newTask(doneWg, b, numBars-i)
 		}()
 	}
-
+	// wait for passed doneWg and for all bars to complete and flush
 	p.Wait()
 }
 

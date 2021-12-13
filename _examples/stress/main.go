@@ -16,6 +16,7 @@ const (
 
 func main() {
 	var wg sync.WaitGroup
+	// passed wg will be accounted at p.Wait() call
 	p := mpb.New(mpb.WithWaitGroup(&wg))
 	wg.Add(totalBars)
 
@@ -44,6 +45,6 @@ func main() {
 			}
 		}()
 	}
-
+	// wait for passed wg and for all bars to complete and flush
 	p.Wait()
 }

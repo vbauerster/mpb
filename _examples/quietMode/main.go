@@ -20,7 +20,7 @@ func init() {
 func main() {
 	flag.Parse()
 	var wg sync.WaitGroup
-	// pass &wg (optional), so p will wait for it eventually
+	// passed wg will be accounted at p.Wait() call
 	p := mpb.New(
 		mpb.WithWaitGroup(&wg),
 		mpb.ContainerOptional(
@@ -68,7 +68,7 @@ func main() {
 			}
 		}()
 	}
-	// Waiting for passed &wg and for all bars to complete and flush
+	// wait for passed wg and for all bars to complete and flush
 	p.Wait()
 	fmt.Println("done")
 }

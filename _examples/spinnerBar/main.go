@@ -12,8 +12,8 @@ import (
 
 func main() {
 	var wg sync.WaitGroup
+	// passed wg will be accounted at p.Wait() call
 	p := mpb.New(
-		// passing &wg will make p.Wait() call wait for it first
 		mpb.WithWaitGroup(&wg),
 		mpb.WithWidth(16),
 	)
@@ -51,7 +51,7 @@ func main() {
 			}
 		}()
 	}
-	// wait for all bars to complete and flush
+	// wait for passed wg and for all bars to complete and flush
 	p.Wait()
 }
 

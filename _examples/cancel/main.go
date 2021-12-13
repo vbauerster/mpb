@@ -16,6 +16,7 @@ func main() {
 	defer cancel()
 
 	var wg sync.WaitGroup
+	// passed wg will be accounted at p.Wait() call
 	p := mpb.NewWithContext(ctx, mpb.WithWaitGroup(&wg))
 	total := 300
 	numBars := 3
@@ -49,6 +50,6 @@ func main() {
 			}
 		}()
 	}
-
+	// wait for passed wg and for all bars to complete and flush
 	p.Wait()
 }

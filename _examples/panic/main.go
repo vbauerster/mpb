@@ -13,7 +13,11 @@ import (
 
 func main() {
 	var wg sync.WaitGroup
-	p := mpb.New(mpb.WithWaitGroup(&wg), mpb.WithDebugOutput(os.Stderr))
+	// passed wg will be accounted at p.Wait() call
+	p := mpb.New(
+		mpb.WithWaitGroup(&wg),
+		mpb.WithDebugOutput(os.Stderr),
+	)
 
 	wantPanic := strings.Repeat("Panic ", 64)
 	numBars := 3
@@ -31,7 +35,7 @@ func main() {
 			}
 		}()
 	}
-
+	// wait for passed wg and for all bars to complete and flush
 	p.Wait()
 }
 
