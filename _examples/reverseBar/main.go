@@ -12,20 +12,16 @@ import (
 
 func main() {
 	var wg sync.WaitGroup
-	// pass &wg (optional), so p will wait for it eventually
-	p := mpb.New(mpb.WithWaitGroup(&wg))
+	p := mpb.New(
+		// passing &wg will make p.Wait() call wait for it first
+		mpb.WithWaitGroup(&wg),
+	)
 	total, numBars := 100, 3
 	wg.Add(numBars)
 
 	for i := 0; i < numBars; i++ {
 		name := fmt.Sprintf("Bar#%d:", i)
-		bs := mpb.BarStyle()
-		if i == 1 {
-			// reverse Bar#1
-			bs = bs.Tip("<").Reverse()
-		}
-		bar := p.Add(int64(total),
-			mpb.NewBarFiller(bs),
+		bar := p.New(int64(total), condBuilder(i == 1),
 			mpb.PrependDecorators(
 				// simple name decorator
 				decor.Name(name),
@@ -56,6 +52,17 @@ func main() {
 			}
 		}()
 	}
-	// Waiting for passed &wg and for all bars to complete and flush
+	// wait for all bars to complete and flush
 	p.Wait()
+}
+
+func condBuilder(cond bool) mpb.BarFillerBuilderFunc {
+	return mpb.BarFillerBuilderFunc(func() mpb.BarFiller {
+		bs := mpb.BarStyle()
+		if cond {
+			// reverse Bar on cond
+			bs = bs.Tip("<").Reverse()
+		}
+		return bs.Build()
+	})
 }

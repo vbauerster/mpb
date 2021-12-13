@@ -13,7 +13,9 @@ func main() {
 	p := mpb.New()
 
 	total := 100
-	bar := p.Add(int64(total), nil,
+	bar := p.New(int64(total),
+		mpb.NopStyle(), // make main bar style nop, so there are just decorators
+		mpb.BarExtender(extended(mpb.BarStyle())), // extend wtih normal bar on the next line
 		mpb.PrependDecorators(
 			decor.Name("Percentage: "),
 			decor.NewPercentage("%d"),
@@ -24,7 +26,6 @@ func main() {
 				decor.AverageETA(decor.ET_STYLE_GO), "done",
 			),
 		),
-		mpb.BarExtender(nlBarFiller(mpb.NewBarFiller(mpb.BarStyle()))),
 	)
 	// simulating some work
 	max := 100 * time.Millisecond
@@ -36,7 +37,8 @@ func main() {
 	p.Wait()
 }
 
-func nlBarFiller(filler mpb.BarFiller) mpb.BarFiller {
+func extended(builder mpb.BarFillerBuilder) mpb.BarFiller {
+	filler := builder.Build()
 	return mpb.BarFillerFunc(func(w io.Writer, reqWidth int, st decor.Statistics) {
 		filler.Fill(w, reqWidth, st)
 		w.Write([]byte("\n"))

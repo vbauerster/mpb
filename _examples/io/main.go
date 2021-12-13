@@ -19,8 +19,8 @@ func main() {
 		mpb.WithRefreshRate(180*time.Millisecond),
 	)
 
-	bar := p.Add(total,
-		mpb.NewBarFiller(mpb.BarStyle().Rbound("|")),
+	bar := p.New(total,
+		mpb.BarStyle().Rbound("|"),
 		mpb.PrependDecorators(
 			decor.CountersKibiByte("% .2f / % .2f"),
 		),

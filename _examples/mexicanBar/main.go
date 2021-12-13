@@ -20,8 +20,7 @@ func main() {
 	bs.Tip("\u001b[0m⛵\u001b[36;1m")
 	bs.Padding("_")
 	bs.Rbound("\u001b[0m]")
-	bar := p.Add(int64(total),
-		mpb.NewBarFiller(bs),
+	bar := p.New(int64(total), bs,
 		mpb.PrependDecorators(decor.Name(name)),
 		mpb.AppendDecorators(decor.Percentage()),
 	)

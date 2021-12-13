@@ -13,49 +13,28 @@ import (
 func main() {
 	var wg sync.WaitGroup
 	p := mpb.New(
+		// passing &wg will make p.Wait() call wait for it first
 		mpb.WithWaitGroup(&wg),
-		mpb.WithWidth(14),
+		mpb.WithWidth(16),
 	)
 	total, numBars := 101, 3
 	wg.Add(numBars)
 
-	spinnerStyle := []string{"∙∙∙", "●∙∙", "∙●∙", "∙∙●", "∙∙∙"}
-
 	for i := 0; i < numBars; i++ {
 		name := fmt.Sprintf("Bar#%d:", i)
-		var bar *mpb.Bar
-		if i == 0 {
-			bar = p.Add(int64(total),
-				mpb.NewBarFiller(mpb.BarStyle().Lbound("╢").Filler("▌").Tip("▌").Padding("░").Rbound("╟")),
-				mpb.PrependDecorators(
-					// simple name decorator
-					decor.Name(name),
+		bar := p.New(int64(total), condBuilder(i != 0),
+			mpb.PrependDecorators(
+				// simple name decorator
+				decor.Name(name),
+			),
+			mpb.AppendDecorators(
+				// replace ETA decorator with "done" message, OnComplete event
+				decor.OnComplete(
+					// ETA decorator with ewma age of 60
+					decor.EwmaETA(decor.ET_STYLE_GO, 60), "done",
 				),
-				mpb.AppendDecorators(
-					// replace ETA decorator with "done" message, OnComplete event
-					decor.OnComplete(
-						// ETA decorator with ewma age of 60
-						decor.EwmaETA(decor.ET_STYLE_GO, 60), "done",
-					),
-				),
-			)
-		} else {
-			bar = p.Add(int64(total),
-				mpb.NewBarFiller(mpb.SpinnerStyle(spinnerStyle...)),
-				mpb.PrependDecorators(
-					// simple name decorator
-					decor.Name(name),
-				),
-				mpb.AppendDecorators(
-					// replace ETA decorator with "done" message, OnComplete event
-					decor.OnComplete(
-						// ETA decorator with ewma age of 60
-						decor.EwmaETA(decor.ET_STYLE_GO, 60), "done",
-					),
-				),
-			)
-		}
-
+			),
+		)
 		// simulating some work
 		go func() {
 			defer wg.Done()
@@ -74,4 +53,15 @@ func main() {
 	}
 	// wait for all bars to complete and flush
 	p.Wait()
+}
+
+func condBuilder(cond bool) mpb.BarFillerBuilderFunc {
+	return mpb.BarFillerBuilderFunc(func() mpb.BarFiller {
+		if cond {
+			// spinner Bar on cond
+			frames := []string{"∙∙∙", "●∙∙", "∙●∙", "∙∙●", "∙∙∙"}
+			return mpb.SpinnerStyle(frames...).Build()
+		}
+		return mpb.BarStyle().Lbound("╢").Filler("▌").Tip("▌").Padding("░").Rbound("╟").Build()
+	})
 }

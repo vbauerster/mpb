@@ -14,8 +14,8 @@ func main() {
 
 	total := 100
 	name := "Single Bar:"
-	bar := p.Add(int64(total),
-		mpb.NewBarFiller(mpb.BarStyle().TipOnComplete(">")),
+	bar := p.New(int64(total),
+		mpb.BarStyle().TipOnComplete(">"),
 		mpb.PrependDecorators(decor.Name(name)),
 		mpb.AppendDecorators(decor.Percentage()),
 	)
