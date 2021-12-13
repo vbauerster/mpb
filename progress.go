@@ -119,7 +119,7 @@ func (p *Progress) New(total int64, builder BarFillerBuilder, options ...BarOpti
 // Panics if *Progress instance is done, i.e. called after *Progress.Wait().
 func (p *Progress) Add(total int64, filler BarFiller, options ...BarOption) *Bar {
 	if filler == nil {
-		filler = BarFillerFunc(func(io.Writer, int, decor.Statistics) {})
+		filler = NopStyle().Build()
 	}
 	p.bwg.Add(1)
 	result := make(chan *Bar)
