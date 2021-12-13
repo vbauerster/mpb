@@ -767,7 +767,7 @@ func TestDrawDefault(t *testing.T) {
 	var tmpBuf bytes.Buffer
 	for tw, cases := range testSuite {
 		for _, tc := range cases {
-			s := newTestState(NewBarFiller(tc.style))
+			s := newTestState(tc.style.Build())
 			s.reqWidth = tc.barWidth
 			s.total = tc.total
 			s.current = tc.current
@@ -1214,7 +1214,7 @@ func TestDrawTipOnComplete(t *testing.T) {
 	var tmpBuf bytes.Buffer
 	for tw, cases := range testSuite {
 		for _, tc := range cases {
-			s := newTestState(NewBarFiller(tc.style))
+			s := newTestState(tc.style.Build())
 			s.reqWidth = tc.barWidth
 			s.total = tc.total
 			s.current = tc.current
@@ -1383,7 +1383,7 @@ func TestDrawDoubleWidth(t *testing.T) {
 	var tmpBuf bytes.Buffer
 	for tw, cases := range testSuite {
 		for _, tc := range cases {
-			s := newTestState(NewBarFiller(tc.style))
+			s := newTestState(tc.style.Build())
 			s.reqWidth = tc.barWidth
 			s.total = tc.total
 			s.current = tc.current

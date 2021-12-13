@@ -63,7 +63,7 @@ func TestBarSetRefill(t *testing.T) {
 	till := 30
 	refiller := "+"
 
-	bar := p.Add(int64(total), mpb.NewBarFiller(mpb.BarStyle().Refiller(refiller)), mpb.BarFillerTrim())
+	bar := p.New(int64(total), mpb.BarStyle().Refiller(refiller), mpb.BarFillerTrim())
 
 	bar.SetRefill(int64(till))
 	bar.IncrBy(till)
@@ -152,7 +152,7 @@ func TestBarStyle(t *testing.T) {
 	bs.Tip(string(runes[2]))
 	bs.Padding(string(runes[3]))
 	bs.Rbound(string(runes[4]))
-	bar := p.Add(int64(total), mpb.NewBarFiller(bs), mpb.BarFillerTrim())
+	bar := p.New(int64(total), bs, mpb.BarFillerTrim())
 
 	for i := 0; i < total; i++ {
 		bar.Increment()
