@@ -54,7 +54,7 @@ func main() {
 	p.Wait()
 }
 
-func condBuilder(cond bool) mpb.BarFillerBuilderFunc {
+func condBuilder(cond bool) mpb.BarFillerBuilder {
 	return mpb.BarFillerBuilderFunc(func() mpb.BarFiller {
 		bs := mpb.BarStyle()
 		if cond {
