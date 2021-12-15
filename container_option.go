@@ -99,9 +99,9 @@ func PopCompletedMode() ContainerOption {
 	}
 }
 
-// ContainerOptional will invoke provided option only when pick is true.
-func ContainerOptional(option ContainerOption, pick bool) ContainerOption {
-	if pick {
+// ContainerOptional will invoke provided option only when cond is true.
+func ContainerOptional(option ContainerOption, cond bool) ContainerOption {
+	if cond {
 		return option
 	}
 	return nil

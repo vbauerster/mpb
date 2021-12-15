@@ -146,9 +146,9 @@ func BarNoPop() BarOption {
 	}
 }
 
-// BarOptional will invoke provided option only when pick is true.
-func BarOptional(option BarOption, pick bool) BarOption {
-	if pick {
+// BarOptional will invoke provided option only when cond is true.
+func BarOptional(option BarOption, cond bool) BarOption {
+	if cond {
 		return option
 	}
 	return nil
