@@ -106,7 +106,7 @@ func (b *Bar) ProxyReader(r io.Reader) io.ReadCloser {
 	if r == nil {
 		panic("expected non nil io.Reader")
 	}
-	return newProxyReader(r, b)
+	return b.newProxyReader(r)
 }
 
 // ID returs id of the bar.
