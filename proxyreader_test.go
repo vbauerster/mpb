@@ -67,8 +67,7 @@ func TestProxyWriterTo(t *testing.T) {
 	p := mpb.New(mpb.WithOutput(ioutil.Discard))
 
 	var reader io.Reader = strings.NewReader(content)
-	wt := reader.(io.WriterTo)
-	tReader := &testWriterTo{reader, wt, false}
+	tReader := &testWriterTo{reader, reader.(io.WriterTo), false}
 
 	bar := p.AddBar(int64(len(content)), mpb.BarFillerTrim())
 
