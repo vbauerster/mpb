@@ -279,7 +279,7 @@ func (b *Bar) Abort(drop bool) {
 	done := make(chan struct{})
 	select {
 	case b.operateState <- func(s *bState) {
-		if s.completed == true {
+		if s.completed {
 			close(done)
 			return
 		}
