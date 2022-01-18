@@ -83,6 +83,7 @@ func TestWithContext(t *testing.T) {
 
 	start := make(chan struct{})
 	done := make(chan struct{})
+	fail := make(chan struct{})
 	bar := p.AddBar(0) // never complete bar
 	go func() {
 		close(start)
@@ -97,14 +98,18 @@ func TestWithContext(t *testing.T) {
 		select {
 		case <-done:
 			p.Wait()
-		case <-time.After(100 * time.Millisecond):
-			t.Error("Progress didn't stop")
+		case <-time.After(150 * time.Millisecond):
+			close(fail)
 		}
 	}()
 
 	<-start
 	cancel()
-	<-shutdown
+	select {
+	case <-shutdown:
+	case <-fail:
+		t.Error("Progress didn't shutdown")
+	}
 }
 
 // MaxWidthDistributor shouldn't stuck in the middle while removing or aborting a bar
