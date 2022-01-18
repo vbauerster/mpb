@@ -77,37 +77,34 @@ func TestBarAbort(t *testing.T) {
 }
 
 func TestWithContext(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
 	shutdown := make(chan struct{})
-	p := mpb.NewWithContext(ctx,
-		mpb.WithOutput(ioutil.Discard),
-		mpb.WithRefreshRate(50*time.Millisecond),
-		mpb.WithShutdownNotifier(shutdown),
-	)
+	ctx, cancel := context.WithCancel(context.Background())
+	p := mpb.NewWithContext(ctx, mpb.WithShutdownNotifier(shutdown), mpb.WithOutput(ioutil.Discard))
 
-	total := 10000
-	numBars := 3
-	bars := make([]*mpb.Bar, 0, numBars)
-	for i := 0; i < numBars; i++ {
-		bar := p.AddBar(int64(total))
-		bars = append(bars, bar)
-		go func() {
-			for !bar.Completed() {
-				bar.Increment()
-				time.Sleep(randomDuration(100 * time.Millisecond))
-			}
-		}()
-	}
+	start := make(chan struct{})
+	done := make(chan struct{})
+	bar := p.AddBar(0) // never complete bar
+	go func() {
+		close(start)
+		for !bar.Completed() {
+			bar.Increment()
+			time.Sleep(randomDuration(100 * time.Millisecond))
+		}
+		close(done)
+	}()
 
-	time.Sleep(50 * time.Millisecond)
+	go func() {
+		select {
+		case <-done:
+			p.Wait()
+		case <-time.After(100 * time.Millisecond):
+			t.Error("Progress didn't stop")
+		}
+	}()
+
+	<-start
 	cancel()
-
-	p.Wait()
-	select {
-	case <-shutdown:
-	case <-time.After(100 * time.Millisecond):
-		t.Error("Progress didn't stop")
-	}
+	<-shutdown
 }
 
 // MaxWidthDistributor shouldn't stuck in the middle while removing or aborting a bar
