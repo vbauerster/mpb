@@ -3,7 +3,6 @@ package decor
 import (
 	"fmt"
 	"io"
-	"math"
 	"strconv"
 )
 
@@ -47,7 +46,7 @@ func (self SizeB1024) Format(st fmt.State, verb rune) {
 		unit = _iMiB
 	case self < _iTiB:
 		unit = _iGiB
-	case self <= math.MaxInt64:
+	default:
 		unit = _iTiB
 	}
 
@@ -96,7 +95,7 @@ func (self SizeB1000) Format(st fmt.State, verb rune) {
 		unit = _MB
 	case self < _TB:
 		unit = _GB
-	case self <= math.MaxInt64:
+	default:
 		unit = _TB
 	}
 
