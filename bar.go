@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
 	"runtime/debug"
 	"strings"
 	"sync"
@@ -36,7 +35,6 @@ type Bar struct {
 	cacheState *bState
 
 	container      *Progress
-	dlogger        *log.Logger
 	recoveredPanic interface{}
 }
 
@@ -81,7 +79,6 @@ type frame struct {
 }
 
 func newBar(container *Progress, bs *bState) *Bar {
-	logPrefix := fmt.Sprintf("%sbar#%02d ", container.dlogger.Prefix(), bs.id)
 	ctx, cancel := context.WithCancel(container.ctx)
 
 	bar := &Bar{
@@ -93,7 +90,6 @@ func newBar(container *Progress, bs *bState) *Bar {
 		frameCh:      make(chan *frame, 1),
 		done:         make(chan struct{}),
 		cancel:       cancel,
-		dlogger:      log.New(bs.debugOut, logPrefix, log.Lshortfile),
 	}
 
 	go bar.serve(ctx, bs)
@@ -346,13 +342,16 @@ func (b *Bar) render(tw int) {
 			// recovering if user defined decorator panics for example
 			if p := recover(); p != nil {
 				if b.recoveredPanic == nil {
+					if s.debugOut != nil {
+						fmt.Fprintln(s.debugOut, p)
+						_, _ = s.debugOut.Write(debug.Stack())
+					}
 					s.extender = makePanicExtender(p)
 					b.toShutdown = !b.toShutdown
 					b.recoveredPanic = p
 				}
 				reader, lines := s.extender(nil, s.reqWidth, stat)
 				b.frameCh <- &frame{reader, lines + 1}
-				b.dlogger.Println(p)
 			}
 			s.completeFlushed = s.completed
 		}()
@@ -559,14 +558,11 @@ func extractBaseDecorator(d decor.Decorator) decor.Decorator {
 
 func makePanicExtender(p interface{}) extenderFunc {
 	pstr := fmt.Sprint(p)
-	stack := debug.Stack()
-	stackLines := bytes.Count(stack, []byte("\n"))
 	return func(_ io.Reader, _ int, st decor.Statistics) (io.Reader, int) {
 		mr := io.MultiReader(
 			strings.NewReader(runewidth.Truncate(pstr, st.AvailableWidth, "…")),
-			strings.NewReader(fmt.Sprintf("\n%#v\n", st)),
-			bytes.NewReader(stack),
+			strings.NewReader("\n"),
 		)
-		return mr, stackLines + 1
+		return mr, 0
 	}
 }

@@ -6,8 +6,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
-	"log"
 	"math"
 	"os"
 	"sync"
@@ -33,7 +31,6 @@ type Progress struct {
 	done         chan struct{}
 	refreshCh    chan time.Time
 	once         sync.Once
-	dlogger      *log.Logger
 }
 
 // pState holds bars in its priorityQueue. It gets passed to
@@ -75,7 +72,6 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 		rr:         prr,
 		parkedBars: make(map[*Bar]*Bar),
 		output:     os.Stdout,
-		debugOut:   ioutil.Discard,
 	}
 
 	for _, opt := range options {
@@ -91,7 +87,6 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 		bwg:          new(sync.WaitGroup),
 		operateState: make(chan func(*pState)),
 		done:         make(chan struct{}),
-		dlogger:      log.New(s.debugOut, "[mpb] ", log.Lshortfile),
 	}
 
 	p.cwg.Add(1)
@@ -234,12 +229,26 @@ func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 			op(s)
 		case <-p.refreshCh:
 			if err := s.render(cw); err != nil {
-				p.dlogger.Println(err)
+				if s.debugOut != nil {
+					_, e := fmt.Fprintln(s.debugOut, err)
+					if e != nil {
+						panic(err)
+					}
+				} else {
+					panic(err)
+				}
 			}
 		case <-s.shutdownNotifier:
 			for s.heapUpdated {
 				if err := s.render(cw); err != nil {
-					p.dlogger.Println(err)
+					if s.debugOut != nil {
+						_, e := fmt.Fprintln(s.debugOut, err)
+						if e != nil {
+							panic(err)
+						}
+					} else {
+						panic(err)
+					}
 				}
 			}
 			return
