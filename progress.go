@@ -320,7 +320,10 @@ func (s *pState) flush(cw *cwriter.Writer) error {
 	for s.bHeap.Len() > 0 {
 		b := heap.Pop(&s.bHeap).(*Bar)
 		frame := <-b.frameCh
-		cw.ReadFrom(frame.reader)
+		_, err := cw.ReadFrom(frame.reader)
+		if err != nil {
+			return err
+		}
 		if b.toShutdown {
 			if b.recoveredPanic != nil {
 				s.barShutdownQueue = append(s.barShutdownQueue, b)

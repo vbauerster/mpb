@@ -774,7 +774,10 @@ func TestDrawDefault(t *testing.T) {
 			s.trimSpace = tc.trim
 			s.refill = tc.refill
 			tmpBuf.Reset()
-			tmpBuf.ReadFrom(s.draw(newStatistics(tw, s)))
+			_, err := tmpBuf.ReadFrom(s.draw(newStatistics(tw, s)))
+			if err != nil {
+				t.FailNow()
+			}
 			by := tmpBuf.Bytes()
 
 			got := string(by[:len(by)-1])
@@ -1221,7 +1224,10 @@ func TestDrawTipOnComplete(t *testing.T) {
 			s.trimSpace = tc.trim
 			s.refill = tc.refill
 			tmpBuf.Reset()
-			tmpBuf.ReadFrom(s.draw(newStatistics(tw, s)))
+			_, err := tmpBuf.ReadFrom(s.draw(newStatistics(tw, s)))
+			if err != nil {
+				t.FailNow()
+			}
 			by := tmpBuf.Bytes()
 
 			got := string(by[:len(by)-1])
@@ -1390,7 +1396,10 @@ func TestDrawDoubleWidth(t *testing.T) {
 			s.trimSpace = tc.trim
 			s.refill = tc.refill
 			tmpBuf.Reset()
-			tmpBuf.ReadFrom(s.draw(newStatistics(tw, s)))
+			_, err := tmpBuf.ReadFrom(s.draw(newStatistics(tw, s)))
+			if err != nil {
+				t.FailNow()
+			}
 			by := tmpBuf.Bytes()
 
 			got := string(by[:len(by)-1])
