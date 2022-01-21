@@ -414,9 +414,9 @@ func (s *pState) makeBarState(total int64, filler BarFiller, options ...BarOptio
 		bs.priority = -(math.MaxInt32 - s.idCount)
 	}
 
-	bs.bufP = bytes.NewBuffer(make([]byte, 0, 128))
-	bs.bufB = bytes.NewBuffer(make([]byte, 0, 256))
-	bs.bufA = bytes.NewBuffer(make([]byte, 0, 128))
+	for i := 0; i < len(bs.buffers); i++ {
+		bs.buffers[i] = bytes.NewBuffer(make([]byte, 0, 512))
+	}
 
 	return bs
 }

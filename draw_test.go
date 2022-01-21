@@ -1414,11 +1414,11 @@ func TestDrawDoubleWidth(t *testing.T) {
 }
 
 func newTestState(filler BarFiller) *bState {
-	s := &bState{
+	bs := &bState{
 		filler: filler,
-		bufP:   new(bytes.Buffer),
-		bufB:   new(bytes.Buffer),
-		bufA:   new(bytes.Buffer),
 	}
-	return s
+	for i := 0; i < len(bs.buffers); i++ {
+		bs.buffers[i] = bytes.NewBuffer(make([]byte, 0, 512))
+	}
+	return bs
 }

@@ -62,7 +62,7 @@ type bState struct {
 	averageDecorators []decor.AverageDecorator
 	ewmaDecorators    []decor.EwmaDecorator
 	shutdownListeners []decor.ShutdownListener
-	bufP, bufB, bufA  *bytes.Buffer
+	buffers           [3]*bytes.Buffer
 	filler            BarFiller
 	middleware        func(BarFiller) BarFiller
 	extender          extenderFunc
@@ -428,40 +428,43 @@ func (b *Bar) wSyncTable() [][]chan int {
 }
 
 func (s *bState) draw(stat decor.Statistics) io.Reader {
+	bufA := s.buffers[0]
+	bufB := s.buffers[1]
+	bufP := s.buffers[2]
 	nlr := strings.NewReader("\n")
 	tw := stat.AvailableWidth
 	for _, d := range s.pDecorators {
 		str := d.Decor(stat)
 		stat.AvailableWidth -= runewidth.StringWidth(stripansi.Strip(str))
-		s.bufP.WriteString(str)
+		bufP.WriteString(str)
 	}
 	if stat.AvailableWidth < 1 {
-		trunc := strings.NewReader(runewidth.Truncate(stripansi.Strip(s.bufP.String()), tw, "…"))
-		s.bufP.Reset()
+		trunc := strings.NewReader(runewidth.Truncate(stripansi.Strip(bufP.String()), tw, "…"))
+		bufP.Reset()
 		return io.MultiReader(trunc, nlr)
 	}
 
 	if !s.trimSpace && stat.AvailableWidth > 1 {
 		stat.AvailableWidth -= 2
-		s.bufB.WriteByte(' ')
-		defer s.bufB.WriteByte(' ')
+		bufB.WriteByte(' ')
+		defer bufB.WriteByte(' ')
 	}
 
 	tw = stat.AvailableWidth
 	for _, d := range s.aDecorators {
 		str := d.Decor(stat)
 		stat.AvailableWidth -= runewidth.StringWidth(stripansi.Strip(str))
-		s.bufA.WriteString(str)
+		bufA.WriteString(str)
 	}
 	if stat.AvailableWidth < 1 {
-		trunc := strings.NewReader(runewidth.Truncate(stripansi.Strip(s.bufA.String()), tw, "…"))
-		s.bufA.Reset()
-		return io.MultiReader(s.bufP, s.bufB, trunc, nlr)
+		trunc := strings.NewReader(runewidth.Truncate(stripansi.Strip(bufA.String()), tw, "…"))
+		bufA.Reset()
+		return io.MultiReader(bufP, bufB, trunc, nlr)
 	}
 
-	s.filler.Fill(s.bufB, s.reqWidth, stat)
+	s.filler.Fill(bufB, s.reqWidth, stat)
 
-	return io.MultiReader(s.bufP, s.bufB, s.bufA, nlr)
+	return io.MultiReader(bufP, bufB, bufA, nlr)
 }
 
 func (s *bState) wSyncTable() [][]chan int {
