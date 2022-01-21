@@ -1,43 +1,58 @@
 package mpb
 
 import (
-	"io/ioutil"
+	"sync"
 	"testing"
-
-	"github.com/vbauerster/mpb/v7/decor"
 )
 
-func BenchmarkIncrSingleBar(b *testing.B) {
-	p := New(WithOutput(ioutil.Discard), WithWidth(80))
-	bar := p.AddBar(int64(b.N))
-	for i := 0; i < b.N; i++ {
-		bar.Increment()
-	}
+const total = 1000
+
+func BenchmarkIncrementOneBar(b *testing.B) {
+	benchBody(1, b)
 }
 
-func BenchmarkIncrSingleBarWhileIsNotCompleted(b *testing.B) {
-	p := New(WithOutput(ioutil.Discard), WithWidth(80))
-	bar := p.AddBar(int64(b.N))
-	for !bar.Completed() {
-		bar.Increment()
-	}
+func BenchmarkIncrementTwoBars(b *testing.B) {
+	benchBody(2, b)
 }
 
-func BenchmarkIncrSingleBarWithNameDecorator(b *testing.B) {
-	p := New(WithOutput(ioutil.Discard), WithWidth(80))
-	bar := p.AddBar(int64(b.N), PrependDecorators(decor.Name("test")))
-	for i := 0; i < b.N; i++ {
-		bar.Increment()
-	}
+func BenchmarkIncrementThreeBars(b *testing.B) {
+	benchBody(3, b)
 }
 
-func BenchmarkIncrSingleBarWithNameAndEwmaETADecorator(b *testing.B) {
-	p := New(WithOutput(ioutil.Discard), WithWidth(80))
-	bar := p.AddBar(int64(b.N),
-		PrependDecorators(decor.Name("test")),
-		AppendDecorators(decor.EwmaETA(decor.ET_STYLE_GO, 60)),
-	)
+func BenchmarkIncrementFourBars(b *testing.B) {
+	benchBody(4, b)
+}
+
+func benchBody(n int, b *testing.B) {
+	p := New(WithOutput(nil), WithWidth(80))
+	wg := new(sync.WaitGroup)
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		bar.Increment()
+		for j := 0; j < n; j++ {
+			switch j {
+			case n - 1:
+				bar := p.AddBar(total)
+				for c := 0; c < total; c++ {
+					bar.Increment()
+				}
+				if !bar.Completed() {
+					b.Fail()
+				}
+			default:
+				wg.Add(1)
+				go func() {
+					bar := p.AddBar(total)
+					for c := 0; c < total; c++ {
+						bar.Increment()
+					}
+					if !bar.Completed() {
+						b.Fail()
+					}
+					wg.Done()
+				}()
+			}
+		}
+		wg.Wait()
 	}
+	p.Wait()
 }
