@@ -36,7 +36,7 @@ func main() {
 	defer proxyReader.Close()
 
 	// copy from proxyReader, ignoring errors
-	io.Copy(ioutil.Discard, proxyReader)
+	_, _ = io.Copy(ioutil.Discard, proxyReader)
 
 	p.Wait()
 }
