@@ -66,7 +66,7 @@ func BarQueueAfter(runningBar *Bar) BarOption {
 		return nil
 	}
 	return func(s *bState) {
-		s.runningBar = runningBar
+		s.afterBar = bar
 	}
 }
 

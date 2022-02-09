@@ -20,8 +20,7 @@ const (
 	prr = 150 * time.Millisecond
 )
 
-// Progress represents a container that renders one or more progress
-// bars.
+// Progress represents a container that renders one or more progress bars.
 type Progress struct {
 	ctx          context.Context
 	uwg          *sync.WaitGroup
@@ -33,8 +32,7 @@ type Progress struct {
 	once         sync.Once
 }
 
-// pState holds bars in its priorityQueue. It gets passed to
-// *Progress.serve(...) monitor goroutine.
+// pState holds bars in its priorityQueue, it gets passed to (*Progress).serve monitor goroutine.
 type pState struct {
 	bHeap            priorityQueue
 	heapUpdated      bool
@@ -52,9 +50,14 @@ type pState struct {
 	externalRefresh  <-chan interface{}
 	renderDelay      <-chan struct{}
 	shutdownNotifier chan struct{}
-	parkedBars       map[*Bar]*Bar
+	queueBars        map[*Bar]queueBar
 	output           io.Writer
 	debugOut         io.Writer
+}
+
+type queueBar struct {
+	bar   *Bar
+	serve func()
 }
 
 // New creates new Progress container instance. It's not possible to
@@ -68,10 +71,10 @@ func New(options ...ContainerOption) *Progress {
 // method has been called.
 func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 	s := &pState{
-		bHeap:      priorityQueue{},
-		rr:         prr,
-		parkedBars: make(map[*Bar]*Bar),
-		output:     os.Stdout,
+		bHeap:     priorityQueue{},
+		rr:        prr,
+		queueBars: make(map[*Bar]queueBar),
+		output:    os.Stdout,
 	}
 
 	for _, opt := range options {
@@ -121,19 +124,18 @@ func (p *Progress) Add(total int64, filler BarFiller, options ...BarOption) *Bar
 	select {
 	case p.operateState <- func(ps *pState) {
 		bs := ps.makeBarState(total, filler, options...)
-		bar := newBar(p, bs)
-		if bs.runningBar != nil {
-			bs.runningBar.noPop = true
-			ps.parkedBars[bs.runningBar] = bar
+		bar, serve := newBar(p, bs)
+		if bs.afterBar != nil {
+			ps.queueBars[bs.afterBar] = queueBar{bar, serve}
 		} else {
 			heap.Push(&ps.bHeap, bar)
 			ps.heapUpdated = true
+			go serve()
 		}
 		ps.idCount++
 		result <- bar
 	}:
 		bar := <-result
-		bar.subscribeDecorators()
 		return bar
 	case <-p.done:
 		p.bwg.Done()
@@ -341,13 +343,13 @@ func (s *pState) flush(cw *cwriter.Writer) error {
 	}
 
 	for _, b := range s.barShutdownQueue {
-		if parkedBar := s.parkedBars[b]; parkedBar != nil {
-			parkedBar.priority = b.priority
-			heap.Push(&s.bHeap, parkedBar)
-			delete(s.parkedBars, b)
+		if qb, ok := s.queueBars[b]; ok {
+			qb.bar.priority = b.priority
+			heap.Push(&s.bHeap, qb.bar)
+			delete(s.queueBars, b)
 			b.toDrop = true
-		}
-		if s.popCompleted && !b.noPop {
+			go qb.serve()
+		} else if s.popCompleted && !b.noPop {
 			totalLines -= bm[b]
 			b.toDrop = true
 		}

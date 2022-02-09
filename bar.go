@@ -24,24 +24,18 @@ type Bar struct {
 	toDrop            bool
 	noPop             bool
 	hasEwmaDecorators bool
-	operateState      chan func(*bState)
 	frameCh           chan *frame
-
-	// cancel is called either by user or on complete event
-	cancel func()
-	// done is closed after cacheState is assigned
-	done chan struct{}
-	// cacheState is populated, right after close(b.done)
-	cacheState *bState
-
-	container      *Progress
-	recoveredPanic interface{}
+	operateState      chan func(*bState)
+	done              chan struct{}
+	cacheState        *bState
+	container         *Progress
+	cancel            func()
+	recoveredPanic    interface{}
 }
 
 type extenderFunc func(in io.Reader, reqWidth int, st decor.Statistics) (out io.Reader, lines int)
 
-// bState is actual bar state. It gets passed to *Bar.serve(...) monitor
-// goroutine.
+// bState is actual bar's state.
 type bState struct {
 	id                int
 	priority          int
@@ -66,11 +60,10 @@ type bState struct {
 	filler            BarFiller
 	middleware        func(BarFiller) BarFiller
 	extender          extenderFunc
+	debugOut          io.Writer
 
-	// runningBar is a key for *pState.parkedBars
-	runningBar *Bar
-
-	debugOut io.Writer
+	// afterBar is a key for *pState.parkedBars
+	afterBar *Bar
 }
 
 type frame struct {
@@ -78,22 +71,38 @@ type frame struct {
 	lines  int
 }
 
-func newBar(container *Progress, bs *bState) *Bar {
+func newBar(container *Progress, bs *bState) (*Bar, func()) {
 	ctx, cancel := context.WithCancel(container.ctx)
 
 	bar := &Bar{
-		container:    container,
 		priority:     bs.priority,
 		toDrop:       bs.dropOnComplete,
 		noPop:        bs.noPop,
-		operateState: make(chan func(*bState)),
 		frameCh:      make(chan *frame, 1),
+		operateState: make(chan func(*bState)),
 		done:         make(chan struct{}),
+		container:    container,
 		cancel:       cancel,
 	}
 
-	go bar.serve(ctx, bs)
-	return bar
+	bar.subscribeDecorators(bs)
+
+	serve := func() {
+		defer container.bwg.Done()
+		for {
+			select {
+			case op := <-bar.operateState:
+				op(bs)
+			case <-ctx.Done():
+				bs.decoratorShutdownNotify()
+				bar.cacheState = bs
+				close(bar.done)
+				return
+			}
+		}
+	}
+
+	return bar, serve
 }
 
 // ProxyReader wraps r with metrics required for progress tracking.
@@ -319,21 +328,6 @@ func (b *Bar) Completed() bool {
 	}
 }
 
-func (b *Bar) serve(ctx context.Context, s *bState) {
-	defer b.container.bwg.Done()
-	for {
-		select {
-		case op := <-b.operateState:
-			op(s)
-		case <-ctx.Done():
-			s.decoratorShutdownNotify()
-			b.cacheState = s
-			close(b.done)
-			return
-		}
-	}
-}
-
 func (b *Bar) render(tw int) {
 	select {
 	case b.operateState <- func(s *bState) {
@@ -371,29 +365,23 @@ func (b *Bar) render(tw int) {
 	}
 }
 
-func (b *Bar) subscribeDecorators() {
-	var averageDecorators []decor.AverageDecorator
-	var ewmaDecorators []decor.EwmaDecorator
-	var shutdownListeners []decor.ShutdownListener
-	b.TraverseDecorators(func(d decor.Decorator) {
-		if d, ok := d.(decor.AverageDecorator); ok {
-			averageDecorators = append(averageDecorators, d)
+func (b *Bar) subscribeDecorators(bs *bState) {
+	for _, decorators := range [...][]decor.Decorator{
+		bs.pDecorators,
+		bs.aDecorators,
+	} {
+		for _, d := range decorators {
+			d = extractBaseDecorator(d)
+			if d, ok := d.(decor.AverageDecorator); ok {
+				bs.averageDecorators = append(bs.averageDecorators, d)
+			}
+			if d, ok := d.(decor.EwmaDecorator); ok {
+				bs.ewmaDecorators = append(bs.ewmaDecorators, d)
+			}
+			if d, ok := d.(decor.ShutdownListener); ok {
+				bs.shutdownListeners = append(bs.shutdownListeners, d)
+			}
 		}
-		if d, ok := d.(decor.EwmaDecorator); ok {
-			ewmaDecorators = append(ewmaDecorators, d)
-		}
-		if d, ok := d.(decor.ShutdownListener); ok {
-			shutdownListeners = append(shutdownListeners, d)
-		}
-	})
-	b.hasEwmaDecorators = len(ewmaDecorators) != 0
-	select {
-	case b.operateState <- func(s *bState) {
-		s.averageDecorators = averageDecorators
-		s.ewmaDecorators = ewmaDecorators
-		s.shutdownListeners = shutdownListeners
-	}:
-	case <-b.done:
 	}
 }
 
