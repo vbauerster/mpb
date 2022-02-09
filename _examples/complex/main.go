@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"math/rand"
-	"sync"
 	"time"
 
 	"github.com/vbauerster/mpb/v7"
@@ -15,41 +14,32 @@ func init() {
 }
 
 func main() {
-	doneWg := new(sync.WaitGroup)
-	// passed doneWg will be accounted at p.Wait() call
-	p := mpb.New(mpb.WithWaitGroup(doneWg))
 	numBars := 4
+	bars := make([]*mpb.Bar, numBars)
+	p := mpb.New()
 
-	var bars []*mpb.Bar
-	var downloadWgg []*sync.WaitGroup
 	for i := 0; i < numBars; i++ {
-		wg := new(sync.WaitGroup)
-		wg.Add(1)
-		downloadWgg = append(downloadWgg, wg)
 		task := fmt.Sprintf("Task#%02d:", i)
-		job := "downloading"
-		b := p.AddBar(rand.Int63n(201)+100,
+		bars[i] = p.AddBar(rand.Int63n(201)+100,
 			mpb.PrependDecorators(
 				decor.Name(task, decor.WC{W: len(task) + 1, C: decor.DidentRight}),
-				decor.Name(job, decor.WCSyncSpaceR),
+				decor.Name("downloading", decor.WCSyncSpaceR),
 				decor.CountersNoUnit("%d / %d", decor.WCSyncWidth),
 			),
 			mpb.AppendDecorators(decor.Percentage(decor.WC{W: 5})),
 		)
-		go newTask(wg, b, i+1)
-		bars = append(bars, b)
+		go complete(bars[i], i+1)
 	}
 
 	for i := 0; i < numBars; i++ {
-		doneWg.Add(1)
-		i := i
+		afterBar := bars[i]
+		task := fmt.Sprintf("Task#%02d:", i)
+		incrBy := numBars - i
 		go func() {
-			task := fmt.Sprintf("Task#%02d:", i)
-			// ANSI escape sequences are not supported on Windows OS
-			job := "\x1b[31;1;4mつのだ☆HIRO\x1b[0m"
-			// preparing delayed bars
+			job := "\x1b[31minstalling\x1b[0m"
+			// preparing queued bars
 			b := p.AddBar(rand.Int63n(101)+100,
-				mpb.BarQueueAfter(bars[i]),
+				mpb.BarQueueAfter(afterBar),
 				mpb.BarFillerClearOnComplete(),
 				mpb.PrependDecorators(
 					decor.Name(task, decor.WC{W: len(task) + 1, C: decor.DidentRight}),
@@ -60,17 +50,14 @@ func main() {
 					decor.OnComplete(decor.Percentage(decor.WC{W: 5}), ""),
 				),
 			)
-			// waiting for download to complete, before starting install job
-			downloadWgg[i].Wait()
-			go newTask(doneWg, b, numBars-i)
+			complete(b, incrBy) // blocks until afterBar completes
 		}()
 	}
-	// wait for passed doneWg and for all bars to complete and flush
+
 	p.Wait()
 }
 
-func newTask(wg *sync.WaitGroup, bar *mpb.Bar, incrBy int) {
-	defer wg.Done()
+func complete(bar *mpb.Bar, incrBy int) {
 	max := 100 * time.Millisecond
 	for !bar.Completed() {
 		// start variable is solely for EWMA calculation
