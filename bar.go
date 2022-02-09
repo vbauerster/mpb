@@ -392,6 +392,7 @@ func (b *Bar) forceRefreshIfLastUncompleted() {
 		for {
 			select {
 			case b.container.refreshCh <- time.Now():
+				time.Sleep(prr)
 			case <-b.done:
 				return
 			}
