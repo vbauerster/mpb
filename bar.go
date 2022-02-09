@@ -296,15 +296,12 @@ func (b *Bar) Abort(drop bool) {
 			if drop {
 				b.container.dropBar(b)
 			} else {
-				var uncompleted int
+				var anyOtherUncompleted bool
 				b.container.traverseBars(func(bar *Bar) bool {
-					if b != bar && !bar.Completed() {
-						uncompleted++
-						return false
-					}
-					return true
+					anyOtherUncompleted = b != bar && !bar.Completed()
+					return !anyOtherUncompleted
 				})
-				if uncompleted == 0 {
+				if !anyOtherUncompleted {
 					b.container.refreshCh <- time.Now()
 				}
 			}
@@ -386,15 +383,12 @@ func (b *Bar) subscribeDecorators(bs *bState) {
 }
 
 func (b *Bar) forceRefreshIfLastUncompleted() {
-	var uncompleted int
+	var anyOtherUncompleted bool
 	b.container.traverseBars(func(bar *Bar) bool {
-		if b != bar && !bar.Completed() {
-			uncompleted++
-			return false
-		}
-		return true
+		anyOtherUncompleted = b != bar && !bar.Completed()
+		return !anyOtherUncompleted
 	})
-	if uncompleted == 0 {
+	if !anyOtherUncompleted {
 		for {
 			select {
 			case b.container.refreshCh <- time.Now():
