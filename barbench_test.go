@@ -29,25 +29,14 @@ func benchBody(n int, b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		for j := 0; j < n; j++ {
+			bar := p.AddBar(total)
 			switch j {
 			case n - 1:
-				bar := p.AddBar(total)
-				for c := 0; c < total; c++ {
-					bar.Increment()
-				}
-				if !bar.Completed() {
-					b.Fail()
-				}
+				complete(b, bar, total)
 			default:
 				wg.Add(1)
 				go func() {
-					bar := p.AddBar(total)
-					for c := 0; c < total; c++ {
-						bar.Increment()
-					}
-					if !bar.Completed() {
-						b.Fail()
-					}
+					complete(b, bar, total)
 					wg.Done()
 				}()
 			}
@@ -55,4 +44,13 @@ func benchBody(n int, b *testing.B) {
 		wg.Wait()
 	}
 	p.Wait()
+}
+
+func complete(b *testing.B, bar *Bar, total int) {
+	for c := 0; c < total; c++ {
+		bar.Increment()
+	}
+	if !bar.Completed() {
+		b.Fail()
+	}
 }
