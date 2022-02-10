@@ -18,7 +18,6 @@ import (
 // Bar represents a progress bar.
 type Bar struct {
 	index             int // used by heap
-	toShutdown        bool
 	hasEwmaDecorators bool
 	frameCh           chan *frame
 	operateState      chan func(*bState)
@@ -63,8 +62,10 @@ type bState struct {
 }
 
 type frame struct {
-	reader io.Reader
-	lines  int
+	reader   io.Reader
+	lines    int
+	shutdown bool
+	abort    bool
 }
 
 func newBar(container *Progress, bs *bState) (*Bar, func()) {
@@ -275,35 +276,16 @@ func (b *Bar) SetPriority(priority int) {
 // if bar is already in complete state. If drop is true bar will be
 // removed as well.
 func (b *Bar) Abort(drop bool) {
-	done := make(chan struct{})
 	select {
 	case b.operateState <- func(s *bState) {
-		if s.completed {
-			close(done)
+		if s.completed || s.aborted {
 			return
 		}
 		s.aborted = true
-		b.cancel()
-		// container must be run during lifetime of this inner goroutine
-		// we control this by done channel declared above
-		go func() {
-			if drop {
-				b.container.dropBar(b)
-			} else {
-				var anyOtherUncompleted bool
-				b.container.traverseBars(func(bar *Bar) bool {
-					anyOtherUncompleted = b != bar && !bar.Completed()
-					return !anyOtherUncompleted
-				})
-				if !anyOtherUncompleted {
-					b.container.refreshCh <- time.Now()
-				}
-			}
-			close(done) // release hold of Abort
-		}()
+		s.dropOnComplete = drop
+		go b.forceRefreshIfLastUncompleted()
 	}:
-		// guarantee: container is alive during lifetime of this hold
-		<-done
+		<-b.done
 	case <-b.done:
 	}
 }
@@ -322,37 +304,46 @@ func (b *Bar) Completed() bool {
 func (b *Bar) render(tw int) {
 	select {
 	case b.operateState <- func(s *bState) {
+		var reader io.Reader
+		var lines int
 		stat := newStatistics(tw, s)
 		defer func() {
 			// recovering if user defined decorator panics for example
 			if p := recover(); p != nil {
-				if b.recoveredPanic == nil {
-					if s.debugOut != nil {
-						fmt.Fprintln(s.debugOut, p)
-						_, _ = s.debugOut.Write(debug.Stack())
-					}
-					s.extender = makePanicExtender(p)
-					b.toShutdown = !b.toShutdown
-					b.recoveredPanic = p
+				if s.debugOut != nil {
+					fmt.Fprintln(s.debugOut, p)
+					_, _ = s.debugOut.Write(debug.Stack())
 				}
-				reader, lines := s.extender(nil, s.reqWidth, stat)
-				b.frameCh <- &frame{reader, lines + 1}
+				s.aborted = true
+				s.extender = makePanicExtender(p)
+				reader, lines = s.extender(nil, s.reqWidth, stat)
+				b.recoveredPanic = p
 			}
-			s.completeFlushed = s.completed
+			b.frameCh <- &frame{
+				reader:   reader,
+				lines:    lines + 1,
+				shutdown: s.completed && !s.completeFlushed,
+				abort:    s.aborted && !s.completeFlushed,
+			}
+			s.completeFlushed = s.completed || s.aborted
 		}()
-		reader, lines := s.extender(s.draw(stat), s.reqWidth, stat)
-		b.toShutdown = s.completed && !s.completeFlushed
-		b.frameCh <- &frame{reader, lines + 1}
+		if b.recoveredPanic == nil {
+			reader = s.draw(stat)
+		}
+		reader, lines = s.extender(reader, s.reqWidth, stat)
 	}:
 	case <-b.done:
-		s := b.bs
-		stat := newStatistics(tw, s)
-		var r io.Reader
+		var reader io.Reader
+		var lines int
+		stat, s := newStatistics(tw, b.bs), b.bs
 		if b.recoveredPanic == nil {
-			r = s.draw(stat)
+			reader = s.draw(stat)
 		}
-		reader, lines := s.extender(r, s.reqWidth, stat)
-		b.frameCh <- &frame{reader, lines + 1}
+		reader, lines = s.extender(reader, s.reqWidth, stat)
+		b.frameCh <- &frame{
+			reader: reader,
+			lines:  lines + 1,
+		}
 	}
 }
 
@@ -522,7 +513,7 @@ func newStatistics(tw int, s *bState) decor.Statistics {
 		Total:          s.total,
 		Current:        s.current,
 		Refill:         s.refill,
-		Completed:      s.completeFlushed,
+		Completed:      s.completeFlushed && !s.aborted,
 		Aborted:        s.aborted,
 	}
 }

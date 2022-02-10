@@ -16,8 +16,7 @@ import (
 )
 
 const (
-	// default RefreshRate
-	prr = 150 * time.Millisecond
+	prr = 150 * time.Millisecond // default RefreshRate
 )
 
 // Progress represents a container that renders one or more progress bars.
@@ -140,19 +139,6 @@ func (p *Progress) Add(total int64, filler BarFiller, options ...BarOption) *Bar
 	case <-p.done:
 		p.bwg.Done()
 		panic(fmt.Sprintf("%T instance can't be reused after it's done!", p))
-	}
-}
-
-func (p *Progress) dropBar(b *Bar) {
-	select {
-	case p.operateState <- func(s *pState) {
-		if b.index < 0 {
-			return
-		}
-		heap.Remove(&s.bHeap, b.index)
-		s.heapUpdated = true
-	}:
-	case <-p.done:
 	}
 }
 
@@ -318,7 +304,7 @@ func (s *pState) render(cw *cwriter.Writer) error {
 
 func (s *pState) flush(cw *cwriter.Writer) error {
 	var totalLines int
-	bm := make(map[*Bar]int, s.bHeap.Len())
+	bm := make(map[*Bar]*frame, s.bHeap.Len())
 	for s.bHeap.Len() > 0 {
 		b := heap.Pop(&s.bHeap).(*Bar)
 		frame := <-b.frameCh
@@ -326,38 +312,38 @@ func (s *pState) flush(cw *cwriter.Writer) error {
 		if err != nil {
 			return err
 		}
-		if b.toShutdown {
-			if b.recoveredPanic != nil {
+		if frame.abort {
+			s.barShutdownQueue = append(s.barShutdownQueue, b)
+		} else if frame.shutdown {
+			// shutdown at next flush
+			// this ensures no bar ends up with less than 100% rendered
+			defer func() {
 				s.barShutdownQueue = append(s.barShutdownQueue, b)
-				b.toShutdown = false
-			} else {
-				// shutdown at next flush
-				// this ensures no bar ends up with less than 100% rendered
-				defer func() {
-					s.barShutdownQueue = append(s.barShutdownQueue, b)
-				}()
-			}
+			}()
 		}
-		bm[b] = frame.lines
 		totalLines += frame.lines
+		bm[b] = frame
 	}
 
 	for _, b := range s.barShutdownQueue {
+		b.cancel()
+		<-b.done // waiting for b.done, so it's safe to read b.bs
+		var toDrop bool
 		if qb, ok := s.queueBars[b]; ok {
+			delete(s.queueBars, b)
 			qb.bar.bs.priority = b.bs.priority
 			heap.Push(&s.bHeap, qb.bar)
-			delete(s.queueBars, b)
-			b.bs.dropOnComplete = true
 			go qb.serve()
+			toDrop = true
 		} else if s.popCompleted && !b.bs.noPop {
-			totalLines -= bm[b]
-			b.bs.dropOnComplete = true
+			frame := bm[b]
+			totalLines -= frame.lines
+			toDrop = true
 		}
-		if b.bs.dropOnComplete {
+		if toDrop || b.bs.dropOnComplete {
 			delete(bm, b)
 			s.heapUpdated = true
 		}
-		b.cancel()
 	}
 	s.barShutdownQueue = s.barShutdownQueue[0:0]
 
