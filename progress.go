@@ -61,13 +61,13 @@ type queueBar struct {
 }
 
 // New creates new Progress container instance. It's not possible to
-// reuse instance after *Progress.Wait() method has been called.
+// reuse instance after (*Progress).Wait method has been called.
 func New(options ...ContainerOption) *Progress {
 	return NewWithContext(context.Background(), options...)
 }
 
 // NewWithContext creates new Progress container instance with provided
-// context. It's not possible to reuse instance after *Progress.Wait()
+// context. It's not possible to reuse instance after (*Progress).Wait
 // method has been called.
 func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 	s := &pState{
@@ -114,7 +114,7 @@ func (p *Progress) New(total int64, builder BarFillerBuilder, options ...BarOpti
 
 // Add creates a bar which renders itself by provided filler.
 // If `total <= 0` trigger complete event is disabled until reset with *bar.SetTotal(int64, bool).
-// Panics if *Progress instance is done, i.e. called after *Progress.Wait().
+// Panics if *Progress instance is done, i.e. called after (*Progress).Wait.
 func (p *Progress) Add(total int64, filler BarFiller, options ...BarOption) *Bar {
 	if filler == nil {
 		filler = NopStyle().Build()

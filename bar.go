@@ -62,7 +62,7 @@ type bState struct {
 	extender          extenderFunc
 	debugOut          io.Writer
 
-	// afterBar is a key for *pState.parkedBars
+	// afterBar is a key for (*pState).queueBars
 	afterBar *Bar
 }
 
