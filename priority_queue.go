@@ -6,7 +6,7 @@ type priorityQueue []*Bar
 func (pq priorityQueue) Len() int { return len(pq) }
 
 func (pq priorityQueue) Less(i, j int) bool {
-	return pq[i].bs.priority < pq[j].bs.priority
+	return pq[i].priority < pq[j].priority
 }
 
 func (pq priorityQueue) Swap(i, j int) {

@@ -166,7 +166,7 @@ func (p *Progress) UpdateBarPriority(b *Bar, priority int) {
 		if b.index < 0 {
 			return
 		}
-		b.bs.priority = priority
+		b.priority = priority
 		heap.Fix(&s.bHeap, b.index)
 	}:
 	case <-p.done:
@@ -331,7 +331,7 @@ func (s *pState) flush(cw *cwriter.Writer) error {
 		var toDrop bool
 		if qb, ok := s.queueBars[b]; ok {
 			delete(s.queueBars, b)
-			qb.bar.bs.priority = b.bs.priority
+			qb.bar.priority = b.priority
 			heap.Push(&s.bHeap, qb.bar)
 			go qb.serve()
 			toDrop = true

@@ -18,6 +18,7 @@ import (
 // Bar represents a progress bar.
 type Bar struct {
 	index             int // used by heap
+	priority          int // used by heap
 	hasEwmaDecorators bool
 	frameCh           chan *frame
 	operateState      chan func(*bState)
@@ -33,7 +34,7 @@ type extenderFunc func(in io.Reader, reqWidth int, st decor.Statistics) (out io.
 // bState is actual bar's state.
 type bState struct {
 	id                int
-	priority          int // used by heap
+	priority          int
 	reqWidth          int
 	total             int64
 	current           int64
@@ -87,6 +88,7 @@ func newBar(container *Progress, bs *bState) (*Bar, func()) {
 	}
 
 	bar := &Bar{
+		priority:     bs.priority,
 		frameCh:      make(chan *frame, 1),
 		operateState: operateState,
 		done:         done,
