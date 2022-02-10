@@ -47,7 +47,7 @@ func benchBody(n int, b *testing.B) {
 }
 
 func complete(b *testing.B, bar *Bar, total int) {
-	for c := 0; c < total; c++ {
+	for i := 0; i < total; i++ {
 		bar.Increment()
 	}
 	if !bar.Completed() {
