@@ -28,13 +28,12 @@ func main() {
 			),
 			mpb.AppendDecorators(decor.Percentage(decor.WC{W: 5})),
 		)
-		go complete(bars[i], i+1)
+		go complete(bars[i])
 	}
 
 	for i := 0; i < numBars; i++ {
 		afterBar := bars[i]
 		task := fmt.Sprintf("Task#%02d:", i)
-		incrBy := numBars - i
 		go func() {
 			job := "\x1b[31minstalling\x1b[0m"
 			// preparing queued bars
@@ -50,21 +49,21 @@ func main() {
 					decor.OnComplete(decor.Percentage(decor.WC{W: 5}), ""),
 				),
 			)
-			complete(b, incrBy) // blocks until afterBar completes
+			complete(b) // blocks until afterBar completes
 		}()
 	}
 
 	p.Wait()
 }
 
-func complete(bar *mpb.Bar, incrBy int) {
+func complete(bar *mpb.Bar) {
 	max := 100 * time.Millisecond
 	for !bar.Completed() {
 		// start variable is solely for EWMA calculation
 		// EWMA's unit of measure is an iteration's duration
 		start := time.Now()
 		time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
-		bar.IncrBy(incrBy)
+		bar.IncrInt64(rand.Int63n(5) + 1)
 		// we need to call DecoratorEwmaUpdate to fulfill ewma decorator's contract
 		bar.DecoratorEwmaUpdate(time.Since(start))
 	}
