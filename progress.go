@@ -406,6 +406,8 @@ func (s *pState) makeBarState(total int64, filler BarFiller, options ...BarOptio
 		bs.buffers[i] = bytes.NewBuffer(make([]byte, 0, 512))
 	}
 
+	bs.subscribeDecorators()
+
 	return bs
 }
 

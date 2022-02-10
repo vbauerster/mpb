@@ -17,16 +17,16 @@ import (
 
 // Bar represents a progress bar.
 type Bar struct {
-	index             int // used by heap
-	priority          int // used by heap
-	hasEwmaDecorators bool
-	frameCh           chan *frame
-	operateState      chan func(*bState)
-	done              chan struct{}
-	container         *Progress
-	bs                *bState
-	cancel            func()
-	recoveredPanic    interface{}
+	index          int // used by heap
+	priority       int // used by heap
+	hasEwma        bool
+	frameCh        chan *frame
+	operateState   chan func(*bState)
+	done           chan struct{}
+	container      *Progress
+	bs             *bState
+	cancel         func()
+	recoveredPanic interface{}
 }
 
 type extenderFunc func(in io.Reader, reqWidth int, st decor.Statistics) (out io.Reader, lines int)
@@ -89,6 +89,7 @@ func newBar(container *Progress, bs *bState) (*Bar, func()) {
 
 	bar := &Bar{
 		priority:     bs.priority,
+		hasEwma:      len(bs.ewmaDecorators) != 0,
 		frameCh:      make(chan *frame, 1),
 		operateState: operateState,
 		done:         done,
@@ -96,8 +97,6 @@ func newBar(container *Progress, bs *bState) (*Bar, func()) {
 		bs:           bs,
 		cancel:       cancel,
 	}
-
-	bar.subscribeDecorators(bs)
 
 	return bar, serve
 }
@@ -349,26 +348,6 @@ func (b *Bar) render(tw int) {
 	}
 }
 
-func (b *Bar) subscribeDecorators(bs *bState) {
-	for _, decorators := range [...][]decor.Decorator{
-		bs.pDecorators,
-		bs.aDecorators,
-	} {
-		for _, d := range decorators {
-			d = extractBaseDecorator(d)
-			if d, ok := d.(decor.AverageDecorator); ok {
-				bs.averageDecorators = append(bs.averageDecorators, d)
-			}
-			if d, ok := d.(decor.EwmaDecorator); ok {
-				bs.ewmaDecorators = append(bs.ewmaDecorators, d)
-			}
-			if d, ok := d.(decor.ShutdownListener); ok {
-				bs.shutdownListeners = append(bs.shutdownListeners, d)
-			}
-		}
-	}
-}
-
 func (b *Bar) forceRefreshIfLastUncompleted() {
 	var anyOtherUncompleted bool
 	b.container.traverseBars(func(bar *Bar) bool {
@@ -455,6 +434,26 @@ func (s *bState) wSyncTable() [][]chan int {
 	table[0] = columns[0:pCount]
 	table[1] = columns[pCount : pCount+aCount : pCount+aCount]
 	return table
+}
+
+func (s *bState) subscribeDecorators() {
+	for _, decorators := range [...][]decor.Decorator{
+		s.pDecorators,
+		s.aDecorators,
+	} {
+		for _, d := range decorators {
+			d = extractBaseDecorator(d)
+			if d, ok := d.(decor.AverageDecorator); ok {
+				s.averageDecorators = append(s.averageDecorators, d)
+			}
+			if d, ok := d.(decor.EwmaDecorator); ok {
+				s.ewmaDecorators = append(s.ewmaDecorators, d)
+			}
+			if d, ok := d.(decor.ShutdownListener); ok {
+				s.shutdownListeners = append(s.shutdownListeners, d)
+			}
+		}
+	}
 }
 
 func (s bState) decoratorEwmaUpdate(dur time.Duration) {
