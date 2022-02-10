@@ -17,18 +17,14 @@ import (
 
 // Bar represents a progress bar.
 type Bar struct {
-	priority int // used by heap
-	index    int // used by heap
-
+	index             int // used by heap
 	toShutdown        bool
-	toDrop            bool
-	noPop             bool
 	hasEwmaDecorators bool
 	frameCh           chan *frame
 	operateState      chan func(*bState)
 	done              chan struct{}
-	cacheState        *bState
 	container         *Progress
+	bs                *bState
 	cancel            func()
 	recoveredPanic    interface{}
 }
@@ -38,7 +34,7 @@ type extenderFunc func(in io.Reader, reqWidth int, st decor.Statistics) (out io.
 // bState is actual bar's state.
 type bState struct {
 	id                int
-	priority          int
+	priority          int // used by heap
 	reqWidth          int
 	total             int64
 	current           int64
@@ -73,34 +69,32 @@ type frame struct {
 
 func newBar(container *Progress, bs *bState) (*Bar, func()) {
 	ctx, cancel := context.WithCancel(container.ctx)
-
-	bar := &Bar{
-		priority:     bs.priority,
-		toDrop:       bs.dropOnComplete,
-		noPop:        bs.noPop,
-		frameCh:      make(chan *frame, 1),
-		operateState: make(chan func(*bState)),
-		done:         make(chan struct{}),
-		container:    container,
-		cancel:       cancel,
-	}
-
-	bar.subscribeDecorators(bs)
-
+	operateState := make(chan func(*bState))
+	done := make(chan struct{})
 	serve := func() {
 		defer container.bwg.Done()
 		for {
 			select {
-			case op := <-bar.operateState:
+			case op := <-operateState:
 				op(bs)
 			case <-ctx.Done():
 				bs.decoratorShutdownNotify()
-				bar.cacheState = bs
-				close(bar.done)
+				close(done)
 				return
 			}
 		}
 	}
+
+	bar := &Bar{
+		frameCh:      make(chan *frame, 1),
+		operateState: operateState,
+		done:         done,
+		container:    container,
+		bs:           bs,
+		cancel:       cancel,
+	}
+
+	bar.subscribeDecorators(bs)
 
 	return bar, serve
 }
@@ -121,18 +115,18 @@ func (b *Bar) ID() int {
 	case b.operateState <- func(s *bState) { result <- s.id }:
 		return <-result
 	case <-b.done:
-		return b.cacheState.id
+		return b.bs.id
 	}
 }
 
-// Current returns bar's current number, in other words sum of all increments.
+// Current returns bar's current value, in other words sum of all increments.
 func (b *Bar) Current() int64 {
 	result := make(chan int64)
 	select {
 	case b.operateState <- func(s *bState) { result <- s.current }:
 		return <-result
 	case <-b.done:
-		return b.cacheState.current
+		return b.bs.current
 	}
 }
 
@@ -251,9 +245,9 @@ func (b *Bar) DecoratorEwmaUpdate(dur time.Duration) {
 		}
 	}:
 	case <-b.done:
-		if b.cacheState.lastIncrement > 0 {
-			b.cacheState.decoratorEwmaUpdate(dur)
-			b.cacheState.lastIncrement = 0
+		if b.bs.lastIncrement > 0 {
+			b.bs.decoratorEwmaUpdate(dur)
+			b.bs.lastIncrement = 0
 		}
 	}
 }
@@ -351,7 +345,7 @@ func (b *Bar) render(tw int) {
 		b.frameCh <- &frame{reader, lines + 1}
 	}:
 	case <-b.done:
-		s := b.cacheState
+		s := b.bs
 		stat := newStatistics(tw, s)
 		var r io.Reader
 		if b.recoveredPanic == nil {
@@ -406,7 +400,7 @@ func (b *Bar) wSyncTable() [][]chan int {
 	case b.operateState <- func(s *bState) { result <- s.wSyncTable() }:
 		return <-result
 	case <-b.done:
-		return b.cacheState.wSyncTable()
+		return b.bs.wSyncTable()
 	}
 }
 

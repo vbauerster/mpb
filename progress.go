@@ -113,7 +113,7 @@ func (p *Progress) New(total int64, builder BarFillerBuilder, options ...BarOpti
 }
 
 // Add creates a bar which renders itself by provided filler.
-// If `total <= 0` trigger complete event is disabled until reset with *bar.SetTotal(int64, bool).
+// If `total <= 0` trigger complete event is disabled until reset with (*bar).SetTotal(int64, bool).
 // Panics if *Progress instance is done, i.e. called after (*Progress).Wait.
 func (p *Progress) Add(total int64, filler BarFiller, options ...BarOption) *Bar {
 	if filler == nil {
@@ -180,7 +180,7 @@ func (p *Progress) UpdateBarPriority(b *Bar, priority int) {
 		if b.index < 0 {
 			return
 		}
-		b.priority = priority
+		b.bs.priority = priority
 		heap.Fix(&s.bHeap, b.index)
 	}:
 	case <-p.done:
@@ -344,16 +344,16 @@ func (s *pState) flush(cw *cwriter.Writer) error {
 
 	for _, b := range s.barShutdownQueue {
 		if qb, ok := s.queueBars[b]; ok {
-			qb.bar.priority = b.priority
+			qb.bar.bs.priority = b.bs.priority
 			heap.Push(&s.bHeap, qb.bar)
 			delete(s.queueBars, b)
-			b.toDrop = true
+			b.bs.dropOnComplete = true
 			go qb.serve()
-		} else if s.popCompleted && !b.noPop {
+		} else if s.popCompleted && !b.bs.noPop {
 			totalLines -= bm[b]
-			b.toDrop = true
+			b.bs.dropOnComplete = true
 		}
-		if b.toDrop {
+		if b.bs.dropOnComplete {
 			delete(bm, b)
 			s.heapUpdated = true
 		}
