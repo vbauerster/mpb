@@ -292,6 +292,17 @@ func (b *Bar) Abort(drop bool) {
 	}
 }
 
+// Aborted reports whether the bar is in aborted state.
+func (b *Bar) Aborted() bool {
+	result := make(chan bool)
+	select {
+	case b.operateState <- func(s *bState) { result <- s.aborted }:
+		return <-result
+	case <-b.done:
+		return b.bs.aborted
+	}
+}
+
 // Completed reports whether the bar is in completed state.
 func (b *Bar) Completed() bool {
 	result := make(chan bool)
