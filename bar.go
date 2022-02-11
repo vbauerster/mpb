@@ -69,37 +69,21 @@ type frame struct {
 	complete bool
 }
 
-func newBar(container *Progress, bs *bState) (*Bar, func()) {
+func newBar(container *Progress, bs *bState) *Bar {
 	ctx, cancel := context.WithCancel(container.ctx)
-	operateState := make(chan func(*bState))
-	done := make(chan struct{})
-	serve := func() {
-		defer container.bwg.Done()
-		for {
-			select {
-			case op := <-operateState:
-				op(bs)
-			case <-ctx.Done():
-				bs.aborted = !bs.completed
-				bs.decoratorShutdownNotify()
-				close(done)
-				return
-			}
-		}
-	}
 
 	bar := &Bar{
 		priority:     bs.priority,
 		hasEwma:      len(bs.ewmaDecorators) != 0,
 		frameCh:      make(chan *frame, 1),
-		operateState: operateState,
-		done:         done,
+		operateState: make(chan func(*bState)),
+		done:         make(chan struct{}),
 		container:    container,
-		bs:           bs,
 		cancel:       cancel,
 	}
 
-	return bar, serve
+	go bar.serve(ctx, bs)
+	return bar
 }
 
 // ProxyReader wraps r with metrics required for progress tracking.
@@ -311,6 +295,22 @@ func (b *Bar) Completed() bool {
 		return <-result
 	case <-b.done:
 		return b.bs.completed
+	}
+}
+
+func (b *Bar) serve(ctx context.Context, bs *bState) {
+	defer b.container.bwg.Done()
+	for {
+		select {
+		case op := <-b.operateState:
+			op(bs)
+		case <-ctx.Done():
+			bs.aborted = !bs.completed
+			bs.decoratorShutdownNotify()
+			b.bs = bs
+			close(b.done)
+			return
+		}
 	}
 }
 

@@ -49,14 +49,9 @@ type pState struct {
 	externalRefresh  <-chan interface{}
 	renderDelay      <-chan struct{}
 	shutdownNotifier chan struct{}
-	queueBars        map[*Bar]queueBar
+	queueBars        map[*Bar]*Bar
 	output           io.Writer
 	debugOut         io.Writer
-}
-
-type queueBar struct {
-	bar   *Bar
-	serve func()
 }
 
 // New creates new Progress container instance. It's not possible to
@@ -72,7 +67,7 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 	s := &pState{
 		bHeap:     priorityQueue{},
 		rr:        prr,
-		queueBars: make(map[*Bar]queueBar),
+		queueBars: make(map[*Bar]*Bar),
 		output:    os.Stdout,
 	}
 
@@ -123,13 +118,12 @@ func (p *Progress) Add(total int64, filler BarFiller, options ...BarOption) *Bar
 	select {
 	case p.operateState <- func(ps *pState) {
 		bs := ps.makeBarState(total, filler, options...)
-		bar, serve := newBar(p, bs)
+		bar := newBar(p, bs)
 		if bs.afterBar != nil {
-			ps.queueBars[bs.afterBar] = queueBar{bar, serve}
+			ps.queueBars[bs.afterBar] = bar
 		} else {
 			heap.Push(&ps.bHeap, bar)
 			ps.heapUpdated = true
-			go serve()
 		}
 		ps.idCount++
 		result <- bar
@@ -293,9 +287,8 @@ func (s *pState) flush(cw *cwriter.Writer) error {
 		var toDrop bool
 		if qb, ok := s.queueBars[b]; ok {
 			delete(s.queueBars, b)
-			qb.bar.priority = b.priority
-			heap.Push(&s.bHeap, qb.bar)
-			go qb.serve()
+			qb.priority = b.priority
+			heap.Push(&s.bHeap, qb)
 			toDrop = true
 		} else if s.popCompleted && !b.bs.noPop {
 			frame := bm[b]
