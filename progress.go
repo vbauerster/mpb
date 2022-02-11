@@ -312,14 +312,14 @@ func (s *pState) flush(cw *cwriter.Writer) error {
 		if err != nil {
 			return err
 		}
-		if frame.abort {
-			s.barShutdownQueue = append(s.barShutdownQueue, b)
-		} else if frame.complete {
+		if frame.complete {
 			// shutdown at next flush
 			// this ensures no bar ends up with less than 100% rendered
 			defer func() {
 				s.barShutdownQueue = append(s.barShutdownQueue, b)
 			}()
+		} else if frame.abort {
+			s.barShutdownQueue = append(s.barShutdownQueue, b)
 		}
 		totalLines += frame.lines
 		bm[b] = frame
