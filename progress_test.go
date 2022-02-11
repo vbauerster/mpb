@@ -131,7 +131,7 @@ func TestMaxWidthDistributor(t *testing.T) {
 	ready := make(chan struct{})
 	start := make(chan struct{})
 	end := make(chan struct{})
-	*mpb.MaxWidthDistributor = makeWrapper(*mpb.MaxWidthDistributor, start, end)
+	mpb.MaxWidthDistributor = makeWrapper(mpb.MaxWidthDistributor, start, end)
 
 	total := 80
 	numBars := 6

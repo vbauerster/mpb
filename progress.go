@@ -417,7 +417,7 @@ func syncWidth(matrix map[int][]chan int) {
 	}
 }
 
-var maxWidthDistributor = func(column []chan int) {
+func maxWidthDistributor(column []chan int) {
 	var maxWidth int
 	for _, ch := range column {
 		if w := <-ch; w > maxWidth {
