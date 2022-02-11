@@ -298,7 +298,7 @@ func (b *Bar) Completed() bool {
 	case b.operateState <- func(s *bState) { result <- s.completed }:
 		return <-result
 	case <-b.done:
-		return true
+		return b.bs.completed
 	}
 }
 
