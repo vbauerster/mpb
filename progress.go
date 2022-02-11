@@ -314,7 +314,7 @@ func (s *pState) flush(cw *cwriter.Writer) error {
 		}
 		if frame.abort {
 			s.barShutdownQueue = append(s.barShutdownQueue, b)
-		} else if frame.shutdown {
+		} else if frame.complete {
 			// shutdown at next flush
 			// this ensures no bar ends up with less than 100% rendered
 			defer func() {

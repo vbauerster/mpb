@@ -65,8 +65,8 @@ type bState struct {
 type frame struct {
 	reader   io.Reader
 	lines    int
-	shutdown bool
 	abort    bool
+	complete bool
 }
 
 func newBar(container *Progress, bs *bState) (*Bar, func()) {
@@ -335,8 +335,8 @@ func (b *Bar) render(tw int) {
 			b.frameCh <- &frame{
 				reader:   reader,
 				lines:    lines + 1,
-				shutdown: s.completed && !s.completeFlushed,
 				abort:    s.aborted && !s.completeFlushed,
+				complete: s.completed && !s.completeFlushed,
 			}
 			s.completeFlushed = s.completed || s.aborted
 		}()
