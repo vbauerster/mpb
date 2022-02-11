@@ -80,6 +80,7 @@ func newBar(container *Progress, bs *bState) (*Bar, func()) {
 			case op := <-operateState:
 				op(bs)
 			case <-ctx.Done():
+				bs.aborted = !bs.completed
 				bs.decoratorShutdownNotify()
 				close(done)
 				return
@@ -315,7 +316,7 @@ func (b *Bar) render(tw int) {
 					fmt.Fprintln(s.debugOut, p)
 					_, _ = s.debugOut.Write(debug.Stack())
 				}
-				s.aborted = true
+				s.aborted = !s.completed
 				s.extender = makePanicExtender(p)
 				reader, lines = s.extender(nil, s.reqWidth, stat)
 				b.recoveredPanic = p
