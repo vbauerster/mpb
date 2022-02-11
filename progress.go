@@ -244,44 +244,6 @@ func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 	}
 }
 
-func (s *pState) newTicker(done <-chan struct{}) chan time.Time {
-	ch := make(chan time.Time)
-	if s.shutdownNotifier == nil {
-		s.shutdownNotifier = make(chan struct{})
-	}
-	go func() {
-		if s.renderDelay != nil {
-			<-s.renderDelay
-		}
-		var internalRefresh <-chan time.Time
-		if !s.outputDiscarded {
-			if s.externalRefresh == nil {
-				ticker := time.NewTicker(s.rr)
-				defer ticker.Stop()
-				internalRefresh = ticker.C
-			}
-		} else {
-			s.externalRefresh = nil
-		}
-		for {
-			select {
-			case t := <-internalRefresh:
-				ch <- t
-			case x := <-s.externalRefresh:
-				if t, ok := x.(time.Time); ok {
-					ch <- t
-				} else {
-					ch <- time.Now()
-				}
-			case <-done:
-				close(s.shutdownNotifier)
-				return
-			}
-		}
-	}()
-	return ch
-}
-
 func (s *pState) render(cw *cwriter.Writer) error {
 	if s.heapUpdated {
 		s.updateSyncMatrix()
@@ -352,6 +314,44 @@ func (s *pState) flush(cw *cwriter.Writer) error {
 	}
 
 	return cw.Flush(totalLines)
+}
+
+func (s *pState) newTicker(done <-chan struct{}) chan time.Time {
+	ch := make(chan time.Time)
+	if s.shutdownNotifier == nil {
+		s.shutdownNotifier = make(chan struct{})
+	}
+	go func() {
+		if s.renderDelay != nil {
+			<-s.renderDelay
+		}
+		var internalRefresh <-chan time.Time
+		if !s.outputDiscarded {
+			if s.externalRefresh == nil {
+				ticker := time.NewTicker(s.rr)
+				defer ticker.Stop()
+				internalRefresh = ticker.C
+			}
+		} else {
+			s.externalRefresh = nil
+		}
+		for {
+			select {
+			case t := <-internalRefresh:
+				ch <- t
+			case x := <-s.externalRefresh:
+				if t, ok := x.(time.Time); ok {
+					ch <- t
+				} else {
+					ch <- time.Now()
+				}
+			case <-done:
+				close(s.shutdownNotifier)
+				return
+			}
+		}
+	}()
+	return ch
 }
 
 func (s *pState) updateSyncMatrix() {
