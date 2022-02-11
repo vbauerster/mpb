@@ -17,7 +17,8 @@ func init() {
 }
 
 func TestBarCount(t *testing.T) {
-	p := mpb.New(mpb.WithOutput(ioutil.Discard))
+	shutdown := make(chan struct{})
+	p := mpb.New(mpb.WithShutdownNotifier(shutdown), mpb.WithOutput(ioutil.Discard))
 
 	check := make(chan struct{})
 	b := p.AddBar(100)
@@ -27,36 +28,40 @@ func TestBarCount(t *testing.T) {
 				close(check)
 			}
 			b.Increment()
-			time.Sleep((time.Duration(rand.Intn(10)+1) * (10 * time.Millisecond)) / 2)
+			time.Sleep(randomDuration(100 * time.Millisecond))
 		}
 	}()
 
 	<-check
-	count := p.BarCount()
-	if count != 1 {
+	if count := p.BarCount(); count != 1 {
 		t.Errorf("BarCount want: %q, got: %q\n", 1, count)
 	}
 
 	b.Abort(false)
-	p.Wait()
+	go p.Wait()
+	select {
+	case <-shutdown:
+	case <-time.After(150 * time.Millisecond):
+		t.Error("Progress didn't shutdown")
+	}
 }
 
 func TestBarAbort(t *testing.T) {
+	shutdown := make(chan struct{})
+	p := mpb.New(mpb.WithShutdownNotifier(shutdown), mpb.WithOutput(ioutil.Discard))
 	n := 2
-	p := mpb.New(mpb.WithOutput(ioutil.Discard))
 	bars := make([]*mpb.Bar, n)
 	for i := 0; i < n; i++ {
 		b := p.AddBar(100)
 		switch i {
 		case n - 1:
 			var abortCalledTimes int
-			for j := 0; !b.Completed(); j++ {
-				if j >= 33 {
+			for j := 0; !b.Aborted(); j++ {
+				if j >= 10 {
 					b.Abort(true)
 					abortCalledTimes++
 				} else {
 					b.Increment()
-					time.Sleep((time.Duration(rand.Intn(10)+1) * (10 * time.Millisecond)) / 2)
 				}
 			}
 			if abortCalledTimes != 1 {
@@ -70,7 +75,7 @@ func TestBarAbort(t *testing.T) {
 			go func() {
 				for !b.Completed() {
 					b.Increment()
-					time.Sleep((time.Duration(rand.Intn(10)+1) * (10 * time.Millisecond)) / 2)
+					time.Sleep(randomDuration(100 * time.Millisecond))
 				}
 			}()
 		}
@@ -78,7 +83,12 @@ func TestBarAbort(t *testing.T) {
 	}
 
 	bars[0].Abort(false)
-	p.Wait()
+	go p.Wait()
+	select {
+	case <-shutdown:
+	case <-time.After(150 * time.Millisecond):
+		t.Error("Progress didn't shutdown")
+	}
 }
 
 func TestWithContext(t *testing.T) {
@@ -86,15 +96,13 @@ func TestWithContext(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	p := mpb.NewWithContext(ctx, mpb.WithShutdownNotifier(shutdown), mpb.WithOutput(ioutil.Discard))
 
-	start := make(chan struct{})
 	done := make(chan struct{})
 	fail := make(chan struct{})
 	bar := p.AddBar(0) // never complete bar
 	go func() {
-		close(start)
-		for !bar.Completed() {
-			bar.Increment()
+		for !bar.Aborted() {
 			time.Sleep(randomDuration(100 * time.Millisecond))
+			cancel()
 		}
 		close(done)
 	}()
@@ -108,8 +116,6 @@ func TestWithContext(t *testing.T) {
 		}
 	}()
 
-	<-start
-	cancel()
 	select {
 	case <-shutdown:
 	case <-fail:
@@ -133,28 +139,26 @@ func TestMaxWidthDistributor(t *testing.T) {
 	end := make(chan struct{})
 	mpb.MaxWidthDistributor = makeWrapper(mpb.MaxWidthDistributor, start, end)
 
-	total := 80
+	total := 100
 	numBars := 6
 	p := mpb.New(mpb.WithOutput(ioutil.Discard))
 	for i := 0; i < numBars; i++ {
 		bar := p.AddBar(int64(total),
 			mpb.BarOptional(mpb.BarRemoveOnComplete(), i == 0),
-			mpb.PrependDecorators(
-				decor.EwmaETA(decor.ET_STYLE_GO, 60, decor.WCSyncSpace),
-			),
+			mpb.PrependDecorators(decor.EwmaETA(decor.ET_STYLE_GO, 60, decor.WCSyncSpace)),
 		)
 		go func() {
 			<-ready
 			for i := 0; i < total; i++ {
 				start := time.Now()
-				if id := bar.ID(); id > 1 && i >= 42 {
+				if id := bar.ID(); id > 1 && i >= 32 {
 					if id&1 == 1 {
 						bar.Abort(true)
 					} else {
 						bar.Abort(false)
 					}
 				}
-				time.Sleep((time.Duration(rand.Intn(10)+1) * (50 * time.Millisecond)) / 2)
+				time.Sleep(randomDuration(100 * time.Millisecond))
 				bar.IncrInt64(rand.Int63n(5) + 1)
 				bar.DecoratorEwmaUpdate(time.Since(start))
 			}
