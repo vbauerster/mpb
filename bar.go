@@ -164,7 +164,7 @@ func (b *Bar) SetTotal(total int64, triggerComplete bool) {
 		if s.triggerComplete && !s.completed {
 			s.current = s.total
 			s.completed = true
-			go b.forceRefreshIfLastUncompleted()
+			go b.forceRefresh()
 		}
 	}:
 	case <-b.done:
@@ -181,7 +181,7 @@ func (b *Bar) SetCurrent(current int64) {
 		if s.triggerComplete && s.current >= s.total {
 			s.current = s.total
 			s.completed = true
-			go b.forceRefreshIfLastUncompleted()
+			go b.forceRefresh()
 		}
 	}:
 	case <-b.done:
@@ -210,7 +210,7 @@ func (b *Bar) IncrInt64(n int64) {
 		if s.triggerComplete && s.current >= s.total {
 			s.current = s.total
 			s.completed = true
-			go b.forceRefreshIfLastUncompleted()
+			go b.forceRefresh()
 		}
 	}:
 	case <-b.done:
@@ -269,7 +269,7 @@ func (b *Bar) Abort(drop bool) {
 		}
 		s.aborted = true
 		s.dropOnComplete = drop
-		go b.forceRefreshIfLastUncompleted()
+		go b.forceRefresh()
 	}:
 		<-b.done
 	case <-b.done:
@@ -363,7 +363,7 @@ func (b *Bar) render(tw int) {
 	}
 }
 
-func (b *Bar) forceRefreshIfLastUncompleted() {
+func (b *Bar) forceRefresh() {
 	var anyOtherRunning bool
 	b.container.traverseBars(func(bar *Bar) bool {
 		anyOtherRunning = b != bar && !bar.Completed()
