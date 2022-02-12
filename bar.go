@@ -58,8 +58,8 @@ type bState struct {
 	extender          extenderFunc
 	debugOut          io.Writer
 
-	// afterBar is a key for (*pState).queueBars
-	afterBar *Bar
+	afterBar *Bar // key for (*pState).queueBars
+	sync     bool
 }
 
 type frame struct {
@@ -300,6 +300,9 @@ func (b *Bar) Completed() bool {
 
 func (b *Bar) serve(ctx context.Context, bs *bState) {
 	defer b.container.bwg.Done()
+	if bs.afterBar != nil && bs.sync {
+		<-bs.afterBar.done
+	}
 	for {
 		select {
 		case op := <-b.operateState:
