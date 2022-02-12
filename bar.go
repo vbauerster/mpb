@@ -161,7 +161,7 @@ func (b *Bar) SetTotal(total int64, triggerComplete bool) {
 		} else {
 			s.total = total
 		}
-		if s.triggerComplete && !s.completed {
+		if s.triggerComplete && !s.completed && !s.aborted {
 			s.current = s.total
 			s.completed = true
 			go b.forceRefresh()
@@ -366,7 +366,7 @@ func (b *Bar) render(tw int) {
 func (b *Bar) forceRefresh() {
 	var anyOtherRunning bool
 	b.container.traverseBars(func(bar *Bar) bool {
-		anyOtherRunning = b != bar && !bar.Completed()
+		anyOtherRunning = b != bar && !bar.Completed() && !bar.Aborted()
 		return !anyOtherRunning
 	})
 	if !anyOtherRunning {
