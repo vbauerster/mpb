@@ -364,12 +364,12 @@ func (b *Bar) render(tw int) {
 }
 
 func (b *Bar) forceRefreshIfLastUncompleted() {
-	var anyOtherUncompleted bool
+	var anyOtherRunning bool
 	b.container.traverseBars(func(bar *Bar) bool {
-		anyOtherUncompleted = b != bar && !bar.Completed()
-		return !anyOtherUncompleted
+		anyOtherRunning = b != bar && !bar.Completed()
+		return !anyOtherRunning
 	})
-	if !anyOtherUncompleted {
+	if !anyOtherRunning {
 		for {
 			select {
 			case b.container.refreshCh <- time.Now():
