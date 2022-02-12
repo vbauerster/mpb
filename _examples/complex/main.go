@@ -15,12 +15,12 @@ func init() {
 
 func main() {
 	numBars := 4
-	bars := make([]*mpb.Bar, numBars)
 	p := mpb.New()
 
 	for i := 0; i < numBars; i++ {
 		task := fmt.Sprintf("Task#%02d:", i)
-		bars[i] = p.AddBar(rand.Int63n(201)+100,
+		queue := make([]*mpb.Bar, 2)
+		queue[0] = p.AddBar(rand.Int63n(201)+100,
 			mpb.PrependDecorators(
 				decor.Name(task, decor.WC{W: len(task) + 1, C: decor.DidentRight}),
 				decor.Name("downloading", decor.WCSyncSpaceR),
@@ -28,28 +28,23 @@ func main() {
 			),
 			mpb.AppendDecorators(decor.Percentage(decor.WC{W: 5})),
 		)
-		go complete(bars[i])
-	}
+		queue[1] = p.AddBar(rand.Int63n(101)+100,
+			mpb.BarQueueAfter(queue[0], false), // this bar is queued
+			mpb.BarFillerClearOnComplete(),
+			mpb.PrependDecorators(
+				decor.Name(task, decor.WC{W: len(task) + 1, C: decor.DidentRight}),
+				decor.OnComplete(decor.Name("\x1b[31minstalling\x1b[0m", decor.WCSyncSpaceR), "done!"),
+				decor.OnComplete(decor.EwmaETA(decor.ET_STYLE_MMSS, 0, decor.WCSyncWidth), ""),
+			),
+			mpb.AppendDecorators(
+				decor.OnComplete(decor.Percentage(decor.WC{W: 5}), ""),
+			),
+		)
 
-	for i := 0; i < numBars; i++ {
-		afterBar := bars[i]
-		task := fmt.Sprintf("Task#%02d:", i)
 		go func() {
-			job := "\x1b[31minstalling\x1b[0m"
-			// preparing queued bars
-			b := p.AddBar(rand.Int63n(101)+100,
-				mpb.BarQueueAfter(afterBar),
-				mpb.BarFillerClearOnComplete(),
-				mpb.PrependDecorators(
-					decor.Name(task, decor.WC{W: len(task) + 1, C: decor.DidentRight}),
-					decor.OnComplete(decor.Name(job, decor.WCSyncSpaceR), "done!"),
-					decor.OnComplete(decor.EwmaETA(decor.ET_STYLE_MMSS, 0, decor.WCSyncWidth), ""),
-				),
-				mpb.AppendDecorators(
-					decor.OnComplete(decor.Percentage(decor.WC{W: 5}), ""),
-				),
-			)
-			complete(b) // blocks until afterBar completes
+			for _, b := range queue {
+				complete(b)
+			}
 		}()
 	}
 
