@@ -523,8 +523,8 @@ func (s bState) decoratorShutdownNotify() {
 
 func newStatistics(tw int, s *bState) decor.Statistics {
 	return decor.Statistics{
-		ID:             s.id,
 		AvailableWidth: tw,
+		ID:             s.id,
 		Total:          s.total,
 		Current:        s.current,
 		Refill:         s.refill,
