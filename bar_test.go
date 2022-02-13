@@ -19,12 +19,16 @@ func TestBarCompleted(t *testing.T) {
 	total := 80
 	bar := p.AddBar(int64(total))
 
+	if bar.Completed() {
+		t.Error("bar is completed before increment")
+	}
+
 	for i := 0; i < total; i++ {
 		bar.Increment()
 	}
 
 	if !bar.Completed() {
-		t.Error("bar isn't completed")
+		t.Error("bar isn't completed after increment")
 	}
 
 	p.Wait()
