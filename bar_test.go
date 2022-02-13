@@ -2,6 +2,7 @@ package mpb_test
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io/ioutil"
 	"strings"
@@ -223,33 +224,28 @@ func TestBarPanicAfterComplete(t *testing.T) {
 }
 
 func TestDecorStatisticsAvailableWidth(t *testing.T) {
-	total := 100
-	down := make(chan struct{})
-	checkDone := make(chan struct{})
+	var called [2]bool
 	td1 := func(s decor.Statistics) string {
 		if s.AvailableWidth != 80 {
 			t.Errorf("expected AvailableWidth %d got %d\n", 80, s.AvailableWidth)
 		}
+		called[0] = true
 		return fmt.Sprintf("\x1b[31;1;4m%s\x1b[0m", strings.Repeat("0", 20))
 	}
 	td2 := func(s decor.Statistics) string {
-		defer func() {
-			select {
-			case checkDone <- struct{}{}:
-			default:
-			}
-		}()
 		if s.AvailableWidth != 40 {
 			t.Errorf("expected AvailableWidth %d got %d\n", 40, s.AvailableWidth)
 		}
+		called[1] = true
 		return ""
 	}
-	p := mpb.New(
-		mpb.WithWidth(100),
-		mpb.WithShutdownNotifier(down),
+	ctx, cancel := context.WithCancel(context.Background())
+	refresh := make(chan interface{})
+	p := mpb.NewWithContext(ctx, mpb.WithWidth(100),
+		mpb.WithManualRefresh(refresh),
 		mpb.WithOutput(ioutil.Discard),
 	)
-	bar := p.AddBar(int64(total),
+	_ = p.AddBar(0,
 		mpb.BarFillerTrim(),
 		mpb.PrependDecorators(
 			decor.Name(strings.Repeat("0", 20)),
@@ -260,20 +256,14 @@ func TestDecorStatisticsAvailableWidth(t *testing.T) {
 			decor.Any(td2),
 		),
 	)
-	go func() {
-		for {
-			select {
-			case <-checkDone:
-				bar.Abort(true)
-			case <-down:
-				return
-			}
-		}
-	}()
-	for !bar.Completed() {
-		bar.Increment()
-	}
+	refresh <- time.Now()
+	cancel()
 	p.Wait()
+	for i, ok := range called {
+		if !ok {
+			t.Errorf("Decorator %d isn't called", i+1)
+		}
+	}
 }
 
 func panicDecorator(panicMsg string, cond func(decor.Statistics) bool) decor.Decorator {
