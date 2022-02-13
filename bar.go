@@ -165,6 +165,9 @@ func (b *Bar) SetTotal(total int64, triggerComplete bool) {
 			go b.forceRefresh()
 		}
 	}:
+		if triggerComplete {
+			<-b.done
+		}
 	case <-b.done:
 	}
 }
