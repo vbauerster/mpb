@@ -95,7 +95,6 @@ func TestWithContext(t *testing.T) {
 	p := mpb.NewWithContext(ctx, mpb.WithShutdownNotifier(shutdown), mpb.WithOutput(ioutil.Discard))
 
 	done := make(chan struct{})
-	fail := make(chan struct{})
 	bar := p.AddBar(0) // never complete bar
 	go func() {
 		for !bar.Aborted() {
@@ -106,17 +105,13 @@ func TestWithContext(t *testing.T) {
 	}()
 
 	go func() {
-		select {
-		case <-done:
-			p.Wait()
-		case <-time.After(timeout):
-			close(fail)
-		}
+		<-done
+		p.Wait()
 	}()
 
 	select {
 	case <-shutdown:
-	case <-fail:
+	case <-time.After(timeout):
 		t.Errorf("Progress didn't shutdown after %v", timeout)
 	}
 }
