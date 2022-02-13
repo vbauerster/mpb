@@ -23,25 +23,20 @@ func TestBarCount(t *testing.T) {
 	shutdown := make(chan struct{})
 	p := mpb.New(mpb.WithShutdownNotifier(shutdown), mpb.WithOutput(ioutil.Discard))
 
-	check := make(chan struct{})
-	b := p.AddBar(100)
-	go func() {
-		for i := 0; i < 100; i++ {
-			if i == 10 {
-				close(check)
-			}
-			b.Increment()
-			time.Sleep(randomDuration(100 * time.Millisecond))
-		}
-	}()
+	b := p.AddBar(0, mpb.BarRemoveOnComplete())
 
-	<-check
 	if count := p.BarCount(); count != 1 {
-		t.Errorf("BarCount want: %q, got: %q\n", 1, count)
+		t.Errorf("BarCount want: %d, got: %d\n", 1, count)
 	}
 
-	b.Abort(false)
+	b.SetTotal(100, true)
+
+	if count := p.BarCount(); count != 0 {
+		t.Errorf("BarCount want: %d, got: %d\n", 0, count)
+	}
+
 	go p.Wait()
+
 	select {
 	case <-shutdown:
 	case <-time.After(timeout):
