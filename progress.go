@@ -33,11 +33,10 @@ type Progress struct {
 
 // pState holds bars in its priorityQueue, it gets passed to (*Progress).serve monitor goroutine.
 type pState struct {
-	bHeap            priorityQueue
-	heapUpdated      bool
-	pMatrix          map[int][]chan int
-	aMatrix          map[int][]chan int
-	barShutdownQueue []*Bar
+	bHeap       priorityQueue
+	heapUpdated bool
+	pMatrix     map[int][]chan int
+	aMatrix     map[int][]chan int
 
 	// following are provided/overrided by user
 	idCount          int
@@ -260,49 +259,37 @@ func (s *pState) render(cw *cwriter.Writer) error {
 
 func (s *pState) flush(cw *cwriter.Writer) error {
 	var totalLines int
-	bm := make(map[*Bar]*frame, s.bHeap.Len())
+	pool := make([]*Bar, 0, s.bHeap.Len())
 	for s.bHeap.Len() > 0 {
 		b := heap.Pop(&s.bHeap).(*Bar)
 		frame := <-b.frameCh
+		totalLines += frame.lines
 		_, err := cw.ReadFrom(frame.reader)
 		if err != nil {
 			return err
 		}
-		if frame.complete {
-			// shutdown at next flush
-			// this ensures no bar ends up with less than 100% rendered
-			defer func() {
-				s.barShutdownQueue = append(s.barShutdownQueue, b)
-			}()
-		} else if frame.abort {
-			s.barShutdownQueue = append(s.barShutdownQueue, b)
+		if frame.shutdown {
+			b.cancel()
+			<-b.done // waiting for b.done, so it's safe to read b.bs
+			var toDrop bool
+			if qb, ok := s.queueBars[b]; ok {
+				delete(s.queueBars, b)
+				qb.priority = b.priority
+				pool = append(pool, qb)
+				toDrop = true
+			} else if s.popCompleted && !b.bs.noPop {
+				totalLines -= frame.lines
+				toDrop = true
+			}
+			if toDrop || b.bs.dropOnComplete {
+				s.heapUpdated = true
+				continue
+			}
 		}
-		totalLines += frame.lines
-		bm[b] = frame
+		pool = append(pool, b)
 	}
 
-	for _, b := range s.barShutdownQueue {
-		b.cancel()
-		<-b.done // waiting for b.done, so it's safe to read b.bs
-		var toDrop bool
-		if qb, ok := s.queueBars[b]; ok {
-			delete(s.queueBars, b)
-			qb.priority = b.priority
-			heap.Push(&s.bHeap, qb)
-			toDrop = true
-		} else if s.popCompleted && !b.bs.noPop {
-			frame := bm[b]
-			totalLines -= frame.lines
-			toDrop = true
-		}
-		if toDrop || b.bs.dropOnComplete {
-			delete(bm, b)
-			s.heapUpdated = true
-		}
-	}
-	s.barShutdownQueue = s.barShutdownQueue[0:0]
-
-	for b := range bm {
+	for _, b := range pool {
 		heap.Push(&s.bHeap, b)
 	}
 

@@ -42,7 +42,6 @@ type bState struct {
 	lastIncrement     int64
 	trimSpace         bool
 	completed         bool
-	completeFlushed   bool
 	aborted           bool
 	triggerComplete   bool
 	dropOnComplete    bool
@@ -65,8 +64,7 @@ type bState struct {
 type frame struct {
 	reader   io.Reader
 	lines    int
-	abort    bool
-	complete bool
+	shutdown bool
 }
 
 func newBar(container *Progress, bs *bState) *Bar {
@@ -338,10 +336,8 @@ func (b *Bar) render(tw int) {
 			b.frameCh <- &frame{
 				reader:   reader,
 				lines:    lines + 1,
-				abort:    s.aborted && !s.completeFlushed,
-				complete: s.completed && !s.completeFlushed,
+				shutdown: s.completed || s.aborted,
 			}
-			s.completeFlushed = s.completed || s.aborted
 		}()
 		if b.recoveredPanic == nil {
 			reader = s.draw(stat)
@@ -529,7 +525,7 @@ func newStatistics(tw int, s *bState) decor.Statistics {
 		Total:          s.total,
 		Current:        s.current,
 		Refill:         s.refill,
-		Completed:      s.completeFlushed && !s.aborted,
+		Completed:      s.completed,
 		Aborted:        s.aborted,
 	}
 }
