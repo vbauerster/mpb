@@ -34,6 +34,24 @@ func TestBarCompleted(t *testing.T) {
 	p.Wait()
 }
 
+func TestBarAborted(t *testing.T) {
+	p := mpb.New(mpb.WithWidth(80), mpb.WithOutput(ioutil.Discard))
+	total := 80
+	bar := p.AddBar(int64(total))
+
+	if bar.Aborted() {
+		t.Fail()
+	}
+
+	bar.Abort(false)
+
+	if !bar.Aborted() {
+		t.Error("bar isn't aborted after abort call")
+	}
+
+	p.Wait()
+}
+
 func TestBarID(t *testing.T) {
 	p := mpb.New(mpb.WithWidth(80), mpb.WithOutput(ioutil.Discard))
 	total := 100
