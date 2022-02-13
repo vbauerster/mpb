@@ -19,17 +19,15 @@ func TestBarCompleted(t *testing.T) {
 	total := 80
 	bar := p.AddBar(int64(total))
 
-	var count int
-	for !bar.Completed() {
-		time.Sleep(10 * time.Millisecond)
+	for i := 0; i < total; i++ {
 		bar.Increment()
-		count++
+	}
+
+	if !bar.Completed() {
+		t.Error("bar isn't completed")
 	}
 
 	p.Wait()
-	if count != total {
-		t.Errorf("got count: %d, expected %d\n", count, total)
-	}
 }
 
 func TestBarID(t *testing.T) {
