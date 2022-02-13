@@ -88,7 +88,7 @@ func TestBarSetRefill(t *testing.T) {
 		strings.Repeat("=", total-till-1),
 	)
 
-	got := string(getLastLine(buf.Bytes()))
+	got := string(bytes.Split(buf.Bytes(), []byte("\n"))[0])
 
 	if !strings.Contains(got, wantBar) {
 		t.Errorf("Want bar: %q, got bar: %q\n", wantBar, got)
@@ -141,7 +141,7 @@ func TestBarStyle(t *testing.T) {
 		string(runes[2]),
 		string(runes[4]),
 	)
-	got := string(getLastLine(buf.Bytes()))
+	got := string(bytes.Split(buf.Bytes(), []byte("\n"))[0])
 
 	if !strings.Contains(got, wantBar) {
 		t.Errorf("Want bar: %q:%d, got bar: %q:%d\n", wantBar, utf8.RuneCountInString(wantBar), got, utf8.RuneCountInString(got))
@@ -283,9 +283,4 @@ func panicDecorator(panicMsg string, cond func(decor.Statistics) bool) decor.Dec
 		}
 		return ""
 	})
-}
-
-func getLastLine(bb []byte) []byte {
-	split := bytes.Split(bb, []byte("\n"))
-	return split[len(split)-2]
 }
