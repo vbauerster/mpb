@@ -258,12 +258,12 @@ func (s *pState) render(cw *cwriter.Writer) error {
 }
 
 func (s *pState) flush(cw *cwriter.Writer) error {
-	var totalLines int
+	var lines int
 	pool := make([]*Bar, 0, s.bHeap.Len())
 	for s.bHeap.Len() > 0 {
 		b := heap.Pop(&s.bHeap).(*Bar)
 		frame := <-b.frameCh
-		totalLines += frame.lines
+		lines += frame.lines
 		_, err := cw.ReadFrom(frame.reader)
 		if err != nil {
 			return err
@@ -278,7 +278,7 @@ func (s *pState) flush(cw *cwriter.Writer) error {
 				pool = append(pool, qb)
 				toDrop = true
 			} else if s.popCompleted && !b.bs.noPop {
-				totalLines -= frame.lines
+				lines -= frame.lines
 				toDrop = true
 			}
 			if toDrop || b.bs.dropOnComplete {
@@ -293,7 +293,7 @@ func (s *pState) flush(cw *cwriter.Writer) error {
 		heap.Push(&s.bHeap, b)
 	}
 
-	return cw.Flush(totalLines)
+	return cw.Flush(lines)
 }
 
 func (s *pState) newTicker(done <-chan struct{}) chan time.Time {
