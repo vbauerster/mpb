@@ -81,7 +81,9 @@ func TestBarAbort(t *testing.T) {
 	}
 
 	bars[0].Abort(false)
+
 	go p.Wait()
+
 	select {
 	case <-shutdown:
 	case <-time.After(timeout):
