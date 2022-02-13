@@ -11,6 +11,10 @@ import (
 	"github.com/vbauerster/mpb/v7/decor"
 )
 
+const (
+	timeout = 200 * time.Millisecond
+)
+
 func init() {
 	rand.Seed(time.Now().UnixNano())
 }
@@ -40,8 +44,8 @@ func TestBarCount(t *testing.T) {
 	go p.Wait()
 	select {
 	case <-shutdown:
-	case <-time.After(150 * time.Millisecond):
-		t.Error("Progress didn't shutdown")
+	case <-time.After(timeout):
+		t.Errorf("Progress didn't shutdown after %v", timeout)
 	}
 }
 
@@ -85,8 +89,8 @@ func TestBarAbort(t *testing.T) {
 	go p.Wait()
 	select {
 	case <-shutdown:
-	case <-time.After(150 * time.Millisecond):
-		t.Error("Progress didn't shutdown")
+	case <-time.After(timeout):
+		t.Errorf("Progress didn't shutdown after %v", timeout)
 	}
 }
 
@@ -110,7 +114,7 @@ func TestWithContext(t *testing.T) {
 		select {
 		case <-done:
 			p.Wait()
-		case <-time.After(150 * time.Millisecond):
+		case <-time.After(timeout):
 			close(fail)
 		}
 	}()
@@ -118,7 +122,7 @@ func TestWithContext(t *testing.T) {
 	select {
 	case <-shutdown:
 	case <-fail:
-		t.Error("Progress didn't shutdown")
+		t.Errorf("Progress didn't shutdown after %v", timeout)
 	}
 }
 
