@@ -20,12 +20,10 @@ func TestBarCompleted(t *testing.T) {
 	bar := p.AddBar(int64(total))
 
 	if bar.Completed() {
-		t.Error("bar is completed before increment")
+		t.Fail()
 	}
 
-	for i := 0; i < total; i++ {
-		bar.Increment()
-	}
+	bar.IncrBy(total)
 
 	if !bar.Completed() {
 		t.Error("bar isn't completed after increment")
@@ -63,7 +61,8 @@ func TestBarID(t *testing.T) {
 		t.Errorf("Expected bar id: %d, got %d\n", wantID, gotID)
 	}
 
-	bar.Abort(true)
+	bar.IncrBy(total)
+
 	p.Wait()
 }
 
@@ -80,11 +79,7 @@ func TestBarSetRefill(t *testing.T) {
 
 	bar.SetRefill(int64(till))
 	bar.IncrBy(till)
-
-	for i := 0; i < total-till; i++ {
-		bar.Increment()
-		time.Sleep(10 * time.Millisecond)
-	}
+	bar.IncrBy(total - till)
 
 	p.Wait()
 
@@ -112,10 +107,7 @@ func TestBarHas100PercentWithBarRemoveOnComplete(t *testing.T) {
 		mpb.AppendDecorators(decor.Percentage()),
 	)
 
-	for i := 0; i < total; i++ {
-		bar.Increment()
-		time.Sleep(10 * time.Millisecond)
-	}
+	bar.IncrBy(total)
 
 	p.Wait()
 
@@ -139,10 +131,7 @@ func TestBarStyle(t *testing.T) {
 	bs.Rbound(string(runes[4]))
 	bar := p.New(int64(total), bs, mpb.BarFillerTrim())
 
-	for i := 0; i < total; i++ {
-		bar.Increment()
-		time.Sleep(10 * time.Millisecond)
-	}
+	bar.IncrBy(total)
 
 	p.Wait()
 
@@ -182,15 +171,12 @@ func TestBarPanicBeforeComplete(t *testing.T) {
 		)),
 	)
 
-	for i := 0; i < total; i++ {
-		time.Sleep(10 * time.Millisecond)
-		bar.Increment()
-	}
+	bar.IncrBy(total)
 
 	p.Wait()
 
 	if pCount != 1 {
-		t.Errorf("Decor called after panic %d times\n", pCount-1)
+		t.Errorf("Decorator called after panic %d times, expected 1\n", pCount)
 	}
 
 	barStr := buf.String()
@@ -222,15 +208,12 @@ func TestBarPanicAfterComplete(t *testing.T) {
 		)),
 	)
 
-	for i := 0; i < total; i++ {
-		time.Sleep(10 * time.Millisecond)
-		bar.Increment()
-	}
+	bar.IncrBy(total)
 
 	p.Wait()
 
-	if pCount > 2 {
-		t.Error("Decor called after panic more than 2 times\n")
+	if pCount != 1 {
+		t.Errorf("Decorator called after panic %d times, expected 1\n", pCount)
 	}
 
 	barStr := buf.String()
