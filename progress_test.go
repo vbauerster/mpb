@@ -1,7 +1,6 @@
 package mpb_test
 
 import (
-	"bytes"
 	"context"
 	"io/ioutil"
 	"math/rand"
@@ -187,11 +186,6 @@ func TestMaxWidthDistributor(t *testing.T) {
 	if !res {
 		t.Error("maxWidthDistributor stuck in the middle")
 	}
-}
-
-func getLastLine(bb []byte) []byte {
-	split := bytes.Split(bb, []byte("\n"))
-	return split[len(split)-2]
 }
 
 func randomDuration(max time.Duration) time.Duration {

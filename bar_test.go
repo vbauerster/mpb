@@ -288,3 +288,8 @@ func panicDecorator(panicMsg string, cond func(decor.Statistics) bool) decor.Dec
 		return ""
 	})
 }
+
+func getLastLine(bb []byte) []byte {
+	split := bytes.Split(bb, []byte("\n"))
+	return split[len(split)-2]
+}
