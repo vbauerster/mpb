@@ -40,13 +40,6 @@ func TestBarID(t *testing.T) {
 	wantID := 11
 	bar := p.AddBar(int64(total), mpb.BarID(wantID))
 
-	go func() {
-		for i := 0; i < total; i++ {
-			time.Sleep(50 * time.Millisecond)
-			bar.Increment()
-		}
-	}()
-
 	gotID := bar.ID()
 	if gotID != wantID {
 		t.Errorf("Expected bar id: %d, got %d\n", wantID, gotID)
