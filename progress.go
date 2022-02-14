@@ -269,7 +269,6 @@ func (s *pState) flush(cw *cwriter.Writer) error {
 			return err
 		}
 		if frame.shutdown {
-			b.cancel()
 			<-b.done // waiting for b.done, so it's safe to read b.bs
 			var toDrop bool
 			if qb, ok := s.queueBars[b]; ok {

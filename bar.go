@@ -342,11 +342,15 @@ func (b *Bar) render(tw int) {
 				reader, lines = s.extender(nil, s.reqWidth, stat)
 				b.recoveredPanic = p
 			}
-			b.frameCh <- &frame{
+			frame := frame{
 				reader:   reader,
 				lines:    lines + 1,
 				shutdown: s.completed || s.aborted,
 			}
+			if frame.shutdown {
+				b.cancel()
+			}
+			b.frameCh <- &frame
 		}()
 		if b.recoveredPanic == nil {
 			reader = s.draw(stat)
