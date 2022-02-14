@@ -8,13 +8,14 @@ import (
 
 type proxyReader struct {
 	io.ReadCloser
-	bar *Bar
+	bar          *Bar
+	totalUnknown bool
 }
 
 func (x proxyReader) Read(p []byte) (int, error) {
 	n, err := x.ReadCloser.Read(p)
 	x.bar.IncrBy(n)
-	if err == io.EOF {
+	if x.totalUnknown && err == io.EOF {
 		go x.bar.SetTotal(-1, true)
 	}
 	return n, err
@@ -28,7 +29,7 @@ type proxyWriterTo struct {
 func (x proxyWriterTo) WriteTo(w io.Writer) (int64, error) {
 	n, err := x.wt.WriteTo(w)
 	x.bar.IncrInt64(n)
-	if err == io.EOF {
+	if x.totalUnknown && err == io.EOF {
 		go x.bar.SetTotal(-1, true)
 	}
 	return n, err
@@ -61,8 +62,8 @@ func (x ewmaProxyWriterTo) WriteTo(w io.Writer) (int64, error) {
 	return n, err
 }
 
-func (b *Bar) newProxyReader(r io.Reader) (rc io.ReadCloser) {
-	pr := proxyReader{toReadCloser(r), b}
+func (b *Bar) newProxyReader(r io.Reader, totalUnknown bool) (rc io.ReadCloser) {
+	pr := proxyReader{toReadCloser(r), b, totalUnknown}
 	if wt, ok := r.(io.WriterTo); ok {
 		pw := proxyWriterTo{pr, wt}
 		if b.hasEwma {
