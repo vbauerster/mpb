@@ -271,7 +271,7 @@ func (b *Bar) SetPriority(priority int) {
 func (b *Bar) Abort(drop bool) {
 	select {
 	case b.operateState <- func(s *bState) {
-		if s.completed || s.aborted {
+		if s.completed {
 			return
 		}
 		s.aborted = true
