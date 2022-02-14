@@ -51,6 +51,56 @@ func TestBarAborted(t *testing.T) {
 	p.Wait()
 }
 
+func TestBarEnableTriggerCompleteAndIncrementBefore(t *testing.T) {
+	p := mpb.New(mpb.WithWidth(80), mpb.WithOutput(ioutil.Discard))
+	bar := p.AddBar(0) // never complete bar
+
+	for _, f := range []func(){
+		func() { bar.SetTotal(40, false) },
+		func() { bar.IncrBy(60) },
+		func() { bar.SetTotal(80, false) },
+		func() { bar.IncrBy(20) },
+	} {
+		f()
+		if bar.Completed() {
+			t.Fail()
+		}
+	}
+
+	bar.EnableTriggerComplete()
+
+	if !bar.Completed() {
+		t.Fail()
+	}
+
+	p.Wait()
+}
+
+func TestBarEnableTriggerCompleteAndIncrementAfter(t *testing.T) {
+	p := mpb.New(mpb.WithWidth(80), mpb.WithOutput(ioutil.Discard))
+	bar := p.AddBar(0) // never complete bar
+
+	for _, f := range []func(){
+		func() { bar.SetTotal(40, false) },
+		func() { bar.IncrBy(60) },
+		func() { bar.SetTotal(80, false) },
+		func() { bar.EnableTriggerComplete() },
+	} {
+		f()
+		if bar.Completed() {
+			t.Fail()
+		}
+	}
+
+	bar.IncrBy(20)
+
+	if !bar.Completed() {
+		t.Fail()
+	}
+
+	p.Wait()
+}
+
 func TestBarID(t *testing.T) {
 	p := mpb.New(mpb.WithWidth(80), mpb.WithOutput(ioutil.Discard))
 	total := 100
