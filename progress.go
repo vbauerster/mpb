@@ -106,8 +106,8 @@ func (p *Progress) New(total int64, builder BarFillerBuilder, options ...BarOpti
 }
 
 // Add creates a bar which renders itself by provided filler.
-// If `total <= 0` trigger complete event is disabled until reset with (*bar).SetTotal(int64, bool).
-// Panics if *Progress instance is done, i.e. called after (*Progress).Wait.
+// If `total <= 0` triggering complete event by increment methods is disabled.
+// Panics if (*Progress) instance is done, i.e. called after (*Progress).Wait().
 func (p *Progress) Add(total int64, filler BarFiller, options ...BarOption) *Bar {
 	if filler == nil {
 		filler = NopStyle().Build()
