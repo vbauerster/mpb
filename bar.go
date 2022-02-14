@@ -20,7 +20,7 @@ type Bar struct {
 	index          int // used by heap
 	priority       int // used by heap
 	hasEwma        bool
-	frameCh        chan *frame
+	frameCh        chan *renderFrame
 	operateState   chan func(*bState)
 	done           chan struct{}
 	container      *Progress
@@ -61,7 +61,7 @@ type bState struct {
 	sync     bool
 }
 
-type frame struct {
+type renderFrame struct {
 	reader   io.Reader
 	lines    int
 	shutdown bool
@@ -73,7 +73,7 @@ func newBar(container *Progress, bs *bState) *Bar {
 	bar := &Bar{
 		priority:     bs.priority,
 		hasEwma:      len(bs.ewmaDecorators) != 0,
-		frameCh:      make(chan *frame, 1),
+		frameCh:      make(chan *renderFrame, 1),
 		operateState: make(chan func(*bState)),
 		done:         make(chan struct{}),
 		container:    container,
@@ -342,7 +342,7 @@ func (b *Bar) render(tw int) {
 				reader, lines = s.extender(nil, s.reqWidth, stat)
 				b.recoveredPanic = p
 			}
-			frame := frame{
+			frame := renderFrame{
 				reader:   reader,
 				lines:    lines + 1,
 				shutdown: s.completed || s.aborted,
@@ -365,7 +365,7 @@ func (b *Bar) render(tw int) {
 			reader = s.draw(stat)
 		}
 		reader, lines = s.extender(reader, s.reqWidth, stat)
-		b.frameCh <- &frame{
+		b.frameCh <- &renderFrame{
 			reader: reader,
 			lines:  lines + 1,
 		}
