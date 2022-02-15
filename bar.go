@@ -161,12 +161,8 @@ func (b *Bar) TraverseDecorators(cb func(decor.Decorator)) {
 // If bar has been incremented to the total, complete event is
 // triggered right away.
 func (b *Bar) EnableTriggerComplete() {
-	triggerComplete := make(chan bool)
 	select {
 	case b.operateState <- func(s *bState) {
-		defer func() {
-			triggerComplete <- s.triggerComplete
-		}()
 		if s.triggerComplete {
 			return
 		}
@@ -178,10 +174,6 @@ func (b *Bar) EnableTriggerComplete() {
 			s.triggerComplete = true
 		}
 	}:
-		triggerComplete := <-triggerComplete
-		if !triggerComplete {
-			<-b.done
-		}
 	case <-b.done:
 	}
 }
