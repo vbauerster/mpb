@@ -155,10 +155,10 @@ func (b *Bar) TraverseDecorators(cb func(decor.Decorator)) {
 	}
 }
 
-// EnableTriggerComplete enables triggering complete event by increment
-// methods or triggers it now if bar already has been incremented up
-// to the total. Triggering complete event is auto disabled if bar
-// constructed with `total <= 0`.
+// EnableTriggerComplete enables triggering complete event. It's
+// effective only for bar which was constructed with `total <= 0`.
+// If bar has been incremented to the total, complete event is
+// triggered right away.
 func (b *Bar) EnableTriggerComplete() {
 	select {
 	case b.operateState <- func(s *bState) {
@@ -177,10 +177,11 @@ func (b *Bar) EnableTriggerComplete() {
 	}
 }
 
-// SetTotal sets total to an arbitrary value. Setting it to negative
-// value is equivalent to (*Bar).SetTotal((*Bar).Current(), bool). If
-// triggerCompleteNow is true, current value is set to total and
-// complete event is triggered right away.
+// SetTotal sets total to an arbitrary value. It's effective only for
+// bar which was constructed with `total <= 0`. Setting total to negative
+// value is equivalent to (*Bar).SetTotal((*Bar).Current(), bool).
+// If triggerCompleteNow is true then total value is set to current
+// and complete event is triggered right away.
 func (b *Bar) SetTotal(total int64, triggerCompleteNow bool) {
 	select {
 	case b.operateState <- func(s *bState) {
