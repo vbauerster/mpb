@@ -31,6 +31,8 @@ func TestBarCount(t *testing.T) {
 
 	b.SetTotal(100, true)
 
+	b.Wait()
+
 	if count := p.BarCount(); count != 0 {
 		t.Errorf("BarCount want: %d, got: %d\n", 0, count)
 	}

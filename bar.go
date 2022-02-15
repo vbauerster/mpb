@@ -332,6 +332,11 @@ func (b *Bar) Completed() bool {
 	}
 }
 
+// Wait blocks until bar is completed or aborted.
+func (b *Bar) Wait() {
+	<-b.done
+}
+
 func (b *Bar) serve(ctx context.Context, bs *bState) {
 	defer b.container.bwg.Done()
 	if bs.afterBar != nil && bs.sync {
