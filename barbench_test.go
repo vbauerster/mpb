@@ -32,11 +32,11 @@ func benchBody(n int, b *testing.B) {
 			bar := p.AddBar(total)
 			switch j {
 			case n - 1:
-				complete(b, bar, total)
+				complete(b, bar)
 			default:
 				wg.Add(1)
 				go func() {
-					complete(b, bar, total)
+					complete(b, bar)
 					wg.Done()
 				}()
 			}
@@ -46,7 +46,7 @@ func benchBody(n int, b *testing.B) {
 	p.Wait()
 }
 
-func complete(b *testing.B, bar *Bar, total int) {
+func complete(b *testing.B, bar *Bar) {
 	for i := 0; i < total; i++ {
 		bar.Increment()
 	}
