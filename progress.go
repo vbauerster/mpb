@@ -107,7 +107,7 @@ func (p *Progress) New(total int64, builder BarFillerBuilder, options ...BarOpti
 
 // Add creates a bar which renders itself by provided filler.
 // If `total <= 0` triggering complete event by increment methods is disabled.
-// Panics if (*Progress) instance is done, i.e. called after (*Progress).Wait().
+// Panics if *Progress instance is done, i.e. called after (*Progress).Wait().
 func (p *Progress) Add(total int64, filler BarFiller, options ...BarOption) *Bar {
 	if filler == nil {
 		filler = NopStyle().Build()
@@ -181,8 +181,8 @@ func (p *Progress) BarCount() int {
 // After this method has been called, there is no way to reuse *Progress
 // instance.
 func (p *Progress) Wait() {
+	// wait for user wg, if any
 	if p.uwg != nil {
-		// wait for user wg
 		p.uwg.Wait()
 	}
 
