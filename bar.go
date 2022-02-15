@@ -90,14 +90,7 @@ func (b *Bar) ProxyReader(r io.Reader) io.ReadCloser {
 	if r == nil {
 		panic("expected non nil io.Reader")
 	}
-	result := make(chan bool)
-	select {
-	case b.operateState <- func(s *bState) { result <- s.triggerComplete }:
-		triggerComplete := <-result
-		return b.newProxyReader(r, !triggerComplete)
-	case <-b.done:
-		return nil
-	}
+	return b.newProxyReader(r)
 }
 
 // ID returs id of the bar.
