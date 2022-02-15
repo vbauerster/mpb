@@ -185,10 +185,8 @@ func (b *Bar) EnableTriggerComplete() {
 // bool). If triggerCompleteNow is true then total value is set to
 // current and complete event is triggered right away.
 func (b *Bar) SetTotal(total int64, triggerCompleteNow bool) {
-	triggerComplete := make(chan bool, 1)
 	select {
 	case b.operateState <- func(s *bState) {
-		triggerComplete <- s.triggerComplete
 		if s.triggerComplete {
 			return
 		}
@@ -203,12 +201,6 @@ func (b *Bar) SetTotal(total int64, triggerCompleteNow bool) {
 			go b.forceRefresh()
 		}
 	}:
-		if triggerCompleteNow {
-			triggerComplete := <-triggerComplete
-			if !triggerComplete {
-				<-b.done
-			}
-		}
 	case <-b.done:
 	}
 }
