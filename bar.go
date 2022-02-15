@@ -184,6 +184,9 @@ func (b *Bar) EnableTriggerComplete() {
 func (b *Bar) SetTotal(total int64, triggerCompleteNow bool) {
 	select {
 	case b.operateState <- func(s *bState) {
+		if s.triggerComplete {
+			return
+		}
 		if total < 0 {
 			s.total = s.current
 		} else {
