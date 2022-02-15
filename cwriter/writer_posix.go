@@ -6,7 +6,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-func (w *Writer) clearLines() error {
+func (w *Writer) ClearLines() error {
 	return w.ansiCuuAndEd()
 }
 
