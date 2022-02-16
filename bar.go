@@ -294,7 +294,8 @@ func (b *Bar) SetPriority(priority int) {
 
 // Abort interrupts bar's running goroutine. Abort won't be engaged
 // if bar is already in complete state. If drop is true bar will be
-// removed as well.
+// removed as well. To make sure that bar has been removed call
+// (*Bar).Wait method.
 func (b *Bar) Abort(drop bool) {
 	select {
 	case b.operateState <- func(s *bState) {
@@ -305,7 +306,6 @@ func (b *Bar) Abort(drop bool) {
 		s.dropOnComplete = drop
 		go b.forceRefresh()
 	}:
-		<-b.done
 	case <-b.done:
 	}
 }

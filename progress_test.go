@@ -67,6 +67,7 @@ func TestBarAbort(t *testing.T) {
 			if abortCalledTimes != 1 {
 				t.Errorf("Expected abortCalledTimes: %d, got: %d\n", 1, abortCalledTimes)
 			}
+			b.Wait()
 			count := p.BarCount()
 			if count != 1 {
 				t.Errorf("BarCount want: %d, got: %d\n", 1, count)
