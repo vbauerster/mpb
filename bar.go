@@ -340,7 +340,7 @@ func (b *Bar) Wait() {
 func (b *Bar) serve(ctx context.Context, bs *bState) {
 	defer b.container.bwg.Done()
 	if bs.afterBar != nil && bs.sync {
-		<-bs.afterBar.done
+		bs.afterBar.Wait()
 	}
 	for {
 		select {
