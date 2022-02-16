@@ -136,7 +136,7 @@ func (p *Progress) Add(total int64, filler BarFiller, options ...BarOption) *Bar
 }
 
 func (p *Progress) traverseBars(cb func(b *Bar) bool) {
-	done := make(chan struct{})
+	sync := make(chan struct{})
 	select {
 	case p.operateState <- func(s *pState) {
 		for i := 0; i < s.bHeap.Len(); i++ {
@@ -145,9 +145,9 @@ func (p *Progress) traverseBars(cb func(b *Bar) bool) {
 				break
 			}
 		}
-		close(done)
+		close(sync)
 	}:
-		<-done
+		<-sync
 	case <-p.done:
 	}
 }
