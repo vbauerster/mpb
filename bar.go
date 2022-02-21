@@ -407,7 +407,7 @@ func (b *Bar) render(tw int) {
 func (b *Bar) forceRefresh() {
 	var anyOtherRunning bool
 	b.container.traverseBars(func(bar *Bar) bool {
-		anyOtherRunning = b != bar && !bar.Completed() && !bar.Aborted()
+		anyOtherRunning = b != bar && bar.isRunning()
 		return !anyOtherRunning
 	})
 	if !anyOtherRunning {
@@ -419,6 +419,18 @@ func (b *Bar) forceRefresh() {
 				return
 			}
 		}
+	}
+}
+
+func (b *Bar) isRunning() bool {
+	result := make(chan bool)
+	select {
+	case b.operateState <- func(s *bState) {
+		result <- !s.completed && !s.aborted
+	}:
+		return <-result
+	case <-b.done:
+		return false
 	}
 }
 
