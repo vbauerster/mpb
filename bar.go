@@ -180,11 +180,10 @@ func (b *Bar) EnableTriggerComplete() {
 }
 
 // SetTotal sets total to an arbitrary value. It's effective only for
-// bar which was constructed with `total <= 0` and if
-// (*Bar).EnableTriggerComplete hasn't been called yet. Setting total
-// to negative value is equivalent to (*Bar).SetTotal((*Bar).Current(),
-// bool). If triggerCompleteNow is true then total value is set to
-// current and complete event is triggered right away.
+// bar which was constructed with `total <= 0`. Setting total to negative
+// value is equivalent to (*Bar).SetTotal((*Bar).Current(), bool).
+// If triggerCompleteNow is true, total value is set to current and
+// complete event is triggered right away.
 func (b *Bar) SetTotal(total int64, triggerCompleteNow bool) {
 	select {
 	case b.operateState <- func(s *bState) {
