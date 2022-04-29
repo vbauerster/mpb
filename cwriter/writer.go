@@ -22,12 +22,11 @@ const (
 // contents of writer will be flushed when Flush is called.
 type Writer struct {
 	sync.Mutex
-	out                io.Writer
-	buf                bytes.Buffer
-	lines              int
-	fd                 int
-	isTerminal         bool
-	LastTypeIsProgress bool
+	out        io.Writer
+	buf        bytes.Buffer
+	lines      int
+	fd         int
+	isTerminal bool
 }
 
 // New returns a new Writer with defaults.
@@ -42,19 +41,32 @@ func New(out io.Writer) *Writer {
 
 // Flush flushes the underlying buffer.
 func (w *Writer) Flush(lines int) (err error) {
-	w.Lock()
-	defer w.Unlock()
 	// some terminals interpret 'cursor up 0' as 'cursor up 1'
-	if w.LastTypeIsProgress && w.lines > 0 {
-		err = w.ClearLines()
+	if w.lines > 0 {
+		err = w.clearLines()
 		if err != nil {
 			return
 		}
 	}
 	w.lines = lines
 	_, err = w.buf.WriteTo(w.out)
-	w.LastTypeIsProgress = true
 	return
+}
+
+func (w *Writer) FlushLog(content []byte) (n int, err error) {
+	w.Lock()
+	defer w.Unlock()
+	// some terminals interpret 'cursor up 0' as 'cursor up 1'
+	if w.lines > 0 {
+		err = w.clearLines()
+		if err != nil {
+			return
+		}
+	}
+
+	write, err := w.out.Write(content)
+	w.lines = 0
+	return write, err
 }
 
 // Write appends the contents of p to the underlying buffer.

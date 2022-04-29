@@ -240,73 +240,7 @@ func (p *Progress) serve(s *pState) {
 }
 
 func (p *Progress) Write(content []byte) (n int, err error) {
-	p.cw.Lock()
-	defer p.cw.Unlock()
-	if p.cw.LastTypeIsProgress {
-		_ = p.cw.ClearLines()
-	}
-	write, err := p.cw.Write(content)
-	p.cw.LastTypeIsProgress = false
-	return write, err
-}
-
-func (s *pState) render(cw *cwriter.Writer) error {
-	if s.heapUpdated {
-		s.updateSyncMatrix()
-		s.heapUpdated = false
-	}
-	syncWidth(s.pMatrix)
-	syncWidth(s.aMatrix)
-
-	tw, err := cw.GetWidth()
-	if err != nil {
-		tw = s.reqWidth
-	}
-	for i := 0; i < s.bHeap.Len(); i++ {
-		bar := s.bHeap[i]
-		go bar.render(tw)
-	}
-
-	return s.flush(cw)
-}
-
-func (s *pState) flush(cw *cwriter.Writer) error {
-	var lines int
-	pool := make([]*Bar, 0, s.bHeap.Len())
-	for s.bHeap.Len() > 0 {
-		b := heap.Pop(&s.bHeap).(*Bar)
-		frame := <-b.frameCh
-		lines += frame.lines
-		_, err := cw.ReadFrom(frame.reader)
-		if err != nil {
-			return err
-		}
-		if frame.shutdown {
-			b.cancel()
-			<-b.done // waiting for b.done, so it's safe to read b.bs
-			var toDrop bool
-			if qb, ok := s.queueBars[b]; ok {
-				delete(s.queueBars, b)
-				qb.priority = b.priority
-				pool = append(pool, qb)
-				toDrop = true
-			} else if s.popCompleted && !b.bs.noPop {
-				lines -= frame.lines
-				toDrop = true
-			}
-			if toDrop || b.bs.dropOnComplete {
-				s.heapUpdated = true
-				continue
-			}
-		}
-		pool = append(pool, b)
-	}
-
-	for _, b := range pool {
-		heap.Push(&s.bHeap, b)
-	}
-
-	return cw.Flush(lines)
+	return p.cw.FlushLog(content)
 }
 
 func (s *pState) newTicker(done <-chan struct{}) chan time.Time {
