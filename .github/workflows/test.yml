@@ -29,5 +29,4 @@ jobs:
         key: ${{ runner.os }}-go-${{ matrix.go-version }}-${{ hashFiles('**/go.sum') }}
         restore-keys: |
           ${{ runner.os }}-go-${{ matrix.go-version }}-
-    - name: Test
-      run: go test -race ./...
+    - run: go test -race ./...
