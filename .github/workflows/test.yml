@@ -6,16 +6,14 @@ jobs:
   test:
     strategy:
       matrix:
-        go-version: [1.16, 1.17]
+        go-version: [1.17, 1.18]
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
-    - name: Setup Go
-      uses: actions/setup-go@v2
+    - uses: actions/setup-go@v3
       with:
         go-version: ${{ matrix.go-version }}
-    - name: Checkout code
-      uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - uses: actions/cache@v2
       with:
         # In order:
@@ -27,9 +25,8 @@ jobs:
           ~/go/pkg/mod
           ~/.cache/go-build
           ~/Library/Caches/go-build
-          %LocalAppData%\go-build
-        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          ~\AppData\Local\go-build
+        key: ${{ runner.os }}-go-${{ matrix.go-version }}-${{ hashFiles('**/go.sum') }}
         restore-keys: |
-          ${{ runner.os }}-go-
-    - name: Test
-      run: go test -race ./...
+          ${{ runner.os }}-go-${{ matrix.go-version }}-
+    - run: go test -race ./...

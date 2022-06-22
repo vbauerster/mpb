@@ -20,7 +20,7 @@ type Bar struct {
 	index          int // used by heap
 	priority       int // used by heap
 	hasEwma        bool
-	frameCh        chan *frame
+	frameCh        chan *renderFrame
 	operateState   chan func(*bState)
 	done           chan struct{}
 	container      *Progress
@@ -61,7 +61,7 @@ type bState struct {
 	sync     bool
 }
 
-type frame struct {
+type renderFrame struct {
 	reader   io.Reader
 	lines    int
 	shutdown bool
@@ -73,7 +73,7 @@ func newBar(container *Progress, bs *bState) *Bar {
 	bar := &Bar{
 		priority:     bs.priority,
 		hasEwma:      len(bs.ewmaDecorators) != 0,
-		frameCh:      make(chan *frame, 1),
+		frameCh:      make(chan *renderFrame, 1),
 		operateState: make(chan func(*bState)),
 		done:         make(chan struct{}),
 		container:    container,
@@ -85,12 +85,20 @@ func newBar(container *Progress, bs *bState) *Bar {
 }
 
 // ProxyReader wraps r with metrics required for progress tracking.
-// Panics if r is nil.
+// If r is 'unknown total/size' reader it's mandatory to call
+// (*Bar).SetTotal(-1, true) method after (Reader).Read returns io.EOF.
+// Panics if r is nil. If bar is already completed or aborted, returns
+// nil.
 func (b *Bar) ProxyReader(r io.Reader) io.ReadCloser {
 	if r == nil {
 		panic("expected non nil io.Reader")
 	}
-	return b.newProxyReader(r)
+	select {
+	case <-b.done:
+		return nil
+	default:
+		return b.newProxyReader(r)
+	}
 }
 
 // ID returs id of the bar.
@@ -130,7 +138,7 @@ func (b *Bar) SetRefill(amount int64) {
 
 // TraverseDecorators traverses all available decorators and calls cb func on each.
 func (b *Bar) TraverseDecorators(cb func(decor.Decorator)) {
-	done := make(chan struct{})
+	sync := make(chan struct{})
 	select {
 	case b.operateState <- func(s *bState) {
 		for _, decorators := range [...][]decor.Decorator{
@@ -141,33 +149,58 @@ func (b *Bar) TraverseDecorators(cb func(decor.Decorator)) {
 				cb(extractBaseDecorator(d))
 			}
 		}
-		close(done)
+		close(sync)
 	}:
-		<-done
+		<-sync
 	case <-b.done:
 	}
 }
 
-// SetTotal sets total dynamically.
-// If total is negative it takes progress' current value.
-func (b *Bar) SetTotal(total int64, triggerComplete bool) {
+// EnableTriggerComplete enables triggering complete event. It's
+// effective only for bar which was constructed with `total <= 0` and
+// after total has been set with (*Bar).SetTotal(int64, false). If bar
+// has been incremented to the total, complete event is triggered right
+// away.
+func (b *Bar) EnableTriggerComplete() {
 	select {
 	case b.operateState <- func(s *bState) {
-		s.triggerComplete = triggerComplete
+		if s.triggerComplete || s.total <= 0 {
+			return
+		}
+		if s.current >= s.total {
+			s.current = s.total
+			s.completed = true
+			go b.forceRefresh()
+		} else {
+			s.triggerComplete = true
+		}
+	}:
+	case <-b.done:
+	}
+}
+
+// SetTotal sets total to an arbitrary value. It's effective only for
+// bar which was constructed with `total <= 0`. Setting total to negative
+// value is equivalent to (*Bar).SetTotal((*Bar).Current(), bool).
+// If triggerCompleteNow is true, total value is set to current and
+// complete event is triggered right away.
+func (b *Bar) SetTotal(total int64, triggerCompleteNow bool) {
+	select {
+	case b.operateState <- func(s *bState) {
+		if s.triggerComplete {
+			return
+		}
 		if total < 0 {
 			s.total = s.current
 		} else {
 			s.total = total
 		}
-		if s.triggerComplete && !s.completed && !s.aborted {
+		if triggerCompleteNow {
 			s.current = s.total
 			s.completed = true
 			go b.forceRefresh()
 		}
 	}:
-		if triggerComplete {
-			<-b.done
-		}
 	case <-b.done:
 	}
 }
@@ -261,7 +294,8 @@ func (b *Bar) SetPriority(priority int) {
 
 // Abort interrupts bar's running goroutine. Abort won't be engaged
 // if bar is already in complete state. If drop is true bar will be
-// removed as well.
+// removed as well. To make sure that bar has been removed call
+// (*Bar).Wait method.
 func (b *Bar) Abort(drop bool) {
 	select {
 	case b.operateState <- func(s *bState) {
@@ -272,7 +306,6 @@ func (b *Bar) Abort(drop bool) {
 		s.dropOnComplete = drop
 		go b.forceRefresh()
 	}:
-		<-b.done
 	case <-b.done:
 	}
 }
@@ -299,10 +332,15 @@ func (b *Bar) Completed() bool {
 	}
 }
 
+// Wait blocks until bar is completed or aborted.
+func (b *Bar) Wait() {
+	<-b.done
+}
+
 func (b *Bar) serve(ctx context.Context, bs *bState) {
 	defer b.container.bwg.Done()
 	if bs.afterBar != nil && bs.sync {
-		<-bs.afterBar.done
+		bs.afterBar.Wait()
 	}
 	for {
 		select {
@@ -336,11 +374,15 @@ func (b *Bar) render(tw int) {
 				reader, lines = s.extender(nil, s.reqWidth, stat)
 				b.recoveredPanic = p
 			}
-			b.frameCh <- &frame{
+			frame := renderFrame{
 				reader:   reader,
 				lines:    lines + 1,
 				shutdown: s.completed || s.aborted,
 			}
+			if frame.shutdown {
+				b.cancel()
+			}
+			b.frameCh <- &frame
 		}()
 		if b.recoveredPanic == nil {
 			reader = s.draw(stat)
@@ -355,7 +397,7 @@ func (b *Bar) render(tw int) {
 			reader = s.draw(stat)
 		}
 		reader, lines = s.extender(reader, s.reqWidth, stat)
-		b.frameCh <- &frame{
+		b.frameCh <- &renderFrame{
 			reader: reader,
 			lines:  lines + 1,
 		}
@@ -365,7 +407,7 @@ func (b *Bar) render(tw int) {
 func (b *Bar) forceRefresh() {
 	var anyOtherRunning bool
 	b.container.traverseBars(func(bar *Bar) bool {
-		anyOtherRunning = b != bar && !bar.Completed() && !bar.Aborted()
+		anyOtherRunning = b != bar && bar.isRunning()
 		return !anyOtherRunning
 	})
 	if !anyOtherRunning {
@@ -377,6 +419,18 @@ func (b *Bar) forceRefresh() {
 				return
 			}
 		}
+	}
+}
+
+func (b *Bar) isRunning() bool {
+	result := make(chan bool)
+	select {
+	case b.operateState <- func(s *bState) {
+		result <- !s.completed && !s.aborted
+	}:
+		return <-result
+	case <-b.done:
+		return false
 	}
 }
 

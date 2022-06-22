@@ -28,12 +28,22 @@ func (r *testReader) Read(p []byte) (n int, err error) {
 	return r.Reader.Read(p)
 }
 
+type testWriterTo struct {
+	*testReader
+	wt io.WriterTo
+}
+
+func (wt testWriterTo) WriteTo(w io.Writer) (n int64, err error) {
+	wt.called = true
+	return wt.wt.WriteTo(w)
+}
+
 func TestProxyReader(t *testing.T) {
 	p := mpb.New(mpb.WithOutput(ioutil.Discard))
 
 	tReader := &testReader{strings.NewReader(content), false}
 
-	bar := p.AddBar(int64(len(content)), mpb.BarFillerTrim())
+	bar := p.AddBar(int64(len(content)))
 
 	var buf bytes.Buffer
 	_, err := io.Copy(&buf, bar.ProxyReader(tReader))
@@ -52,34 +62,23 @@ func TestProxyReader(t *testing.T) {
 	}
 }
 
-type testWriterTo struct {
-	io.Reader
-	wt     io.WriterTo
-	called bool
-}
-
-func (wt *testWriterTo) WriteTo(w io.Writer) (n int64, err error) {
-	wt.called = true
-	return wt.wt.WriteTo(w)
-}
-
 func TestProxyWriterTo(t *testing.T) {
 	p := mpb.New(mpb.WithOutput(ioutil.Discard))
 
 	var reader io.Reader = strings.NewReader(content)
-	tReader := &testWriterTo{reader, reader.(io.WriterTo), false}
+	tWriterTo := testWriterTo{&testReader{reader, false}, reader.(io.WriterTo)}
 
-	bar := p.AddBar(int64(len(content)), mpb.BarFillerTrim())
+	bar := p.AddBar(int64(len(content)))
 
 	var buf bytes.Buffer
-	_, err := io.Copy(&buf, bar.ProxyReader(tReader))
+	_, err := io.Copy(&buf, bar.ProxyReader(tWriterTo))
 	if err != nil {
 		t.Errorf("Error copying from reader: %+v\n", err)
 	}
 
 	p.Wait()
 
-	if !tReader.called {
+	if !tWriterTo.called {
 		t.Error("WriteTo not called")
 	}
 

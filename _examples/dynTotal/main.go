@@ -16,9 +16,8 @@ func init() {
 func main() {
 	p := mpb.New(mpb.WithWidth(64))
 
-	var total int64
 	// new bar with 'trigger complete event' disabled, because total is zero
-	bar := p.AddBar(total,
+	bar := p.AddBar(0,
 		mpb.PrependDecorators(decor.Counters(decor.UnitKiB, "% .1f / % .1f")),
 		mpb.AppendDecorators(decor.Percentage()),
 	)
@@ -27,20 +26,17 @@ func main() {
 	read := makeStream(200)
 	for {
 		n, err := read()
-		total += int64(n)
 		if err == io.EOF {
+			// triggering complete event now
+			bar.SetTotal(-1, true)
 			break
 		}
-		// while total is unknown,
-		// set it to a positive number which is greater than current total,
-		// to make sure no complete event is triggered by next IncrBy call.
-		bar.SetTotal(total+2048, false)
+		// increment methods won't trigger complete event because bar was constructed with total = 0
 		bar.IncrBy(n)
+		// following call is not required, it's called to show some progress instead of an empty bar
+		bar.SetTotal(bar.Current()+2048, false)
 		time.Sleep(time.Duration(rand.Intn(10)+1) * maxSleep / 10)
 	}
-
-	// force bar complete event, note true flag
-	bar.SetTotal(total, true)
 
 	p.Wait()
 }

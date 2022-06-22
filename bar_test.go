@@ -2,6 +2,7 @@ package mpb_test
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io/ioutil"
 	"strings"
@@ -20,15 +21,81 @@ func TestBarCompleted(t *testing.T) {
 	bar := p.AddBar(int64(total))
 
 	if bar.Completed() {
-		t.Error("bar is completed before increment")
+		t.Fail()
 	}
 
-	for i := 0; i < total; i++ {
-		bar.Increment()
-	}
+	bar.IncrBy(total)
 
 	if !bar.Completed() {
 		t.Error("bar isn't completed after increment")
+	}
+
+	p.Wait()
+}
+
+func TestBarAborted(t *testing.T) {
+	p := mpb.New(mpb.WithWidth(80), mpb.WithOutput(ioutil.Discard))
+	total := 80
+	bar := p.AddBar(int64(total))
+
+	if bar.Aborted() {
+		t.Fail()
+	}
+
+	bar.Abort(false)
+
+	if !bar.Aborted() {
+		t.Error("bar isn't aborted after abort call")
+	}
+
+	p.Wait()
+}
+
+func TestBarEnableTriggerCompleteAndIncrementBefore(t *testing.T) {
+	p := mpb.New(mpb.WithWidth(80), mpb.WithOutput(ioutil.Discard))
+	bar := p.AddBar(0) // never complete bar
+
+	for _, f := range []func(){
+		func() { bar.SetTotal(40, false) },
+		func() { bar.IncrBy(60) },
+		func() { bar.SetTotal(80, false) },
+		func() { bar.IncrBy(20) },
+	} {
+		f()
+		if bar.Completed() {
+			t.Fail()
+		}
+	}
+
+	bar.EnableTriggerComplete()
+
+	if !bar.Completed() {
+		t.Fail()
+	}
+
+	p.Wait()
+}
+
+func TestBarEnableTriggerCompleteAndIncrementAfter(t *testing.T) {
+	p := mpb.New(mpb.WithWidth(80), mpb.WithOutput(ioutil.Discard))
+	bar := p.AddBar(0) // never complete bar
+
+	for _, f := range []func(){
+		func() { bar.SetTotal(40, false) },
+		func() { bar.IncrBy(60) },
+		func() { bar.SetTotal(80, false) },
+		func() { bar.EnableTriggerComplete() },
+	} {
+		f()
+		if bar.Completed() {
+			t.Fail()
+		}
+	}
+
+	bar.IncrBy(20)
+
+	if !bar.Completed() {
+		t.Fail()
 	}
 
 	p.Wait()
@@ -40,19 +107,13 @@ func TestBarID(t *testing.T) {
 	wantID := 11
 	bar := p.AddBar(int64(total), mpb.BarID(wantID))
 
-	go func() {
-		for i := 0; i < total; i++ {
-			time.Sleep(50 * time.Millisecond)
-			bar.Increment()
-		}
-	}()
-
 	gotID := bar.ID()
 	if gotID != wantID {
 		t.Errorf("Expected bar id: %d, got %d\n", wantID, gotID)
 	}
 
-	bar.Abort(true)
+	bar.IncrBy(total)
+
 	p.Wait()
 }
 
@@ -69,11 +130,7 @@ func TestBarSetRefill(t *testing.T) {
 
 	bar.SetRefill(int64(till))
 	bar.IncrBy(till)
-
-	for i := 0; i < total-till; i++ {
-		bar.Increment()
-		time.Sleep(10 * time.Millisecond)
-	}
+	bar.IncrBy(total - till)
 
 	p.Wait()
 
@@ -82,7 +139,7 @@ func TestBarSetRefill(t *testing.T) {
 		strings.Repeat("=", total-till-1),
 	)
 
-	got := string(getLastLine(buf.Bytes()))
+	got := string(bytes.Split(buf.Bytes(), []byte("\n"))[0])
 
 	if !strings.Contains(got, wantBar) {
 		t.Errorf("Want bar: %q, got bar: %q\n", wantBar, got)
@@ -101,10 +158,7 @@ func TestBarHas100PercentWithBarRemoveOnComplete(t *testing.T) {
 		mpb.AppendDecorators(decor.Percentage()),
 	)
 
-	for i := 0; i < total; i++ {
-		bar.Increment()
-		time.Sleep(10 * time.Millisecond)
-	}
+	bar.IncrBy(total)
 
 	p.Wait()
 
@@ -128,10 +182,7 @@ func TestBarStyle(t *testing.T) {
 	bs.Rbound(string(runes[4]))
 	bar := p.New(int64(total), bs, mpb.BarFillerTrim())
 
-	for i := 0; i < total; i++ {
-		bar.Increment()
-		time.Sleep(10 * time.Millisecond)
-	}
+	bar.IncrBy(total)
 
 	p.Wait()
 
@@ -141,7 +192,7 @@ func TestBarStyle(t *testing.T) {
 		string(runes[2]),
 		string(runes[4]),
 	)
-	got := string(getLastLine(buf.Bytes()))
+	got := string(bytes.Split(buf.Bytes(), []byte("\n"))[0])
 
 	if !strings.Contains(got, wantBar) {
 		t.Errorf("Want bar: %q:%d, got bar: %q:%d\n", wantBar, utf8.RuneCountInString(wantBar), got, utf8.RuneCountInString(got))
@@ -171,15 +222,12 @@ func TestBarPanicBeforeComplete(t *testing.T) {
 		)),
 	)
 
-	for i := 0; i < total; i++ {
-		time.Sleep(10 * time.Millisecond)
-		bar.Increment()
-	}
+	bar.IncrBy(total)
 
 	p.Wait()
 
 	if pCount != 1 {
-		t.Errorf("Decor called after panic %d times\n", pCount-1)
+		t.Errorf("Decorator called after panic %d times, expected 1\n", pCount)
 	}
 
 	barStr := buf.String()
@@ -211,15 +259,12 @@ func TestBarPanicAfterComplete(t *testing.T) {
 		)),
 	)
 
-	for i := 0; i < total; i++ {
-		time.Sleep(10 * time.Millisecond)
-		bar.Increment()
-	}
+	bar.IncrBy(total)
 
 	p.Wait()
 
-	if pCount > 2 {
-		t.Error("Decor called after panic more than 2 times\n")
+	if pCount != 1 {
+		t.Errorf("Decorator called after panic %d times, expected 1\n", pCount)
 	}
 
 	barStr := buf.String()
@@ -229,33 +274,28 @@ func TestBarPanicAfterComplete(t *testing.T) {
 }
 
 func TestDecorStatisticsAvailableWidth(t *testing.T) {
-	total := 100
-	down := make(chan struct{})
-	checkDone := make(chan struct{})
+	var called [2]bool
 	td1 := func(s decor.Statistics) string {
 		if s.AvailableWidth != 80 {
 			t.Errorf("expected AvailableWidth %d got %d\n", 80, s.AvailableWidth)
 		}
+		called[0] = true
 		return fmt.Sprintf("\x1b[31;1;4m%s\x1b[0m", strings.Repeat("0", 20))
 	}
 	td2 := func(s decor.Statistics) string {
-		defer func() {
-			select {
-			case checkDone <- struct{}{}:
-			default:
-			}
-		}()
 		if s.AvailableWidth != 40 {
 			t.Errorf("expected AvailableWidth %d got %d\n", 40, s.AvailableWidth)
 		}
+		called[1] = true
 		return ""
 	}
-	p := mpb.New(
-		mpb.WithWidth(100),
-		mpb.WithShutdownNotifier(down),
+	ctx, cancel := context.WithCancel(context.Background())
+	refresh := make(chan interface{})
+	p := mpb.NewWithContext(ctx, mpb.WithWidth(100),
+		mpb.WithManualRefresh(refresh),
 		mpb.WithOutput(ioutil.Discard),
 	)
-	bar := p.AddBar(int64(total),
+	_ = p.AddBar(0,
 		mpb.BarFillerTrim(),
 		mpb.PrependDecorators(
 			decor.Name(strings.Repeat("0", 20)),
@@ -266,20 +306,14 @@ func TestDecorStatisticsAvailableWidth(t *testing.T) {
 			decor.Any(td2),
 		),
 	)
-	go func() {
-		for {
-			select {
-			case <-checkDone:
-				bar.Abort(true)
-			case <-down:
-				return
-			}
-		}
-	}()
-	for !bar.Completed() {
-		bar.Increment()
-	}
+	refresh <- time.Now()
+	cancel()
 	p.Wait()
+	for i, ok := range called {
+		if !ok {
+			t.Errorf("Decorator %d isn't called", i+1)
+		}
+	}
 }
 
 func panicDecorator(panicMsg string, cond func(decor.Statistics) bool) decor.Decorator {
@@ -289,9 +323,4 @@ func panicDecorator(panicMsg string, cond func(decor.Statistics) bool) decor.Dec
 		}
 		return ""
 	})
-}
-
-func getLastLine(bb []byte) []byte {
-	split := bytes.Split(bb, []byte("\n"))
-	return split[len(split)-2]
 }
