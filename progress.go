@@ -23,6 +23,7 @@ const (
 type Progress struct {
 	ctx          context.Context
 	uwg          *sync.WaitGroup
+	cw           *cwriter.Writer
 	cwg          *sync.WaitGroup
 	bwg          *sync.WaitGroup
 	operateState chan func(*pState)
@@ -80,13 +81,14 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 		ctx:          ctx,
 		uwg:          s.uwg,
 		cwg:          new(sync.WaitGroup),
+		cw:           cwriter.New(s.output),
 		bwg:          new(sync.WaitGroup),
 		operateState: make(chan func(*pState)),
 		done:         make(chan struct{}),
 	}
 
 	p.cwg.Add(1)
-	go p.serve(s, cwriter.New(s.output))
+	go p.serve(s)
 	return p
 }
 
@@ -199,7 +201,7 @@ func (p *Progress) shutdown() {
 	close(p.done)
 }
 
-func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
+func (p *Progress) serve(s *pState) {
 	defer p.cwg.Done()
 
 	p.refreshCh = s.newTicker(p.done)
@@ -209,7 +211,7 @@ func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 		case op := <-p.operateState:
 			op(s)
 		case <-p.refreshCh:
-			if err := s.render(cw); err != nil {
+			if err := s.render(p.cw); err != nil {
 				if s.debugOut != nil {
 					_, e := fmt.Fprintln(s.debugOut, err)
 					if e != nil {
@@ -221,7 +223,7 @@ func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 			}
 		case <-s.shutdownNotifier:
 			for s.heapUpdated {
-				if err := s.render(cw); err != nil {
+				if err := s.render(p.cw); err != nil {
 					if s.debugOut != nil {
 						_, e := fmt.Fprintln(s.debugOut, err)
 						if e != nil {
@@ -331,6 +333,10 @@ func (s *pState) newTicker(done <-chan struct{}) chan time.Time {
 		}
 	}()
 	return ch
+}
+
+func (p *Progress) Write(content []byte) (n int, err error) {
+	return p.cw.FlushLog(content)
 }
 
 func (s *pState) updateSyncMatrix() {
