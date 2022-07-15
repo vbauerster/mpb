@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/vbauerster/mpb/v7/cwriter"
-	"github.com/vbauerster/mpb/v7/decor"
 )
 
 const (
@@ -41,6 +40,7 @@ type pState struct {
 	// following are provided/overrided by user
 	idCount          int
 	reqWidth         int
+	popPriority      int
 	popCompleted     bool
 	outputDiscarded  bool
 	rr               time.Duration
@@ -64,10 +64,11 @@ func New(options ...ContainerOption) *Progress {
 // method has been called.
 func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 	s := &pState{
-		bHeap:     priorityQueue{},
-		rr:        prr,
-		queueBars: make(map[*Bar]*Bar),
-		output:    os.Stdout,
+		bHeap:       priorityQueue{},
+		rr:          prr,
+		queueBars:   make(map[*Bar]*Bar),
+		output:      os.Stdout,
+		popPriority: math.MinInt32,
 	}
 
 	for _, opt := range options {
@@ -239,42 +240,52 @@ func (s *pState) render(cw *cwriter.Writer) error {
 	syncWidth(s.pMatrix)
 	syncWidth(s.aMatrix)
 
-	tw, err := cw.GetWidth()
+	width, height, err := cw.GetTermSize()
 	if err != nil {
-		tw = s.reqWidth
+		width = s.reqWidth
 	}
 	for i := 0; i < s.bHeap.Len(); i++ {
 		bar := s.bHeap[i]
-		go bar.render(tw)
+		go bar.render(width)
 	}
 
-	return s.flush(cw)
+	return s.flush(cw, height)
 }
 
-func (s *pState) flush(cw *cwriter.Writer) error {
-	var lines int
+func (s *pState) flush(cw *cwriter.Writer, height int) error {
+	var popCount int
+	rows := make([]io.Reader, 0, s.bHeap.Len())
 	pool := make([]*Bar, 0, s.bHeap.Len())
 	for s.bHeap.Len() > 0 {
+		var frameRowsUsed int
 		b := heap.Pop(&s.bHeap).(*Bar)
 		frame := <-b.frameCh
-		lines += frame.lines
-		_, err := cw.ReadFrom(frame.reader)
-		if err != nil {
-			return err
+		for i := len(frame.rows) - 1; i >= 0; i-- {
+			if len(rows) == height {
+				break
+			}
+			rows = append(rows, frame.rows[i])
+			frameRowsUsed++
 		}
-		if frame.shutdown {
+		if frame.shutdown != 0 {
 			b.Wait() // waiting for b.done, so it's safe to read b.bs
-			var toDrop bool
+			drop := b.bs.dropOnComplete
 			if qb, ok := s.queueBars[b]; ok {
 				delete(s.queueBars, b)
 				qb.priority = b.priority
+				qb.bs.dropOnComplete = drop
 				pool = append(pool, qb)
-				toDrop = true
+				drop = true
 			} else if s.popCompleted && !b.bs.noPop {
-				lines -= frame.lines
-				toDrop = true
+				if frame.shutdown > 1 {
+					popCount += frameRowsUsed
+					drop = true
+				} else {
+					s.popPriority++
+					b.priority = s.popPriority
+				}
 			}
-			if toDrop || b.bs.dropOnComplete {
+			if drop {
 				s.heapUpdated = true
 				continue
 			}
@@ -286,7 +297,14 @@ func (s *pState) flush(cw *cwriter.Writer) error {
 		heap.Push(&s.bHeap, b)
 	}
 
-	return cw.Flush(lines)
+	for i := len(rows) - 1; i >= 0; i-- {
+		_, err := cw.ReadFrom(rows[i])
+		if err != nil {
+			return err
+		}
+	}
+
+	return cw.Flush(len(rows) - popCount)
 }
 
 func (s *pState) newTicker(done <-chan struct{}) chan time.Time {
@@ -352,7 +370,6 @@ func (s *pState) makeBarState(total int64, filler BarFiller, options ...BarOptio
 		reqWidth: s.reqWidth,
 		total:    total,
 		filler:   filler,
-		extender: func(r io.Reader, _ int, _ decor.Statistics) (io.Reader, int) { return r, 0 },
 		debugOut: s.debugOut,
 	}
 
@@ -369,10 +386,6 @@ func (s *pState) makeBarState(total int64, filler BarFiller, options ...BarOptio
 	if bs.middleware != nil {
 		bs.filler = bs.middleware(filler)
 		bs.middleware = nil
-	}
-
-	if s.popCompleted && !bs.noPop {
-		bs.priority = -(math.MaxInt32 - s.idCount)
 	}
 
 	for i := 0; i < len(bs.buffers); i++ {
