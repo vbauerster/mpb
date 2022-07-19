@@ -204,33 +204,27 @@ func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 
 	p.refreshCh = s.newTicker(p.done)
 
+	render := func(debugOut io.Writer) {
+		err := s.render(cw)
+		for err != nil {
+			if debugOut != nil {
+				_, err = fmt.Fprintln(debugOut, err)
+			} else {
+				panic(err)
+			}
+			debugOut = nil
+		}
+	}
+
 	for {
 		select {
 		case op := <-p.operateState:
 			op(s)
 		case <-p.refreshCh:
-			if err := s.render(cw); err != nil {
-				if s.debugOut != nil {
-					_, e := fmt.Fprintln(s.debugOut, err)
-					if e != nil {
-						panic(err)
-					}
-				} else {
-					panic(err)
-				}
-			}
+			render(s.debugOut)
 		case <-s.shutdownNotifier:
 			for s.heapUpdated {
-				if err := s.render(cw); err != nil {
-					if s.debugOut != nil {
-						_, e := fmt.Fprintln(s.debugOut, err)
-						if e != nil {
-							panic(err)
-						}
-					} else {
-						panic(err)
-					}
-				}
+				render(s.debugOut)
 			}
 			return
 		}
