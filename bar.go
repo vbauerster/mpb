@@ -364,8 +364,18 @@ func (b *Bar) render(tw int) {
 			// recovering if user defined decorator panics for example
 			if p := recover(); p != nil {
 				if s.debugOut != nil {
-					fmt.Fprintln(s.debugOut, p)
-					_, _ = s.debugOut.Write(debug.Stack())
+					for _, fn := range []func() (int, error){
+						func() (int, error) {
+							return fmt.Fprintln(s.debugOut, p)
+						},
+						func() (int, error) {
+							return s.debugOut.Write(debug.Stack())
+						},
+					} {
+						if _, err := fn(); err != nil {
+							panic(err)
+						}
+					}
 				}
 				s.aborted = !s.completed
 				s.extender = makePanicExtender(p)
