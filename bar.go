@@ -445,7 +445,7 @@ func (b *Bar) wSyncTable() [][]chan int {
 
 func (s *bState) draw(stat decor.Statistics) io.Reader {
 	bufP, bufB, bufA := s.buffers[0], s.buffers[1], s.buffers[2]
-	nlr := strings.NewReader("\n")
+	nlr := bytes.NewReader([]byte("\n"))
 	tw := stat.AvailableWidth
 	for _, d := range s.pDecorators {
 		str := d.Decor(stat)
