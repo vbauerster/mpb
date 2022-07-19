@@ -23,29 +23,27 @@ type Writer struct {
 	out      io.Writer
 	buf      bytes.Buffer
 	lines    int // how much lines to clear before flushing new ones
-	termSize func() (int, int, error)
-}
-
-func prepareTermSizeFunc(out io.Writer) func() (int, int, error) {
-	fn := func() (int, int, error) {
-		return -1, -1, ErrNotTTY
-	}
-	if f, ok := out.(*os.File); ok {
-		fd := int(f.Fd())
-		if IsTerminal(fd) {
-			fn = func() (int, int, error) {
-				return GetSize(fd)
-			}
-		}
-	}
-	return fn
+	fd       int
+	terminal bool
+	termSize func(int) (int, int, error)
 }
 
 // New returns a new Writer with defaults.
 func New(out io.Writer) *Writer {
 	w := &Writer{
-		out:      out,
-		termSize: prepareTermSizeFunc(out),
+		out: out,
+		termSize: func(_ int) (int, int, error) {
+			return -1, -1, ErrNotTTY
+		},
+	}
+	if f, ok := out.(*os.File); ok {
+		w.fd = int(f.Fd())
+		if IsTerminal(w.fd) {
+			w.terminal = true
+			w.termSize = func(fd int) (int, int, error) {
+				return GetSize(fd)
+			}
+		}
 	}
 	return w
 }
@@ -82,7 +80,7 @@ func (w *Writer) ReadFrom(r io.Reader) (n int64, err error) {
 
 // GetTermSize returns WxH of underlying terminal.
 func (w *Writer) GetTermSize() (width, height int, err error) {
-	return w.termSize()
+	return w.termSize(w.fd)
 }
 
 func (w *Writer) ansiCuuAndEd() error {
