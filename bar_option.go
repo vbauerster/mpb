@@ -60,6 +60,7 @@ func BarWidth(width int) BarOption {
 }
 
 // BarQueueAfter puts this (being constructed) bar into the queue.
+// BarPriority will be inherited from the argument bar.
 // When argument bar completes or aborts queued bar replaces its place.
 // If sync is true queued bar is suspended until argument bar completes
 // or aborts.
@@ -111,8 +112,7 @@ func BarFillerMiddleware(middle func(BarFiller) BarFiller) BarOption {
 }
 
 // BarPriority sets bar's priority. Zero is highest priority, i.e. bar
-// will be on top. If `BarReplaceOnComplete` option is supplied, this
-// option is ignored.
+// will be on top. This option isn't effective with `BarQueueAfter` option.
 func BarPriority(priority int) BarOption {
 	return func(s *bState) {
 		s.priority = priority
