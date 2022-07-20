@@ -243,6 +243,7 @@ func (s *pState) render(cw *cwriter.Writer) error {
 	width, height, err := cw.GetTermSize()
 	if err != nil {
 		width = s.reqWidth
+		height = s.bHeap.Len()
 	}
 	for i := 0; i < s.bHeap.Len(); i++ {
 		bar := s.bHeap[i]
