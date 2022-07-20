@@ -254,7 +254,7 @@ func (s *pState) render(cw *cwriter.Writer) error {
 
 func (s *pState) flush(cw *cwriter.Writer, height int) error {
 	var popCount int
-	rows := make([]io.Reader, 0, s.bHeap.Len())
+	rows := make([]io.Reader, 0, height)
 	pool := make([]*Bar, 0, s.bHeap.Len())
 	for s.bHeap.Len() > 0 {
 		var frameRowsUsed int
