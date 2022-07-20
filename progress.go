@@ -273,7 +273,6 @@ func (s *pState) flush(cw *cwriter.Writer, height int) error {
 			if qb, ok := s.queueBars[b]; ok {
 				delete(s.queueBars, b)
 				qb.priority = b.priority
-				qb.bs.dropOnComplete = drop
 				pool = append(pool, qb)
 				drop = true
 			} else if s.popCompleted && !b.bs.noPop {
