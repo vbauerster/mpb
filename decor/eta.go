@@ -60,16 +60,19 @@ type movingAverageETA struct {
 	WC
 	average    ewma.MovingAverage
 	normalizer TimeNormalizer
-	producer   func(time.Duration) string
+	producer   func(time.Duration, bool) string
 }
 
 func (d *movingAverageETA) Decor(s Statistics) string {
-	v := math.Round(d.average.Value())
-	remaining := time.Duration((s.Total - s.Current) * int64(v))
-	if d.normalizer != nil {
-		remaining = d.normalizer.Normalize(remaining)
+	var remaining time.Duration
+	if !s.Aborted {
+		v := math.Round(d.average.Value())
+		remaining = time.Duration((s.Total - s.Current) * int64(v))
+		if d.normalizer != nil {
+			remaining = d.normalizer.Normalize(remaining)
+		}
 	}
-	return d.FormatMsg(d.producer(remaining))
+	return d.FormatMsg(d.producer(remaining, s.Aborted))
 }
 
 func (d *movingAverageETA) EwmaUpdate(n int64, dur time.Duration) {
@@ -114,12 +117,12 @@ type averageETA struct {
 	WC
 	startTime  time.Time
 	normalizer TimeNormalizer
-	producer   func(time.Duration) string
+	producer   func(time.Duration, bool) string
 }
 
 func (d *averageETA) Decor(s Statistics) string {
 	var remaining time.Duration
-	if s.Current != 0 {
+	if s.Current != 0 && !s.Aborted {
 		durPerItem := float64(time.Since(d.startTime)) / float64(s.Current)
 		durPerItem = math.Round(durPerItem)
 		remaining = time.Duration((s.Total - s.Current) * int64(durPerItem))
@@ -127,7 +130,7 @@ func (d *averageETA) Decor(s Statistics) string {
 			remaining = d.normalizer.Normalize(remaining)
 		}
 	}
-	return d.FormatMsg(d.producer(remaining))
+	return d.FormatMsg(d.producer(remaining, s.Aborted))
 }
 
 func (d *averageETA) AverageAdjust(startTime time.Time) {
@@ -169,33 +172,48 @@ func FixedIntervalTimeNormalizer(updInterval int) TimeNormalizer {
 	})
 }
 
-func chooseTimeProducer(style TimeStyle) func(time.Duration) string {
+func chooseTimeProducer(style TimeStyle) func(time.Duration, bool) string {
 	switch style {
 	case ET_STYLE_HHMMSS:
-		return func(remaining time.Duration) string {
+		return func(remaining time.Duration, aborted bool) string {
+			if aborted {
+				return "--:--:--"
+			}
 			hours := int64(remaining/time.Hour) % 60
 			minutes := int64(remaining/time.Minute) % 60
 			seconds := int64(remaining/time.Second) % 60
 			return fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
 		}
 	case ET_STYLE_HHMM:
-		return func(remaining time.Duration) string {
+		return func(remaining time.Duration, aborted bool) string {
+			if aborted {
+				return "--:--"
+			}
 			hours := int64(remaining/time.Hour) % 60
 			minutes := int64(remaining/time.Minute) % 60
 			return fmt.Sprintf("%02d:%02d", hours, minutes)
 		}
 	case ET_STYLE_MMSS:
-		return func(remaining time.Duration) string {
+		return func(remaining time.Duration, aborted bool) string {
 			hours := int64(remaining/time.Hour) % 60
 			minutes := int64(remaining/time.Minute) % 60
 			seconds := int64(remaining/time.Second) % 60
 			if hours > 0 {
+				if aborted {
+					return "--:--:--"
+				}
 				return fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
+			}
+			if aborted {
+				return "--:--"
 			}
 			return fmt.Sprintf("%02d:%02d", minutes, seconds)
 		}
 	default:
-		return func(remaining time.Duration) string {
+		return func(remaining time.Duration, aborted bool) string {
+			if aborted {
+				return "unknown"
+			}
 			// strip off nanoseconds
 			return ((remaining / time.Second) * time.Second).String()
 		}
