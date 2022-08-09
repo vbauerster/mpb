@@ -138,14 +138,13 @@ func barExtender(filler BarFiller, rev bool) BarOption {
 		return nil
 	}
 	return func(s *bState) {
-		s.extender.fn = makeExtenderFunc(filler)
-		s.extender.rev = rev
+		s.extender = makeExtenderFunc(filler, rev)
 	}
 }
 
-func makeExtenderFunc(filler BarFiller) extenderFunc {
+func makeExtenderFunc(filler BarFiller, rev bool) extenderFunc {
 	buf := new(bytes.Buffer)
-	return func(rows []io.Reader, width int, stat decor.Statistics) []io.Reader {
+	base := func(rows []io.Reader, width int, stat decor.Statistics) []io.Reader {
 		buf.Reset()
 		filler.Fill(buf, width, stat)
 		for {
@@ -156,6 +155,18 @@ func makeExtenderFunc(filler BarFiller) extenderFunc {
 			rows = append(rows, bytes.NewReader(b))
 		}
 		return rows
+	}
+
+	if !rev {
+		return base
+	} else {
+		return func(rows []io.Reader, width int, stat decor.Statistics) []io.Reader {
+			rows = base(rows, width, stat)
+			for left, right := 0, len(rows)-1; left < right; left, right = left+1, right-1 {
+				rows[left], rows[right] = rows[right], rows[left]
+			}
+			return rows
+		}
 	}
 }
 
