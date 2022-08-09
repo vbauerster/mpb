@@ -119,13 +119,27 @@ func BarPriority(priority int) BarOption {
 	}
 }
 
-// BarExtender provides a way to extend bar to the next new line.
+// BarExtender extends bar with arbitrary lines. Provided BarFiller will be
+// called at each render/flush cycle. Any lines written to the underlying
+// io.Writer will be printed after the bar itself.
 func BarExtender(filler BarFiller) BarOption {
+	return barExtender(filler, false)
+}
+
+// BarExtenderRev extends bar with arbitrary lines in reverse order. Provided
+// BarFiller will be called at each render/flush cycle. Any lines written
+// to the underlying io.Writer will be printed before the bar itself.
+func BarExtenderRev(filler BarFiller) BarOption {
+	return barExtender(filler, true)
+}
+
+func barExtender(filler BarFiller, rev bool) BarOption {
 	if filler == nil {
 		return nil
 	}
 	return func(s *bState) {
-		s.extender = makeExtenderFunc(filler)
+		s.extender.fn = makeExtenderFunc(filler)
+		s.extender.rev = rev
 	}
 }
 

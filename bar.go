@@ -54,8 +54,12 @@ type bState struct {
 	buffers           [3]*bytes.Buffer
 	filler            BarFiller
 	middleware        func(BarFiller) BarFiller
-	extender          extenderFunc
 	debugOut          io.Writer
+
+	extender struct {
+		fn  extenderFunc
+		rev bool
+	}
 
 	afterBar *Bar // key for (*pState).queueBars
 	sync     bool
@@ -378,11 +382,16 @@ func (b *Bar) render(tw int) {
 					}
 				}
 				s.aborted = !s.completed
-				s.extender = makePanicExtender(p)
+				s.extender.fn = makePanicExtender(p)
 				b.recoveredPanic = p
 			}
-			if s.extender != nil {
-				rows = s.extender(rows, s.reqWidth, stat)
+			if fn := s.extender.fn; fn != nil {
+				rows = fn(rows, s.reqWidth, stat)
+				if s.extender.rev {
+					for left, right := 0, len(rows)-1; left < right; left, right = left+1, right-1 {
+						rows[left], rows[right] = rows[right], rows[left]
+					}
+				}
 			}
 			frame := &renderFrame{
 				rows: rows,
@@ -403,8 +412,13 @@ func (b *Bar) render(tw int) {
 		if b.recoveredPanic == nil {
 			rows = append(rows, s.draw(stat))
 		}
-		if s.extender != nil {
-			rows = s.extender(rows, s.reqWidth, stat)
+		if fn := s.extender.fn; fn != nil {
+			rows = fn(rows, s.reqWidth, stat)
+			if s.extender.rev {
+				for left, right := 0, len(rows)-1; left < right; left, right = left+1, right-1 {
+					rows[left], rows[right] = rows[right], rows[left]
+				}
+			}
 		}
 		frame := &renderFrame{
 			rows: rows,
