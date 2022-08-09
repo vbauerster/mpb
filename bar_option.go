@@ -69,8 +69,8 @@ func BarQueueAfter(bar *Bar, sync bool) BarOption {
 		return nil
 	}
 	return func(s *bState) {
-		s.afterBar = bar
-		s.sync = sync
+		s.wait.bar = bar
+		s.wait.sync = sync
 	}
 }
 

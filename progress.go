@@ -119,8 +119,8 @@ func (p *Progress) Add(total int64, filler BarFiller, options ...BarOption) *Bar
 	case p.operateState <- func(ps *pState) {
 		bs := ps.makeBarState(total, filler, options...)
 		bar := newBar(p, bs)
-		if bs.afterBar != nil {
-			ps.queueBars[bs.afterBar] = bar
+		if bs.wait.bar != nil {
+			ps.queueBars[bs.wait.bar] = bar
 		} else {
 			heap.Push(&ps.bHeap, bar)
 			ps.heapUpdated = true

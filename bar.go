@@ -61,8 +61,10 @@ type bState struct {
 		rev bool
 	}
 
-	afterBar *Bar // key for (*pState).queueBars
-	sync     bool
+	wait struct {
+		bar  *Bar // key for (*pState).queueBars
+		sync bool
+	}
 }
 
 type renderFrame struct {
@@ -342,8 +344,8 @@ func (b *Bar) Wait() {
 
 func (b *Bar) serve(ctx context.Context, bs *bState) {
 	defer b.container.bwg.Done()
-	if bs.afterBar != nil && bs.sync {
-		bs.afterBar.Wait()
+	if bs.wait.bar != nil && bs.wait.sync {
+		bs.wait.bar.Wait()
 	}
 	for {
 		select {
