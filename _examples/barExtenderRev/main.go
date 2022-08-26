@@ -100,7 +100,7 @@ func middleware(base mpb.BarFiller, id uint32) mpb.BarFiller {
 		}
 		fmt.Fprintf(w, "   Taksk %02d: Done!\n", id)
 	}
-	if id == 0 {
+	if base == nil {
 		return mpb.BarFillerFunc(fn)
 	}
 	return mpb.BarFillerFunc(func(w io.Writer, reqWidth int, st decor.Statistics) {
