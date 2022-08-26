@@ -39,9 +39,3 @@ type BarFillerBuilderFunc func() BarFiller
 func (f BarFillerBuilderFunc) Build() BarFiller {
 	return f()
 }
-
-// NewBarFiller constructs a BarFiller from provided BarFillerBuilder.
-// Deprecated. Prefer using `*Progress.New(...)` directly.
-func NewBarFiller(b BarFillerBuilder) BarFiller {
-	return b.Build()
-}
