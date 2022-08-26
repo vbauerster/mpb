@@ -70,10 +70,10 @@ func main() {
 		),
 	)
 
-	tb.SetTotal(int64(total), false)
+	tb.SetTotal(total, false)
 
 	for _, t := range tasks {
-		atomic.StoreUint32(&curTask, uint32(t.id))
+		atomic.StoreUint32(&curTask, t.id)
 		complete(tb, t)
 		atomic.AddUint32(&doneTasks, 1)
 	}
