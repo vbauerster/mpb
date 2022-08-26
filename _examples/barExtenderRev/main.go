@@ -15,22 +15,22 @@ var curTask uint32
 var doneTasks uint32
 
 type task struct {
-	id    int
-	total int
+	id    uint32
+	total int64
 	bar   *mpb.Bar
 }
 
 func main() {
 	numTasks := 4
 
-	var total int
+	var total int64
 	var filler mpb.BarFiller
 	tasks := make([]*task, numTasks)
 
 	for i := 0; i < numTasks; i++ {
 		task := &task{
-			id:    i,
-			total: rand.Intn(101) + 100,
+			id:    uint32(i),
+			total: rand.Int63n(666) + 100,
 		}
 		total += task.total
 		filler = middleware(filler, task.id)
@@ -46,8 +46,7 @@ func main() {
 		if i != 0 {
 			waitBar = tasks[i-1].bar
 		}
-		total := tasks[i].total
-		bar := p.AddBar(int64(total),
+		bar := p.AddBar(tasks[i].total,
 			mpb.BarExtenderRev(filler),
 			mpb.BarQueueAfter(waitBar, false),
 			mpb.PrependDecorators(
@@ -84,11 +83,11 @@ func main() {
 	p.Wait()
 }
 
-func middleware(base mpb.BarFiller, id int) mpb.BarFiller {
+func middleware(base mpb.BarFiller, id uint32) mpb.BarFiller {
 	var done bool
 	fn := func(w io.Writer, _ int, st decor.Statistics) {
 		if !done {
-			cur := atomic.LoadUint32(&curTask) == uint32(id)
+			cur := atomic.LoadUint32(&curTask) == id
 			if !cur {
 				fmt.Fprintf(w, "   Taksk %02d\n", id)
 				return
