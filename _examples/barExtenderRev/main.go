@@ -60,16 +60,10 @@ func main() {
 		tasks[i].bar = bar
 	}
 
-	tb := p.AddBar(int64(total),
+	tb := p.AddBar(0,
 		mpb.PrependDecorators(
 			decor.Any(func(st decor.Statistics) string {
-				var done uint32
-				if st.Completed {
-					done = uint32(len(tasks))
-				} else {
-					done = atomic.LoadUint32(&doneTasks)
-				}
-				return fmt.Sprintf("TOTAL(%d/%d)", done, len(tasks))
+				return fmt.Sprintf("TOTAL(%d/%d)", atomic.LoadUint32(&doneTasks), len(tasks))
 			}, decor.WCSyncWidthR),
 		),
 		mpb.AppendDecorators(
@@ -77,11 +71,15 @@ func main() {
 		),
 	)
 
+	tb.SetTotal(int64(total), false)
+
 	for _, t := range tasks {
 		atomic.StoreUint32(&curTask, uint32(t.id))
 		complete(tb, t)
 		atomic.AddUint32(&doneTasks, 1)
 	}
+
+	tb.EnableTriggerComplete()
 
 	p.Wait()
 }
