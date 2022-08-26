@@ -91,14 +91,14 @@ func BarFillerClearOnComplete() BarOption {
 // BarFillerOnComplete replaces bar's filler with message, on complete event.
 func BarFillerOnComplete(message string) BarOption {
 	return BarFillerMiddleware(func(base BarFiller) BarFiller {
-		return BarFillerFunc(func(w io.Writer, reqWidth int, st decor.Statistics) {
+		return BarFillerFunc(func(w io.Writer, st decor.Statistics) {
 			if st.Completed {
 				_, err := io.WriteString(w, message)
 				if err != nil {
 					panic(err)
 				}
 			} else {
-				base.Fill(w, reqWidth, st)
+				base.Fill(w, st)
 			}
 		})
 	})
@@ -144,9 +144,9 @@ func barExtender(filler BarFiller, rev bool) BarOption {
 
 func makeExtenderFunc(filler BarFiller, rev bool) extenderFunc {
 	buf := new(bytes.Buffer)
-	base := func(rows []io.Reader, width int, stat decor.Statistics) []io.Reader {
+	base := func(rows []io.Reader, stat decor.Statistics) []io.Reader {
 		buf.Reset()
-		filler.Fill(buf, width, stat)
+		filler.Fill(buf, stat)
 		for {
 			b, err := buf.ReadBytes('\n')
 			if err != nil {
@@ -160,8 +160,8 @@ func makeExtenderFunc(filler BarFiller, rev bool) extenderFunc {
 	if !rev {
 		return base
 	} else {
-		return func(rows []io.Reader, width int, stat decor.Statistics) []io.Reader {
-			rows = base(rows, width, stat)
+		return func(rows []io.Reader, stat decor.Statistics) []io.Reader {
+			rows = base(rows, stat)
 			for left, right := 0, len(rows)-1; left < right; left, right = left+1, right-1 {
 				rows[left], rows[right] = rows[right], rows[left]
 			}

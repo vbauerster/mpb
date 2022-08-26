@@ -29,7 +29,7 @@ type Bar struct {
 	recoveredPanic interface{}
 }
 
-type extenderFunc func(rows []io.Reader, width int, stat decor.Statistics) []io.Reader
+type extenderFunc func(rows []io.Reader, stat decor.Statistics) []io.Reader
 
 // bState is actual bar's state.
 type bState struct {
@@ -384,7 +384,7 @@ func (b *Bar) render(tw int) {
 				b.recoveredPanic = p
 			}
 			if fn := s.extender; fn != nil {
-				rows = fn(rows, s.reqWidth, stat)
+				rows = fn(rows, stat)
 			}
 			frame := &renderFrame{
 				rows: rows,
@@ -406,7 +406,7 @@ func (b *Bar) render(tw int) {
 			rows = append(rows, s.draw(stat))
 		}
 		if fn := s.extender; fn != nil {
-			rows = fn(rows, s.reqWidth, stat)
+			rows = fn(rows, stat)
 		}
 		frame := &renderFrame{
 			rows: rows,
@@ -488,7 +488,7 @@ func (s *bState) draw(stat decor.Statistics) io.Reader {
 		return io.MultiReader(bufP, bufB, trunc, nlr)
 	}
 
-	s.filler.Fill(bufB, s.reqWidth, stat)
+	s.filler.Fill(bufB, stat)
 
 	return io.MultiReader(bufP, bufB, bufA, nlr)
 }
@@ -589,6 +589,7 @@ func (s bState) decoratorShutdownNotify() {
 func newStatistics(tw int, s *bState) decor.Statistics {
 	return decor.Statistics{
 		AvailableWidth: tw,
+		RequestedWidth: s.reqWidth,
 		ID:             s.id,
 		Total:          s.total,
 		Current:        s.current,
@@ -607,7 +608,7 @@ func extractBaseDecorator(d decor.Decorator) decor.Decorator {
 
 func makePanicExtender(p interface{}) extenderFunc {
 	pstr := fmt.Sprint(p)
-	return func(rows []io.Reader, _ int, stat decor.Statistics) []io.Reader {
+	return func(rows []io.Reader, stat decor.Statistics) []io.Reader {
 		r := io.MultiReader(
 			strings.NewReader(runewidth.Truncate(pstr, stat.AvailableWidth, "…")),
 			bytes.NewReader([]byte("\n")),

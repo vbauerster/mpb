@@ -63,8 +63,8 @@ func (s *spinnerStyle) Build() BarFiller {
 	return sf
 }
 
-func (s *sFiller) Fill(w io.Writer, width int, stat decor.Statistics) {
-	width = internal.CheckRequestedWidth(width, stat.AvailableWidth)
+func (s *sFiller) Fill(w io.Writer, stat decor.Statistics) {
+	width := internal.CheckRequestedWidth(stat.RequestedWidth, stat.AvailableWidth)
 
 	frame := s.frames[s.count%uint(len(s.frames))]
 	frameWidth := runewidth.StringWidth(stripansi.Strip(frame))

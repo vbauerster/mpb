@@ -48,6 +48,7 @@ const (
 // may need.
 type Statistics struct {
 	AvailableWidth int
+	RequestedWidth int
 	ID             int
 	Total          int64
 	Current        int64

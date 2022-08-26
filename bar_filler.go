@@ -9,11 +9,9 @@ import (
 // BarFiller interface.
 // Bar (without decorators) renders itself by calling BarFiller's Fill method.
 //
-//	reqWidth is requested width set by `func WithWidth(int) ContainerOption`.
 //	If not set, it defaults to terminal width.
-//
 type BarFiller interface {
-	Fill(w io.Writer, reqWidth int, stat decor.Statistics)
+	Fill(w io.Writer, stat decor.Statistics)
 }
 
 // BarFillerBuilder interface.
@@ -22,17 +20,16 @@ type BarFiller interface {
 //	BarStyle()
 //	SpinnerStyle()
 //	NopStyle()
-//
 type BarFillerBuilder interface {
 	Build() BarFiller
 }
 
 // BarFillerFunc is function type adapter to convert compatible function
 // into BarFiller interface.
-type BarFillerFunc func(w io.Writer, reqWidth int, stat decor.Statistics)
+type BarFillerFunc func(w io.Writer, stat decor.Statistics)
 
-func (f BarFillerFunc) Fill(w io.Writer, reqWidth int, stat decor.Statistics) {
-	f(w, reqWidth, stat)
+func (f BarFillerFunc) Fill(w io.Writer, stat decor.Statistics) {
+	f(w, stat)
 }
 
 // BarFillerBuilderFunc is function type adapter to convert compatible
