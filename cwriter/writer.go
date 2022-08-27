@@ -31,6 +31,7 @@ var ErrNotTTY = errors.New("not a terminal")
 type Writer struct {
 	*bytes.Buffer
 	out      io.Writer
+	lines    int // used by writer_windows only
 	fd       int
 	terminal bool
 	termSize func(int) (int, int, error)

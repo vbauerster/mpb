@@ -15,25 +15,16 @@ var (
 	procFillConsoleOutputCharacter = kernel32.NewProc("FillConsoleOutputCharacterW")
 )
 
-var linesCleaner = makeLinesCleaner()
-
-func makeLinesCleaner() func(*Writer, int) error {
-	var lastLines int
-	return func(w *Writer, n int) (err error) {
-		if lastLines > 0 {
-			err = w.clearLines(lastLines)
-		}
-		lastLines = n
-		return err
-	}
-}
-
 // Flush flushes the underlying buffer.
 func (w *Writer) Flush(lines int) error {
-	err := linesCleaner(w, lines)
-	if err == nil {
-		_, err = w.WriteTo(w.out)
+	if w.lines > 0 {
+		err := w.clearLines(w.lines)
+		if err != nil {
+			return err
+		}
 	}
+	w.lines = lines
+	_, err := w.WriteTo(w.out)
 	return err
 }
 
