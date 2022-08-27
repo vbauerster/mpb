@@ -8,14 +8,17 @@ import (
 	"strconv"
 )
 
-// ErrNotTTY not a TeleTYpewriter error.
-var ErrNotTTY = errors.New("not a terminal")
-
 // https://github.com/dylanaraps/pure-sh-bible#cursor-movement
 const (
 	escOpen  = "\x1b["
 	cuuAndEd = "A\x1b[J"
 )
+
+// used by ansiCuuAndEd func
+var escBuf = make([]byte, 8)
+
+// ErrNotTTY not a TeleTYpewriter error.
+var ErrNotTTY = errors.New("not a terminal")
 
 // Writer is a buffered the writer that updates the terminal. The
 // contents of writer will be flushed when Flush is called.
@@ -53,9 +56,9 @@ func (w *Writer) GetTermSize() (width, height int, err error) {
 	return w.termSize(w.fd)
 }
 
+// if n > 99 it will allocate because of len(escBuf) = 8
 func ansiCuuAndEd(out io.Writer, n int) error {
-	buf := make([]byte, 8)
-	buf = strconv.AppendInt(buf[:copy(buf, escOpen)], int64(n), 10)
-	_, err := out.Write(append(buf, cuuAndEd...))
+	escBuf = strconv.AppendInt(escBuf[:copy(escBuf, escOpen)], int64(n), 10)
+	_, err := out.Write(append(escBuf, cuuAndEd...))
 	return err
 }
