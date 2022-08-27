@@ -15,7 +15,7 @@ var (
 	procFillConsoleOutputCharacter = kernel32.NewProc("FillConsoleOutputCharacterW")
 )
 
-func (w *Writer) clearLines() error {
+func (w *Writer) clearLines(n int) error {
 	if !w.terminal {
 		// hope it's cygwin or similar
 		return w.ansiCuuAndEd()
@@ -26,7 +26,7 @@ func (w *Writer) clearLines() error {
 		return err
 	}
 
-	info.CursorPosition.Y -= int16(w.lines)
+	info.CursorPosition.Y -= int16(n)
 	if info.CursorPosition.Y < 0 {
 		info.CursorPosition.Y = 0
 	}
@@ -40,7 +40,7 @@ func (w *Writer) clearLines() error {
 		X: info.Window.Left,
 		Y: info.CursorPosition.Y,
 	}
-	count := uint32(info.Size.X) * uint32(w.lines)
+	count := uint32(info.Size.X) * uint32(n)
 	_, _, _ = procFillConsoleOutputCharacter.Call(
 		uintptr(w.fd),
 		uintptr(' '),

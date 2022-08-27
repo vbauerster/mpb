@@ -6,8 +6,8 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-func (w *Writer) clearLines() error {
-	return w.ansiCuuAndEd()
+func (w *Writer) clearLines(n int) error {
+	return w.ansiCuuAndEd(n)
 }
 
 // GetSize returns the dimensions of the given terminal.

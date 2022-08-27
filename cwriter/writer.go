@@ -22,7 +22,6 @@ const (
 type Writer struct {
 	out      io.Writer
 	buf      bytes.Buffer
-	lines    int // how much lines to clear before flushing new ones
 	fd       int
 	terminal bool
 	termSize func(int) (int, int, error)
@@ -49,17 +48,13 @@ func New(out io.Writer) *Writer {
 }
 
 // Flush flushes the underlying buffer.
-func (w *Writer) Flush(lines int) (err error) {
+func (w *Writer) Flush(lines int) error {
+	_, err := w.buf.WriteTo(w.out)
 	// some terminals interpret 'cursor up 0' as 'cursor up 1'
-	if w.lines > 0 {
-		err = w.clearLines()
-		if err != nil {
-			return
-		}
+	if err == nil && lines > 0 {
+		err = w.clearLines(lines)
 	}
-	w.lines = lines
-	_, err = w.buf.WriteTo(w.out)
-	return
+	return err
 }
 
 // Write appends the contents of p to the underlying buffer.
@@ -83,9 +78,9 @@ func (w *Writer) GetTermSize() (width, height int, err error) {
 	return w.termSize(w.fd)
 }
 
-func (w *Writer) ansiCuuAndEd() error {
+func (w *Writer) ansiCuuAndEd(n int) error {
 	buf := make([]byte, 8)
-	buf = strconv.AppendInt(buf[:copy(buf, escOpen)], int64(w.lines), 10)
-	_, err := w.out.Write(append(buf, cuuAndEd...))
+	buf = strconv.AppendInt(buf[:copy(buf, escOpen)], int64(n), 10)
+	_, err := w.buf.Write(append(buf, cuuAndEd...))
 	return err
 }
