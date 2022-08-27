@@ -1,4 +1,4 @@
-// +build zos
+//go:build zos
 
 package cwriter
 

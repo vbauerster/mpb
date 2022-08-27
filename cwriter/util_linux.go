@@ -1,4 +1,4 @@
-// +build aix linux
+//go:build aix || linux
 
 package cwriter
 

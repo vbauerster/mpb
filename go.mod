@@ -7,4 +7,6 @@ require (
 	golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a
 )
 
-go 1.14
+require github.com/rivo/uniseg v0.2.0 // indirect
+
+go 1.17
