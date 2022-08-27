@@ -15,10 +15,32 @@ var (
 	procFillConsoleOutputCharacter = kernel32.NewProc("FillConsoleOutputCharacterW")
 )
 
+var linesCleaner = makeLinesCleaner()
+
+func makeLinesCleaner() func(*Writer, int) error {
+	var lastLines int
+	return func(w *Writer, n int) (err error) {
+		if lastLines > 0 {
+			err = w.clearLines(lastLines)
+		}
+		lastLines = n
+		return err
+	}
+}
+
+// Flush flushes the underlying buffer.
+func (w *Writer) Flush(lines int) error {
+	err := linesCleaner(w, lines)
+	if err == nil {
+		_, err = w.WriteTo(w.out)
+	}
+	return err
+}
+
 func (w *Writer) clearLines(n int) error {
 	if !w.terminal {
 		// hope it's cygwin or similar
-		return w.ansiCuuAndEd()
+		return ansiCuuAndEd(w.out, n)
 	}
 
 	var info windows.ConsoleScreenBufferInfo
@@ -52,7 +74,6 @@ func (w *Writer) clearLines(n int) error {
 }
 
 // GetSize returns the visible dimensions of the given terminal.
-//
 // These dimensions don't include any scrollback buffer height.
 func GetSize(fd int) (width, height int, err error) {
 	var info windows.ConsoleScreenBufferInfo

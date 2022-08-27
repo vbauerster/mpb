@@ -6,8 +6,14 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-func (w *Writer) clearLines(n int) error {
-	return w.ansiCuuAndEd(n)
+// Flush flushes the underlying buffer.
+func (w *Writer) Flush(lines int) error {
+	_, err := w.WriteTo(w.out)
+	// some terminals interpret 'cursor up 0' as 'cursor up 1'
+	if err == nil && lines > 0 {
+		err = ansiCuuAndEd(w, lines)
+	}
+	return err
 }
 
 // GetSize returns the dimensions of the given terminal.
