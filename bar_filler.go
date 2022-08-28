@@ -3,7 +3,7 @@ package mpb
 import (
 	"io"
 
-	"github.com/vbauerster/mpb/v7/decor"
+	"github.com/vbauerster/mpb/v8/decor"
 )
 
 // BarFiller interface.

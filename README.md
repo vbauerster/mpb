@@ -1,6 +1,6 @@
 # Multi Progress Bar
 
-[![GoDoc](https://pkg.go.dev/badge/github.com/vbauerster/mpb)](https://pkg.go.dev/github.com/vbauerster/mpb/v7)
+[![GoDoc](https://pkg.go.dev/badge/github.com/vbauerster/mpb)](https://pkg.go.dev/github.com/vbauerster/mpb/v8)
 [![Test status](https://github.com/vbauerster/mpb/actions/workflows/test.yml/badge.svg)](https://github.com/vbauerster/mpb/actions/workflows/test.yml)
 [![Donate with PayPal](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.me/vbauerster)
 
@@ -26,8 +26,8 @@ import (
     "math/rand"
     "time"
 
-    "github.com/vbauerster/mpb/v7"
-    "github.com/vbauerster/mpb/v7/decor"
+    "github.com/vbauerster/mpb/v8"
+    "github.com/vbauerster/mpb/v8/decor"
 )
 
 func main() {

@@ -1,4 +1,4 @@
-// Package decor provides common decorators for "github.com/vbauerster/mpb/v7" module.
+// Package decor provides common decorators for "github.com/vbauerster/mpb/v8" module.
 //
 // Some decorators returned by this package might have a closure state. It is ok to use
 // decorators concurrently, unless you share the same decorator among multiple

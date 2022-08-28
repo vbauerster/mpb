@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/vbauerster/mpb/v7"
+	"github.com/vbauerster/mpb/v8"
 )
 
 const content = `Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do

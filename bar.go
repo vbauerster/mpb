@@ -12,7 +12,7 @@ import (
 
 	"github.com/acarl005/stripansi"
 	"github.com/mattn/go-runewidth"
-	"github.com/vbauerster/mpb/v7/decor"
+	"github.com/vbauerster/mpb/v8/decor"
 )
 
 // Bar represents a progress bar.
