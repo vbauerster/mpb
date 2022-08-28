@@ -11,7 +11,7 @@ func (w *Writer) Flush(lines int) error {
 	_, err := w.WriteTo(w.out)
 	// some terminals interpret 'cursor up 0' as 'cursor up 1'
 	if err == nil && lines > 0 {
-		err = ansiCuuAndEd(w, lines)
+		err = w.ew.ansiCuuAndEd(w, lines)
 	}
 	return err
 }

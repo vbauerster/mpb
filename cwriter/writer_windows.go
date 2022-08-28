@@ -31,7 +31,7 @@ func (w *Writer) Flush(lines int) error {
 func (w *Writer) clearLines(n int) error {
 	if !w.terminal {
 		// hope it's cygwin or similar
-		return ansiCuuAndEd(w.out, n)
+		return w.ew.ansiCuuAndEd(w.out, n)
 	}
 
 	var info windows.ConsoleScreenBufferInfo
