@@ -39,7 +39,7 @@ func main() {
 			defer wg.Done()
 			rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 			max := 100 * time.Millisecond
-			for !bar.Completed() {
+			for bar.IsRunning() {
 				// start variable is solely for EWMA calculation
 				// EWMA's unit of measure is an iteration's duration
 				start := time.Now()

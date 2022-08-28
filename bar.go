@@ -418,7 +418,7 @@ func (b *Bar) render(tw int) {
 func (b *Bar) forceRefresh() {
 	var anyOtherRunning bool
 	b.container.traverseBars(func(bar *Bar) bool {
-		anyOtherRunning = b != bar && bar.isRunning()
+		anyOtherRunning = b != bar && bar.IsRunning()
 		return !anyOtherRunning
 	})
 	if !anyOtherRunning {
@@ -433,7 +433,9 @@ func (b *Bar) forceRefresh() {
 	}
 }
 
-func (b *Bar) isRunning() bool {
+// IsRunning reports whether the bar is running, i.e. not yet completed
+// and not yet aborted.
+func (b *Bar) IsRunning() bool {
 	result := make(chan bool)
 	select {
 	case b.operateState <- func(s *bState) {

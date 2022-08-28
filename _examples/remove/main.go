@@ -41,7 +41,7 @@ func main() {
 			defer wg.Done()
 			rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 			max := 100 * time.Millisecond
-			for i := 0; !bar.Completed(); i++ {
+			for i := 0; bar.IsRunning(); i++ {
 				if bar.ID() == 2 && i >= 42 {
 					bar.Abort(false)
 				}
