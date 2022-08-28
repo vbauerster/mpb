@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/mattn/go-runewidth"
-	"github.com/vbauerster/mpb/v7"
-	"github.com/vbauerster/mpb/v7/decor"
+	"github.com/vbauerster/mpb/v8"
+	"github.com/vbauerster/mpb/v8/decor"
 )
 
 func main() {
@@ -23,7 +23,7 @@ func main() {
 	bar := p.AddBar(int64(total),
 		mpb.BarFillerMiddleware(func(base mpb.BarFiller) mpb.BarFiller {
 			var msg *string
-			return mpb.BarFillerFunc(func(w io.Writer, reqWidth int, st decor.Statistics) {
+			return mpb.BarFillerFunc(func(w io.Writer, st decor.Statistics) {
 				select {
 				case m := <-msgCh:
 					defer func() {
@@ -38,7 +38,7 @@ func main() {
 					io.WriteString(w, runewidth.Truncate(*msg, st.AvailableWidth, "…"))
 					nextCh <- struct{}{}
 				} else {
-					base.Fill(w, reqWidth, st)
+					base.Fill(w, st)
 				}
 			})
 		}),

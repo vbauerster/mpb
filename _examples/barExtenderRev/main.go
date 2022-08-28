@@ -7,8 +7,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/vbauerster/mpb/v7"
-	"github.com/vbauerster/mpb/v7/decor"
+	"github.com/vbauerster/mpb/v8"
+	"github.com/vbauerster/mpb/v8/decor"
 )
 
 var curTask uint32
@@ -85,7 +85,7 @@ func main() {
 
 func middleware(base mpb.BarFiller, id uint32) mpb.BarFiller {
 	var done bool
-	fn := func(w io.Writer, _ int, st decor.Statistics) {
+	fn := func(w io.Writer, st decor.Statistics) {
 		if !done {
 			cur := atomic.LoadUint32(&curTask) == id
 			if !cur {
@@ -103,16 +103,16 @@ func middleware(base mpb.BarFiller, id uint32) mpb.BarFiller {
 	if base == nil {
 		return mpb.BarFillerFunc(fn)
 	}
-	return mpb.BarFillerFunc(func(w io.Writer, reqWidth int, st decor.Statistics) {
-		fn(w, reqWidth, st)
-		base.Fill(w, reqWidth, st)
+	return mpb.BarFillerFunc(func(w io.Writer, st decor.Statistics) {
+		fn(w, st)
+		base.Fill(w, st)
 	})
 }
 
 func newLineMiddleware(base mpb.BarFiller) mpb.BarFiller {
-	return mpb.BarFillerFunc(func(w io.Writer, reqWidth int, st decor.Statistics) {
+	return mpb.BarFillerFunc(func(w io.Writer, st decor.Statistics) {
 		fmt.Fprintln(w)
-		base.Fill(w, reqWidth, st)
+		base.Fill(w, st)
 	})
 }
 

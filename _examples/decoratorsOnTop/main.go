@@ -5,8 +5,8 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/vbauerster/mpb/v7"
-	"github.com/vbauerster/mpb/v7/decor"
+	"github.com/vbauerster/mpb/v8"
+	"github.com/vbauerster/mpb/v8/decor"
 )
 
 func main() {
@@ -39,8 +39,8 @@ func main() {
 
 func extended(builder mpb.BarFillerBuilder) mpb.BarFiller {
 	filler := builder.Build()
-	return mpb.BarFillerFunc(func(w io.Writer, reqWidth int, st decor.Statistics) {
-		filler.Fill(w, reqWidth, st)
+	return mpb.BarFillerFunc(func(w io.Writer, st decor.Statistics) {
+		filler.Fill(w, st)
 		w.Write([]byte("\n"))
 	})
 }

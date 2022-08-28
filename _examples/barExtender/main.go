@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/vbauerster/mpb/v7"
-	"github.com/vbauerster/mpb/v7/decor"
+	"github.com/vbauerster/mpb/v8"
+	"github.com/vbauerster/mpb/v8/decor"
 )
 
 func main() {
@@ -20,7 +20,7 @@ func main() {
 
 	for i := 0; i < numBars; i++ {
 		name := fmt.Sprintf("Bar#%d:", i)
-		efn := func(w io.Writer, _ int, s decor.Statistics) {
+		efn := func(w io.Writer, s decor.Statistics) {
 			if s.Completed {
 				fmt.Fprintf(w, "Bar id: %d has been completed\n", s.ID)
 			}
