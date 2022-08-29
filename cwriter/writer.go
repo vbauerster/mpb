@@ -21,8 +21,8 @@ var ErrNotTTY = errors.New("not a terminal")
 // contents of writer will be flushed when Flush is called.
 type Writer struct {
 	*bytes.Buffer
-	ew       escWriter
 	out      io.Writer
+	ew       escWriter
 	lines    int // used by writer_windows only
 	fd       int
 	terminal bool
@@ -33,7 +33,6 @@ type Writer struct {
 func New(out io.Writer) *Writer {
 	w := &Writer{
 		Buffer: new(bytes.Buffer),
-		ew:     escWriter(make([]byte, 8, 16)),
 		out:    out,
 		termSize: func(_ int) (int, int, error) {
 			return -1, -1, ErrNotTTY
@@ -48,6 +47,8 @@ func New(out io.Writer) *Writer {
 			}
 		}
 	}
+	bb := make([]byte, 8, 16)
+	w.ew = escWriter(bb[:copy(bb, []byte(escOpen))])
 	return w
 }
 
@@ -59,7 +60,7 @@ func (w *Writer) GetTermSize() (width, height int, err error) {
 type escWriter []byte
 
 func (b escWriter) ansiCuuAndEd(out io.Writer, n int) error {
-	b = strconv.AppendInt(b[:copy(b, escOpen)], int64(n), 10)
+	b = strconv.AppendInt(b, int64(n), 10)
 	_, err := out.Write(append(b, cuuAndEd...))
 	return err
 }
