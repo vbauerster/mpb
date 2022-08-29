@@ -16,6 +16,7 @@ var (
 )
 
 // Flush flushes the underlying buffer.
+// It's caller's responsibility to pass correct number of lines.
 func (w *Writer) Flush(lines int) error {
 	if w.lines > 0 {
 		err := w.clearLines(w.lines)

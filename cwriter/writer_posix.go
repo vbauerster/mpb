@@ -7,6 +7,7 @@ import (
 )
 
 // Flush flushes the underlying buffer.
+// It's caller's responsibility to pass correct number of lines.
 func (w *Writer) Flush(lines int) error {
 	_, err := w.WriteTo(w.out)
 	// some terminals interpret 'cursor up 0' as 'cursor up 1'
