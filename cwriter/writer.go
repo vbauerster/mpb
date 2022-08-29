@@ -17,8 +17,9 @@ const (
 // ErrNotTTY not a TeleTYpewriter error.
 var ErrNotTTY = errors.New("not a terminal")
 
-// Writer is a buffered the writer that updates the terminal. The
-// contents of writer will be flushed when Flush is called.
+// Writer is a buffered terminal writer, which moves cursor N lines up
+// on each flush except the first one, where N is a number of lines of
+// a previous flush.
 type Writer struct {
 	*bytes.Buffer
 	out      io.Writer
