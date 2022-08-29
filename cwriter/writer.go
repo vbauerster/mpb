@@ -61,6 +61,6 @@ type escWriter []byte
 
 func (b escWriter) ansiCuuAndEd(out io.Writer, n int) error {
 	b = strconv.AppendInt(b, int64(n), 10)
-	_, err := out.Write(append(b, cuuAndEd...))
+	_, err := out.Write(append(b, []byte(cuuAndEd)...))
 	return err
 }
