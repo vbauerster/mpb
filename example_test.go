@@ -3,7 +3,6 @@ package mpb_test
 import (
 	crand "crypto/rand"
 	"io"
-	"io/ioutil"
 	"math/rand"
 	"time"
 
@@ -78,7 +77,7 @@ func ExampleBar_ProxyReader() {
 	defer proxyReader.Close()
 
 	// and copy from reader, ignoring errors
-	_, _ = io.Copy(ioutil.Discard, proxyReader)
+	_, _ = io.Copy(io.Discard, proxyReader)
 
 	p.Wait()
 }

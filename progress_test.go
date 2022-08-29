@@ -2,7 +2,7 @@ package mpb_test
 
 import (
 	"context"
-	"io/ioutil"
+	"io"
 	"math/rand"
 	"testing"
 	"time"
@@ -21,7 +21,7 @@ func init() {
 
 func TestBarCount(t *testing.T) {
 	shutdown := make(chan struct{})
-	p := mpb.New(mpb.WithShutdownNotifier(shutdown), mpb.WithOutput(ioutil.Discard))
+	p := mpb.New(mpb.WithShutdownNotifier(shutdown), mpb.WithOutput(io.Discard))
 
 	b := p.AddBar(0, mpb.BarRemoveOnComplete())
 
@@ -48,7 +48,7 @@ func TestBarCount(t *testing.T) {
 
 func TestBarAbort(t *testing.T) {
 	shutdown := make(chan struct{})
-	p := mpb.New(mpb.WithShutdownNotifier(shutdown), mpb.WithOutput(ioutil.Discard))
+	p := mpb.New(mpb.WithShutdownNotifier(shutdown), mpb.WithOutput(io.Discard))
 	n := 2
 	bars := make([]*mpb.Bar, n)
 	for i := 0; i < n; i++ {
@@ -97,7 +97,7 @@ func TestBarAbort(t *testing.T) {
 func TestWithContext(t *testing.T) {
 	shutdown := make(chan struct{})
 	ctx, cancel := context.WithCancel(context.Background())
-	p := mpb.NewWithContext(ctx, mpb.WithShutdownNotifier(shutdown), mpb.WithOutput(ioutil.Discard))
+	p := mpb.NewWithContext(ctx, mpb.WithShutdownNotifier(shutdown), mpb.WithOutput(io.Discard))
 
 	done := make(chan struct{})
 	bar := p.AddBar(0) // never complete bar
@@ -139,7 +139,7 @@ func TestMaxWidthDistributor(t *testing.T) {
 
 	total := 100
 	numBars := 6
-	p := mpb.New(mpb.WithOutput(ioutil.Discard))
+	p := mpb.New(mpb.WithOutput(io.Discard))
 	for i := 0; i < numBars; i++ {
 		bar := p.AddBar(int64(total),
 			mpb.BarOptional(mpb.BarRemoveOnComplete(), i == 0),

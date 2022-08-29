@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -16,7 +16,7 @@ import (
 )
 
 func TestBarCompleted(t *testing.T) {
-	p := mpb.New(mpb.WithWidth(80), mpb.WithOutput(ioutil.Discard))
+	p := mpb.New(mpb.WithWidth(80), mpb.WithOutput(io.Discard))
 	total := 80
 	bar := p.AddBar(int64(total))
 
@@ -34,7 +34,7 @@ func TestBarCompleted(t *testing.T) {
 }
 
 func TestBarAborted(t *testing.T) {
-	p := mpb.New(mpb.WithWidth(80), mpb.WithOutput(ioutil.Discard))
+	p := mpb.New(mpb.WithWidth(80), mpb.WithOutput(io.Discard))
 	total := 80
 	bar := p.AddBar(int64(total))
 
@@ -52,7 +52,7 @@ func TestBarAborted(t *testing.T) {
 }
 
 func TestBarEnableTriggerCompleteAndIncrementBefore(t *testing.T) {
-	p := mpb.New(mpb.WithWidth(80), mpb.WithOutput(ioutil.Discard))
+	p := mpb.New(mpb.WithWidth(80), mpb.WithOutput(io.Discard))
 	bar := p.AddBar(0) // never complete bar
 
 	for _, f := range []func(){
@@ -77,7 +77,7 @@ func TestBarEnableTriggerCompleteAndIncrementBefore(t *testing.T) {
 }
 
 func TestBarEnableTriggerCompleteAndIncrementAfter(t *testing.T) {
-	p := mpb.New(mpb.WithWidth(80), mpb.WithOutput(ioutil.Discard))
+	p := mpb.New(mpb.WithWidth(80), mpb.WithOutput(io.Discard))
 	bar := p.AddBar(0) // never complete bar
 
 	for _, f := range []func(){
@@ -102,7 +102,7 @@ func TestBarEnableTriggerCompleteAndIncrementAfter(t *testing.T) {
 }
 
 func TestBarID(t *testing.T) {
-	p := mpb.New(mpb.WithWidth(80), mpb.WithOutput(ioutil.Discard))
+	p := mpb.New(mpb.WithWidth(80), mpb.WithOutput(io.Discard))
 	total := 100
 	wantID := 11
 	bar := p.AddBar(int64(total), mpb.BarID(wantID))
@@ -204,7 +204,7 @@ func TestBarPanicBeforeComplete(t *testing.T) {
 	p := mpb.New(
 		mpb.WithWidth(80),
 		mpb.WithDebugOutput(&buf),
-		mpb.WithOutput(ioutil.Discard),
+		mpb.WithOutput(io.Discard),
 	)
 
 	total := 100
@@ -241,7 +241,7 @@ func TestBarPanicAfterComplete(t *testing.T) {
 	p := mpb.New(
 		mpb.WithWidth(80),
 		mpb.WithDebugOutput(&buf),
-		mpb.WithOutput(ioutil.Discard),
+		mpb.WithOutput(io.Discard),
 	)
 
 	total := 100
@@ -293,7 +293,7 @@ func TestDecorStatisticsAvailableWidth(t *testing.T) {
 	refresh := make(chan interface{})
 	p := mpb.NewWithContext(ctx, mpb.WithWidth(100),
 		mpb.WithManualRefresh(refresh),
-		mpb.WithOutput(ioutil.Discard),
+		mpb.WithOutput(io.Discard),
 	)
 	_ = p.AddBar(0,
 		mpb.BarFillerTrim(),

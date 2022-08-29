@@ -3,7 +3,6 @@ package mpb_test
 import (
 	"bytes"
 	"io"
-	"io/ioutil"
 	"strings"
 	"testing"
 
@@ -39,7 +38,7 @@ func (wt testWriterTo) WriteTo(w io.Writer) (n int64, err error) {
 }
 
 func TestProxyReader(t *testing.T) {
-	p := mpb.New(mpb.WithOutput(ioutil.Discard))
+	p := mpb.New(mpb.WithOutput(io.Discard))
 
 	tReader := &testReader{strings.NewReader(content), false}
 
@@ -63,7 +62,7 @@ func TestProxyReader(t *testing.T) {
 }
 
 func TestProxyWriterTo(t *testing.T) {
-	p := mpb.New(mpb.WithOutput(ioutil.Discard))
+	p := mpb.New(mpb.WithOutput(io.Discard))
 
 	var reader io.Reader = strings.NewReader(content)
 	tWriterTo := testWriterTo{&testReader{reader, false}, reader.(io.WriterTo)}

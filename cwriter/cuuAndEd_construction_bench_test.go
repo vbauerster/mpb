@@ -3,36 +3,42 @@ package cwriter
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"strconv"
 	"testing"
 )
 
+var (
+	out   = io.Discard
+	lines = 99
+)
+
 func BenchmarkWithFprintf(b *testing.B) {
-	cuuAndEd := "\x1b[%dA\x1b[J"
+	verb := fmt.Sprintf("%s%%d%s", escOpen, cuuAndEd)
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		fmt.Fprintf(ioutil.Discard, cuuAndEd, 4)
+		fmt.Fprintf(out, verb, lines)
 	}
 }
 
 func BenchmarkWithJoin(b *testing.B) {
-	bCuuAndEd := [][]byte{[]byte("\x1b["), []byte("A\x1b[J")}
+	bCuuAndEd := [][]byte{[]byte(escOpen), []byte(cuuAndEd)}
 	for i := 0; i < b.N; i++ {
-		_, _ = ioutil.Discard.Write(bytes.Join(bCuuAndEd, []byte(strconv.Itoa(4))))
+		_, _ = out.Write(bytes.Join(bCuuAndEd, []byte(strconv.Itoa(lines))))
 	}
 }
 
 func BenchmarkWithAppend(b *testing.B) {
-	escOpen := []byte("\x1b[")
-	cuuAndEd := []byte("A\x1b[J")
+	escOpen := []byte(escOpen)
+	cuuAndEd := []byte(cuuAndEd)
 	for i := 0; i < b.N; i++ {
-		_, _ = ioutil.Discard.Write(append(strconv.AppendInt(escOpen, 4, 10), cuuAndEd...))
+		_, _ = out.Write(append(strconv.AppendInt(escOpen, int64(lines), 10), cuuAndEd...))
 	}
 }
 
 func BenchmarkWithCopy(b *testing.B) {
-	w := New(ioutil.Discard)
-	w.lines = 4
+	w := New(out)
+	w.lines = lines
 	for i := 0; i < b.N; i++ {
 		_ = w.ansiCuuAndEd()
 	}
