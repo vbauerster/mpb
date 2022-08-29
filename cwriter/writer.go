@@ -23,7 +23,7 @@ type Writer struct {
 	*bytes.Buffer
 	out      io.Writer
 	ew       escWriter
-	lines    int // used by writer_windows only
+	lines    int //nolint:unused
 	fd       int
 	terminal bool
 	termSize func(int) (int, int, error)
