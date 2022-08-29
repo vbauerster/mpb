@@ -3,13 +3,13 @@ package cwriter
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"strconv"
 	"testing"
 )
 
 var (
-	out   = ioutil.Discard
+	out   = io.Discard
 	lines = 99
 )
 
