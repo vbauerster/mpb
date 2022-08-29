@@ -47,7 +47,7 @@ func New(out io.Writer) *Writer {
 			}
 		}
 	}
-	bb := make([]byte, 8, 16)
+	bb := make([]byte, 16)
 	w.ew = escWriter(bb[:copy(bb, []byte(escOpen))])
 	return w
 }
