@@ -56,10 +56,10 @@ func (self SizeB1024) Format(st fmt.State, verb rune) {
 	}
 	b = append(b, []byte(unit.String())...)
 	_, err := st.Write(b)
-	bytePool.Put(p)
 	if err != nil {
 		panic(err)
 	}
+	bytePool.Put(p)
 }
 
 const (
@@ -110,8 +110,8 @@ func (self SizeB1000) Format(st fmt.State, verb rune) {
 	}
 	b = append(b, []byte(unit.String())...)
 	_, err := st.Write(b)
-	bytePool.Put(p)
 	if err != nil {
 		panic(err)
 	}
+	bytePool.Put(p)
 }

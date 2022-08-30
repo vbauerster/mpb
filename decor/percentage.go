@@ -31,10 +31,10 @@ func (s percentageType) Format(st fmt.State, verb rune) {
 		b = append(b, '%')
 	}
 	_, err := st.Write(b)
-	bytePool.Put(p)
 	if err != nil {
 		panic(err)
 	}
+	bytePool.Put(p)
 }
 
 // Percentage returns percentage decorator. It's a wrapper of NewPercentage.
