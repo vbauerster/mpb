@@ -142,7 +142,7 @@ func (b *Bar) TraverseDecorators(cb func(decor.Decorator)) {
 	sync := make(chan struct{})
 	select {
 	case b.operateState <- func(s *bState) {
-		for _, decorators := range [...][]decor.Decorator{
+		for _, decorators := range [][]decor.Decorator{
 			s.pDecorators,
 			s.aDecorators,
 		} {
