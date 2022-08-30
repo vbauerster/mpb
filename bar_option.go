@@ -172,7 +172,7 @@ func BarNoPop() BarOption {
 	}
 }
 
-// BarOptional will invoke provided option only when cond is true.
+// BarOptional will return provided option only when cond is true.
 func BarOptional(option BarOption, cond bool) BarOption {
 	if cond {
 		return option
@@ -180,11 +180,26 @@ func BarOptional(option BarOption, cond bool) BarOption {
 	return nil
 }
 
-// BarOptOn will invoke provided option only when higher order predicate
-// evaluates to true.
+// BarOptOn will return provided option only when predicate evaluates to true.
 func BarOptOn(option BarOption, predicate func() bool) BarOption {
 	if predicate() {
 		return option
+	}
+	return nil
+}
+
+// BarFuncOptional will call option and return its value only when cond is true.
+func BarFuncOptional(option func() BarOption, cond bool) BarOption {
+	if cond {
+		return option()
+	}
+	return nil
+}
+
+// BarFuncOptOn will call option and return its value only when predicate evaluates to true.
+func BarFuncOptOn(option func() BarOption, predicate func() bool) BarOption {
+	if predicate() {
+		return option()
 	}
 	return nil
 }
