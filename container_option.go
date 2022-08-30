@@ -98,7 +98,7 @@ func PopCompletedMode() ContainerOption {
 	}
 }
 
-// ContainerOptional will invoke provided option only when cond is true.
+// ContainerOptional will return provided option only when cond is true.
 func ContainerOptional(option ContainerOption, cond bool) ContainerOption {
 	if cond {
 		return option
@@ -106,11 +106,26 @@ func ContainerOptional(option ContainerOption, cond bool) ContainerOption {
 	return nil
 }
 
-// ContainerOptOn will invoke provided option only when higher order
-// predicate evaluates to true.
+// ContainerOptOn will return provided option only when predicate evaluates to true.
 func ContainerOptOn(option ContainerOption, predicate func() bool) ContainerOption {
 	if predicate() {
 		return option
+	}
+	return nil
+}
+
+// ContainerFuncOptional will call option and return its value only when cond is true.
+func ContainerFuncOptional(option func() ContainerOption, cond bool) ContainerOption {
+	if cond {
+		return option()
+	}
+	return nil
+}
+
+// ContainerFuncOptOn will call option and return its value only when predicate evaluates to true.
+func ContainerFuncOptOn(option func() ContainerOption, predicate func() bool) ContainerOption {
+	if predicate() {
+		return option()
 	}
 	return nil
 }
