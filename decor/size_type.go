@@ -49,11 +49,17 @@ func (self SizeB1024) Format(st fmt.State, verb rune) {
 		unit = _iTiB
 	}
 
-	mustWriteString(st, strconv.FormatFloat(float64(self)/float64(unit), 'f', prec, 64))
+	p := bytePool.Get().(*[]byte)
+	b := strconv.AppendFloat(*p, float64(self)/float64(unit), 'f', prec, 64)
 	if st.Flag(' ') {
-		mustWriteString(st, " ")
+		b = append(b, ' ')
 	}
-	mustWriteString(st, unit.String())
+	b = append(b, []byte(unit.String())...)
+	_, err := st.Write(b)
+	bytePool.Put(p)
+	if err != nil {
+		panic(err)
+	}
 }
 
 const (
@@ -97,9 +103,15 @@ func (self SizeB1000) Format(st fmt.State, verb rune) {
 		unit = _TB
 	}
 
-	mustWriteString(st, strconv.FormatFloat(float64(self)/float64(unit), 'f', prec, 64))
+	p := bytePool.Get().(*[]byte)
+	b := strconv.AppendFloat(*p, float64(self)/float64(unit), 'f', prec, 64)
 	if st.Flag(' ') {
-		mustWriteString(st, " ")
+		b = append(b, ' ')
 	}
-	mustWriteString(st, unit.String())
+	b = append(b, []byte(unit.String())...)
+	_, err := st.Write(b)
+	bytePool.Put(p)
+	if err != nil {
+		panic(err)
+	}
 }

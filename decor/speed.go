@@ -22,7 +22,10 @@ type speedFormatter struct {
 
 func (self *speedFormatter) Format(st fmt.State, verb rune) {
 	self.Formatter.Format(st, verb)
-	mustWriteString(st, "/s")
+	_, err := st.Write([]byte("/s"))
+	if err != nil {
+		panic(err)
+	}
 }
 
 // EwmaSpeed exponential-weighted-moving-average based speed decorator.
