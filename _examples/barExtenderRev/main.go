@@ -42,13 +42,11 @@ func main() {
 	p := mpb.New()
 
 	for i := 0; i < numTasks; i++ {
-		var waitBar *mpb.Bar
-		if i != 0 {
-			waitBar = tasks[i-1].bar
-		}
 		bar := p.AddBar(tasks[i].total,
-			mpb.BarExtenderRev(filler),
-			mpb.BarQueueAfter(waitBar, false),
+			mpb.BarExtender(filler, true),
+			mpb.BarFuncOptional(func() mpb.BarOption {
+				return mpb.BarQueueAfter(tasks[i-1].bar, false)
+			}, i != 0),
 			mpb.PrependDecorators(
 				decor.Name("current:", decor.WCSyncWidthR),
 			),
