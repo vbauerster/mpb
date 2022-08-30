@@ -6,7 +6,6 @@ package decor
 //	`fn` DecorFunc callback
 //
 //	`wcc` optional WC config
-//
 func Any(fn DecorFunc, wcc ...WC) Decorator {
 	return &any{initWC(wcc...), fn}
 }

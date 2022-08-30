@@ -5,7 +5,6 @@ package decor
 //	`decorator` Decorator
 //
 //	`cond` bool
-//
 func OnCondition(decorator Decorator, cond bool) Decorator {
 	return Conditional(cond, decorator, nil)
 }
@@ -15,7 +14,6 @@ func OnCondition(decorator Decorator, cond bool) Decorator {
 //	`decorator` Decorator
 //
 //	`predicate` func() bool
-//
 func OnPredicate(decorator Decorator, predicate func() bool) Decorator {
 	return Predicative(predicate, decorator, nil)
 }
@@ -28,7 +26,6 @@ func OnPredicate(decorator Decorator, predicate func() bool) Decorator {
 //	`a` Decorator
 //
 //	`b` Decorator
-//
 func Conditional(cond bool, a, b Decorator) Decorator {
 	if cond {
 		return a
@@ -45,7 +42,6 @@ func Conditional(cond bool, a, b Decorator) Decorator {
 //	`a` Decorator
 //
 //	`b` Decorator
-//
 func Predicative(predicate func() bool, a, b Decorator) Decorator {
 	if predicate() {
 		return a

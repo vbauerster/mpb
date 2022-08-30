@@ -6,10 +6,10 @@
 //
 // Don't:
 //
-//	 p := mpb.New()
-//	 name := decor.Name("bar")
-//	 p.AddBar(100, mpb.AppendDecorators(name))
-//	 p.AddBar(100, mpb.AppendDecorators(name))
+//	p := mpb.New()
+//	name := decor.Name("bar")
+//	p.AddBar(100, mpb.AppendDecorators(name))
+//	p.AddBar(100, mpb.AppendDecorators(name))
 //
 // Do:
 //

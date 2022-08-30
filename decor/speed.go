@@ -12,7 +12,6 @@ import (
 // used with SizeB1000 or SizeB1024 types, for example:
 //
 //	fmt.Printf("%.1f", FmtAsSpeed(SizeB1024(2048)))
-//
 func FmtAsSpeed(input fmt.Formatter) fmt.Formatter {
 	return &speedFormatter{input}
 }
@@ -57,7 +56,6 @@ func EwmaSpeed(unit int, format string, age float64, wcc ...WC) Decorator {
 //	unit=UnitKiB, format="% .1f" output: "1.0 MiB/s"
 //	unit=UnitKB,  format="%.1f"  output: "1.0MB/s"
 //	unit=UnitKB,  format="% .1f" output: "1.0 MB/s"
-//
 func MovingAverageSpeed(unit int, format string, average ewma.MovingAverage, wcc ...WC) Decorator {
 	if format == "" {
 		format = "%.0f"
@@ -119,7 +117,6 @@ func AverageSpeed(unit int, format string, wcc ...WC) Decorator {
 //	unit=UnitKiB, format="% .1f" output: "1.0 MiB/s"
 //	unit=UnitKB,  format="%.1f"  output: "1.0MB/s"
 //	unit=UnitKB,  format="% .1f" output: "1.0 MB/s"
-//
 func NewAverageSpeed(unit int, format string, startTime time.Time, wcc ...WC) Decorator {
 	if format == "" {
 		format = "%.0f"

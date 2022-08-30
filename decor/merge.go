@@ -10,12 +10,11 @@ import (
 // Merge wraps its decorator argument with intention to sync width
 // with several decorators of another bar. Visual example:
 //
-//    +----+--------+---------+--------+
-//    | B1 |      MERGE(D, P1, Pn)     |
-//    +----+--------+---------+--------+
-//    | B2 |   D0   |   D1    |   Dn   |
-//    +----+--------+---------+--------+
-//
+//	+----+--------+---------+--------+
+//	| B1 |      MERGE(D, P1, Pn)     |
+//	+----+--------+---------+--------+
+//	| B2 |   D0   |   D1    |   Dn   |
+//	+----+--------+---------+--------+
 func Merge(decorator Decorator, placeholders ...WC) Decorator {
 	if decorator == nil {
 		return nil

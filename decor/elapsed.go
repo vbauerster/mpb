@@ -9,7 +9,6 @@ import (
 //	`style` one of [ET_STYLE_GO|ET_STYLE_HHMMSS|ET_STYLE_HHMM|ET_STYLE_MMSS]
 //
 //	`wcc` optional WC config
-//
 func Elapsed(style TimeStyle, wcc ...WC) Decorator {
 	return NewElapsed(style, time.Now(), wcc...)
 }
@@ -21,7 +20,6 @@ func Elapsed(style TimeStyle, wcc ...WC) Decorator {
 //	`startTime` start time
 //
 //	`wcc` optional WC config
-//
 func NewElapsed(style TimeStyle, startTime time.Time, wcc ...WC) Decorator {
 	var msg string
 	producer := chooseTimeProducer(style)

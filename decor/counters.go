@@ -42,7 +42,6 @@ func CountersKiloByte(pairFmt string, wcc ...WC) Decorator {
 //	pairFmt="% .1f / % .1f" output: "1.0 MB / 12.0 MB"
 //	pairFmt="%d / %d"       output: "1MB / 12MB"
 //	pairFmt="% d / % d"     output: "1 MB / 12 MB"
-//
 func Counters(unit int, pairFmt string, wcc ...WC) Decorator {
 	producer := func(unit int, pairFmt string) DecorFunc {
 		if pairFmt == "" {
@@ -99,7 +98,6 @@ func TotalKiloByte(format string, wcc ...WC) Decorator {
 //	format="% .1f" output: "12.0 MiB"
 //	format="%d"    output: "12MiB"
 //	format="% d"   output: "12 MiB"
-//
 func Total(unit int, format string, wcc ...WC) Decorator {
 	producer := func(unit int, format string) DecorFunc {
 		if format == "" {
@@ -157,7 +155,6 @@ func CurrentKiloByte(format string, wcc ...WC) Decorator {
 //	format="% .1f" output: "12.0 MiB"
 //	format="%d"    output: "12MiB"
 //	format="% d"   output: "12 MiB"
-//
 func Current(unit int, format string, wcc ...WC) Decorator {
 	producer := func(unit int, format string) DecorFunc {
 		if format == "" {
@@ -215,7 +212,6 @@ func InvertedCurrentKiloByte(format string, wcc ...WC) Decorator {
 //	format="% .1f" output: "12.0 MiB"
 //	format="%d"    output: "12MiB"
 //	format="% d"   output: "12 MiB"
-//
 func InvertedCurrent(unit int, format string, wcc ...WC) Decorator {
 	producer := func(unit int, format string) DecorFunc {
 		if format == "" {

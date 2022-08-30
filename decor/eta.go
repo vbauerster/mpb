@@ -45,7 +45,6 @@ func EwmaETA(style TimeStyle, age float64, wcc ...WC) Decorator {
 //	`normalizer` available implementations are [FixedIntervalTimeNormalizer|MaxTolerateTimeNormalizer]
 //
 //	`wcc` optional WC config
-//
 func MovingAverageETA(style TimeStyle, average ewma.MovingAverage, normalizer TimeNormalizer, wcc ...WC) Decorator {
 	d := &movingAverageETA{
 		WC:         initWC(wcc...),
@@ -85,7 +84,6 @@ func (d *movingAverageETA) EwmaUpdate(n int64, dur time.Duration) {
 //	`style` one of [ET_STYLE_GO|ET_STYLE_HHMMSS|ET_STYLE_HHMM|ET_STYLE_MMSS]
 //
 //	`wcc` optional WC config
-//
 func AverageETA(style TimeStyle, wcc ...WC) Decorator {
 	return NewAverageETA(style, time.Now(), nil, wcc...)
 }
@@ -99,7 +97,6 @@ func AverageETA(style TimeStyle, wcc ...WC) Decorator {
 //	`normalizer` available implementations are [FixedIntervalTimeNormalizer|MaxTolerateTimeNormalizer]
 //
 //	`wcc` optional WC config
-//
 func NewAverageETA(style TimeStyle, startTime time.Time, normalizer TimeNormalizer, wcc ...WC) Decorator {
 	d := &averageETA{
 		WC:         initWC(wcc...),

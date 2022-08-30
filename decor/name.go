@@ -6,7 +6,6 @@ package decor
 //	`str` string to display
 //
 //	`wcc` optional WC config
-//
 func Name(str string, wcc ...WC) Decorator {
 	return Any(func(Statistics) string { return str }, wcc...)
 }

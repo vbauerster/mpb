@@ -7,7 +7,6 @@ package decor
 //	`decorator` Decorator to wrap
 //
 //	`message` message to display on abort event
-//
 func OnAbort(decorator Decorator, message string) Decorator {
 	if decorator == nil {
 		return nil

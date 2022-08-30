@@ -43,7 +43,6 @@ func Percentage(wcc ...WC) Decorator {
 //	format="% .1f" output: "1.0 %"
 //	format="%d"    output: "1%"
 //	format="% d"   output: "1 %"
-//
 func NewPercentage(format string, wcc ...WC) Decorator {
 	if format == "" {
 		format = "% d"
