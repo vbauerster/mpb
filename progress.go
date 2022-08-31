@@ -18,6 +18,9 @@ const (
 	prr = 150 * time.Millisecond // default RefreshRate
 )
 
+// DoneError represents an error when `*mpb.Progress` is done but its functionality is requested.
+var DoneError = fmt.Errorf("%T instance can't be reused after it's done!", (*Progress)(nil))
+
 // Progress represents a container that renders one or more progress bars.
 type Progress struct {
 	ctx          context.Context
@@ -25,6 +28,7 @@ type Progress struct {
 	cwg          *sync.WaitGroup
 	bwg          *sync.WaitGroup
 	operateState chan func(*pState)
+	interceptIo  chan func(io.Writer)
 	done         chan struct{}
 	refreshCh    chan time.Time
 	once         sync.Once
@@ -83,6 +87,7 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 		cwg:          new(sync.WaitGroup),
 		bwg:          new(sync.WaitGroup),
 		operateState: make(chan func(*pState)),
+		interceptIo:  make(chan func(io.Writer)),
 		done:         make(chan struct{}),
 	}
 
@@ -132,7 +137,7 @@ func (p *Progress) Add(total int64, filler BarFiller, options ...BarOption) *Bar
 		return bar
 	case <-p.done:
 		p.bwg.Done()
-		panic(fmt.Sprintf("%T instance can't be reused after it's done!", p))
+		panic(DoneError)
 	}
 }
 
@@ -175,6 +180,29 @@ func (p *Progress) BarCount() int {
 		return <-result
 	case <-p.done:
 		return 0
+	}
+}
+
+// Write is implementation of io.Writer.
+// Writing to `*mpb.Progress` will print lines above a running bar.
+// Writes aren't flushed immediatly, but at next refresh cycle.
+// If Write is called after `*mpb.Progress` is done, `mpb.DoneError`
+// is returned.
+func (p *Progress) Write(b []byte) (int, error) {
+	type result struct {
+		n   int
+		err error
+	}
+	ch := make(chan *result)
+	select {
+	case p.interceptIo <- func(w io.Writer) {
+		n, err := w.Write(b)
+		ch <- &result{n, err}
+	}:
+		res := <-ch
+		return res.n, res.err
+	case <-p.done:
+		return 0, DoneError
 	}
 }
 
@@ -221,6 +249,8 @@ func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 		select {
 		case op := <-p.operateState:
 			op(s)
+		case fn := <-p.interceptIo:
+			fn(cw)
 		case <-p.refreshCh:
 			render(s.debugOut)
 		case <-s.shutdownNotifier:
