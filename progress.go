@@ -203,8 +203,6 @@ func (p *Progress) shutdown() {
 func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 	defer p.cwg.Done()
 
-	p.refreshCh = s.newTicker(p.done)
-
 	render := func(debugOut io.Writer) {
 		err := s.render(cw)
 		for err != nil {
@@ -216,6 +214,8 @@ func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 			debugOut = nil
 		}
 	}
+
+	p.refreshCh = s.newTicker(p.done)
 
 	for {
 		select {
