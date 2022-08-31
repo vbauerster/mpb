@@ -25,7 +25,8 @@ func main() {
 				fmt.Fprintf(w, "Bar id: %d has been completed\n", s.ID)
 			}
 		}
-		bar := p.AddBar(int64(total), mpb.BarExtender(mpb.BarFillerFunc(efn)),
+		bar := p.AddBar(int64(total),
+			mpb.BarExtender(mpb.BarFillerFunc(efn), false),
 			mpb.PrependDecorators(
 				// simple name decorator
 				decor.Name(name),
