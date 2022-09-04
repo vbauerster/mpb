@@ -47,8 +47,8 @@ const (
 // Statistics consists of progress related statistics, that Decorator
 // may need.
 type Statistics struct {
-	AvailableWidth int
-	RequestedWidth int
+	AvailableWidth int // calculated width initially equal to terminal width
+	RequestedWidth int // width set by `mpb.WithWidth`
 	ID             int
 	Total          int64
 	Current        int64
