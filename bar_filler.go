@@ -8,8 +8,6 @@ import (
 
 // BarFiller interface.
 // Bar (without decorators) renders itself by calling BarFiller's Fill method.
-//
-//	If not set, it defaults to terminal width.
 type BarFiller interface {
 	Fill(w io.Writer, stat decor.Statistics)
 }
