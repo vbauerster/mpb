@@ -44,8 +44,8 @@ const (
 	ET_STYLE_MMSS
 )
 
-// Statistics consists of progress related statistics, that Decorator
-// may need.
+// Statistics contains fields which are necessary for implementing
+// `decor.Decorator` and `mpb.BarFiller` interfaces.
 type Statistics struct {
 	AvailableWidth int // calculated width initially equal to terminal width
 	RequestedWidth int // width set by `mpb.WithWidth`
