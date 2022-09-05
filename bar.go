@@ -19,7 +19,6 @@ import (
 type Bar struct {
 	index          int // used by heap
 	priority       int // used by heap
-	hasEwma        bool
 	frameCh        chan *renderFrame
 	operateState   chan func(*bState)
 	done           chan struct{}
@@ -73,7 +72,6 @@ func newBar(container *Progress, bs *bState) *Bar {
 
 	bar := &Bar{
 		priority:     bs.priority,
-		hasEwma:      len(bs.ewmaDecorators) != 0,
 		frameCh:      make(chan *renderFrame, 1),
 		operateState: make(chan func(*bState)),
 		done:         make(chan struct{}),
@@ -94,11 +92,12 @@ func (b *Bar) ProxyReader(r io.Reader) io.ReadCloser {
 	if r == nil {
 		panic("expected non nil io.Reader")
 	}
+	result := make(chan bool)
 	select {
+	case b.operateState <- func(s *bState) { result <- len(s.ewmaDecorators) != 0 }:
+		return b.newProxyReader(r, <-result)
 	case <-b.done:
 		return nil
-	default:
-		return b.newProxyReader(r)
 	}
 }
 
