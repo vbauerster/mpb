@@ -95,7 +95,7 @@ func (b *Bar) ProxyReader(r io.Reader) io.ReadCloser {
 	result := make(chan bool)
 	select {
 	case b.operateState <- func(s *bState) { result <- len(s.ewmaDecorators) != 0 }:
-		return b.newProxyReader(r, <-result)
+		return newProxyReader(r, b, <-result)
 	case <-b.done:
 		return nil
 	}
