@@ -29,30 +29,30 @@ func (r *testReader) Read(p []byte) (n int, err error) {
 
 type testWriterTo struct {
 	*testReader
-	wt io.WriterTo
+	called bool
 }
 
-func (wt testWriterTo) WriteTo(w io.Writer) (n int64, err error) {
+func (wt *testWriterTo) WriteTo(w io.Writer) (n int64, err error) {
 	wt.called = true
-	return wt.wt.WriteTo(w)
+	return wt.Reader.(io.WriterTo).WriteTo(w)
 }
 
 func TestProxyReader(t *testing.T) {
 	p := mpb.New(mpb.WithOutput(io.Discard))
 
-	tReader := &testReader{strings.NewReader(content), false}
+	reader := &testReader{strings.NewReader(content), false}
 
 	bar := p.AddBar(int64(len(content)))
 
 	var buf bytes.Buffer
-	_, err := io.Copy(&buf, bar.ProxyReader(tReader))
+	_, err := io.Copy(&buf, bar.ProxyReader(reader))
 	if err != nil {
 		t.Errorf("Error copying from reader: %+v\n", err)
 	}
 
 	p.Wait()
 
-	if !tReader.called {
+	if !reader.called {
 		t.Error("Read not called")
 	}
 
@@ -65,19 +65,19 @@ func TestProxyWriterTo(t *testing.T) {
 	p := mpb.New(mpb.WithOutput(io.Discard))
 
 	var reader io.Reader = strings.NewReader(content)
-	tWriterTo := testWriterTo{&testReader{reader, false}, reader.(io.WriterTo)}
+	writerTo := &testWriterTo{&testReader{reader, false}, false}
 
 	bar := p.AddBar(int64(len(content)))
 
 	var buf bytes.Buffer
-	_, err := io.Copy(&buf, bar.ProxyReader(tWriterTo))
+	_, err := io.Copy(&buf, bar.ProxyReader(writerTo))
 	if err != nil {
 		t.Errorf("Error copying from reader: %+v\n", err)
 	}
 
 	p.Wait()
 
-	if !tWriterTo.called {
+	if !writerTo.called {
 		t.Error("WriteTo not called")
 	}
 
