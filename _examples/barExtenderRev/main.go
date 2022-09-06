@@ -120,7 +120,7 @@ func complete(tb *mpb.Bar, t *task) {
 	for !bar.Completed() {
 		n := rand.Int63n(10) + 1
 		bar.IncrInt64(n)
-		tb.IncrInt64(n)
+		go tb.IncrInt64(n)
 		time.Sleep(time.Duration(n) * max / 10)
 	}
 	bar.Wait()
