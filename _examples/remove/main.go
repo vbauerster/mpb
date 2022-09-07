@@ -43,7 +43,7 @@ func main() {
 			max := 100 * time.Millisecond
 			for i := 0; bar.IsRunning(); i++ {
 				if bar.ID() == 2 && i >= 42 {
-					bar.Abort(false)
+					go bar.Abort(false)
 				}
 				time.Sleep(time.Duration(rng.Intn(10)+1) * max / 10)
 				bar.Increment()
