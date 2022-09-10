@@ -293,15 +293,15 @@ func (s *pState) flush(cw *cwriter.Writer, height int) error {
 		b := heap.Pop(&s.bHeap).(*Bar)
 		frame := <-b.frameCh
 		for i := len(frame.rows) - 1; i >= 0; i-- {
-			if len(rows) < height {
-				rows = append(rows, frame.rows[i])
+			if row := frame.rows[i]; len(rows) < height {
+				rows = append(rows, row)
 				usedRows++
 			} else {
 				wg.Add(1)
-				go func(discardRow io.Reader) {
-					_, _ = io.Copy(io.Discard, discardRow)
+				go func() {
+					_, _ = io.Copy(io.Discard, row)
 					wg.Done()
-				}(frame.rows[i])
+				}()
 			}
 		}
 		if frame.shutdown != 0 {
