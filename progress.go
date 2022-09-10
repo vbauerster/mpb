@@ -289,13 +289,13 @@ func (s *pState) flush(cw *cwriter.Writer, height int) error {
 	rows := make([]io.Reader, 0, height)
 	pool := make([]*Bar, 0, s.bHeap.Len())
 	for s.bHeap.Len() > 0 {
-		var frameRowsUsed int
+		var usedRows int
 		b := heap.Pop(&s.bHeap).(*Bar)
 		frame := <-b.frameCh
 		for i := len(frame.rows) - 1; i >= 0; i-- {
 			if len(rows) < height {
 				rows = append(rows, frame.rows[i])
-				frameRowsUsed++
+				usedRows++
 			} else {
 				wg.Add(1)
 				go func(discardRow io.Reader) {
@@ -314,7 +314,7 @@ func (s *pState) flush(cw *cwriter.Writer, height int) error {
 				drop = true
 			} else if s.popCompleted && !b.bs.noPop {
 				if frame.shutdown > 1 {
-					popCount += frameRowsUsed
+					popCount += usedRows
 					drop = true
 				} else {
 					s.popPriority++
