@@ -336,6 +336,7 @@ func (s *pState) flush(cw *cwriter.Writer, height int) error {
 	for i := len(rows) - 1; i >= 0; i-- {
 		_, err := cw.ReadFrom(rows[i])
 		if err != nil {
+			wg.Wait()
 			return err
 		}
 	}
