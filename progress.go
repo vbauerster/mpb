@@ -284,6 +284,7 @@ func (s *pState) render(cw *cwriter.Writer) error {
 }
 
 func (s *pState) flush(cw *cwriter.Writer, height int) error {
+	var wg sync.WaitGroup
 	var popCount int
 	rows := make([]io.Reader, 0, height)
 	pool := make([]*Bar, 0, s.bHeap.Len())
@@ -292,11 +293,16 @@ func (s *pState) flush(cw *cwriter.Writer, height int) error {
 		b := heap.Pop(&s.bHeap).(*Bar)
 		frame := <-b.frameCh
 		for i := len(frame.rows) - 1; i >= 0; i-- {
-			if len(rows) == height {
-				break
+			if len(rows) < height {
+				rows = append(rows, frame.rows[i])
+				frameRowsUsed++
+			} else {
+				wg.Add(1)
+				go func(discardRow io.Reader) {
+					_, _ = io.Copy(io.Discard, discardRow)
+					wg.Done()
+				}(frame.rows[i])
 			}
-			rows = append(rows, frame.rows[i])
-			frameRowsUsed++
 		}
 		if frame.shutdown != 0 {
 			b.Wait() // waiting for b.done, so it's safe to read b.bs
@@ -334,6 +340,7 @@ func (s *pState) flush(cw *cwriter.Writer, height int) error {
 		}
 	}
 
+	wg.Wait()
 	return cw.Flush(len(rows) - popCount)
 }
 
