@@ -4,7 +4,7 @@ go 1.14
 
 require (
 	github.com/mattn/go-runewidth v0.0.13
-	github.com/vbauerster/mpb/v7 v7.5.2
+	github.com/vbauerster/mpb/v7 v7.5.3
 )
 
 replace github.com/vbauerster/mpb/v7 => /home/vbauer/gohack/github.com/vbauerster/mpb/v7
