@@ -287,7 +287,6 @@ func (s *pState) flush(cw *cwriter.Writer, height int) error {
 	var wg sync.WaitGroup
 	var popCount int
 	rows := make([]io.Reader, 0, height)
-	pool := make([]*Bar, 0, s.bHeap.Len())
 	for s.bHeap.Len() > 0 {
 		var usedRows int
 		b := heap.Pop(&s.bHeap).(*Bar)
@@ -310,7 +309,7 @@ func (s *pState) flush(cw *cwriter.Writer, height int) error {
 			if qb, ok := s.queueBars[b]; ok {
 				delete(s.queueBars, b)
 				qb.priority = b.priority
-				pool = append(pool, qb)
+				defer heap.Push(&s.bHeap, qb)
 				drop = true
 			} else if s.popCompleted && !b.bs.noPop {
 				if frame.shutdown > 1 {
@@ -326,11 +325,7 @@ func (s *pState) flush(cw *cwriter.Writer, height int) error {
 				continue
 			}
 		}
-		pool = append(pool, b)
-	}
-
-	for _, b := range pool {
-		heap.Push(&s.bHeap, b)
+		defer heap.Push(&s.bHeap, b)
 	}
 
 	for i := len(rows) - 1; i >= 0; i-- {
