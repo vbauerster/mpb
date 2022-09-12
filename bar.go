@@ -530,7 +530,7 @@ func (s *bState) subscribeDecorators() {
 }
 
 func (s bState) decoratorEwmaUpdate(dur time.Duration) {
-	wg := new(sync.WaitGroup)
+	var wg sync.WaitGroup
 	for i := 0; i < len(s.ewmaDecorators); i++ {
 		switch d := s.ewmaDecorators[i]; i {
 		case len(s.ewmaDecorators) - 1:
@@ -547,7 +547,7 @@ func (s bState) decoratorEwmaUpdate(dur time.Duration) {
 }
 
 func (s bState) decoratorAverageAdjust(start time.Time) {
-	wg := new(sync.WaitGroup)
+	var wg sync.WaitGroup
 	for i := 0; i < len(s.averageDecorators); i++ {
 		switch d := s.averageDecorators[i]; i {
 		case len(s.averageDecorators) - 1:
@@ -564,7 +564,7 @@ func (s bState) decoratorAverageAdjust(start time.Time) {
 }
 
 func (s bState) decoratorShutdownNotify() {
-	wg := new(sync.WaitGroup)
+	var wg sync.WaitGroup
 	for i := 0; i < len(s.shutdownListeners); i++ {
 		switch d := s.shutdownListeners[i]; i {
 		case len(s.shutdownListeners) - 1:
