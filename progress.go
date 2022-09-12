@@ -40,6 +40,7 @@ type pState struct {
 	heapUpdated bool
 	pMatrix     map[int][]chan int
 	aMatrix     map[int][]chan int
+	rows        []io.Reader
 
 	// following are provided/overrided by user
 	idCount          int
@@ -69,6 +70,7 @@ func New(options ...ContainerOption) *Progress {
 func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 	s := &pState{
 		bHeap:       priorityQueue{},
+		rows:        make([]io.Reader, 128),
 		rr:          prr,
 		queueBars:   make(map[*Bar]*Bar),
 		output:      os.Stdout,
@@ -286,7 +288,7 @@ func (s *pState) render(cw *cwriter.Writer) error {
 func (s *pState) flush(cw *cwriter.Writer, height int) error {
 	var wg sync.WaitGroup
 	var popCount int
-	rows := make([]io.Reader, 0, height)
+	rows := s.rows[:0]
 	for s.bHeap.Len() > 0 {
 		var usedRows int
 		b := heap.Pop(&s.bHeap).(*Bar)
