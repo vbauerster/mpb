@@ -40,7 +40,10 @@ type pState struct {
 	heapUpdated bool
 	pMatrix     map[int][]chan int
 	aMatrix     map[int][]chan int
-	rows        []io.Reader
+
+	// for reuse purposes
+	rows []io.Reader
+	pool []*Bar
 
 	// following are provided/overrided by user
 	idCount          int
@@ -70,7 +73,8 @@ func New(options ...ContainerOption) *Progress {
 func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 	s := &pState{
 		bHeap:       priorityQueue{},
-		rows:        make([]io.Reader, 128),
+		rows:        make([]io.Reader, 0, 128),
+		pool:        make([]*Bar, 0, 128),
 		rr:          prr,
 		queueBars:   make(map[*Bar]*Bar),
 		output:      os.Stdout,
@@ -288,8 +292,7 @@ func (s *pState) render(cw *cwriter.Writer) error {
 func (s *pState) flush(cw *cwriter.Writer, height int) error {
 	var wg sync.WaitGroup
 	var popCount int
-	rows := s.rows[:0]
-	pool := make([]*Bar, 0, s.bHeap.Len())
+
 	for s.bHeap.Len() > 0 {
 		var usedRows int
 		b := heap.Pop(&s.bHeap).(*Bar)
@@ -299,8 +302,8 @@ func (s *pState) flush(cw *cwriter.Writer, height int) error {
 			continue
 		}
 		for i := len(frame.rows) - 1; i >= 0; i-- {
-			if row := frame.rows[i]; len(rows) < height {
-				rows = append(rows, row)
+			if row := frame.rows[i]; len(s.rows) < height {
+				s.rows = append(s.rows, row)
 				usedRows++
 			} else {
 				wg.Add(1)
@@ -316,7 +319,7 @@ func (s *pState) flush(cw *cwriter.Writer, height int) error {
 			if qb, ok := s.queueBars[b]; ok {
 				delete(s.queueBars, b)
 				qb.priority = b.priority
-				pool = append(pool, qb)
+				s.pool = append(s.pool, qb)
 				drop = true
 			} else if s.popCompleted && !b.bs.noPop {
 				if frame.shutdown > 1 {
@@ -332,23 +335,25 @@ func (s *pState) flush(cw *cwriter.Writer, height int) error {
 				continue
 			}
 		}
-		pool = append(pool, b)
+		s.pool = append(s.pool, b)
 	}
 
 	for _, b := range pool {
 		heap.Push(&s.bHeap, b)
 	}
 
-	for i := len(rows) - 1; i >= 0; i-- {
-		_, err := cw.ReadFrom(rows[i])
+	readRows := len(s.rows)
+	for i := readRows - 1; i >= 0; i-- {
+		_, err := cw.ReadFrom(s.rows[i])
 		if err != nil {
-			wg.Wait()
-			return err
+			readRows--
 		}
 	}
 
 	wg.Wait()
-	return cw.Flush(len(rows) - popCount)
+	s.rows = s.rows[:0]
+	s.pool = s.pool[:0]
+	return cw.Flush(readRows - popCount)
 }
 
 func (s *pState) newTicker(done <-chan struct{}) chan time.Time {
