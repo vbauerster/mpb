@@ -293,6 +293,10 @@ func (s *pState) flush(cw *cwriter.Writer, height int) error {
 		var usedRows int
 		b := heap.Pop(&s.bHeap).(*Bar)
 		frame := <-b.frameCh
+		if frame.recovered {
+			s.heapUpdated = true
+			continue
+		}
 		for i := len(frame.rows) - 1; i >= 0; i-- {
 			if row := frame.rows[i]; len(rows) < height {
 				rows = append(rows, row)

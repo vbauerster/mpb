@@ -17,15 +17,14 @@ import (
 
 // Bar represents a progress bar.
 type Bar struct {
-	index          int // used by heap
-	priority       int // used by heap
-	frameCh        chan *renderFrame
-	operateState   chan func(*bState)
-	done           chan struct{}
-	container      *Progress
-	bs             *bState
-	cancel         func()
-	recoveredPanic interface{}
+	index        int // used by heap
+	priority     int // used by heap
+	frameCh      chan *renderFrame
+	operateState chan func(*bState)
+	done         chan struct{}
+	container    *Progress
+	bs           *bState
+	cancel       func()
 }
 
 type extenderFunc func(rows []io.Reader, stat decor.Statistics) []io.Reader
@@ -42,6 +41,7 @@ type bState struct {
 	trimSpace         bool
 	completed         bool
 	aborted           bool
+	recovered         bool
 	triggerComplete   bool
 	dropOnComplete    bool
 	noPop             bool
@@ -63,8 +63,9 @@ type bState struct {
 }
 
 type renderFrame struct {
-	rows     []io.Reader
-	shutdown int
+	rows      []io.Reader
+	recovered bool
+	shutdown  int
 }
 
 func newBar(container *Progress, bs *bState) *Bar {
@@ -357,20 +358,23 @@ func (b *Bar) serve(ctx context.Context, bs *bState) {
 }
 
 func (b *Bar) render(tw int) {
-	select {
-	case b.operateState <- func(s *bState) {
+	var done bool
+	fn := func(s *bState) {
 		var rows []io.Reader
 		stat := newStatistics(tw, s)
 		defer func() {
 			// recovering if user defined decorator panics for example
 			if p := recover(); p != nil {
-				if s.debugOut != nil {
+				go func() {
+					_, _ = fmt.Fprintln(b.container, p)
+				}()
+				if out := s.debugOut; out != nil {
 					for _, fn := range []func() (int, error){
 						func() (int, error) {
-							return fmt.Fprintln(s.debugOut, p)
+							return fmt.Fprintln(out, p)
 						},
 						func() (int, error) {
-							return s.debugOut.Write(debug.Stack())
+							return out.Write(debug.Stack())
 						},
 					} {
 						if _, err := fn(); err != nil {
@@ -379,38 +383,27 @@ func (b *Bar) render(tw int) {
 					}
 				}
 				s.aborted = !s.completed
-				s.extender = makePanicExtender(p)
-				b.recoveredPanic = p
-			}
-			if fn := s.extender; fn != nil {
-				rows = fn(rows, stat)
+				s.recovered = true
+			} else if s.extender != nil {
+				rows = s.extender(rows, stat)
 			}
 			frame := &renderFrame{
-				rows: rows,
+				rows:      rows,
+				recovered: s.recovered,
 			}
-			if s.completed || s.aborted {
+			if !done && (s.completed || s.aborted) {
 				b.cancel()
 				frame.shutdown++
 			}
 			b.frameCh <- frame
 		}()
-		if b.recoveredPanic == nil {
-			rows = append(rows, s.draw(stat))
-		}
-	}:
+		rows = append(rows, s.draw(stat))
+	}
+	select {
+	case b.operateState <- fn:
 	case <-b.done:
-		var rows []io.Reader
-		s, stat := b.bs, newStatistics(tw, b.bs)
-		if b.recoveredPanic == nil {
-			rows = append(rows, s.draw(stat))
-		}
-		if fn := s.extender; fn != nil {
-			rows = fn(rows, stat)
-		}
-		frame := &renderFrame{
-			rows: rows,
-		}
-		b.frameCh <- frame
+		done = true
+		fn(b.bs)
 	}
 }
 
@@ -605,15 +598,4 @@ func extractBaseDecorator(d decor.Decorator) decor.Decorator {
 		return extractBaseDecorator(d.Base())
 	}
 	return d
-}
-
-func makePanicExtender(p interface{}) extenderFunc {
-	pstr := fmt.Sprint(p)
-	return func(rows []io.Reader, stat decor.Statistics) []io.Reader {
-		r := io.MultiReader(
-			strings.NewReader(runewidth.Truncate(pstr, stat.AvailableWidth, "…")),
-			bytes.NewReader([]byte("\n")),
-		)
-		return append(rows, r)
-	}
 }
