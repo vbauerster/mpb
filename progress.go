@@ -338,9 +338,13 @@ func (s *pState) flush(cw *cwriter.Writer, height int) error {
 		s.pool = append(s.pool, b)
 	}
 
-	for _, b := range pool {
-		heap.Push(&s.bHeap, b)
-	}
+	wg.Add(1)
+	go func() {
+		for _, b := range s.pool {
+			heap.Push(&s.bHeap, b)
+		}
+		wg.Done()
+	}()
 
 	readRows := len(s.rows)
 	for i := readRows - 1; i >= 0; i-- {
