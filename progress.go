@@ -73,8 +73,8 @@ func New(options ...ContainerOption) *Progress {
 func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 	s := &pState{
 		bHeap:       priorityQueue{},
-		rows:        make([]io.Reader, 0, 128),
-		pool:        make([]*Bar, 0, 128),
+		rows:        make([]io.Reader, 0, 64),
+		pool:        make([]*Bar, 0, 64),
 		rr:          prr,
 		queueBars:   make(map[*Bar]*Bar),
 		output:      os.Stdout,
