@@ -350,6 +350,9 @@ func (s *pState) flush(cw *cwriter.Writer, height int) error {
 	for i := readRows - 1; i >= 0; i-- {
 		_, err := cw.ReadFrom(s.rows[i])
 		if err != nil {
+			if s.debugOut != nil {
+				fmt.Fprintf(s.debugOut, "cw.ReadFrom: %s\n", err.Error())
+			}
 			readRows--
 		}
 	}
