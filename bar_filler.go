@@ -9,7 +9,7 @@ import (
 // BarFiller interface.
 // Bar (without decorators) renders itself by calling BarFiller's Fill method.
 type BarFiller interface {
-	Fill(w io.Writer, stat decor.Statistics) error
+	Fill(io.Writer, decor.Statistics) error
 }
 
 // BarFillerBuilder interface.
@@ -24,7 +24,7 @@ type BarFillerBuilder interface {
 
 // BarFillerFunc is function type adapter to convert compatible function
 // into BarFiller interface.
-type BarFillerFunc func(w io.Writer, stat decor.Statistics) error
+type BarFillerFunc func(io.Writer, decor.Statistics) error
 
 func (f BarFillerFunc) Fill(w io.Writer, stat decor.Statistics) error {
 	return f(w, stat)
