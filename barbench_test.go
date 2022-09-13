@@ -7,29 +7,37 @@ import (
 
 const total = 1000
 
-func BenchmarkIncrementOneBar(b *testing.B) {
-	benchBody(1, b)
+func BenchmarkNopStyleOneBar(b *testing.B) {
+	bench(b, NopStyle(), 1)
 }
 
-func BenchmarkIncrementTwoBars(b *testing.B) {
-	benchBody(2, b)
+func BenchmarkNopStyleTwoBars(b *testing.B) {
+	bench(b, NopStyle(), 2)
 }
 
-func BenchmarkIncrementThreeBars(b *testing.B) {
-	benchBody(3, b)
+func BenchmarkNopStyleThreeBars(b *testing.B) {
+	bench(b, NopStyle(), 3)
 }
 
-func BenchmarkIncrementFourBars(b *testing.B) {
-	benchBody(4, b)
+func BenchmarkBarStyleOneBar(b *testing.B) {
+	bench(b, BarStyle(), 1)
 }
 
-func benchBody(n int, b *testing.B) {
+func BenchmarkBarStyleTwoBars(b *testing.B) {
+	bench(b, BarStyle(), 2)
+}
+
+func BenchmarkBarStyleThreeBars(b *testing.B) {
+	bench(b, BarStyle(), 3)
+}
+
+func bench(b *testing.B, builder BarFillerBuilder, n int) {
+	var wg sync.WaitGroup
 	p := New(WithOutput(nil), WithWidth(80))
-	wg := new(sync.WaitGroup)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		for j := 0; j < n; j++ {
-			bar := p.AddBar(total)
+			bar := p.New(total, builder)
 			switch j {
 			case n - 1:
 				complete(b, bar)
@@ -53,4 +61,5 @@ func complete(b *testing.B, bar *Bar) {
 	if !bar.Completed() {
 		b.Fail()
 	}
+	bar.Wait()
 }
