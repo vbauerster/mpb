@@ -63,17 +63,16 @@ func (s *spinnerStyle) Build() BarFiller {
 	return sf
 }
 
-func (s *sFiller) Fill(w io.Writer, stat decor.Statistics) {
+func (s *sFiller) Fill(w io.Writer, stat decor.Statistics) (err error) {
 	width := internal.CheckRequestedWidth(stat.RequestedWidth, stat.AvailableWidth)
 
 	frame := s.frames[s.count%uint(len(s.frames))]
 	frameWidth := runewidth.StringWidth(stripansi.Strip(frame))
 
 	if width < frameWidth {
-		return
+		return nil
 	}
 
-	var err error
 	rest := width - frameWidth
 	switch s.position {
 	case positionLeft:
@@ -84,8 +83,6 @@ func (s *sFiller) Fill(w io.Writer, stat decor.Statistics) {
 		str := strings.Repeat(" ", rest/2) + frame + strings.Repeat(" ", rest/2+rest%2)
 		_, err = io.WriteString(w, str)
 	}
-	if err != nil {
-		panic(err)
-	}
 	s.count++
+	return err
 }
