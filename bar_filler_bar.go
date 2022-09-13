@@ -148,20 +148,27 @@ func (s *barStyle) Build() BarFiller {
 	return bf
 }
 
-func (s *bFiller) Fill(w io.Writer, stat decor.Statistics) {
+func (s *bFiller) Fill(w io.Writer, stat decor.Statistics) (err error) {
 	width := internal.CheckRequestedWidth(stat.RequestedWidth, stat.AvailableWidth)
 	brackets := s.components[iLbound].width + s.components[iRbound].width
 	// don't count brackets as progress
 	width -= brackets
 	if width < 0 {
-		return
+		return nil
 	}
 
-	mustWrite(w, s.components[iLbound].bytes)
-	defer mustWrite(w, s.components[iRbound].bytes)
+	_, err = w.Write(s.components[iLbound].bytes)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err == nil {
+			_, err = w.Write(s.components[iRbound].bytes)
+		}
+	}()
 
 	if width == 0 {
-		return
+		return nil
 	}
 
 	var filling [][]byte
@@ -230,24 +237,23 @@ func (s *bFiller) Fill(w io.Writer, stat decor.Statistics) {
 	}
 
 	if s.rev {
-		flush(w, padding, filling)
-	} else {
-		flush(w, filling, padding)
+		return flush(w, padding, filling)
 	}
+	return flush(w, filling, padding)
 }
 
-func flush(w io.Writer, filling, padding [][]byte) {
+func flush(w io.Writer, filling, padding [][]byte) error {
 	for i := len(filling) - 1; i >= 0; i-- {
-		mustWrite(w, filling[i])
+		_, err := w.Write(filling[i])
+		if err != nil {
+			return err
+		}
 	}
 	for i := 0; i < len(padding); i++ {
-		mustWrite(w, padding[i])
+		_, err := w.Write(padding[i])
+		if err != nil {
+			return err
+		}
 	}
-}
-
-func mustWrite(w io.Writer, p []byte) {
-	_, err := w.Write(p)
-	if err != nil {
-		panic(err)
-	}
+	return nil
 }
