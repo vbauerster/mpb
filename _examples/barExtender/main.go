@@ -20,10 +20,11 @@ func main() {
 
 	for i := 0; i < numBars; i++ {
 		name := fmt.Sprintf("Bar#%d:", i)
-		efn := func(w io.Writer, s decor.Statistics) {
+		efn := func(w io.Writer, s decor.Statistics) (err error) {
 			if s.Completed {
-				fmt.Fprintf(w, "Bar id: %d has been completed\n", s.ID)
+				_, err = fmt.Fprintf(w, "Bar id: %d has been completed\n", s.ID)
 			}
+			return err
 		}
 		bar := p.AddBar(int64(total),
 			mpb.BarExtender(mpb.BarFillerFunc(efn), false),
