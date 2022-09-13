@@ -455,33 +455,38 @@ func (s *bState) draw(stat decor.Statistics) io.Reader {
 }
 
 func (s *bState) drawImpl(stat decor.Statistics) io.Reader {
-	bufP, bufB, bufA := s.buffers[0], s.buffers[1], s.buffers[2]
-	tw := stat.AvailableWidth
-	for _, d := range s.pDecorators {
-		str := d.Decor(stat)
-		stat.AvailableWidth -= runewidth.StringWidth(stripansi.Strip(str))
-		mustWriteString(bufP, str)
-	}
-	if stat.AvailableWidth < 1 {
-		trunc := strings.NewReader(runewidth.Truncate(stripansi.Strip(bufP.String()), tw, "…"))
-		bufP.Reset()
-		return trunc
+	decorFiller := func(buf *bytes.Buffer, decorators []decor.Decorator) (int, bool) {
+		tw := stat.AvailableWidth
+		for _, d := range decorators {
+			str := d.Decor(stat)
+			if stat.AvailableWidth > 0 {
+				stat.AvailableWidth -= runewidth.StringWidth(stripansi.Strip(str))
+				mustWriteString(buf, str)
+			}
+		}
+		return tw, stat.AvailableWidth < 0
 	}
 
-	if !s.trimSpace && stat.AvailableWidth > 1 {
+	bufP, bufB, bufA := s.buffers[0], s.buffers[1], s.buffers[2]
+
+	twP, truncateP := decorFiller(bufP, s.pDecorators)
+
+	if !s.trimSpace && stat.AvailableWidth >= 2 {
 		mustWriteString(bufB, " ")
 		defer mustWriteString(bufB, " ")
 		stat.AvailableWidth -= 2
 	}
 
-	tw = stat.AvailableWidth
-	for _, d := range s.aDecorators {
-		str := d.Decor(stat)
-		stat.AvailableWidth -= runewidth.StringWidth(stripansi.Strip(str))
-		mustWriteString(bufA, str)
+	twA, truncateA := decorFiller(bufA, s.aDecorators)
+
+	if truncateP {
+		trunc := strings.NewReader(runewidth.Truncate(stripansi.Strip(bufP.String()), twP, "…"))
+		bufP.Reset()
+		return trunc
 	}
-	if stat.AvailableWidth < 1 {
-		trunc := strings.NewReader(runewidth.Truncate(stripansi.Strip(bufA.String()), tw, "…"))
+
+	if truncateA {
+		trunc := strings.NewReader(runewidth.Truncate(stripansi.Strip(bufA.String()), twA, "…"))
 		bufA.Reset()
 		return io.MultiReader(bufP, bufB, trunc)
 	}
