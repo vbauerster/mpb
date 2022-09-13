@@ -384,8 +384,6 @@ func (b *Bar) render(tw int) {
 				}
 				s.aborted = !s.completed
 				s.recovered = true
-			} else if s.extender != nil {
-				rows = s.extender(rows, stat)
 			}
 			frame := &renderFrame{
 				rows:      rows,
@@ -398,6 +396,9 @@ func (b *Bar) render(tw int) {
 			b.frameCh <- frame
 		}()
 		rows = append(rows, s.draw(stat))
+		if s.extender != nil {
+			rows = s.extender(rows, stat)
+		}
 	}
 	select {
 	case b.operateState <- fn:
