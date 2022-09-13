@@ -88,15 +88,12 @@ func BarFillerClearOnComplete() BarOption {
 // BarFillerOnComplete replaces bar's filler with message, on complete event.
 func BarFillerOnComplete(message string) BarOption {
 	return BarFillerMiddleware(func(base BarFiller) BarFiller {
-		return BarFillerFunc(func(w io.Writer, st decor.Statistics) {
+		return BarFillerFunc(func(w io.Writer, st decor.Statistics) error {
 			if st.Completed {
 				_, err := io.WriteString(w, message)
-				if err != nil {
-					panic(err)
-				}
-			} else {
-				base.Fill(w, st)
+				return err
 			}
+			return base.Fill(w, st)
 		})
 	})
 }

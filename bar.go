@@ -457,7 +457,10 @@ func (s *bState) draw(stat decor.Statistics) io.Reader {
 	for _, d := range s.pDecorators {
 		str := d.Decor(stat)
 		stat.AvailableWidth -= runewidth.StringWidth(stripansi.Strip(str))
-		bufP.WriteString(str)
+		_, err := bufP.WriteString(str)
+		if err != nil {
+			panic(err)
+		}
 	}
 	if stat.AvailableWidth < 1 {
 		trunc := strings.NewReader(runewidth.Truncate(stripansi.Strip(bufP.String()), tw, "…"))
@@ -475,7 +478,10 @@ func (s *bState) draw(stat decor.Statistics) io.Reader {
 	for _, d := range s.aDecorators {
 		str := d.Decor(stat)
 		stat.AvailableWidth -= runewidth.StringWidth(stripansi.Strip(str))
-		bufA.WriteString(str)
+		_, err := bufA.WriteString(str)
+		if err != nil {
+			panic(err)
+		}
 	}
 	if stat.AvailableWidth < 1 {
 		trunc := strings.NewReader(runewidth.Truncate(stripansi.Strip(bufA.String()), tw, "…"))
@@ -483,7 +489,10 @@ func (s *bState) draw(stat decor.Statistics) io.Reader {
 		return io.MultiReader(bufP, bufB, trunc, nlr)
 	}
 
-	s.filler.Fill(bufB, stat)
+	err := s.filler.Fill(bufB, stat)
+	if err != nil {
+		panic(err)
+	}
 
 	return io.MultiReader(bufP, bufB, bufA, nlr)
 }
