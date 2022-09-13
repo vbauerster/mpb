@@ -20,35 +20,43 @@ func main() {
 	msgCh := make(chan string)
 	resumeCh := make(chan struct{})
 	nextCh := make(chan struct{}, 1)
+	ew := &errorWrapper{}
+	timer := time.AfterFunc(2*time.Second, func() {
+		ew.reset(errors.New("timeout"))
+	})
+	defer timer.Stop()
 	bar := p.AddBar(int64(total),
 		mpb.BarFillerMiddleware(func(base mpb.BarFiller) mpb.BarFiller {
 			var msg *string
-			return mpb.BarFillerFunc(func(w io.Writer, st decor.Statistics) {
-				select {
-				case m := <-msgCh:
-					defer func() {
+			var times int
+			return mpb.BarFillerFunc(func(w io.Writer, st decor.Statistics) error {
+				if msg == nil {
+					select {
+					case m := <-msgCh:
 						msg = &m
+						times = 10
+						nextCh <- struct{}{}
+					default:
+					}
+					return base.Fill(w, st)
+				}
+				switch {
+				case times == 0, st.Completed, st.Aborted:
+					defer func() {
+						msg = nil
 					}()
-					nextCh <- struct{}{}
-				case <-resumeCh:
-					msg = nil
+					resumeCh <- struct{}{}
 				default:
+					times--
 				}
-				if msg != nil {
-					io.WriteString(w, runewidth.Truncate(*msg, st.AvailableWidth, "…"))
-					nextCh <- struct{}{}
-				} else {
-					base.Fill(w, st)
-				}
+				_, err := io.WriteString(w, runewidth.Truncate(*msg, st.AvailableWidth, "…"))
+				nextCh <- struct{}{}
+				return err
 			})
 		}),
 		mpb.PrependDecorators(decor.Name("my bar:")),
 		mpb.AppendDecorators(newCustomPercentage(nextCh)),
 	)
-	ew := &errorWrapper{}
-	time.AfterFunc(2*time.Second, func() {
-		ew.reset(errors.New("timeout"))
-	})
 	// simulating some work
 	go func() {
 		rng := rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -57,11 +65,10 @@ func main() {
 			time.Sleep(time.Duration(rng.Intn(10)+1) * max / 10)
 			if ew.isErr() {
 				msgCh <- fmt.Sprintf("%s at %d, retrying...", ew.Error(), i)
-				go ew.reset(nil)
 				i--
 				bar.SetRefill(int64(i))
-				time.Sleep(3 * time.Second)
-				resumeCh <- struct{}{}
+				ew.reset(nil)
+				<-resumeCh
 				continue
 			}
 			bar.Increment()
