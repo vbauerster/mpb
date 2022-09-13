@@ -83,34 +83,41 @@ func main() {
 
 func middleware(base mpb.BarFiller, id uint32) mpb.BarFiller {
 	var done bool
-	fn := func(w io.Writer, st decor.Statistics) {
+	fn := func(w io.Writer, st decor.Statistics) error {
 		if !done {
 			cur := atomic.LoadUint32(&curTask) == id
 			if !cur {
-				fmt.Fprintf(w, "   Taksk %02d\n", id)
-				return
+				_, err := fmt.Fprintf(w, "   Taksk %02d\n", id)
+				return err
 			}
 			if !st.Completed {
-				fmt.Fprintf(w, "=> Taksk %02d\n", id)
-				return
+				_, err := fmt.Fprintf(w, "=> Taksk %02d\n", id)
+				return err
 			}
 			done = cur
 		}
-		fmt.Fprintf(w, "   Taksk %02d: Done!\n", id)
+		_, err := fmt.Fprintf(w, "   Taksk %02d: Done!\n", id)
+		return err
 	}
 	if base == nil {
 		return mpb.BarFillerFunc(fn)
 	}
-	return mpb.BarFillerFunc(func(w io.Writer, st decor.Statistics) {
-		fn(w, st)
-		base.Fill(w, st)
+	return mpb.BarFillerFunc(func(w io.Writer, st decor.Statistics) error {
+		err := fn(w, st)
+		if err != nil {
+			return err
+		}
+		return base.Fill(w, st)
 	})
 }
 
 func newLineMiddleware(base mpb.BarFiller) mpb.BarFiller {
-	return mpb.BarFillerFunc(func(w io.Writer, st decor.Statistics) {
-		fmt.Fprintln(w)
-		base.Fill(w, st)
+	return mpb.BarFillerFunc(func(w io.Writer, st decor.Statistics) error {
+		_, err := fmt.Fprintln(w)
+		if err != nil {
+			return err
+		}
+		return base.Fill(w, st)
 	})
 }
 
