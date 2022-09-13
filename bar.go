@@ -460,10 +460,7 @@ func (s *bState) drawImpl(stat decor.Statistics) io.Reader {
 	for _, d := range s.pDecorators {
 		str := d.Decor(stat)
 		stat.AvailableWidth -= runewidth.StringWidth(stripansi.Strip(str))
-		_, err := bufP.WriteString(str)
-		if err != nil {
-			panic(err)
-		}
+		mustWriteString(bufP, str)
 	}
 	if stat.AvailableWidth < 1 {
 		trunc := strings.NewReader(runewidth.Truncate(stripansi.Strip(bufP.String()), tw, "…"))
@@ -472,19 +469,16 @@ func (s *bState) drawImpl(stat decor.Statistics) io.Reader {
 	}
 
 	if !s.trimSpace && stat.AvailableWidth > 1 {
+		mustWriteString(bufB, " ")
+		defer mustWriteString(bufB, " ")
 		stat.AvailableWidth -= 2
-		bufB.WriteByte(' ')
-		defer bufB.WriteByte(' ')
 	}
 
 	tw = stat.AvailableWidth
 	for _, d := range s.aDecorators {
 		str := d.Decor(stat)
 		stat.AvailableWidth -= runewidth.StringWidth(stripansi.Strip(str))
-		_, err := bufA.WriteString(str)
-		if err != nil {
-			panic(err)
-		}
+		mustWriteString(bufA, str)
 	}
 	if stat.AvailableWidth < 1 {
 		trunc := strings.NewReader(runewidth.Truncate(stripansi.Strip(bufA.String()), tw, "…"))
@@ -611,4 +605,11 @@ func extractBaseDecorator(d decor.Decorator) decor.Decorator {
 		return extractBaseDecorator(d.Base())
 	}
 	return d
+}
+
+func mustWriteString(sw io.StringWriter, str string) {
+	_, err := sw.WriteString(str)
+	if err != nil {
+		panic(err)
+	}
 }
