@@ -15,7 +15,7 @@ func main() {
 	total := 100
 	bar := p.New(int64(total),
 		mpb.NopStyle(), // make main bar style nop, so there are just decorators
-		mpb.BarExtender(extended(mpb.BarStyle())), // extend wtih normal bar on the next line
+		mpb.BarExtender(extended(mpb.BarStyle().Build()), false), // extend wtih normal bar on the next line
 		mpb.PrependDecorators(
 			decor.Name("Percentage: "),
 			decor.NewPercentage("%d"),
@@ -37,10 +37,13 @@ func main() {
 	p.Wait()
 }
 
-func extended(builder mpb.BarFillerBuilder) mpb.BarFiller {
-	filler := builder.Build()
-	return mpb.BarFillerFunc(func(w io.Writer, st decor.Statistics) {
-		filler.Fill(w, st)
-		w.Write([]byte("\n"))
+func extended(base mpb.BarFiller) mpb.BarFiller {
+	return mpb.BarFillerFunc(func(w io.Writer, st decor.Statistics) error {
+		err := base.Fill(w, st)
+		if err != nil {
+			return err
+		}
+		_, err = w.Write([]byte("\n"))
+		return err
 	})
 }
