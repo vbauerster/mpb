@@ -121,8 +121,9 @@ func BarExtender(filler BarFiller, rev bool) BarOption {
 	if filler == nil {
 		return nil
 	}
+	fn := makeExtenderFunc(filler, rev)
 	return func(s *bState) {
-		s.extender = makeExtenderFunc(filler, rev)
+		s.extender = fn
 	}
 }
 
