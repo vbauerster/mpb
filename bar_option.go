@@ -130,7 +130,10 @@ func makeExtenderFunc(filler BarFiller, rev bool) extenderFunc {
 	buf := new(bytes.Buffer)
 	base := func(rows []io.Reader, stat decor.Statistics) []io.Reader {
 		buf.Reset()
-		filler.Fill(buf, stat)
+		err := filler.Fill(buf, stat)
+		if err != nil {
+			panic(err)
+		}
 		for {
 			b, err := buf.ReadBytes('\n')
 			if err != nil {
