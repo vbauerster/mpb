@@ -237,15 +237,15 @@ func (p *Progress) shutdown() {
 func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 	defer p.cwg.Done()
 
-	render := func(debugOut io.Writer) {
+	render := func(out io.Writer) {
 		err := s.render(cw)
 		for err != nil {
-			if debugOut != nil {
-				_, err = fmt.Fprintln(debugOut, err)
+			if out != nil {
+				_, err = fmt.Fprintln(out, err)
 			} else {
 				panic(err)
 			}
-			debugOut = nil
+			out = nil
 		}
 	}
 
