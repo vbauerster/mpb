@@ -354,10 +354,11 @@ func (s *pState) flush(cw *cwriter.Writer, height int) error {
 		}
 	}
 
+	err := cw.Flush(readRows - popCount)
 	wg.Wait()
 	s.rows = s.rows[:0]
 	s.pool = s.pool[:0]
-	return cw.Flush(readRows - popCount)
+	return err
 }
 
 func (s *pState) newTicker(done <-chan struct{}) chan time.Time {
