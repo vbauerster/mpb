@@ -453,9 +453,9 @@ func (b *Bar) wSyncTable() [][]chan int {
 func (s *bState) draw(stat decor.Statistics) io.Reader {
 	r, err := s.drawImpl(stat)
 	if err != nil {
-		s.buffers[0].Reset()
-		s.buffers[1].Reset()
-		s.buffers[2].Reset()
+		for _, b := range s.buffers {
+			b.Reset()
+		}
 		panic(err)
 	}
 	return io.MultiReader(r, strings.NewReader("\n"))
