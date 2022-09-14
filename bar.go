@@ -506,6 +506,8 @@ func (s *bState) drawImpl(stat decor.Statistics) (r io.Reader, err error) {
 	if resP.truncate {
 		trunc := strings.NewReader(runewidth.Truncate(stripansi.Strip(bufP.String()), resP.width, "…"))
 		bufP.Reset()
+		bufB.Reset()
+		bufA.Reset()
 		return trunc, nil
 	}
 
