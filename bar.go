@@ -505,14 +505,15 @@ func (s *bState) drawImpl(stat decor.Statistics) (r io.Reader, err error) {
 
 	if !s.trimSpace && stat.AvailableWidth >= 2 {
 		stat.AvailableWidth -= 2
-		space := func() error {
-			return bufB.WriteByte(' ')
+		writeFiller := func(buf *bytes.Buffer) error {
+			return s.filler.Fill(buf, stat)
 		}
-		filler := func() error {
-			return s.filler.Fill(bufB, stat)
-		}
-		for _, fn := range []func() error{space, filler, space} {
-			if err := fn(); err != nil {
+		for _, fn := range []func(*bytes.Buffer) error{
+			writeSpace,
+			writeFiller,
+			writeSpace,
+		} {
+			if err := fn(bufB); err != nil {
 				return nil, err
 			}
 		}
@@ -637,4 +638,8 @@ func extractBaseDecorator(d decor.Decorator) decor.Decorator {
 		return extractBaseDecorator(d.Base())
 	}
 	return d
+}
+
+func writeSpace(buf *bytes.Buffer) error {
+	return buf.WriteByte(' ')
 }
