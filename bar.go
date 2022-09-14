@@ -485,19 +485,6 @@ func (s *bState) drawImpl(stat decor.Statistics) (r io.Reader, err error) {
 		return nil, err
 	}
 
-	if !s.trimSpace && stat.AvailableWidth >= 2 {
-		err = bufB.WriteByte(' ')
-		if err != nil {
-			return nil, err
-		}
-		defer func() {
-			if err == nil {
-				err = bufB.WriteByte(' ')
-			}
-		}()
-		stat.AvailableWidth -= 2
-	}
-
 	resA, err := decorFiller(bufA, s.aDecorators)
 	if err != nil {
 		return nil, err
@@ -506,7 +493,6 @@ func (s *bState) drawImpl(stat decor.Statistics) (r io.Reader, err error) {
 	if resP.truncate {
 		trunc := strings.NewReader(runewidth.Truncate(stripansi.Strip(bufP.String()), resP.width, "…"))
 		bufP.Reset()
-		bufB.Reset()
 		bufA.Reset()
 		return trunc, nil
 	}
@@ -514,12 +500,27 @@ func (s *bState) drawImpl(stat decor.Statistics) (r io.Reader, err error) {
 	if resA.truncate {
 		trunc := strings.NewReader(runewidth.Truncate(stripansi.Strip(bufA.String()), resA.width, "…"))
 		bufA.Reset()
-		return io.MultiReader(bufP, bufB, trunc), nil
+		return io.MultiReader(bufP, trunc), nil
 	}
 
-	err = s.filler.Fill(bufB, stat)
-	if err != nil {
-		return nil, err
+	if !s.trimSpace && stat.AvailableWidth >= 2 {
+		stat.AvailableWidth -= 2
+		space := func() error {
+			return bufB.WriteByte(' ')
+		}
+		filler := func() error {
+			return s.filler.Fill(bufB, stat)
+		}
+		for _, fn := range []func() error{space, filler, space} {
+			if err := fn(); err != nil {
+				return nil, err
+			}
+		}
+	} else {
+		err = s.filler.Fill(bufB, stat)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return io.MultiReader(bufP, bufB, bufA), nil
