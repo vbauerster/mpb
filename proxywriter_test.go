@@ -86,7 +86,7 @@ func (w *testWriterReadFrom) ReadFrom(r io.Reader) (n int64, err error) {
 }
 
 type dumbReader struct {
-	r *strings.Reader
+	r io.Reader
 }
 
 func (r dumbReader) Read(p []byte) (int, error) {
