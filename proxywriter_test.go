@@ -25,7 +25,7 @@ func TestProxyWriter(t *testing.T) {
 	var buf bytes.Buffer
 	tw := &testWriter{&buf, false}
 
-	bar := p.AddBar(int64(len(content)))
+	bar := p.New(int64(len(content)), mpb.NopStyle())
 
 	_, err := io.Copy(bar.ProxyWriter(tw), strings.NewReader(content))
 	if err != nil {
@@ -59,7 +59,7 @@ func TestProxyWriteCloser(t *testing.T) {
 	var buf bytes.Buffer
 	tw := &testWriteCloser{&buf, false}
 
-	bar := p.AddBar(int64(len(content)))
+	bar := p.New(int64(len(content)), mpb.NopStyle())
 
 	wc := bar.ProxyWriter(tw)
 	_, err := io.Copy(wc, strings.NewReader(content))
