@@ -102,6 +102,22 @@ func (b *Bar) ProxyReader(r io.Reader) io.ReadCloser {
 	}
 }
 
+// ProxyWriter wraps io.Writer with metrics required for progress tracking.
+// If bar is already completed or aborted, returns nil.
+// Panics if `w` is nil.
+func (b *Bar) ProxyWriter(w io.Writer) io.WriteCloser {
+	if w == nil {
+		panic("expected non nil io.Writer")
+	}
+	result := make(chan bool)
+	select {
+	case b.operateState <- func(s *bState) { result <- len(s.ewmaDecorators) != 0 }:
+		return newProxyWriter(w, b, <-result)
+	case <-b.done:
+		return nil
+	}
+}
+
 // ID returs id of the bar.
 func (b *Bar) ID() int {
 	result := make(chan int)
