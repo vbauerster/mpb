@@ -84,11 +84,11 @@ func newBar(container *Progress, bs *bState) *Bar {
 	return bar
 }
 
-// ProxyReader wraps r with metrics required for progress tracking.
-// If r is 'unknown total/size' reader it's mandatory to call
-// (*Bar).SetTotal(-1, true) method after (Reader).Read returns io.EOF.
-// Panics if r is nil. If bar is already completed or aborted, returns
-// nil.
+// ProxyReader wraps io.Reader with metrics required for progress tracking.
+// If `r` is 'unknown total/size' reader it's mandatory to call
+// (*Bar).SetTotal(-1, true) method after (io.Reader).Read returns io.EOF.
+// If bar is already completed or aborted, returns nil.
+// Panics if `r` is nil.
 func (b *Bar) ProxyReader(r io.Reader) io.ReadCloser {
 	if r == nil {
 		panic("expected non nil io.Reader")
