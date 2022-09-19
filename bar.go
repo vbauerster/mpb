@@ -220,8 +220,10 @@ func (b *Bar) SetTotal(total int64, triggerCompleteNow bool) {
 }
 
 // SetCurrent sets progress' current to an arbitrary value.
-// Setting a negative value will cause a panic.
 func (b *Bar) SetCurrent(current int64) {
+	if current < 0 {
+		return
+	}
 	select {
 	case b.operateState <- func(s *bState) {
 		s.current = current
