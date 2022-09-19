@@ -283,8 +283,8 @@ func (b *Bar) EwmaIncrInt64(n int64, dur time.Duration) {
 	}
 	select {
 	case b.operateState <- func(s *bState) {
-		s.current += n
 		s.ewmaUpdate(n, dur)
+		s.current += n
 		if s.triggerComplete && s.current >= s.total {
 			s.current = s.total
 			s.completed = true
