@@ -3,9 +3,7 @@ package mpb
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io"
-	"runtime/debug"
 	"strings"
 	"sync"
 	"time"
@@ -27,7 +25,7 @@ type Bar struct {
 	cancel       func()
 }
 
-type extenderFunc func(rows []io.Reader, stat decor.Statistics) []io.Reader
+type extenderFunc func([]io.Reader, decor.Statistics) ([]io.Reader, error)
 
 // bState is actual bar's state.
 type bState struct {
@@ -63,9 +61,9 @@ type bState struct {
 }
 
 type renderFrame struct {
-	rows      []io.Reader
-	recovered bool
-	shutdown  int
+	rows     []io.Reader
+	shutdown int
+	err      error
 }
 
 func newBar(container *Progress, bs *bState) *Bar {
@@ -378,43 +376,25 @@ func (b *Bar) render(tw int) {
 	fn := func(s *bState) {
 		var rows []io.Reader
 		stat := newStatistics(tw, s)
-		defer func() {
-			// recovering if user defined decorator panics for example
-			if p := recover(); p != nil {
-				go func() {
-					_, _ = fmt.Fprintln(b.container, p)
-				}()
-				if out := s.debugOut; out != nil {
-					for _, fn := range []func() (int, error){
-						func() (int, error) {
-							return fmt.Fprintln(out, p)
-						},
-						func() (int, error) {
-							return out.Write(debug.Stack())
-						},
-					} {
-						if _, err := fn(); err != nil {
-							panic(err)
-						}
-					}
-				}
-				s.aborted = !s.completed
-				s.recovered = true
-			}
-			frame := &renderFrame{
-				rows:      rows,
-				recovered: s.recovered,
-			}
-			if !done && (s.completed || s.aborted) {
-				b.cancel()
-				frame.shutdown++
-			}
-			b.frameCh <- frame
-		}()
-		rows = append(rows, s.draw(stat))
-		if s.extender != nil {
-			rows = s.extender(rows, stat)
+		r, err := s.draw(stat)
+		if err != nil {
+			b.frameCh <- &renderFrame{err: err}
+			return
 		}
+		rows = append(rows, r)
+		if s.extender != nil {
+			rows, err = s.extender(rows, stat)
+			if err != nil {
+				b.frameCh <- &renderFrame{err: err}
+				return
+			}
+		}
+		frame := &renderFrame{rows: rows}
+		if !done && (s.completed || s.aborted) {
+			frame.shutdown++
+			b.cancel()
+		}
+		b.frameCh <- frame
 	}
 	select {
 	case b.operateState <- fn:
@@ -466,15 +446,15 @@ func (b *Bar) wSyncTable() [][]chan int {
 	}
 }
 
-func (s *bState) draw(stat decor.Statistics) io.Reader {
+func (s *bState) draw(stat decor.Statistics) (io.Reader, error) {
 	r, err := s.drawImpl(stat)
 	if err != nil {
 		for _, b := range s.buffers {
 			b.Reset()
 		}
-		panic(err)
+		return nil, err
 	}
-	return io.MultiReader(r, strings.NewReader("\n"))
+	return io.MultiReader(r, strings.NewReader("\n")), nil
 }
 
 func (s *bState) drawImpl(stat decor.Statistics) (r io.Reader, err error) {
