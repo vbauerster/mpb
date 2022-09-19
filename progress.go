@@ -91,6 +91,10 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 		}
 	}
 
+	if s.shutdownNotifier == nil {
+		s.shutdownNotifier = make(chan struct{})
+	}
+
 	p := &Progress{
 		ctx:          ctx,
 		uwg:          s.uwg,
@@ -373,9 +377,6 @@ func (s *pState) flush(cw *cwriter.Writer, height int) (err error) {
 
 func (s *pState) newTicker(done <-chan struct{}) chan time.Time {
 	ch := make(chan time.Time)
-	if s.shutdownNotifier == nil {
-		s.shutdownNotifier = make(chan struct{})
-	}
 	go func() {
 		var autoRefresh <-chan time.Time
 		if !s.disableAutoRefresh {
