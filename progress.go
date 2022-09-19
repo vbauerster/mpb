@@ -200,7 +200,7 @@ func (p *Progress) BarCount() int {
 
 // Write is implementation of io.Writer.
 // Writing to `*mpb.Progress` will print lines above a running bar.
-// Writes aren't flushed immediatly, but at next refresh cycle.
+// Writes aren't flushed immediately, but at next refresh cycle.
 // If Write is called after `*mpb.Progress` is done, `mpb.DoneError`
 // is returned.
 func (p *Progress) Write(b []byte) (int, error) {
@@ -238,7 +238,7 @@ func (p *Progress) Wait() {
 	p.cwg.Wait()
 }
 
-// Shutdown cancels any running bar immediatly and then shutdowns (*Progress)
+// Shutdown cancels any running bar immediately and then shutdowns (*Progress)
 // instance. Normally you shouldn't call this method unless you know what are
 // you doing. Proper way to shutdown is to call (*Progress).Wait() instead.
 func (p *Progress) Shutdown() {
