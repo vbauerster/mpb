@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"strings"
-	"sync/atomic"
 	"testing"
 	"time"
 	"unicode/utf8"
@@ -199,80 +198,6 @@ func TestBarStyle(t *testing.T) {
 	}
 }
 
-func TestBarPanicBeforeComplete(t *testing.T) {
-	var buf bytes.Buffer
-	p := mpb.New(
-		mpb.WithWidth(80),
-		mpb.WithDebugOutput(&buf),
-		mpb.WithOutput(io.Discard),
-	)
-
-	total := 100
-	panicMsg := "Upps!!!"
-	var pCount uint32
-	bar := p.AddBar(int64(total),
-		mpb.PrependDecorators(panicDecorator(panicMsg,
-			func(st decor.Statistics) bool {
-				if st.Current >= 42 {
-					atomic.AddUint32(&pCount, 1)
-					return true
-				}
-				return false
-			},
-		)),
-	)
-
-	bar.IncrBy(total)
-
-	p.Wait()
-
-	if pCount != 1 {
-		t.Errorf("Decorator called after panic %d times, expected 1\n", pCount)
-	}
-
-	barStr := buf.String()
-	if !strings.Contains(barStr, panicMsg) {
-		t.Errorf("%q doesn't contain %q\n", barStr, panicMsg)
-	}
-}
-
-func TestBarPanicAfterComplete(t *testing.T) {
-	var buf bytes.Buffer
-	p := mpb.New(
-		mpb.WithWidth(80),
-		mpb.WithDebugOutput(&buf),
-		mpb.WithOutput(io.Discard),
-	)
-
-	total := 100
-	panicMsg := "Upps!!!"
-	var pCount uint32
-	bar := p.AddBar(int64(total),
-		mpb.PrependDecorators(panicDecorator(panicMsg,
-			func(st decor.Statistics) bool {
-				if st.Completed {
-					atomic.AddUint32(&pCount, 1)
-					return true
-				}
-				return false
-			},
-		)),
-	)
-
-	bar.IncrBy(total)
-
-	p.Wait()
-
-	if pCount != 1 {
-		t.Errorf("Decorator called after panic %d times, expected 1\n", pCount)
-	}
-
-	barStr := buf.String()
-	if !strings.Contains(barStr, panicMsg) {
-		t.Errorf("%q doesn't contain %q\n", barStr, panicMsg)
-	}
-}
-
 func TestDecorStatisticsAvailableWidth(t *testing.T) {
 	var called [2]bool
 	td1 := func(s decor.Statistics) string {
@@ -314,13 +239,4 @@ func TestDecorStatisticsAvailableWidth(t *testing.T) {
 			t.Errorf("Decorator %d isn't called", i+1)
 		}
 	}
-}
-
-func panicDecorator(panicMsg string, cond func(decor.Statistics) bool) decor.Decorator {
-	return decor.Any(func(st decor.Statistics) string {
-		if cond(st) {
-			panic(panicMsg)
-		}
-		return ""
-	})
 }
