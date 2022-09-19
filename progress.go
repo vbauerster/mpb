@@ -292,18 +292,20 @@ func (s *pState) render(cw *cwriter.Writer) error {
 	return s.flush(cw, height)
 }
 
-func (s *pState) flush(cw *cwriter.Writer, height int) error {
+func (s *pState) flush(cw *cwriter.Writer, height int) (err error) {
 	var wg sync.WaitGroup
 	var popCount int
 
 	for s.bHeap.Len() > 0 {
-		var usedRows int
 		b := heap.Pop(&s.bHeap).(*Bar)
 		frame := <-b.frameCh
-		if frame.recovered {
-			s.heapUpdated = true
+		if frame.err != nil {
+			if err == nil {
+				err = frame.err
+			}
 			continue
 		}
+		var usedRows int
 		for i := len(frame.rows) - 1; i >= 0; i-- {
 			if row := frame.rows[i]; len(s.rows) < height {
 				s.rows = append(s.rows, row)
@@ -341,6 +343,10 @@ func (s *pState) flush(cw *cwriter.Writer, height int) error {
 		s.pool = append(s.pool, b)
 	}
 
+	if err != nil {
+		return err
+	}
+
 	wg.Add(1)
 	go func() {
 		for _, b := range s.pool {
@@ -349,18 +355,15 @@ func (s *pState) flush(cw *cwriter.Writer, height int) error {
 		wg.Done()
 	}()
 
-	readRows := len(s.rows)
-	for i := readRows - 1; i >= 0; i-- {
+	for i := len(s.rows) - 1; i >= 0; i-- {
 		_, err := cw.ReadFrom(s.rows[i])
 		if err != nil {
-			if s.debugOut != nil {
-				fmt.Fprintf(s.debugOut, "cw.ReadFrom: %s\n", err.Error())
-			}
-			readRows--
+			wg.Wait()
+			return err
 		}
 	}
 
-	err := cw.Flush(readRows - popCount)
+	err = cw.Flush(len(s.rows) - popCount)
 	wg.Wait()
 	s.rows = s.rows[:0]
 	s.pool = s.pool[:0]
