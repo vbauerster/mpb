@@ -84,6 +84,9 @@ func WithOutput(w io.Writer) ContainerOption {
 
 // WithDebugOutput sets debug output.
 func WithDebugOutput(w io.Writer) ContainerOption {
+	if w == nil {
+		w = io.Discard
+	}
 	return func(s *pState) {
 		s.debugOut = w
 	}

@@ -81,6 +81,7 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 		queueBars:   make(map[*Bar]*Bar),
 		output:      os.Stdout,
 		popPriority: math.MinInt32,
+		debugOut:    io.Discard,
 	}
 
 	for _, opt := range options {
