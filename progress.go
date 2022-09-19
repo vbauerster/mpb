@@ -46,20 +46,20 @@ type pState struct {
 	pool []*Bar
 
 	// following are provided/overrided by user
+	rr                 time.Duration
 	idCount            int
 	reqWidth           int
 	popPriority        int
 	popCompleted       bool
 	outputDiscarded    bool
 	disableAutoRefresh bool
-	rr                 time.Duration
-	uwg                *sync.WaitGroup
 	externalRefresh    chan interface{}
 	renderDelay        <-chan struct{}
 	shutdownNotifier   chan struct{}
 	queueBars          map[*Bar]*Bar
 	output             io.Writer
 	debugOut           io.Writer
+	uwg                *sync.WaitGroup
 }
 
 // New creates new Progress container instance. It's not possible to
@@ -80,8 +80,8 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 		pool:            make([]*Bar, 0, 64),
 		externalRefresh: make(chan interface{}),
 		queueBars:       make(map[*Bar]*Bar),
-		output:          os.Stdout,
 		popPriority:     math.MinInt32,
+		output:          os.Stdout,
 		debugOut:        io.Discard,
 	}
 
