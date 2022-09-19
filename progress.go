@@ -112,7 +112,7 @@ func (p *Progress) AddSpinner(total int64, options ...BarOption) *Bar {
 	return p.New(total, SpinnerStyle(), options...)
 }
 
-// New creates a bar with provided BarFillerBuilder.
+// New creates a bar by calling `Build` method on provided `BarFillerBuilder`.
 func (p *Progress) New(total int64, builder BarFillerBuilder, options ...BarOption) *Bar {
 	return p.AddFiller(total, builder.Build(), options...)
 }
