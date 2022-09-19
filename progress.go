@@ -432,7 +432,6 @@ func (s *pState) makeBarState(total int64, filler BarFiller, options ...BarOptio
 		reqWidth: s.reqWidth,
 		total:    total,
 		filler:   filler,
-		debugOut: s.debugOut,
 	}
 
 	if total > 0 {

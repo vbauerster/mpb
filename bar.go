@@ -52,7 +52,6 @@ type bState struct {
 	filler            BarFiller
 	middleware        func(BarFiller) BarFiller
 	extender          extenderFunc
-	debugOut          io.Writer
 
 	wait struct {
 		bar  *Bar // key for (*pState).queueBars
