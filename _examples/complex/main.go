@@ -58,8 +58,7 @@ func complete(bar *mpb.Bar) {
 		// EWMA's unit of measure is an iteration's duration
 		start := time.Now()
 		time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
-		bar.IncrInt64(rand.Int63n(5) + 1)
-		// we need to call DecoratorEwmaUpdate to fulfill ewma decorator's contract
-		bar.DecoratorEwmaUpdate(time.Since(start))
+		// we need to call EwmaIncrement to fulfill ewma decorator's contract
+		bar.EwmaIncrInt64(rand.Int63n(5)+1, time.Since(start))
 	}
 }

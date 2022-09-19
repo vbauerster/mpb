@@ -47,9 +47,8 @@ func main() {
 				// EWMA's unit of measure is an iteration's duration
 				start := time.Now()
 				time.Sleep(time.Duration(rng.Intn(10)+1) * max / 10)
-				bar.Increment()
-				// we need to call DecoratorEwmaUpdate to fulfill ewma decorator's contract
-				bar.DecoratorEwmaUpdate(time.Since(start))
+				// we need to call EwmaIncrement to fulfill ewma decorator's contract
+				bar.EwmaIncrement(time.Since(start))
 			}
 			log.Println(name, "done")
 		}()
