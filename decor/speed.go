@@ -29,9 +29,8 @@ func (self *speedFormatter) Format(st fmt.State, verb rune) {
 }
 
 // EwmaSpeed exponential-weighted-moving-average based speed decorator.
-// For this decorator to work correctly you have to measure each
-// iteration's duration and pass it to the
-// *Bar.DecoratorEwmaUpdate(time.Duration) method after each increment.
+// For this decorator to work correctly you have to measure each iteration's
+// duration and pass it to one of the (*Bar).EwmaIncr... family methods.
 func EwmaSpeed(unit int, format string, age float64, wcc ...WC) Decorator {
 	var average ewma.MovingAverage
 	if age == 0 {
