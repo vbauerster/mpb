@@ -30,7 +30,6 @@ type Progress struct {
 	operateState chan func(*pState)
 	interceptIo  chan func(io.Writer)
 	done         chan struct{}
-	refreshCh    chan time.Time
 	once         sync.Once
 	cancel       func()
 }
@@ -47,19 +46,20 @@ type pState struct {
 	pool []*Bar
 
 	// following are provided/overrided by user
-	idCount          int
-	reqWidth         int
-	popPriority      int
-	popCompleted     bool
-	outputDiscarded  bool
-	rr               time.Duration
-	uwg              *sync.WaitGroup
-	externalRefresh  <-chan interface{}
-	renderDelay      <-chan struct{}
-	shutdownNotifier chan struct{}
-	queueBars        map[*Bar]*Bar
-	output           io.Writer
-	debugOut         io.Writer
+	idCount            int
+	reqWidth           int
+	popPriority        int
+	popCompleted       bool
+	outputDiscarded    bool
+	disableAutoRefresh bool
+	rr                 time.Duration
+	uwg                *sync.WaitGroup
+	externalRefresh    <-chan interface{}
+	renderDelay        <-chan struct{}
+	shutdownNotifier   chan struct{}
+	queueBars          map[*Bar]*Bar
+	output             io.Writer
+	debugOut           io.Writer
 }
 
 // New creates new Progress container instance. It's not possible to
@@ -375,22 +375,20 @@ func (s *pState) newTicker(done <-chan struct{}) chan time.Time {
 		s.shutdownNotifier = make(chan struct{})
 	}
 	go func() {
-		if s.renderDelay != nil {
-			<-s.renderDelay
-		}
-		var internalRefresh <-chan time.Time
-		if !s.outputDiscarded {
-			if s.externalRefresh == nil {
+		var autoRefresh <-chan time.Time
+		if !s.disableAutoRefresh {
+			if !s.outputDiscarded {
+				if s.renderDelay != nil {
+					<-s.renderDelay
+				}
 				ticker := time.NewTicker(s.rr)
 				defer ticker.Stop()
-				internalRefresh = ticker.C
+				autoRefresh = ticker.C
 			}
-		} else {
-			s.externalRefresh = nil
 		}
 		for {
 			select {
-			case t := <-internalRefresh:
+			case t := <-autoRefresh:
 				ch <- t
 			case x := <-s.externalRefresh:
 				if t, ok := x.(time.Time); ok {

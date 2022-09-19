@@ -42,6 +42,7 @@ func WithRefreshRate(d time.Duration) ContainerOption {
 func WithManualRefresh(ch <-chan interface{}) ContainerOption {
 	return func(s *pState) {
 		s.externalRefresh = ch
+		s.disableAutoRefresh = true
 	}
 }
 
