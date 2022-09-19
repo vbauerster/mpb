@@ -74,14 +74,15 @@ func New(options ...ContainerOption) *Progress {
 func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 	ctx, cancel := context.WithCancel(ctx)
 	s := &pState{
-		bHeap:       priorityQueue{},
-		rows:        make([]io.Reader, 0, 64),
-		pool:        make([]*Bar, 0, 64),
-		rr:          prr,
-		queueBars:   make(map[*Bar]*Bar),
-		output:      os.Stdout,
-		popPriority: math.MinInt32,
-		debugOut:    io.Discard,
+		rr:              prr,
+		bHeap:           priorityQueue{},
+		rows:            make([]io.Reader, 0, 64),
+		pool:            make([]*Bar, 0, 64),
+		externalRefresh: make(chan interface{}),
+		queueBars:       make(map[*Bar]*Bar),
+		output:          os.Stdout,
+		popPriority:     math.MinInt32,
+		debugOut:        io.Discard,
 	}
 
 	for _, opt := range options {
