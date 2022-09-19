@@ -41,7 +41,7 @@ func WithRefreshRate(d time.Duration) ContainerOption {
 // Refresh will occur upon receive value from provided ch.
 func WithManualRefresh(ch chan interface{}) ContainerOption {
 	return func(s *pState) {
-		s.externalRefresh = ch
+		s.manualRefresh = ch
 		s.disableAutoRefresh = true
 	}
 }

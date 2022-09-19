@@ -53,7 +53,7 @@ type pState struct {
 	popCompleted       bool
 	outputDiscarded    bool
 	disableAutoRefresh bool
-	externalRefresh    chan interface{}
+	manualRefresh      chan interface{}
 	renderDelay        <-chan struct{}
 	shutdownNotifier   chan struct{}
 	queueBars          map[*Bar]*Bar
@@ -74,15 +74,15 @@ func New(options ...ContainerOption) *Progress {
 func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 	ctx, cancel := context.WithCancel(ctx)
 	s := &pState{
-		rr:              prr,
-		bHeap:           priorityQueue{},
-		rows:            make([]io.Reader, 0, 64),
-		pool:            make([]*Bar, 0, 64),
-		externalRefresh: make(chan interface{}),
-		queueBars:       make(map[*Bar]*Bar),
-		popPriority:     math.MinInt32,
-		output:          os.Stdout,
-		debugOut:        io.Discard,
+		rr:            prr,
+		bHeap:         priorityQueue{},
+		rows:          make([]io.Reader, 0, 64),
+		pool:          make([]*Bar, 0, 64),
+		manualRefresh: make(chan interface{}),
+		queueBars:     make(map[*Bar]*Bar),
+		popPriority:   math.MinInt32,
+		output:        os.Stdout,
+		debugOut:      io.Discard,
 	}
 
 	for _, opt := range options {
@@ -392,7 +392,7 @@ func (s *pState) newTicker(done <-chan struct{}) chan time.Time {
 			select {
 			case t := <-autoRefresh:
 				ch <- t
-			case x := <-s.externalRefresh:
+			case x := <-s.manualRefresh:
 				if t, ok := x.(time.Time); ok {
 					ch <- t
 				} else {
@@ -427,12 +427,12 @@ func (s *pState) updateSyncMatrix() {
 
 func (s *pState) makeBarState(total int64, filler BarFiller, options ...BarOption) *bState {
 	bs := &bState{
-		id:        s.idCount,
-		priority:  s.idCount,
-		reqWidth:  s.reqWidth,
-		total:     total,
-		filler:    filler,
-		refreshCh: s.externalRefresh,
+		id:            s.idCount,
+		priority:      s.idCount,
+		reqWidth:      s.reqWidth,
+		total:         total,
+		filler:        filler,
+		manualRefresh: s.manualRefresh,
 	}
 
 	if total > 0 {
