@@ -255,6 +255,8 @@ func (p *Progress) shutdown() {
 func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 	defer p.cwg.Done()
 
+	render := func() error { return s.render(cw) }
+
 	refreshCh := s.newTicker(p.done)
 
 	for {
@@ -264,12 +266,12 @@ func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 		case fn := <-p.interceptIo:
 			fn(cw)
 		case <-refreshCh:
-			err := s.render(cw)
+			err := render()
 			if err != nil {
 				p.cancel() // cancel all bars
 				p.once.Do(p.shutdown)
 				s.heapUpdated = false
-				refreshCh = nil
+				render = func() error { return nil }
 				_, _ = fmt.Fprintln(s.debugOut, err)
 			}
 		case <-s.shutdownNotifier:
