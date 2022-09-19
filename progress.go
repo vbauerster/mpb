@@ -54,7 +54,7 @@ type pState struct {
 	disableAutoRefresh bool
 	rr                 time.Duration
 	uwg                *sync.WaitGroup
-	externalRefresh    <-chan interface{}
+	externalRefresh    chan interface{}
 	renderDelay        <-chan struct{}
 	shutdownNotifier   chan struct{}
 	queueBars          map[*Bar]*Bar
