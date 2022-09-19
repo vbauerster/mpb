@@ -32,6 +32,7 @@ type Progress struct {
 	done         chan struct{}
 	refreshCh    chan time.Time
 	once         sync.Once
+	cancel       func()
 }
 
 // pState holds bars in its priorityQueue, it gets passed to (*Progress).serve monitor goroutine.
@@ -71,6 +72,7 @@ func New(options ...ContainerOption) *Progress {
 // context. It's not possible to reuse instance after (*Progress).Wait
 // method has been called.
 func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
+	ctx, cancel := context.WithCancel(ctx)
 	s := &pState{
 		bHeap:       priorityQueue{},
 		rows:        make([]io.Reader, 0, 64),
@@ -95,6 +97,7 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 		operateState: make(chan func(*pState)),
 		interceptIo:  make(chan func(io.Writer)),
 		done:         make(chan struct{}),
+		cancel:       cancel,
 	}
 
 	p.cwg.Add(1)
