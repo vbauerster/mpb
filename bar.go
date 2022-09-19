@@ -35,7 +35,6 @@ type bState struct {
 	total             int64
 	current           int64
 	refill            int64
-	lastIncrement     int64
 	trimSpace         bool
 	completed         bool
 	aborted           bool
@@ -225,7 +224,6 @@ func (b *Bar) SetTotal(total int64, triggerCompleteNow bool) {
 func (b *Bar) SetCurrent(current int64) {
 	select {
 	case b.operateState <- func(s *bState) {
-		s.lastIncrement = current - s.current
 		s.current = current
 		if s.triggerComplete && s.current >= s.total {
 			s.current = s.total
@@ -254,7 +252,6 @@ func (b *Bar) IncrInt64(n int64) {
 	}
 	select {
 	case b.operateState <- func(s *bState) {
-		s.lastIncrement = n
 		s.current += n
 		if s.triggerComplete && s.current >= s.total {
 			s.current = s.total
@@ -266,25 +263,33 @@ func (b *Bar) IncrInt64(n int64) {
 	}
 }
 
-// DecoratorEwmaUpdate updates all EWMA based decorators. Should be
-// called on each iteration, because EWMA's unit of measure is an
-// iteration's duration. Panics if called before *Bar.Incr... family
-// methods.
-func (b *Bar) DecoratorEwmaUpdate(dur time.Duration) {
+// EwmaIncrement is a shorthand for b.EwmaIncrInt64(1, dur).
+func (b *Bar) EwmaIncrement(dur time.Duration) {
+	b.EwmaIncrInt64(1, dur)
+}
+
+// EwmaIncrBy is a shorthand for b.EwmaIncrInt64(int64(n), dur).
+func (b *Bar) EwmaIncrBy(n int, dur time.Duration) {
+	b.EwmaIncrInt64(int64(n), dur)
+}
+
+// EwmaIncrInt64 increments progress by amount of n and updates EWMA based
+// decorators by dur of a single iteration.
+func (b *Bar) EwmaIncrInt64(n int64, dur time.Duration) {
+	if n <= 0 {
+		return
+	}
 	select {
 	case b.operateState <- func(s *bState) {
-		if s.lastIncrement > 0 {
-			s.decoratorEwmaUpdate(dur)
-			s.lastIncrement = 0
-		} else {
-			panic("increment required before ewma iteration update")
+		s.current += n
+		s.ewmaUpdate(n, dur)
+		if s.triggerComplete && s.current >= s.total {
+			s.current = s.total
+			s.completed = true
+			go b.forceRefresh(s.manualRefresh)
 		}
 	}:
 	case <-b.done:
-		if b.bs.lastIncrement > 0 {
-			b.bs.decoratorEwmaUpdate(dur)
-			b.bs.lastIncrement = 0
-		}
 	}
 }
 
@@ -565,16 +570,16 @@ func (s *bState) subscribeDecorators() {
 	}
 }
 
-func (s bState) decoratorEwmaUpdate(dur time.Duration) {
+func (s bState) ewmaUpdate(n int64, dur time.Duration) {
 	var wg sync.WaitGroup
 	for i := 0; i < len(s.ewmaDecorators); i++ {
 		switch d := s.ewmaDecorators[i]; i {
 		case len(s.ewmaDecorators) - 1:
-			d.EwmaUpdate(s.lastIncrement, dur)
+			d.EwmaUpdate(n, dur)
 		default:
 			wg.Add(1)
 			go func() {
-				d.EwmaUpdate(s.lastIncrement, dur)
+				d.EwmaUpdate(n, dur)
 				wg.Done()
 			}()
 		}

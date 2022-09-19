@@ -27,15 +27,14 @@ func (x proxyWriterTo) WriteTo(w io.Writer) (int64, error) {
 }
 
 type ewmaProxyReader struct {
-	proxyReader
+	io.ReadCloser
+	bar *Bar
 }
 
 func (x ewmaProxyReader) Read(p []byte) (int, error) {
 	start := time.Now()
-	n, err := x.proxyReader.Read(p)
-	if n > 0 {
-		x.bar.DecoratorEwmaUpdate(time.Since(start))
-	}
+	n, err := x.ReadCloser.Read(p)
+	x.bar.EwmaIncrBy(n, time.Since(start))
 	return n, err
 }
 
@@ -46,21 +45,20 @@ type ewmaProxyWriterTo struct {
 func (x ewmaProxyWriterTo) WriteTo(w io.Writer) (int64, error) {
 	start := time.Now()
 	n, err := x.ReadCloser.(io.WriterTo).WriteTo(w)
-	if n > 0 {
-		x.bar.DecoratorEwmaUpdate(time.Since(start))
-	}
+	x.bar.EwmaIncrInt64(n, time.Since(start))
 	return n, err
 }
 
 func newProxyReader(r io.Reader, b *Bar, hasEwma bool) io.ReadCloser {
-	pr := proxyReader{toReadCloser(r), b}
+	rc := toReadCloser(r)
 	if hasEwma {
-		epr := ewmaProxyReader{pr}
+		epr := ewmaProxyReader{rc, b}
 		if _, ok := r.(io.WriterTo); ok {
 			return ewmaProxyWriterTo{epr}
 		}
 		return epr
 	}
+	pr := proxyReader{rc, b}
 	if _, ok := r.(io.WriterTo); ok {
 		return proxyWriterTo{pr}
 	}
