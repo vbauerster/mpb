@@ -239,8 +239,8 @@ func (p *Progress) Wait() {
 }
 
 // Shutdown cancels any running bar immediately and then shutdowns (*Progress)
-// instance. Normally you shouldn't call this method unless you know what are
-// you doing. Proper way to shutdown is to call (*Progress).Wait() instead.
+// instance. Normally this method shouldn't be called unless you know what you
+// are doing. Proper way to shutdown is to call (*Progress).Wait() instead.
 func (p *Progress) Shutdown() {
 	p.cancel()
 	p.bwg.Wait()
