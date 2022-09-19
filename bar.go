@@ -237,6 +237,28 @@ func (b *Bar) SetCurrent(current int64) {
 	}
 }
 
+// EwmaSetCurrent sets progress' current to an arbitrary value and updates
+// EWMA based decorators by dur of a single iteration.
+func (b *Bar) EwmaSetCurrent(current int64, dur time.Duration) {
+	if current < 0 {
+		return
+	}
+	select {
+	case b.operateState <- func(s *bState) {
+		if n := current - s.current; n > 0 {
+			s.ewmaUpdate(n, dur)
+		}
+		s.current = current
+		if s.triggerComplete && s.current >= s.total {
+			s.current = s.total
+			s.completed = true
+			go b.forceRefresh(s.manualRefresh)
+		}
+	}:
+	case <-b.done:
+	}
+}
+
 // Increment is a shorthand for b.IncrInt64(1).
 func (b *Bar) Increment() {
 	b.IncrInt64(1)
