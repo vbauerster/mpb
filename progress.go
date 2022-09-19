@@ -240,19 +240,7 @@ func (p *Progress) shutdown() {
 func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 	defer p.cwg.Done()
 
-	render := func(out io.Writer) {
-		err := s.render(cw)
-		for err != nil {
-			if out != nil {
-				_, err = fmt.Fprintln(out, err)
-			} else {
-				panic(err)
-			}
-			out = nil
-		}
-	}
-
-	p.refreshCh = s.newTicker(p.done)
+	refreshCh := s.newTicker(p.done)
 
 	for {
 		select {
@@ -260,11 +248,22 @@ func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 			op(s)
 		case fn := <-p.interceptIo:
 			fn(cw)
-		case <-p.refreshCh:
-			render(s.debugOut)
+		case <-refreshCh:
+			err := s.render(cw)
+			if err != nil {
+				p.cancel() // cancel all bars
+				p.once.Do(p.shutdown)
+				s.heapUpdated = false
+				refreshCh = nil
+				_, _ = fmt.Fprintln(s.debugOut, err)
+			}
 		case <-s.shutdownNotifier:
 			for s.heapUpdated {
-				render(s.debugOut)
+				err := s.render(cw)
+				if err != nil {
+					_, _ = fmt.Fprintln(s.debugOut, err)
+					return
+				}
 			}
 			return
 		}
