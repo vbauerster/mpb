@@ -52,6 +52,7 @@ type bState struct {
 	filler            BarFiller
 	middleware        func(BarFiller) BarFiller
 	extender          extenderFunc
+	refreshCh         chan interface{}
 
 	wait struct {
 		bar  *Bar // key for (*pState).queueBars
@@ -184,7 +185,7 @@ func (b *Bar) EnableTriggerComplete() {
 		if s.current >= s.total {
 			s.current = s.total
 			s.completed = true
-			go b.forceRefresh()
+			go b.forceRefresh(s.refreshCh)
 		} else {
 			s.triggerComplete = true
 		}
@@ -212,7 +213,7 @@ func (b *Bar) SetTotal(total int64, triggerCompleteNow bool) {
 		if triggerCompleteNow {
 			s.current = s.total
 			s.completed = true
-			go b.forceRefresh()
+			go b.forceRefresh(s.refreshCh)
 		}
 	}:
 	case <-b.done:
@@ -229,7 +230,7 @@ func (b *Bar) SetCurrent(current int64) {
 		if s.triggerComplete && s.current >= s.total {
 			s.current = s.total
 			s.completed = true
-			go b.forceRefresh()
+			go b.forceRefresh(s.refreshCh)
 		}
 	}:
 	case <-b.done:
@@ -258,7 +259,7 @@ func (b *Bar) IncrInt64(n int64) {
 		if s.triggerComplete && s.current >= s.total {
 			s.current = s.total
 			s.completed = true
-			go b.forceRefresh()
+			go b.forceRefresh(s.refreshCh)
 		}
 	}:
 	case <-b.done:
@@ -318,7 +319,7 @@ func (b *Bar) Abort(drop bool) {
 		}
 		s.aborted = true
 		s.dropOnComplete = drop
-		go b.forceRefresh()
+		go b.forceRefresh(s.refreshCh)
 	}:
 	case <-b.done:
 	}
@@ -403,7 +404,7 @@ func (b *Bar) render(tw int) {
 	}
 }
 
-func (b *Bar) forceRefresh() {
+func (b *Bar) forceRefresh(refreshCh chan interface{}) {
 	var anyOtherRunning bool
 	b.container.traverseBars(func(bar *Bar) bool {
 		anyOtherRunning = b != bar && bar.IsRunning()
@@ -412,7 +413,7 @@ func (b *Bar) forceRefresh() {
 	if !anyOtherRunning {
 		for {
 			select {
-			case b.container.refreshCh <- time.Now():
+			case refreshCh <- time.Now():
 				time.Sleep(prr)
 			case <-b.done:
 				return

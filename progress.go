@@ -427,11 +427,12 @@ func (s *pState) updateSyncMatrix() {
 
 func (s *pState) makeBarState(total int64, filler BarFiller, options ...BarOption) *bState {
 	bs := &bState{
-		id:       s.idCount,
-		priority: s.idCount,
-		reqWidth: s.reqWidth,
-		total:    total,
-		filler:   filler,
+		id:        s.idCount,
+		priority:  s.idCount,
+		reqWidth:  s.reqWidth,
+		total:     total,
+		filler:    filler,
+		refreshCh: s.externalRefresh,
 	}
 
 	if total > 0 {
