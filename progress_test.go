@@ -99,20 +99,15 @@ func TestWithContext(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	p := mpb.NewWithContext(ctx, mpb.WithShutdownNotifier(shutdown), mpb.WithOutput(io.Discard))
 
-	done := make(chan struct{})
 	bar := p.AddBar(0) // never complete bar
 	go func() {
 		for !bar.Aborted() {
 			time.Sleep(randomDuration(100 * time.Millisecond))
 			cancel()
 		}
-		close(done)
 	}()
 
-	go func() {
-		<-done
-		p.Wait()
-	}()
+	go p.Wait()
 
 	select {
 	case <-shutdown:
