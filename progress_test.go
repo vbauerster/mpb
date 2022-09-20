@@ -1,9 +1,12 @@
 package mpb_test
 
 import (
+	"bytes"
 	"context"
+	"errors"
 	"io"
 	"math/rand"
+	"strings"
 	"testing"
 	"time"
 
@@ -178,6 +181,44 @@ func TestMaxWidthDistributor(t *testing.T) {
 
 	if !res {
 		t.Error("maxWidthDistributor stuck in the middle")
+	}
+}
+
+func TestProgressShutdownsWithErrFiller(t *testing.T) {
+	var debug bytes.Buffer
+	shutdown := make(chan struct{})
+	p := mpb.New(
+		mpb.WithShutdownNotifier(shutdown),
+		mpb.WithOutput(io.Discard),
+		mpb.WithDebugOutput(&debug),
+	)
+
+	testError := errors.New("test error")
+	bar := p.AddBar(100,
+		mpb.BarFillerMiddleware(func(base mpb.BarFiller) mpb.BarFiller {
+			return mpb.BarFillerFunc(func(w io.Writer, st decor.Statistics) error {
+				if st.Current >= 42 {
+					return testError
+				}
+				return base.Fill(w, st)
+			})
+		}),
+	)
+
+	for bar.IsRunning() {
+		time.Sleep(randomDuration(100 * time.Millisecond))
+		bar.Increment()
+	}
+
+	go p.Wait()
+
+	select {
+	case <-shutdown:
+		if err := strings.TrimSpace(debug.String()); err != testError.Error() {
+			t.Errorf("Expected err: %q, got %q\n", testError.Error(), err)
+		}
+	case <-time.After(timeout):
+		t.Errorf("Progress didn't shutdown after %v", timeout)
 	}
 }
 
