@@ -231,9 +231,8 @@ func (p *Progress) Wait() {
 
 	// wait for bars to quit, if any
 	p.bwg.Wait()
-
+	// shutdown
 	p.once.Do(p.shutdown)
-
 	// wait for container to quit
 	p.cwg.Wait()
 }
