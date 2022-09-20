@@ -197,12 +197,11 @@ func TestProgressShutdownsWithErrFiller(t *testing.T) {
 		}),
 	)
 
-	for bar.IsRunning() {
-		time.Sleep(randomDuration(100 * time.Millisecond))
-		bar.Increment()
-	}
-
-	go p.Wait()
+	go func() {
+		for bar.IsRunning() {
+			bar.Increment()
+		}
+	}()
 
 	select {
 	case <-shutdown:
@@ -212,6 +211,7 @@ func TestProgressShutdownsWithErrFiller(t *testing.T) {
 	case <-time.After(timeout):
 		t.Errorf("Progress didn't shutdown after %v", timeout)
 	}
+	p.Wait()
 }
 
 func randomDuration(max time.Duration) time.Duration {
