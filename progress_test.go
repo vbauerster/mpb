@@ -112,9 +112,7 @@ func TestWithContext(t *testing.T) {
 	}
 }
 
-// MaxWidthDistributor shouldn't stuck in the middle while removing or aborting a bar
 func TestMaxWidthDistributor(t *testing.T) {
-
 	makeWrapper := func(f func([]chan int), start, end chan struct{}) func([]chan int) {
 		return func(column []chan int) {
 			start <- struct{}{}
@@ -126,6 +124,7 @@ func TestMaxWidthDistributor(t *testing.T) {
 	ready := make(chan struct{})
 	start := make(chan struct{})
 	end := make(chan struct{})
+	// mpb.MaxWidthDistributor shouldn't stuck in the middle while removing or aborting a bar
 	mpb.MaxWidthDistributor = makeWrapper(mpb.MaxWidthDistributor, start, end)
 
 	total := 100
