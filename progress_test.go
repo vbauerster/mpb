@@ -23,8 +23,7 @@ func init() {
 }
 
 func TestBarCount(t *testing.T) {
-	shutdown := make(chan struct{})
-	p := mpb.New(mpb.WithShutdownNotifier(shutdown), mpb.WithOutput(io.Discard))
+	p := mpb.New(mpb.WithOutput(io.Discard))
 
 	b := p.AddBar(0, mpb.BarRemoveOnComplete())
 
@@ -40,13 +39,7 @@ func TestBarCount(t *testing.T) {
 		t.Errorf("BarCount want: %d, got: %d\n", 0, count)
 	}
 
-	go p.Wait()
-
-	select {
-	case <-shutdown:
-	case <-time.After(timeout):
-		t.Errorf("Progress didn't shutdown after %v", timeout)
-	}
+	p.Wait()
 }
 
 func TestBarAbort(t *testing.T) {
