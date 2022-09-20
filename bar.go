@@ -38,7 +38,6 @@ type bState struct {
 	trimSpace         bool
 	completed         bool
 	aborted           bool
-	recovered         bool
 	triggerComplete   bool
 	dropOnComplete    bool
 	noPop             bool
