@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	timeout = 200 * time.Millisecond
+	timeout = 300 * time.Millisecond
 )
 
 func init() {
