@@ -269,10 +269,10 @@ func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 			err := render()
 			if err != nil {
 				p.cancel() // cancel all bars
-				p.once.Do(p.shutdown)
+				_, _ = fmt.Fprintln(s.debugOut, err)
 				s.heapUpdated = false
 				render = func() error { return nil }
-				_, _ = fmt.Fprintln(s.debugOut, err)
+				p.once.Do(p.shutdown)
 			}
 		case <-s.shutdownNotifier:
 			for s.heapUpdated {
