@@ -239,14 +239,14 @@ func (b *Bar) SetCurrent(current int64) {
 
 // EwmaSetCurrent sets progress' current to an arbitrary value and updates
 // EWMA based decorators by dur of a single iteration.
-func (b *Bar) EwmaSetCurrent(current int64, dur time.Duration) {
+func (b *Bar) EwmaSetCurrent(current int64, iterDur time.Duration) {
 	if current < 0 {
 		return
 	}
 	select {
 	case b.operateState <- func(s *bState) {
 		if n := current - s.current; n > 0 {
-			s.ewmaUpdate(n, dur)
+			s.ewmaUpdate(n, iterDur)
 		}
 		s.current = current
 		if s.triggerComplete && s.current >= s.total {
@@ -287,25 +287,25 @@ func (b *Bar) IncrInt64(n int64) {
 	}
 }
 
-// EwmaIncrement is a shorthand for b.EwmaIncrInt64(1, dur).
-func (b *Bar) EwmaIncrement(dur time.Duration) {
-	b.EwmaIncrInt64(1, dur)
+// EwmaIncrement is a shorthand for b.EwmaIncrInt64(1, iterDur).
+func (b *Bar) EwmaIncrement(iterDur time.Duration) {
+	b.EwmaIncrInt64(1, iterDur)
 }
 
-// EwmaIncrBy is a shorthand for b.EwmaIncrInt64(int64(n), dur).
-func (b *Bar) EwmaIncrBy(n int, dur time.Duration) {
-	b.EwmaIncrInt64(int64(n), dur)
+// EwmaIncrBy is a shorthand for b.EwmaIncrInt64(int64(n), iterDur).
+func (b *Bar) EwmaIncrBy(n int, iterDur time.Duration) {
+	b.EwmaIncrInt64(int64(n), iterDur)
 }
 
 // EwmaIncrInt64 increments progress by amount of n and updates EWMA based
 // decorators by dur of a single iteration.
-func (b *Bar) EwmaIncrInt64(n int64, dur time.Duration) {
+func (b *Bar) EwmaIncrInt64(n int64, iterDur time.Duration) {
 	if n <= 0 {
 		return
 	}
 	select {
 	case b.operateState <- func(s *bState) {
-		s.ewmaUpdate(n, dur)
+		s.ewmaUpdate(n, iterDur)
 		s.current += n
 		if s.triggerComplete && s.current >= s.total {
 			s.current = s.total
