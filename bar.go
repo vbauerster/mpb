@@ -183,6 +183,7 @@ func (b *Bar) EnableTriggerComplete() {
 		if s.current >= s.total {
 			s.current = s.total
 			s.completed = true
+			b.container.bwg.Add(1)
 			go b.forceRefresh(s.manualRefresh)
 		} else {
 			s.triggerComplete = true
@@ -211,6 +212,7 @@ func (b *Bar) SetTotal(total int64, triggerCompleteNow bool) {
 		if triggerCompleteNow {
 			s.current = s.total
 			s.completed = true
+			b.container.bwg.Add(1)
 			go b.forceRefresh(s.manualRefresh)
 		}
 	}:
@@ -229,6 +231,7 @@ func (b *Bar) SetCurrent(current int64) {
 		if s.triggerComplete && s.current >= s.total {
 			s.current = s.total
 			s.completed = true
+			b.container.bwg.Add(1)
 			go b.forceRefresh(s.manualRefresh)
 		}
 	}:
@@ -251,6 +254,7 @@ func (b *Bar) EwmaSetCurrent(current int64, iterDur time.Duration) {
 		if s.triggerComplete && s.current >= s.total {
 			s.current = s.total
 			s.completed = true
+			b.container.bwg.Add(1)
 			go b.forceRefresh(s.manualRefresh)
 		}
 	}:
@@ -279,6 +283,7 @@ func (b *Bar) IncrInt64(n int64) {
 		if s.triggerComplete && s.current >= s.total {
 			s.current = s.total
 			s.completed = true
+			b.container.bwg.Add(1)
 			go b.forceRefresh(s.manualRefresh)
 		}
 	}:
@@ -309,6 +314,7 @@ func (b *Bar) EwmaIncrInt64(n int64, iterDur time.Duration) {
 		if s.triggerComplete && s.current >= s.total {
 			s.current = s.total
 			s.completed = true
+			b.container.bwg.Add(1)
 			go b.forceRefresh(s.manualRefresh)
 		}
 	}:
@@ -347,6 +353,7 @@ func (b *Bar) Abort(drop bool) {
 		}
 		s.aborted = true
 		s.dropOnComplete = drop
+		b.container.bwg.Add(1)
 		go b.forceRefresh(s.manualRefresh)
 	}:
 	case <-b.done:
@@ -433,6 +440,7 @@ func (b *Bar) render(tw int) {
 }
 
 func (b *Bar) forceRefresh(refreshCh chan interface{}) {
+	defer b.container.bwg.Done()
 	var anyOtherRunning bool
 	b.container.traverseBars(func(bar *Bar) bool {
 		anyOtherRunning = b != bar && bar.IsRunning()
