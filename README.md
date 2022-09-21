@@ -2,6 +2,7 @@
 
 [![GoDoc](https://pkg.go.dev/badge/github.com/vbauerster/mpb)](https://pkg.go.dev/github.com/vbauerster/mpb/v8)
 [![Test status](https://github.com/vbauerster/mpb/actions/workflows/test.yml/badge.svg)](https://github.com/vbauerster/mpb/actions/workflows/test.yml)
+[![Lint status](https://github.com/vbauerster/mpb/actions/workflows/golangci-lint.yml/badge.svg)](https://github.com/vbauerster/mpb/actions/workflows/golangci-lint.yml)
 
 **mpb** is a Go lib for rendering progress bars in terminal applications.
 
