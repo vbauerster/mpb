@@ -317,7 +317,7 @@ func (s *pState) render(cw *cwriter.Writer) error {
 	return s.flush(cw, height)
 }
 
-func (s *pState) flush(cw *cwriter.Writer, height int) (err error) {
+func (s *pState) flush(cw *cwriter.Writer, height int) error {
 	var wg sync.WaitGroup
 	var popCount int
 
@@ -325,10 +325,7 @@ func (s *pState) flush(cw *cwriter.Writer, height int) (err error) {
 		b := heap.Pop(&s.bHeap).(*Bar)
 		frame := <-b.frameCh
 		if frame.err != nil {
-			if err == nil {
-				err = frame.err
-			}
-			continue
+			return frame.err
 		}
 		var usedRows int
 		for i := len(frame.rows) - 1; i >= 0; i-- {
@@ -368,10 +365,6 @@ func (s *pState) flush(cw *cwriter.Writer, height int) (err error) {
 		s.pool = append(s.pool, b)
 	}
 
-	if err != nil {
-		return err
-	}
-
 	wg.Add(1)
 	go func() {
 		for _, b := range s.pool {
@@ -388,7 +381,7 @@ func (s *pState) flush(cw *cwriter.Writer, height int) (err error) {
 		}
 	}
 
-	err = cw.Flush(len(s.rows) - popCount)
+	err := cw.Flush(len(s.rows) - popCount)
 	wg.Wait()
 	s.rows = s.rows[:0]
 	s.pool = s.pool[:0]
