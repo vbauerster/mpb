@@ -367,7 +367,7 @@ func (s *pState) flush(wg *sync.WaitGroup, cw *cwriter.Writer, height int) error
 		s.pool = append(s.pool, b)
 	}
 
-	switch l := len(s.pool); l {
+	switch len(s.pool) {
 	case 0:
 		if s.heapUpdated {
 			s.updateSyncMatrix()
