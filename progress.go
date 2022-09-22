@@ -254,7 +254,12 @@ func (p *Progress) shutdown() {
 func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 	defer p.cwg.Done()
 
-	render := func() error { return s.render(cw) }
+	render := func() error {
+		if s.bHeap.Len() == 0 {
+			return nil
+		}
+		return s.render(cw)
+	}
 
 	refreshCh := s.newTicker(p.done)
 
