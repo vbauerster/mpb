@@ -365,13 +365,18 @@ func (s *pState) flush(cw *cwriter.Writer, height int) error {
 		s.pool = append(s.pool, b)
 	}
 
-	wg.Add(1)
-	go func() {
-		for _, b := range s.pool {
-			heap.Push(&s.bHeap, b)
-		}
-		wg.Done()
-	}()
+	switch l := len(s.pool); l {
+	case 1:
+		heap.Push(&s.bHeap, s.pool[0])
+	default:
+		wg.Add(1)
+		go func() {
+			for _, b := range s.pool {
+				heap.Push(&s.bHeap, b)
+			}
+			wg.Done()
+		}()
+	}
 
 	for i := len(s.rows) - 1; i >= 0; i-- {
 		_, err := cw.ReadFrom(s.rows[i])
