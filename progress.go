@@ -366,6 +366,11 @@ func (s *pState) flush(cw *cwriter.Writer, height int) error {
 	}
 
 	switch l := len(s.pool); l {
+	case 0:
+		if s.heapUpdated {
+			s.updateSyncMatrix()
+			s.heapUpdated = false
+		}
 	case 1:
 		heap.Push(&s.bHeap, s.pool[0])
 	default:
