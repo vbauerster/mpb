@@ -72,7 +72,6 @@ func New(options ...ContainerOption) *Progress {
 // context. It's not possible to reuse instance after (*Progress).Wait
 // method has been called.
 func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
-	ctx, cancel := context.WithCancel(ctx)
 	s := &pState{
 		rr:            prr,
 		bHeap:         priorityQueue{},
@@ -95,6 +94,7 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 		s.shutdownNotifier = make(chan struct{})
 	}
 
+	ctx, cancel := context.WithCancel(ctx)
 	p := &Progress{
 		ctx:          ctx,
 		uwg:          s.uwg,
