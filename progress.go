@@ -297,12 +297,13 @@ func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 }
 
 func (s *pState) render(cw *cwriter.Writer) error {
+	var wg sync.WaitGroup
 	if s.heapUpdated {
 		s.updateSyncMatrix()
 		s.heapUpdated = false
 	}
-	syncWidth(s.pMatrix)
-	syncWidth(s.aMatrix)
+	syncWidth(&wg, s.pMatrix)
+	syncWidth(&wg, s.aMatrix)
 
 	width, height, err := cw.GetTermSize()
 	if err != nil {
@@ -314,11 +315,12 @@ func (s *pState) render(cw *cwriter.Writer) error {
 		go bar.render(width)
 	}
 
-	return s.flush(cw, height)
+	err = s.flush(&wg, cw, height)
+	wg.Wait()
+	return err
 }
 
-func (s *pState) flush(cw *cwriter.Writer, height int) error {
-	var wg sync.WaitGroup
+func (s *pState) flush(wg *sync.WaitGroup, cw *cwriter.Writer, height int) error {
 	var popCount int
 
 	for s.bHeap.Len() > 0 {
@@ -373,12 +375,14 @@ func (s *pState) flush(cw *cwriter.Writer, height int) error {
 		}
 	case 1:
 		heap.Push(&s.bHeap, s.pool[0])
+		s.pool = s.pool[:0]
 	default:
 		wg.Add(1)
 		go func() {
 			for _, b := range s.pool {
 				heap.Push(&s.bHeap, b)
 			}
+			s.pool = s.pool[:0]
 			wg.Done()
 		}()
 	}
@@ -386,15 +390,13 @@ func (s *pState) flush(cw *cwriter.Writer, height int) error {
 	for i := len(s.rows) - 1; i >= 0; i-- {
 		_, err := cw.ReadFrom(s.rows[i])
 		if err != nil {
-			wg.Wait()
+			s.rows = s.rows[:0]
 			return err
 		}
 	}
 
 	err := cw.Flush(len(s.rows) - popCount)
-	wg.Wait()
 	s.rows = s.rows[:0]
-	s.pool = s.pool[:0]
 	return err
 }
 
@@ -483,13 +485,14 @@ func (s *pState) makeBarState(total int64, filler BarFiller, options ...BarOptio
 	return bs
 }
 
-func syncWidth(matrix map[int][]chan int) {
+func syncWidth(wg *sync.WaitGroup, matrix map[int][]chan int) {
 	for _, column := range matrix {
-		go maxWidthDistributor(column)
+		wg.Add(1)
+		go maxWidthDistributor(wg, column)
 	}
 }
 
-func maxWidthDistributor(column []chan int) {
+func maxWidthDistributor(wg *sync.WaitGroup, column []chan int) {
 	var maxWidth int
 	for _, ch := range column {
 		if w := <-ch; w > maxWidth {
@@ -499,4 +502,5 @@ func maxWidthDistributor(column []chan int) {
 	for _, ch := range column {
 		ch <- maxWidth
 	}
+	wg.Done()
 }

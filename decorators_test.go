@@ -183,30 +183,26 @@ func testDecoratorConcurrently(t *testing.T, testCases [][]step) {
 	}
 
 	for _, columnCase := range testCases {
-		mpb.SyncWidth(toSyncMatrix(columnCase))
-		numBars := len(columnCase)
-		gott := make([]chan string, numBars)
-		wg := new(sync.WaitGroup)
-		wg.Add(numBars)
-		for i, step := range columnCase {
+		var wg sync.WaitGroup
+		mpb.SyncWidth(&wg, toSyncMatrix(columnCase))
+		var results []chan string
+		for _, step := range columnCase {
 			step := step
-			ch := make(chan string, 1)
+			ch := make(chan string)
 			go func() {
-				defer wg.Done()
 				ch <- step.decorator.Decor(step.stat)
 			}()
-			gott[i] = ch
+			results = append(results, ch)
 		}
-		wg.Wait()
 
-		for i, ch := range gott {
-			got := <-ch
+		for i, ch := range results {
+			res := <-ch
 			want := columnCase[i].want
-			if got != want {
-				t.Errorf("Want: %q, Got: %q\n", want, got)
+			if res != want {
+				t.Errorf("Want: %q, Got: %q\n", want, res)
 			}
 		}
-
+		wg.Wait()
 	}
 }
 
