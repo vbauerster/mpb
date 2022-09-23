@@ -10,13 +10,14 @@ import (
 )
 
 func main() {
+	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 	p := mpb.New(mpb.PopCompletedMode())
-
 	total, numBars := 100, 4
 	for i := 0; i < numBars; i++ {
 		name := fmt.Sprintf("Bar#%d:", i)
 		bar := p.AddBar(int64(total),
 			mpb.BarFillerOnComplete(fmt.Sprintf("%s has been completed", name)),
+			mpb.BarRemoveOnComplete(),
 			mpb.BarFillerTrim(),
 			mpb.PrependDecorators(
 				decor.OnComplete(decor.Name(name), ""),
@@ -28,7 +29,6 @@ func main() {
 			),
 		)
 		// simulating some work
-		rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 		max := 100 * time.Millisecond
 		for i := 0; i < total; i++ {
 			// start variable is solely for EWMA calculation
