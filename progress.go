@@ -408,15 +408,13 @@ func (s *pState) newTicker(done <-chan struct{}) chan time.Time {
 	ch := make(chan time.Time)
 	go func() {
 		var autoRefresh <-chan time.Time
-		if !s.disableAutoRefresh {
-			if !s.outputDiscarded {
-				if s.renderDelay != nil {
-					<-s.renderDelay
-				}
-				ticker := time.NewTicker(s.rr)
-				defer ticker.Stop()
-				autoRefresh = ticker.C
+		if !s.disableAutoRefresh && !s.outputDiscarded {
+			if s.renderDelay != nil {
+				<-s.renderDelay
 			}
+			ticker := time.NewTicker(s.rr)
+			defer ticker.Stop()
+			autoRefresh = ticker.C
 		}
 		for {
 			select {
