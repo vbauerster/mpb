@@ -32,6 +32,7 @@ type bState struct {
 	id                int
 	priority          int
 	reqWidth          int
+	shutdown          int
 	total             int64
 	current           int64
 	refill            int64
@@ -400,7 +401,6 @@ func (b *Bar) serve(ctx context.Context, bs *bState) {
 }
 
 func (b *Bar) render(tw int) {
-	var done bool
 	fn := func(s *bState) {
 		var rows []io.Reader
 		stat := newStatistics(tw, s)
@@ -418,8 +418,9 @@ func (b *Bar) render(tw int) {
 			}
 		}
 		frame := &renderFrame{rows: rows}
-		if !done && (s.completed || s.aborted) {
-			frame.shutdown++
+		if s.completed || s.aborted {
+			s.shutdown++
+			frame.shutdown = s.shutdown
 			b.cancel()
 		}
 		b.frameCh <- frame
@@ -427,7 +428,6 @@ func (b *Bar) render(tw int) {
 	select {
 	case b.operateState <- fn:
 	case <-b.done:
-		done = true
 		fn(b.bs)
 	}
 }
