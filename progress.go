@@ -351,12 +351,15 @@ func (s *pState) flush(wg *sync.WaitGroup, cw *cwriter.Writer, height int) error
 				s.pool = append(s.pool, qb)
 				drop = true
 			} else if s.popCompleted && !b.bs.noPop {
-				if frame.shutdown > 1 {
-					popCount += usedRows
-					drop = true
-				} else {
-					s.popPriority++
+				switch frame.shutdown {
+				case 1:
 					b.priority = s.popPriority
+					s.popPriority++
+					drop = false
+				default:
+					if drop {
+						popCount += usedRows
+					}
 				}
 			}
 			if drop {
