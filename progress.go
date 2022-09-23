@@ -342,27 +342,28 @@ func (s *pState) flush(wg *sync.WaitGroup, cw *cwriter.Writer, height int) error
 				}()
 			}
 		}
-		if frame.shutdown != 0 {
+		if frame.shutdown {
 			b.Wait() // waiting for b.done, so it's safe to read b.bs
-			drop := b.bs.dropOnComplete
 			if qb, ok := s.queueBars[b]; ok {
 				delete(s.queueBars, b)
 				qb.priority = b.priority
 				s.pool = append(s.pool, qb)
-				drop = true
-			} else if s.popCompleted && !b.bs.noPop {
-				switch frame.shutdown {
+				s.heapUpdated = true
+				continue
+			}
+			if s.popCompleted && !b.bs.noPop {
+				switch b.bs.shutdown++; b.bs.shutdown {
 				case 1:
 					b.priority = s.popPriority
 					s.popPriority++
-					drop = false
 				default:
-					if drop {
+					if b.bs.dropOnComplete {
 						popCount += usedRows
+						s.heapUpdated = true
+						continue
 					}
 				}
-			}
-			if drop {
+			} else if b.bs.dropOnComplete {
 				s.heapUpdated = true
 				continue
 			}
