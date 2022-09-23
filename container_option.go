@@ -93,7 +93,9 @@ func WithDebugOutput(w io.Writer) ContainerOption {
 	}
 }
 
-// PopCompletedMode will pop and stop rendering completed bars.
+// PopCompletedMode will pop completed bars to the top.
+// To stop rendering bar after it has been popped, use
+// mpb.BarRemoveOnComplete() option on that bar.
 func PopCompletedMode() ContainerOption {
 	return func(s *pState) {
 		s.popCompleted = true
