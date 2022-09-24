@@ -73,25 +73,22 @@ func New(options ...ContainerOption) *Progress {
 // method has been called.
 func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 	s := &pState{
-		rr:            prr,
-		bHeap:         priorityQueue{},
-		rows:          make([]io.Reader, 0, 64),
-		pool:          make([]*Bar, 0, 64),
-		manualRefresh: make(chan interface{}),
-		queueBars:     make(map[*Bar]*Bar),
-		popPriority:   math.MinInt32,
-		output:        os.Stdout,
-		debugOut:      io.Discard,
+		rr:               prr,
+		bHeap:            priorityQueue{},
+		rows:             make([]io.Reader, 0, 64),
+		pool:             make([]*Bar, 0, 64),
+		manualRefresh:    make(chan interface{}),
+		shutdownNotifier: make(chan struct{}),
+		queueBars:        make(map[*Bar]*Bar),
+		popPriority:      math.MinInt32,
+		output:           os.Stdout,
+		debugOut:         io.Discard,
 	}
 
 	for _, opt := range options {
 		if opt != nil {
 			opt(s)
 		}
-	}
-
-	if s.shutdownNotifier == nil {
-		s.shutdownNotifier = make(chan struct{})
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
