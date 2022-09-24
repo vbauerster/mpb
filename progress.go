@@ -73,7 +73,6 @@ func New(options ...ContainerOption) *Progress {
 // method has been called.
 func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 	s := &pState{
-		bHeap:            priorityQueue{},
 		rows:             make([]io.Reader, 0, 64),
 		pool:             make([]*Bar, 0, 64),
 		refreshRate:      defaultRefreshRate,
