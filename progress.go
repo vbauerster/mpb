@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	prr = 150 * time.Millisecond // default RefreshRate
+	defaultRefreshRate = 150 * time.Millisecond
 )
 
 // DoneError represents an error when `*mpb.Progress` is done but its functionality is requested.
@@ -46,7 +46,7 @@ type pState struct {
 	pool []*Bar
 
 	// following are provided/overrided by user
-	rr                 time.Duration
+	refreshRate        time.Duration
 	idCount            int
 	reqWidth           int
 	popPriority        int
@@ -73,14 +73,14 @@ func New(options ...ContainerOption) *Progress {
 // method has been called.
 func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 	s := &pState{
-		rr:               prr,
 		bHeap:            priorityQueue{},
 		rows:             make([]io.Reader, 0, 64),
 		pool:             make([]*Bar, 0, 64),
+		refreshRate:      defaultRefreshRate,
+		popPriority:      math.MinInt32,
 		manualRefresh:    make(chan interface{}),
 		shutdownNotifier: make(chan struct{}),
 		queueBars:        make(map[*Bar]*Bar),
-		popPriority:      math.MinInt32,
 		output:           os.Stdout,
 		debugOut:         io.Discard,
 	}
@@ -409,7 +409,7 @@ func (s *pState) newTicker(done <-chan struct{}) chan time.Time {
 			if s.renderDelay != nil {
 				<-s.renderDelay
 			}
-			ticker := time.NewTicker(s.rr)
+			ticker := time.NewTicker(s.refreshRate)
 			defer ticker.Stop()
 			autoRefresh = ticker.C
 		}
