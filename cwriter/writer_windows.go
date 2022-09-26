@@ -3,6 +3,8 @@
 package cwriter
 
 import (
+	"bytes"
+	"io"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
@@ -14,6 +16,19 @@ var (
 	procSetConsoleCursorPosition   = kernel32.NewProc("SetConsoleCursorPosition")
 	procFillConsoleOutputCharacter = kernel32.NewProc("FillConsoleOutputCharacterW")
 )
+
+// Writer is a buffered terminal writer, which moves cursor N lines up
+// on each flush except the first one, where N is a number of lines of
+// a previous flush.
+type Writer struct {
+	*bytes.Buffer
+	out      io.Writer
+	ew       escWriter
+	lines    int
+	fd       int
+	terminal bool
+	termSize func(int) (int, int, error)
+}
 
 // Flush flushes the underlying buffer.
 // It's caller's responsibility to pass correct number of lines.

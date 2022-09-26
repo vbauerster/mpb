@@ -17,19 +17,6 @@ const (
 // ErrNotTTY not a TeleTYpewriter error.
 var ErrNotTTY = errors.New("not a terminal")
 
-// Writer is a buffered terminal writer, which moves cursor N lines up
-// on each flush except the first one, where N is a number of lines of
-// a previous flush.
-type Writer struct {
-	*bytes.Buffer
-	out      io.Writer
-	ew       escWriter
-	lines    int //nolint:unused
-	fd       int
-	terminal bool
-	termSize func(int) (int, int, error)
-}
-
 // New returns a new Writer with defaults.
 func New(out io.Writer) *Writer {
 	w := &Writer{
