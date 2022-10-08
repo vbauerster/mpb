@@ -472,8 +472,8 @@ func (s *pState) makeBarState(total int64, filler BarFiller, options ...BarOptio
 }
 
 func syncWidth(wg *sync.WaitGroup, matrix map[int][]chan int) {
-	wg.Add(len(matrix))
 	for _, column := range matrix {
+		wg.Add(1)
 		go maxWidthDistributor(wg, column)
 	}
 }
