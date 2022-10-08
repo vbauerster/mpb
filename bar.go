@@ -491,33 +491,36 @@ func (s *bState) draw(stat decor.Statistics) (io.Reader, error) {
 	return io.MultiReader(r, strings.NewReader("\n")), nil
 }
 
-func (s *bState) drawImpl(stat decor.Statistics) (r io.Reader, err error) {
+func (s *bState) drawImpl(stat decor.Statistics) (io.Reader, error) {
 	type decorResult struct {
 		width    int
 		truncate bool
+		err      error
 	}
-	decorFiller := func(buf *bytes.Buffer, decorators []decor.Decorator) (res decorResult, err error) {
+	decorFiller := func(buf *bytes.Buffer, decorators []decor.Decorator) (res decorResult) {
 		res.width = stat.AvailableWidth
 		for _, d := range decorators {
 			str := d.Decor(stat)
-			if stat.AvailableWidth > 0 && err == nil {
+			if stat.AvailableWidth > 0 {
 				stat.AvailableWidth -= runewidth.StringWidth(stripansi.Strip(str))
-				_, err = buf.WriteString(str)
+				if res.err == nil {
+					_, res.err = buf.WriteString(str)
+				}
 			}
 		}
 		res.truncate = stat.AvailableWidth < 0
-		return res, err
+		return res
 	}
+
 	bufP, bufB, bufA := s.buffers[0], s.buffers[1], s.buffers[2]
 
-	resP, err := decorFiller(bufP, s.pDecorators)
-	if err != nil {
-		return nil, err
-	}
+	resP := decorFiller(bufP, s.pDecorators)
+	resA := decorFiller(bufA, s.aDecorators)
 
-	resA, err := decorFiller(bufA, s.aDecorators)
-	if err != nil {
-		return nil, err
+	for _, err := range []error{resP.err, resA.err} {
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if resP.truncate {
@@ -548,7 +551,7 @@ func (s *bState) drawImpl(stat decor.Statistics) (r io.Reader, err error) {
 			}
 		}
 	} else {
-		err = s.filler.Fill(bufB, stat)
+		err := s.filler.Fill(bufB, stat)
 		if err != nil {
 			return nil, err
 		}
