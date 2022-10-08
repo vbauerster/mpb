@@ -773,6 +773,7 @@ func TestDrawDefault(t *testing.T) {
 			s.current = tc.current
 			s.trimSpace = tc.trim
 			s.refill = tc.refill
+			s.completed = tc.total > 0 && tc.current >= tc.total
 			tmpBuf.Reset()
 			r, err := s.draw(newStatistics(tw, s))
 			if err != nil {
@@ -1227,6 +1228,7 @@ func TestDrawTipOnComplete(t *testing.T) {
 			s.current = tc.current
 			s.trimSpace = tc.trim
 			s.refill = tc.refill
+			s.completed = tc.total > 0 && tc.current >= tc.total
 			tmpBuf.Reset()
 			r, err := s.draw(newStatistics(tw, s))
 			if err != nil {
@@ -1403,6 +1405,7 @@ func TestDrawDoubleWidth(t *testing.T) {
 			s.current = tc.current
 			s.trimSpace = tc.trim
 			s.refill = tc.refill
+			s.completed = tc.total > 0 && tc.current >= tc.total
 			tmpBuf.Reset()
 			r, err := s.draw(newStatistics(tw, s))
 			if err != nil {
