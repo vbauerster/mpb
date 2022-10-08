@@ -376,6 +376,20 @@ func (b *Bar) Completed() bool {
 	}
 }
 
+// IsRunning reports whether the bar is running, i.e. not yet completed
+// and not yet aborted.
+func (b *Bar) IsRunning() bool {
+	result := make(chan bool)
+	select {
+	case b.operateState <- func(s *bState) {
+		result <- !s.completed && !s.aborted
+	}:
+		return <-result
+	case <-b.done:
+		return false
+	}
+}
+
 // Wait blocks until bar is completed or aborted.
 func (b *Bar) Wait() {
 	<-b.done
@@ -453,20 +467,6 @@ func (b *Bar) forceRefreshImpl(refreshCh chan interface{}) {
 				return
 			}
 		}
-	}
-}
-
-// IsRunning reports whether the bar is running, i.e. not yet completed
-// and not yet aborted.
-func (b *Bar) IsRunning() bool {
-	result := make(chan bool)
-	select {
-	case b.operateState <- func(s *bState) {
-		result <- !s.completed && !s.aborted
-	}:
-		return <-result
-	case <-b.done:
-		return false
 	}
 }
 
