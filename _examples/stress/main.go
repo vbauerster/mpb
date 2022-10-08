@@ -32,7 +32,7 @@ func main() {
 	}
 	var wg sync.WaitGroup
 	// passed wg will be accounted at p.Wait() call
-	p := mpb.New(mpb.WithWaitGroup(&wg))
+	p := mpb.New(mpb.WithWaitGroup(&wg), mpb.WithDebugOutput(os.Stderr))
 	wg.Add(totalBars)
 
 	for i := 0; i < totalBars; i++ {
