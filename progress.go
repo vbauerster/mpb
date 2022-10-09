@@ -294,14 +294,14 @@ func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 			if err != nil {
 				s.heapUpdated = false
 				render = func() error { return nil }
-				_, _ = fmt.Fprintln(s.debugOut, err)
+				_, _ = fmt.Fprintln(s.debugOut, err.Error())
 				p.cancel() // cancel all bars
 			}
 		case <-p.done:
 			for s.heapUpdated {
 				err := render()
 				if err != nil {
-					_, _ = fmt.Fprintln(s.debugOut, err)
+					_, _ = fmt.Fprintln(s.debugOut, err.Error())
 					return
 				}
 			}
