@@ -3,13 +3,12 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"math/rand"
 	"os"
-	"runtime/pprof"
 	"sync"
 	"time"
 
+	"github.com/pkg/profile"
 	"github.com/vbauerster/mpb/v8"
 	"github.com/vbauerster/mpb/v8/decor"
 )
@@ -18,17 +17,15 @@ const (
 	totalBars = 32
 )
 
-var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
+var proftype = flag.String("prof", "", "profile type (cpu, mem)")
 
 func main() {
 	flag.Parse()
-	if *cpuprofile != "" {
-		f, err := os.Create(*cpuprofile)
-		if err != nil {
-			log.Fatal(err)
-		}
-		pprof.StartCPUProfile(f)
-		defer pprof.StopCPUProfile()
+	switch *proftype {
+	case "cpu":
+		defer profile.Start(profile.CPUProfile, profile.ProfilePath("."), profile.NoShutdownHook).Stop()
+	case "mem":
+		defer profile.Start(profile.MemProfile, profile.ProfilePath("."), profile.NoShutdownHook).Stop()
 	}
 	var wg sync.WaitGroup
 	// passed wg will be accounted at p.Wait() call
