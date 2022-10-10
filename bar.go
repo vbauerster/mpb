@@ -492,12 +492,12 @@ func (s *bState) draw(stat decor.Statistics) (io.Reader, error) {
 }
 
 func (s *bState) drawImpl(stat decor.Statistics) (io.Reader, error) {
-	type decorResult struct {
+	type result struct {
 		width    int
 		truncate bool
 		err      error
 	}
-	decorFiller := func(buf *bytes.Buffer, decorators []decor.Decorator) (res decorResult) {
+	decorFiller := func(buf *bytes.Buffer, decorators []decor.Decorator) (res result) {
 		res.width = stat.AvailableWidth
 		for _, d := range decorators {
 			str := d.Decor(stat)
