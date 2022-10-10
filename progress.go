@@ -424,13 +424,12 @@ func (s *pState) updateSyncMatrix() {
 	for i := 0; i < s.bHeap.Len(); i++ {
 		bar := s.bHeap[i]
 		table := bar.wSyncTable()
-		pRow, aRow := table[0], table[1]
 
-		for i, ch := range pRow {
+		for i, ch := range table[0] {
 			s.pMatrix[i] = append(s.pMatrix[i], ch)
 		}
 
-		for i, ch := range aRow {
+		for i, ch := range table[1] {
 			s.aMatrix[i] = append(s.aMatrix[i], ch)
 		}
 	}

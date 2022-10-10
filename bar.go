@@ -25,6 +25,7 @@ type Bar struct {
 	cancel       func()
 }
 
+type syncTable [2][]chan int
 type extenderFunc func([]io.Reader, decor.Statistics) ([]io.Reader, error)
 
 // bState is actual bar's state.
@@ -470,8 +471,8 @@ func (b *Bar) forceRefreshImpl(refreshCh chan interface{}) {
 	}
 }
 
-func (b *Bar) wSyncTable() [][]chan int {
-	result := make(chan [][]chan int)
+func (b *Bar) wSyncTable() syncTable {
+	result := make(chan syncTable)
 	select {
 	case b.operateState <- func(s *bState) { result <- s.wSyncTable() }:
 		return <-result
@@ -559,25 +560,27 @@ func (s *bState) drawImpl(stat decor.Statistics) (io.Reader, error) {
 	return io.MultiReader(bufP, bufB, bufA), nil
 }
 
-func (s *bState) wSyncTable() [][]chan int {
-	columns := make([]chan int, 0, len(s.pDecorators)+len(s.aDecorators))
-	var pCount int
-	for _, d := range s.pDecorators {
-		if ch, ok := d.Sync(); ok {
-			columns = append(columns, ch)
-			pCount++
+func (s *bState) wSyncTable() (table syncTable) {
+	var count int
+	var row []chan int
+
+	for i, decorators := range [][]decor.Decorator{
+		s.pDecorators,
+		s.aDecorators,
+	} {
+		for _, d := range decorators {
+			if ch, ok := d.Sync(); ok {
+				row = append(row, ch)
+				count++
+			}
+		}
+		switch i {
+		case 0:
+			table[i] = row[0:count]
+		default:
+			table[i] = row[len(table[i-1]):count]
 		}
 	}
-	var aCount int
-	for _, d := range s.aDecorators {
-		if ch, ok := d.Sync(); ok {
-			columns = append(columns, ch)
-			aCount++
-		}
-	}
-	table := make([][]chan int, 2)
-	table[0] = columns[0:pCount]
-	table[1] = columns[pCount : pCount+aCount : pCount+aCount]
 	return table
 }
 
