@@ -159,13 +159,13 @@ func (p *Progress) traverseBars(cb func(b *Bar) bool) {
 	sync := make(chan struct{})
 	select {
 	case p.operateState <- func(s *pState) {
+		defer close(sync)
 		for i := 0; i < s.bHeap.Len(); i++ {
 			bar := s.bHeap[i]
 			if !cb(bar) {
 				break
 			}
 		}
-		close(sync)
 	}:
 		<-sync
 	case <-p.done:

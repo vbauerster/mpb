@@ -156,6 +156,7 @@ func (b *Bar) TraverseDecorators(cb func(decor.Decorator)) {
 	sync := make(chan struct{})
 	select {
 	case b.operateState <- func(s *bState) {
+		defer close(sync)
 		for _, decorators := range [][]decor.Decorator{
 			s.pDecorators,
 			s.aDecorators,
@@ -164,7 +165,6 @@ func (b *Bar) TraverseDecorators(cb func(decor.Decorator)) {
 				cb(extractBaseDecorator(d))
 			}
 		}
-		close(sync)
 	}:
 		<-sync
 	case <-b.done:
