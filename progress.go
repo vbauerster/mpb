@@ -341,7 +341,6 @@ func (s *pState) flush(wg *sync.WaitGroup, cw *cwriter.Writer, height int) error
 		b := heap.Pop(&s.bHeap).(*Bar)
 		frame := <-b.frameCh
 		if frame.err != nil {
-			s.rows = s.rows[:0]
 			return frame.err
 		}
 		var usedRows int
@@ -409,7 +408,6 @@ func (s *pState) flush(wg *sync.WaitGroup, cw *cwriter.Writer, height int) error
 	for i := len(s.rows) - 1; i >= 0; i-- {
 		_, err := cw.ReadFrom(s.rows[i])
 		if err != nil {
-			s.rows = s.rows[:0]
 			return err
 		}
 	}
