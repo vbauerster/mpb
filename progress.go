@@ -341,6 +341,7 @@ func (s *pState) flush(wg *sync.WaitGroup, cw *cwriter.Writer, height int) error
 		b := heap.Pop(&s.bHeap).(*Bar)
 		frame := <-b.frameCh
 		if frame.err != nil {
+			// b.frameCh is buffered it's ok to return here
 			return frame.err
 		}
 		var usedRows int
