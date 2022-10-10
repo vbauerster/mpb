@@ -582,7 +582,7 @@ func (s *bState) wSyncTable() [][]chan int {
 }
 
 func (s *bState) subscribeDecorators() {
-	for _, decorators := range [...][]decor.Decorator{
+	for _, decorators := range [][]decor.Decorator{
 		s.pDecorators,
 		s.aDecorators,
 	} {
