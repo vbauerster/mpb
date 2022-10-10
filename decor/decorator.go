@@ -139,17 +139,17 @@ type WC struct {
 // Should be called by any Decorator implementation.
 func (wc *WC) FormatMsg(msg string) string {
 	pureWidth := runewidth.StringWidth(msg)
-	stripWidth := runewidth.StringWidth(stripansi.Strip(msg))
-	maxCell := wc.W
+	viewWidth := runewidth.StringWidth(stripansi.Strip(msg))
+	max := wc.W
 	if (wc.C & DSyncWidth) != 0 {
-		cellCount := stripWidth
+		viewWidth := viewWidth
 		if (wc.C & DextraSpace) != 0 {
-			cellCount++
+			viewWidth++
 		}
-		wc.wsync <- cellCount
-		maxCell = <-wc.wsync
+		wc.wsync <- viewWidth
+		max = <-wc.wsync
 	}
-	return wc.fill(msg, maxCell+(pureWidth-stripWidth))
+	return wc.fill(msg, max-viewWidth+pureWidth)
 }
 
 // Init initializes width related config.
