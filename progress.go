@@ -40,10 +40,6 @@ type pState struct {
 	pMatrix     map[int][]chan int
 	aMatrix     map[int][]chan int
 
-	// for reuse purposes
-	rows []io.Reader
-	pool []*Bar
-
 	// following are provided/overrided by user
 	refreshRate        time.Duration
 	idCount            int
@@ -72,8 +68,6 @@ func New(options ...ContainerOption) *Progress {
 // method has been called.
 func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 	s := &pState{
-		rows:          make([]io.Reader, 0, 64),
-		pool:          make([]*Bar, 0, 64),
 		refreshRate:   defaultRefreshRate,
 		popPriority:   math.MinInt32,
 		manualRefresh: make(chan interface{}),
@@ -275,9 +269,6 @@ func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 	defer close(p.shutdown)
 
 	render := func() error {
-		if s.bHeap.Len() == 0 {
-			return nil
-		}
 		return s.render(cw)
 	}
 
@@ -336,6 +327,8 @@ func (s *pState) render(cw *cwriter.Writer) error {
 
 func (s *pState) flush(wg *sync.WaitGroup, cw *cwriter.Writer, height int) error {
 	var popCount int
+	rows := make([]io.Reader, 0, height)
+	pool := make([]*Bar, 0, s.bHeap.Len())
 
 	for s.bHeap.Len() > 0 {
 		b := heap.Pop(&s.bHeap).(*Bar)
@@ -346,8 +339,8 @@ func (s *pState) flush(wg *sync.WaitGroup, cw *cwriter.Writer, height int) error
 		}
 		var usedRows int
 		for i := len(frame.rows) - 1; i >= 0; i-- {
-			if row := frame.rows[i]; len(s.rows) < height {
-				s.rows = append(s.rows, row)
+			if row := frame.rows[i]; len(rows) < height {
+				rows = append(rows, row)
 				usedRows++
 			} else {
 				wg.Add(1)
@@ -362,7 +355,7 @@ func (s *pState) flush(wg *sync.WaitGroup, cw *cwriter.Writer, height int) error
 			if qb, ok := s.queueBars[b]; ok {
 				delete(s.queueBars, b)
 				qb.priority = b.priority
-				s.pool = append(s.pool, qb)
+				pool = append(pool, qb)
 				s.heapUpdated = true
 				continue
 			}
@@ -383,38 +376,30 @@ func (s *pState) flush(wg *sync.WaitGroup, cw *cwriter.Writer, height int) error
 				continue
 			}
 		}
-		s.pool = append(s.pool, b)
+		pool = append(pool, b)
 	}
 
-	switch len(s.pool) {
-	case 0:
-		if s.heapUpdated {
-			s.updateSyncMatrix()
-			s.heapUpdated = false
-		}
+	switch len(pool) {
 	case 1:
-		heap.Push(&s.bHeap, s.pool[0])
-		s.pool = s.pool[:0]
+		heap.Push(&s.bHeap, pool[0])
 	default:
 		wg.Add(1)
 		go func() {
-			for _, b := range s.pool {
+			for _, b := range pool {
 				heap.Push(&s.bHeap, b)
 			}
-			s.pool = s.pool[:0]
 			wg.Done()
 		}()
 	}
 
-	for i := len(s.rows) - 1; i >= 0; i-- {
-		_, err := cw.ReadFrom(s.rows[i])
+	for i := len(rows) - 1; i >= 0; i-- {
+		_, err := cw.ReadFrom(rows[i])
 		if err != nil {
 			return err
 		}
 	}
 
-	err := cw.Flush(len(s.rows) - popCount)
-	s.rows = s.rows[:0]
+	err := cw.Flush(len(rows) - popCount)
 	return err
 }
 
