@@ -380,6 +380,7 @@ func (s *pState) flush(wg *sync.WaitGroup, cw *cwriter.Writer, height int) error
 	}
 
 	switch len(pool) {
+	case 0:
 	case 1:
 		heap.Push(&s.bHeap, pool[0])
 	default:
