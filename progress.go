@@ -379,11 +379,7 @@ func (s *pState) flush(wg *sync.WaitGroup, cw *cwriter.Writer, height int) error
 		pool = append(pool, b)
 	}
 
-	switch len(pool) {
-	case 0:
-	case 1:
-		heap.Push(&s.bHeap, pool[0])
-	default:
+	if len(pool) != 0 {
 		wg.Add(1)
 		go func() {
 			for _, b := range pool {
