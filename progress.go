@@ -39,6 +39,7 @@ type pState struct {
 	heapUpdated bool
 	pMatrix     map[int][]chan int
 	aMatrix     map[int][]chan int
+	rows        []io.Reader
 
 	// following are provided/overrided by user
 	refreshRate        time.Duration
@@ -68,6 +69,7 @@ func New(options ...ContainerOption) *Progress {
 // method has been called.
 func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 	s := &pState{
+		rows:          make([]io.Reader, 32),
 		refreshRate:   defaultRefreshRate,
 		popPriority:   math.MinInt32,
 		manualRefresh: make(chan interface{}),
@@ -327,8 +329,8 @@ func (s *pState) render(cw *cwriter.Writer) error {
 
 func (s *pState) flush(wg *sync.WaitGroup, cw *cwriter.Writer, height int) error {
 	var popCount int
-	rows := make([]io.Reader, 0, height)
 	pool := make([]*Bar, 0, s.bHeap.Len())
+	s.rows = s.rows[:0]
 
 	for s.bHeap.Len() > 0 {
 		b := heap.Pop(&s.bHeap).(*Bar)
@@ -339,8 +341,8 @@ func (s *pState) flush(wg *sync.WaitGroup, cw *cwriter.Writer, height int) error
 		}
 		var usedRows int
 		for i := len(frame.rows) - 1; i >= 0; i-- {
-			if row := frame.rows[i]; len(rows) < height {
-				rows = append(rows, row)
+			if row := frame.rows[i]; len(s.rows) < height {
+				s.rows = append(s.rows, row)
 				usedRows++
 			} else {
 				wg.Add(1)
@@ -389,14 +391,14 @@ func (s *pState) flush(wg *sync.WaitGroup, cw *cwriter.Writer, height int) error
 		}()
 	}
 
-	for i := len(rows) - 1; i >= 0; i-- {
-		_, err := cw.ReadFrom(rows[i])
+	for i := len(s.rows) - 1; i >= 0; i-- {
+		_, err := cw.ReadFrom(s.rows[i])
 		if err != nil {
 			return err
 		}
 	}
 
-	err := cw.Flush(len(rows) - popCount)
+	err := cw.Flush(len(s.rows) - popCount)
 	return err
 }
 
