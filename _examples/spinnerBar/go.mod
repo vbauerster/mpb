@@ -2,7 +2,7 @@ module github.com/vbauerster/mpb/_examples/spinnerBar
 
 go 1.17
 
-require github.com/vbauerster/mpb/v8 v8.1.5
+require github.com/vbauerster/mpb/v8 v8.1.6
 
 require (
 	github.com/VividCortex/ewma v1.2.0 // indirect
