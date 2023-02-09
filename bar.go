@@ -458,7 +458,7 @@ func (b *Bar) forceRefreshImpl(refreshCh chan interface{}) {
 	var anyOtherRunning bool
 	b.container.traverseBars(func(bar *Bar) bool {
 		anyOtherRunning = b != bar && bar.IsRunning()
-		return !anyOtherRunning
+		return anyOtherRunning
 	})
 	if !anyOtherRunning {
 		for {
