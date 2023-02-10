@@ -14,6 +14,7 @@ const (
 	h_iter
 	h_pop_all
 	h_fix
+	h_end
 )
 
 type heapRequest struct {
@@ -82,6 +83,10 @@ func (m heapManager) run() {
 			close(data.iter)
 		case h_fix:
 			heap.Fix(&bHeap, req.data.(int))
+		case h_end:
+			close(m)
+			data := req.data.(chan []*Bar)
+			data <- bHeap
 		}
 	}
 }
@@ -107,4 +112,10 @@ func (m heapManager) popAll(iter chan *Bar, drop chan struct{}) {
 
 func (m heapManager) fix(index int) {
 	m <- heapRequest{cmd: h_push, data: index}
+}
+
+func (m heapManager) end() []*Bar {
+	data := make(chan []*Bar)
+	m <- heapRequest{cmd: h_end, data: data}
+	return <-data
 }
