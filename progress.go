@@ -44,6 +44,7 @@ type pState struct {
 	popPriority        int
 	popCompleted       bool
 	disableAutoRefresh bool
+	forceAutoRefresh   bool
 	manualRefresh      chan interface{}
 	renderDelay        <-chan struct{}
 	shutdownNotifier   chan<- interface{}
@@ -229,7 +230,7 @@ func (p *Progress) newTicker(s *pState, isTerminal bool) chan time.Time {
 	ch := make(chan time.Time)
 	go func() {
 		var autoRefresh <-chan time.Time
-		if isTerminal && !s.disableAutoRefresh {
+		if (isTerminal || s.forceAutoRefresh) && !s.disableAutoRefresh {
 			if s.renderDelay != nil {
 				<-s.renderDelay
 			}

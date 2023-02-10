@@ -86,6 +86,14 @@ func WithDebugOutput(w io.Writer) ContainerOption {
 	}
 }
 
+// ForceAutoRefresh force auto refresh even if output is not terminal.
+// Useful for testing purposes.
+func ForceAutoRefresh() ContainerOption {
+	return func(s *pState) {
+		s.forceAutoRefresh = true
+	}
+}
+
 // PopCompletedMode will pop completed bars to the top.
 // To stop rendering bar after it has been popped, use
 // mpb.BarRemoveOnComplete() option on that bar.
