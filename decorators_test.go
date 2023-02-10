@@ -1,7 +1,6 @@
 package mpb_test
 
 import (
-	"sync"
 	"testing"
 
 	"github.com/vbauerster/mpb/v8"
@@ -183,8 +182,7 @@ func testDecoratorConcurrently(t *testing.T, testCases [][]step) {
 	}
 
 	for _, columnCase := range testCases {
-		var wg sync.WaitGroup
-		mpb.SyncWidth(&wg, toSyncMatrix(columnCase))
+		mpb.SyncWidth(toSyncMatrix(columnCase))
 		var results []chan string
 		for _, step := range columnCase {
 			step := step
@@ -202,7 +200,6 @@ func testDecoratorConcurrently(t *testing.T, testCases [][]step) {
 				t.Errorf("Want: %q, Got: %q\n", want, res)
 			}
 		}
-		wg.Wait()
 	}
 }
 
