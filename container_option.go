@@ -56,15 +56,11 @@ func WithRenderDelay(ch <-chan struct{}) ContainerOption {
 	}
 }
 
-// WithShutdownNotifier provided chanel will be closed, after all bars
-// have been rendered.
-func WithShutdownNotifier(ch chan struct{}) ContainerOption {
+// WithShutdownNotifier value of type `[]*mpb.Bar` will be send into provided
+// channel upon container shutdown.
+func WithShutdownNotifier(ch chan<- interface{}) ContainerOption {
 	return func(s *pState) {
-		select {
-		case <-ch:
-		default:
-			s.shutdownNotifier = ch
-		}
+		s.shutdownNotifier = ch
 	}
 }
 
