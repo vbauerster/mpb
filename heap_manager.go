@@ -119,3 +119,21 @@ func (m heapManager) end() []*Bar {
 	m <- heapRequest{cmd: h_end, data: data}
 	return <-data
 }
+
+func syncWidth(matrix map[int][]chan int) {
+	for _, column := range matrix {
+		go maxWidthDistributor(column)
+	}
+}
+
+func maxWidthDistributor(column []chan int) {
+	var maxWidth int
+	for _, ch := range column {
+		if w := <-ch; w > maxWidth {
+			maxWidth = w
+		}
+	}
+	for _, ch := range column {
+		ch <- maxWidth
+	}
+}
