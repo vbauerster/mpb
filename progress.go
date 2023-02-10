@@ -43,12 +43,10 @@ type pState struct {
 	reqWidth           int
 	popPriority        int
 	popCompleted       bool
-	outputDiscarded    bool
 	disableAutoRefresh bool
-	ignoreNotTTY       bool
 	manualRefresh      chan interface{}
 	renderDelay        <-chan struct{}
-	shutdownNotifier   chan struct{}
+	shutdownNotifier   chan<- interface{}
 	queueBars          map[*Bar]*Bar
 	output             io.Writer
 	debugOut           io.Writer
@@ -90,14 +88,8 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 		operateState: make(chan func(*pState)),
 		interceptIo:  make(chan func(io.Writer)),
 		done:         make(chan struct{}),
+		shutdown:     make(chan struct{}),
 		cancel:       cancel,
-	}
-
-	if s.shutdownNotifier != nil {
-		p.shutdown = s.shutdownNotifier
-		s.shutdownNotifier = nil
-	} else {
-		p.shutdown = make(chan struct{})
 	}
 
 	go p.serve(s, cwriter.New(s.output))
@@ -233,11 +225,11 @@ func (p *Progress) Shutdown() {
 	<-p.shutdown
 }
 
-func (p *Progress) newTicker(s *pState) chan time.Time {
+func (p *Progress) newTicker(s *pState, isTerminal bool) chan time.Time {
 	ch := make(chan time.Time)
 	go func() {
 		var autoRefresh <-chan time.Time
-		if !s.disableAutoRefresh && !s.outputDiscarded {
+		if isTerminal && !s.disableAutoRefresh {
 			if s.renderDelay != nil {
 				<-s.renderDelay
 			}
@@ -265,10 +257,13 @@ func (p *Progress) newTicker(s *pState) chan time.Time {
 }
 
 func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
+	render := func() error {
+		return s.render(cw)
+	}
 
 	go s.hm.run()
 
-	refreshCh := p.newTicker(s)
+	refreshCh := p.newTicker(s, cw.IsTerminal())
 
 	for {
 		select {
@@ -277,26 +272,34 @@ func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 		case fn := <-p.interceptIo:
 			fn(cw)
 		case <-refreshCh:
-			err := s.render(cw)
+			err := render()
 			if err != nil {
-				refreshCh = nil
 				_, _ = fmt.Fprintln(s.debugOut, err.Error())
+				render = func() error { return nil }
 				p.cancel() // cancel all bars
 			}
 		case <-p.done:
-			close(s.hm)
+			if s.shutdownNotifier != nil {
+				go func() {
+					s.shutdownNotifier <- s.hm.end()
+				}()
+			} else {
+				close(s.hm)
+			}
 			close(p.shutdown)
 			return
 		}
 	}
 }
 
-func (s *pState) render(cw *cwriter.Writer) error {
-	width, height, err := cw.GetTermSize()
-	if err != nil {
-		if !s.ignoreNotTTY {
+func (s *pState) render(cw *cwriter.Writer) (err error) {
+	var width, height int
+	if cw.IsTerminal() {
+		width, height, err = cw.GetTermSize()
+		if err != nil {
 			return err
 		}
+	} else {
 		width = s.reqWidth
 		height = 100
 	}

@@ -72,14 +72,11 @@ func WithShutdownNotifier(ch chan struct{}) ContainerOption {
 // will effectively disable auto refresh rate and discard any output,
 // useful if you want to disable progress bars with little overhead.
 func WithOutput(w io.Writer) ContainerOption {
-	var discarded bool
 	if w == nil {
 		w = io.Discard
-		discarded = true
 	}
 	return func(s *pState) {
 		s.output = w
-		s.outputDiscarded = discarded
 	}
 }
 
