@@ -108,7 +108,7 @@ func TestBarID(t *testing.T) {
 
 	gotID := bar.ID()
 	if gotID != wantID {
-		t.Errorf("Expected bar id: %d, got %d\n", wantID, gotID)
+		t.Errorf("Expected bar id: %d, got %d", wantID, gotID)
 	}
 
 	bar.IncrBy(total)
@@ -141,7 +141,7 @@ func TestBarSetRefill(t *testing.T) {
 	got := string(bytes.Split(buf.Bytes(), []byte("\n"))[0])
 
 	if !strings.Contains(got, wantBar) {
-		t.Errorf("Want bar: %q, got bar: %q\n", wantBar, got)
+		t.Errorf("Want bar: %q, got bar: %q", wantBar, got)
 	}
 }
 
@@ -163,7 +163,7 @@ func TestBarHas100PercentWithBarRemoveOnComplete(t *testing.T) {
 
 	hundred := "100 %"
 	if !bytes.Contains(buf.Bytes(), []byte(hundred)) {
-		t.Errorf("Bar's buffer does not contain: %q\n", hundred)
+		t.Errorf("Bar's buffer does not contain: %q", hundred)
 	}
 }
 
@@ -194,7 +194,7 @@ func TestBarStyle(t *testing.T) {
 	got := string(bytes.Split(buf.Bytes(), []byte("\n"))[0])
 
 	if !strings.Contains(got, wantBar) {
-		t.Errorf("Want bar: %q:%d, got bar: %q:%d\n", wantBar, utf8.RuneCountInString(wantBar), got, utf8.RuneCountInString(got))
+		t.Errorf("Want bar: %q:%d, got bar: %q:%d", wantBar, utf8.RuneCountInString(wantBar), got, utf8.RuneCountInString(got))
 	}
 }
 
@@ -202,14 +202,14 @@ func TestDecorStatisticsAvailableWidth(t *testing.T) {
 	var called [2]bool
 	td1 := func(s decor.Statistics) string {
 		if s.AvailableWidth != 80 {
-			t.Errorf("expected AvailableWidth %d got %d\n", 80, s.AvailableWidth)
+			t.Errorf("expected AvailableWidth %d got %d", 80, s.AvailableWidth)
 		}
 		called[0] = true
 		return fmt.Sprintf("\x1b[31;1;4m%s\x1b[0m", strings.Repeat("0", 20))
 	}
 	td2 := func(s decor.Statistics) string {
 		if s.AvailableWidth != 40 {
-			t.Errorf("expected AvailableWidth %d got %d\n", 40, s.AvailableWidth)
+			t.Errorf("expected AvailableWidth %d got %d", 40, s.AvailableWidth)
 		}
 		called[1] = true
 		return ""
