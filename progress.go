@@ -331,6 +331,7 @@ func (s *pState) flush(wg *sync.WaitGroup, cw *cwriter.Writer, height int) error
 		frame := <-b.frameCh
 		if frame.err != nil {
 			close(drop)
+			b.cancel()
 			return frame.err // b.frameCh is buffered it's ok to return here
 		}
 		var usedRows int
