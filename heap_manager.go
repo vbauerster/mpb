@@ -24,7 +24,7 @@ type heapRequest struct {
 }
 
 type iterData struct {
-	iter chan *Bar
+	iter chan<- *Bar
 	drop chan struct{}
 }
 
@@ -111,12 +111,12 @@ func (m heapManager) push(b *Bar, sync bool) {
 	m <- heapRequest{cmd: h_push, data: data}
 }
 
-func (m heapManager) iter(iter chan *Bar, drop chan struct{}) {
+func (m heapManager) iter(iter chan<- *Bar, drop chan struct{}) {
 	data := iterData{iter, drop}
 	m <- heapRequest{cmd: h_iter, data: data}
 }
 
-func (m heapManager) drain(iter chan *Bar, drop chan struct{}) {
+func (m heapManager) drain(iter chan<- *Bar, drop chan struct{}) {
 	data := iterData{iter, drop}
 	m <- heapRequest{cmd: h_drain, data: data}
 }

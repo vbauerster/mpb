@@ -448,12 +448,12 @@ func (b *Bar) render(tw int) {
 	}
 }
 
-func (b *Bar) forceRefresh(refreshCh chan interface{}) {
+func (b *Bar) forceRefresh(refreshCh chan<- interface{}) {
 	b.container.bwg.Add(1)
 	go b.forceRefreshImpl(refreshCh)
 }
 
-func (b *Bar) forceRefreshImpl(refreshCh chan interface{}) {
+func (b *Bar) forceRefreshImpl(refreshCh chan<- interface{}) {
 	defer b.container.bwg.Done()
 	var anyOtherRunning bool
 	b.container.traverseBars(func(bar *Bar) bool {
