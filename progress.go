@@ -172,17 +172,6 @@ func (p *Progress) UpdateBarPriority(b *Bar, priority int) {
 	}
 }
 
-// BarCount returns bars count.
-// func (p *Progress) BarCount() int {
-// 	result := make(chan int)
-// 	select {
-// 	case p.operateState <- func(s *pState) { result <- s.bHeap.Len() }:
-// 		return <-result
-// 	case <-p.done:
-// 		return 0
-// 	}
-// }
-
 // Write is implementation of io.Writer.
 // Writing to `*mpb.Progress` will print lines above a running bar.
 // Writes aren't flushed immediately, but at next refresh cycle.
