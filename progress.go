@@ -266,11 +266,10 @@ func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 				err = e
 			}
 		case <-p.done:
-			ch := make(chan bool)
+			update := make(chan bool)
 			for err == nil {
-				s.hm.state(ch)
-				isUnrenderedState := <-ch
-				if isUnrenderedState {
+				s.hm.state(update)
+				if <-update {
 					err = render()
 				} else {
 					break
