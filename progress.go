@@ -247,6 +247,7 @@ func (p *Progress) newTicker(s *pState, isTerminal bool) chan time.Time {
 }
 
 func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
+	var err error
 	render := func() error {
 		return s.render(cw)
 	}
@@ -262,13 +263,26 @@ func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 		case fn := <-p.interceptIo:
 			fn(cw)
 		case <-refreshCh:
-			err := render()
-			if err != nil {
-				_, _ = fmt.Fprintln(s.debugOut, err.Error())
-				render = func() error { return nil }
+			e := render()
+			if e != nil {
 				p.cancel() // cancel all bars
+				render = func() error { return nil }
+				err = e
 			}
 		case <-p.done:
+			ch := make(chan bool)
+			for err == nil {
+				s.hm.state(ch)
+				isUnrenderedState := <-ch
+				if isUnrenderedState {
+					err = render()
+				} else {
+					break
+				}
+			}
+			if err != nil {
+				_, _ = fmt.Fprintln(s.debugOut, err.Error())
+			}
 			s.hm.end(s.shutdownNotifier)
 			close(p.shutdown)
 			return
