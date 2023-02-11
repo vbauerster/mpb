@@ -146,9 +146,7 @@ func (p *Progress) traverseBars(cb func(b *Bar) bool) {
 	iter := make(chan *Bar)
 	drop := make(chan struct{})
 	select {
-	case p.operateState <- func(s *pState) {
-		s.hm.iter(iter, drop)
-	}:
+	case p.operateState <- func(s *pState) { s.hm.iter(iter, drop) }:
 		for b := range iter {
 			if cb(b) {
 				close(drop)
