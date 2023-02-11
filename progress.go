@@ -308,7 +308,7 @@ func (s *pState) flush(wg *sync.WaitGroup, cw *cwriter.Writer, height int) error
 
 	iter := make(chan *Bar)
 	drop := make(chan struct{})
-	s.hm.popAll(iter, drop)
+	s.hm.drain(iter, drop)
 
 	for b := range iter {
 		frame := <-b.frameCh

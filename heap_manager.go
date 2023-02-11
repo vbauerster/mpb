@@ -12,7 +12,7 @@ const (
 	h_sync heapCmd = iota
 	h_push
 	h_iter
-	h_pop_all
+	h_drain
 	h_fix
 	h_end
 )
@@ -75,7 +75,7 @@ func (m heapManager) run() {
 				}
 			}
 			close(data.iter)
-		case h_pop_all:
+		case h_drain:
 			data := req.data.(*iterData)
 			for bHeap.Len() != 0 {
 				select {
@@ -112,9 +112,9 @@ func (m heapManager) iter(iter chan *Bar, drop chan struct{}) {
 	m <- heapRequest{cmd: h_iter, data: data}
 }
 
-func (m heapManager) popAll(iter chan *Bar, drop chan struct{}) {
+func (m heapManager) drain(iter chan *Bar, drop chan struct{}) {
 	data := &iterData{iter, drop}
-	m <- heapRequest{cmd: h_pop_all, data: data}
+	m <- heapRequest{cmd: h_drain, data: data}
 }
 
 func (m heapManager) fix(index int) {
