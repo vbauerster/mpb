@@ -87,9 +87,13 @@ func (m heapManager) run() {
 		case h_fix:
 			heap.Fix(&bHeap, req.data.(int))
 		case h_end:
+			ch := req.data.(chan<- interface{})
+			if ch != nil {
+				go func() {
+					ch <- []*Bar(bHeap)
+				}()
+			}
 			close(m)
-			data := req.data.(chan []*Bar)
-			data <- bHeap
 		}
 	}
 }
@@ -117,10 +121,8 @@ func (m heapManager) fix(index int) {
 	m <- heapRequest{cmd: h_push, data: index}
 }
 
-func (m heapManager) end() []*Bar {
-	data := make(chan []*Bar)
-	m <- heapRequest{cmd: h_end, data: data}
-	return <-data
+func (m heapManager) end(ch chan<- interface{}) {
+	m <- heapRequest{cmd: h_end, data: ch}
 }
 
 func syncWidth(matrix map[int][]chan int) {

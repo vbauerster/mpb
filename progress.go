@@ -280,13 +280,7 @@ func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 				p.cancel() // cancel all bars
 			}
 		case <-p.done:
-			if s.shutdownNotifier != nil {
-				go func() {
-					s.shutdownNotifier <- s.hm.end()
-				}()
-			} else {
-				close(s.hm)
-			}
+			s.hm.end(s.shutdownNotifier)
 			close(p.shutdown)
 			return
 		}
