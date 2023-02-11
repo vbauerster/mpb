@@ -14,6 +14,7 @@ const (
 	h_iter
 	h_drain
 	h_fix
+	h_state
 	h_end
 )
 
@@ -86,6 +87,9 @@ func (m heapManager) run() {
 			close(data.iter)
 		case h_fix:
 			heap.Fix(&bHeap, req.data.(int))
+		case h_state:
+			ch := req.data.(chan<- bool)
+			ch <- sync || l != bHeap.Len()
 		case h_end:
 			ch := req.data.(chan<- interface{})
 			if ch != nil {
@@ -119,6 +123,10 @@ func (m heapManager) drain(iter chan *Bar, drop chan struct{}) {
 
 func (m heapManager) fix(index int) {
 	m <- heapRequest{cmd: h_push, data: index}
+}
+
+func (m heapManager) state(ch chan<- bool) {
+	m <- heapRequest{cmd: h_state, data: ch}
 }
 
 func (m heapManager) end(ch chan<- interface{}) {
