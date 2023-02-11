@@ -93,6 +93,7 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 		cancel:       cancel,
 	}
 
+	go s.hm.run()
 	go p.serve(s, cwriter.New(s.output))
 	return p
 }
@@ -248,12 +249,7 @@ func (p *Progress) newTicker(s *pState, isTerminal bool) chan time.Time {
 
 func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 	var err error
-	render := func() error {
-		return s.render(cw)
-	}
-
-	go s.hm.run()
-
+	render := func() error { return s.render(cw) }
 	refreshCh := p.newTicker(s, cw.IsTerminal())
 
 	for {
