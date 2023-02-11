@@ -250,7 +250,7 @@ func (p *Progress) newTicker(s *pState, isTerminal bool) chan time.Time {
 func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 	var err error
 	render := func() error { return s.render(cw) }
-	refreshCh := p.newTicker(s, cw.IsTerminal())
+	tickerC := p.newTicker(s, cw.IsTerminal())
 
 	for {
 		select {
@@ -258,7 +258,7 @@ func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 			op(s)
 		case fn := <-p.interceptIo:
 			fn(cw)
-		case <-refreshCh:
+		case <-tickerC:
 			e := render()
 			if e != nil {
 				p.cancel() // cancel all bars
