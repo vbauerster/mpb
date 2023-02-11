@@ -26,7 +26,7 @@ type Progress struct {
 	uwg          *sync.WaitGroup
 	bwg          *sync.WaitGroup
 	operateState chan func(*pState)
-	interceptIo  chan func(io.Writer)
+	interceptIO  chan func(io.Writer)
 	done         chan struct{}
 	shutdown     chan struct{}
 	cancel       func()
@@ -87,7 +87,7 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 		uwg:          s.uwg,
 		bwg:          new(sync.WaitGroup),
 		operateState: make(chan func(*pState)),
-		interceptIo:  make(chan func(io.Writer)),
+		interceptIO:  make(chan func(io.Writer)),
 		done:         make(chan struct{}),
 		shutdown:     make(chan struct{}),
 		cancel:       cancel,
@@ -183,7 +183,7 @@ func (p *Progress) Write(b []byte) (int, error) {
 	}
 	ch := make(chan *result)
 	select {
-	case p.interceptIo <- func(w io.Writer) {
+	case p.interceptIO <- func(w io.Writer) {
 		n, err := w.Write(b)
 		ch <- &result{n, err}
 	}:
@@ -254,7 +254,7 @@ func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 		select {
 		case op := <-p.operateState:
 			op(s)
-		case fn := <-p.interceptIo:
+		case fn := <-p.interceptIO:
 			fn(cw)
 		case <-tickerC:
 			e := render()
