@@ -181,11 +181,11 @@ func (p *Progress) Write(b []byte) (int, error) {
 		n   int
 		err error
 	}
-	ch := make(chan *result)
+	ch := make(chan result)
 	select {
 	case p.interceptIO <- func(w io.Writer) {
 		n, err := w.Write(b)
-		ch <- &result{n, err}
+		ch <- result{n, err}
 	}:
 		res := <-ch
 		return res.n, res.err
