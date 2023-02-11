@@ -217,7 +217,7 @@ func (p *Progress) Shutdown() {
 }
 
 func (p *Progress) newTicker(s *pState, isTerminal bool) chan time.Time {
-	ch := make(chan time.Time)
+	ch := make(chan time.Time, 1)
 	go func() {
 		var autoRefresh <-chan time.Time
 		if (isTerminal || s.forceAutoRefresh) && !s.disableAutoRefresh {
