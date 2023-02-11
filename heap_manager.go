@@ -45,7 +45,9 @@ func (m heapManager) run() {
 		case h_push:
 			data := req.data.(*pushData)
 			heap.Push(&bHeap, data.bar)
-			sync = data.sync
+			if !sync {
+				sync = data.sync
+			}
 		case h_sync:
 			if sync || l != bHeap.Len() {
 				pMatrix = make(map[int][]chan int)
@@ -59,8 +61,9 @@ func (m heapManager) run() {
 						aMatrix[i] = append(aMatrix[i], ch)
 					}
 				}
+				sync = false
+				l = bHeap.Len()
 			}
-			l = bHeap.Len()
 			syncWidth(pMatrix)
 			syncWidth(aMatrix)
 		case h_iter:
