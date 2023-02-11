@@ -43,7 +43,7 @@ func (m heapManager) run() {
 	for req := range m {
 		switch req.cmd {
 		case h_push:
-			data := req.data.(*pushData)
+			data := req.data.(pushData)
 			heap.Push(&bHeap, data.bar)
 			if !sync {
 				sync = data.sync
@@ -67,7 +67,7 @@ func (m heapManager) run() {
 			syncWidth(pMatrix)
 			syncWidth(aMatrix)
 		case h_iter:
-			data := req.data.(*iterData)
+			data := req.data.(iterData)
 			for _, b := range bHeap {
 				select {
 				case data.iter <- b:
@@ -76,7 +76,7 @@ func (m heapManager) run() {
 			}
 			close(data.iter)
 		case h_drain:
-			data := req.data.(*iterData)
+			data := req.data.(iterData)
 			for bHeap.Len() != 0 {
 				select {
 				case data.iter <- heap.Pop(&bHeap).(*Bar):
@@ -103,17 +103,17 @@ func (m heapManager) sync() {
 }
 
 func (m heapManager) push(b *Bar, sync bool) {
-	data := &pushData{b, sync}
+	data := pushData{b, sync}
 	m <- heapRequest{cmd: h_push, data: data}
 }
 
 func (m heapManager) iter(iter chan *Bar, drop chan struct{}) {
-	data := &iterData{iter, drop}
+	data := iterData{iter, drop}
 	m <- heapRequest{cmd: h_iter, data: data}
 }
 
 func (m heapManager) drain(iter chan *Bar, drop chan struct{}) {
-	data := &iterData{iter, drop}
+	data := iterData{iter, drop}
 	m <- heapRequest{cmd: h_drain, data: data}
 }
 
