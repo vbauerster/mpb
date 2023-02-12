@@ -199,24 +199,19 @@ func TestBarStyle(t *testing.T) {
 }
 
 func TestDecorStatisticsAvailableWidth(t *testing.T) {
-	var called [2]bool
+	ch := make(chan int, 2)
 	td1 := func(s decor.Statistics) string {
-		if s.AvailableWidth != 80 {
-			t.Errorf("expected AvailableWidth %d got %d", 80, s.AvailableWidth)
-		}
-		called[0] = true
+		ch <- s.AvailableWidth
 		return fmt.Sprintf("\x1b[31;1;4m%s\x1b[0m", strings.Repeat("0", 20))
 	}
 	td2 := func(s decor.Statistics) string {
-		if s.AvailableWidth != 40 {
-			t.Errorf("expected AvailableWidth %d got %d", 40, s.AvailableWidth)
-		}
-		called[1] = true
+		ch <- s.AvailableWidth
 		return ""
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	refresh := make(chan interface{})
-	p := mpb.NewWithContext(ctx, mpb.WithWidth(100),
+	p := mpb.NewWithContext(ctx,
+		mpb.WithWidth(100),
 		mpb.WithManualRefresh(refresh),
 		mpb.WithOutput(io.Discard),
 	)
@@ -232,11 +227,17 @@ func TestDecorStatisticsAvailableWidth(t *testing.T) {
 		),
 	)
 	refresh <- time.Now()
-	cancel()
+	go func() {
+		time.Sleep(10 * time.Millisecond)
+		cancel()
+	}()
 	p.Wait()
-	for i, ok := range called {
-		if !ok {
-			t.Errorf("Decorator %d isn't called", i+1)
-		}
+
+	if availableWidth := <-ch; availableWidth != 80 {
+		t.Errorf("expected AvailableWidth %d got %d", 80, availableWidth)
+	}
+
+	if availableWidth := <-ch; availableWidth != 40 {
+		t.Errorf("expected AvailableWidth %d got %d", 40, availableWidth)
 	}
 }
