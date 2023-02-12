@@ -73,6 +73,7 @@ func (m heapManager) run() {
 				select {
 				case data.iter <- b:
 				case <-data.drop:
+					break
 				}
 			}
 			close(data.iter)
@@ -82,6 +83,7 @@ func (m heapManager) run() {
 				select {
 				case data.iter <- heap.Pop(&bHeap).(*Bar):
 				case <-data.drop:
+					break
 				}
 			}
 			close(data.iter)
