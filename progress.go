@@ -96,7 +96,6 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 		cancel:       cancel,
 	}
 
-	go s.hm.run()
 	go p.serve(s, cwriter.New(s.output))
 	return p
 }
@@ -253,6 +252,8 @@ func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 	render := func() error { return s.render(cw) }
 	tickerC := s.newTicker(p.ctx, cw.IsTerminal(), p.done)
 
+	go s.hm.run()
+
 	for {
 		select {
 		case op := <-p.operateState:
@@ -299,7 +300,6 @@ func (s *pState) render(cw *cwriter.Writer) (err error) {
 	}
 
 	s.hm.sync()
-
 	iter := make(chan *Bar)
 	s.hm.iter(iter, nil)
 	for b := range iter {
