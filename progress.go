@@ -145,8 +145,7 @@ func (p *Progress) AddFiller(total int64, filler BarFiller, options ...BarOption
 }
 
 func (p *Progress) traverseBars(cb func(b *Bar) bool) {
-	iter := make(chan *Bar)
-	drop := make(chan struct{})
+	iter, drop := make(chan *Bar), make(chan struct{})
 	select {
 	case p.operateState <- func(s *pState) { s.hm.iter(iter, drop) }:
 		for b := range iter {
@@ -316,8 +315,7 @@ func (s *pState) flush(cw *cwriter.Writer, height int) error {
 	var popCount int
 	s.rows = s.rows[:0]
 
-	iter := make(chan *Bar)
-	drop := make(chan struct{})
+	iter, drop := make(chan *Bar), make(chan struct{})
 	s.hm.drain(iter, drop)
 
 	for b := range iter {
