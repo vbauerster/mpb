@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/vbauerster/mpb/v8/cwriter"
+	"github.com/vbauerster/mpb/v8/decor"
 )
 
 const (
@@ -122,8 +123,11 @@ func (p *Progress) AddFiller(total int64, filler BarFiller, options ...BarOption
 	if filler == nil {
 		filler = NopStyle().Build()
 	}
-	p.bwg.Add(1)
-	result := make(chan *Bar)
+	type result struct {
+		bar *Bar
+		bs  *bState
+	}
+	ch := make(chan result)
 	select {
 	case p.operateState <- func(ps *pState) {
 		bs := ps.makeBarState(total, filler, options...)
@@ -133,13 +137,24 @@ func (p *Progress) AddFiller(total int64, filler BarFiller, options ...BarOption
 		} else {
 			ps.hm.push(bar, true)
 		}
+		ch <- result{bar, bs}
 		ps.idCount++
-		result <- bar
 	}:
-		bar := <-result
-		return bar
+		res := <-ch
+		res.bar.TraverseDecorators(func(d decor.Decorator) {
+			if d, ok := d.(decor.AverageDecorator); ok {
+				res.bs.averageDecorators = append(res.bs.averageDecorators, d)
+			}
+			if d, ok := d.(decor.EwmaDecorator); ok {
+				res.bs.ewmaDecorators = append(res.bs.ewmaDecorators, d)
+			}
+			if d, ok := d.(decor.ShutdownListener); ok {
+				res.bs.shutdownListeners = append(res.bs.shutdownListeners, d)
+			}
+		})
+		p.bwg.Add(1)
+		return res.bar
 	case <-p.done:
-		p.bwg.Done()
 		panic(DoneError)
 	}
 }
@@ -406,8 +421,6 @@ func (s *pState) makeBarState(total int64, filler BarFiller, options ...BarOptio
 	for i := 0; i < len(bs.buffers); i++ {
 		bs.buffers[i] = bytes.NewBuffer(make([]byte, 0, 512))
 	}
-
-	bs.subscribeDecorators()
 
 	return bs
 }
