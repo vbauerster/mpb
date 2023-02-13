@@ -23,11 +23,11 @@ func main() {
 	wg.Add(numBars)
 
 	for i := 0; i < numBars; i++ {
-		name := fmt.Sprintf("Bar#%d:", i)
+		name := fmt.Sprintf("Bar#%02d: ", i)
 		bar := p.AddBar(int64(total),
 			mpb.PrependDecorators(
-				decor.Name(name),
-				decor.EwmaETA(decor.ET_STYLE_GO, 60, decor.WCSyncSpace),
+				decor.Name(name, decor.WCSyncWidthR),
+				decor.EwmaETA(decor.ET_STYLE_GO, 60, decor.WCSyncWidth),
 			),
 			mpb.AppendDecorators(
 				// note that OnComplete will not be fired, because of cancel
