@@ -217,7 +217,7 @@ func (p *Progress) Shutdown() {
 	<-p.shutdown
 }
 
-func (p *Progress) newTicker(s *pState, isTerminal bool) chan time.Time {
+func (s *pState) newTicker(ctx context.Context, isTerminal bool, done chan struct{}) chan time.Time {
 	ch := make(chan time.Time, 1)
 	go func() {
 		var autoRefresh <-chan time.Time
@@ -239,8 +239,8 @@ func (p *Progress) newTicker(s *pState, isTerminal bool) chan time.Time {
 				} else {
 					ch <- time.Now()
 				}
-			case <-p.ctx.Done():
-				close(p.done)
+			case <-ctx.Done():
+				close(done)
 				return
 			}
 		}
@@ -251,7 +251,7 @@ func (p *Progress) newTicker(s *pState, isTerminal bool) chan time.Time {
 func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 	var err error
 	render := func() error { return s.render(cw) }
-	tickerC := p.newTicker(s, cw.IsTerminal())
+	tickerC := s.newTicker(p.ctx, cw.IsTerminal(), p.done)
 
 	for {
 		select {
