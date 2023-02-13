@@ -216,37 +216,6 @@ func (p *Progress) Shutdown() {
 	<-p.shutdown
 }
 
-func (s *pState) newTicker(ctx context.Context, isTerminal bool, done chan struct{}) chan time.Time {
-	ch := make(chan time.Time, 1)
-	go func() {
-		var autoRefresh <-chan time.Time
-		if (isTerminal || s.forceAutoRefresh) && !s.disableAutoRefresh {
-			if s.renderDelay != nil {
-				<-s.renderDelay
-			}
-			ticker := time.NewTicker(s.refreshRate)
-			defer ticker.Stop()
-			autoRefresh = ticker.C
-		}
-		for {
-			select {
-			case t := <-autoRefresh:
-				ch <- t
-			case x := <-s.manualRefresh:
-				if t, ok := x.(time.Time); ok {
-					ch <- t
-				} else {
-					ch <- time.Now()
-				}
-			case <-ctx.Done():
-				close(done)
-				return
-			}
-		}
-	}()
-	return ch
-}
-
 func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 	var err error
 	render := func() error { return s.render(cw) }
@@ -285,6 +254,37 @@ func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 			return
 		}
 	}
+}
+
+func (s *pState) newTicker(ctx context.Context, isTerminal bool, done chan struct{}) chan time.Time {
+	ch := make(chan time.Time, 1)
+	go func() {
+		var autoRefresh <-chan time.Time
+		if (isTerminal || s.forceAutoRefresh) && !s.disableAutoRefresh {
+			if s.renderDelay != nil {
+				<-s.renderDelay
+			}
+			ticker := time.NewTicker(s.refreshRate)
+			defer ticker.Stop()
+			autoRefresh = ticker.C
+		}
+		for {
+			select {
+			case t := <-autoRefresh:
+				ch <- t
+			case x := <-s.manualRefresh:
+				if t, ok := x.(time.Time); ok {
+					ch <- t
+				} else {
+					ch <- time.Now()
+				}
+			case <-ctx.Done():
+				close(done)
+				return
+			}
+		}
+	}()
+	return ch
 }
 
 func (s *pState) render(cw *cwriter.Writer) (err error) {
