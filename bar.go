@@ -671,7 +671,7 @@ func newStatistics(tw int, s *bState) decor.Statistics {
 
 func extractBaseDecorator(d decor.Decorator) decor.Decorator {
 	if d, ok := d.(decor.Wrapper); ok {
-		return extractBaseDecorator(d.Base())
+		return extractBaseDecorator(d.Unwrap())
 	}
 	return d
 }

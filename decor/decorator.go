@@ -93,7 +93,7 @@ type Configurator interface {
 // it is necessary to implement this interface to retain functionality
 // of built-in Decorator.
 type Wrapper interface {
-	Base() Decorator
+	Unwrap() Decorator
 }
 
 // EwmaDecorator interface.
