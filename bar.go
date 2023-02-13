@@ -644,11 +644,11 @@ func (s bState) decoratorShutdownNotify() {
 	for i := 0; i < len(s.shutdownListeners); i++ {
 		switch d := s.shutdownListeners[i]; i {
 		case len(s.shutdownListeners) - 1:
-			d.Shutdown()
+			d.OnShutdown()
 		default:
 			wg.Add(1)
 			go func() {
-				d.Shutdown()
+				d.OnShutdown()
 				wg.Done()
 			}()
 		}

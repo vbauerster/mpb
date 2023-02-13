@@ -113,7 +113,7 @@ type AverageDecorator interface {
 // If decorator needs to be notified once upon bar shutdown event, so
 // this is the right interface to implement.
 type ShutdownListener interface {
-	Shutdown()
+	OnShutdown()
 }
 
 // Global convenience instances of WC with sync width bit set.
