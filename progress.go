@@ -313,10 +313,10 @@ func (s *pState) flush(cw *cwriter.Writer, height int) error {
 	defer wg.Wait() // waiting for all s.hm.push to complete
 
 	var popCount int
-	s.rows = s.rows[:0]
 
 	iter, drop := make(chan *Bar), make(chan struct{})
 	s.hm.drain(iter, drop)
+	s.rows = s.rows[:0]
 
 	for b := range iter {
 		frame := <-b.frameCh
