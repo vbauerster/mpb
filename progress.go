@@ -65,20 +65,23 @@ func New(options ...ContainerOption) *Progress {
 // method has been called.
 func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 	s := &pState{
-		hm:            make(heapManager),
-		rows:          make([]io.Reader, 32),
-		refreshRate:   defaultRefreshRate,
-		popPriority:   math.MinInt32,
-		manualRefresh: make(chan interface{}),
-		queueBars:     make(map[*Bar]*Bar),
-		output:        os.Stdout,
-		debugOut:      io.Discard,
+		hm:          make(heapManager),
+		rows:        make([]io.Reader, 32),
+		refreshRate: defaultRefreshRate,
+		popPriority: math.MinInt32,
+		queueBars:   make(map[*Bar]*Bar),
+		output:      os.Stdout,
+		debugOut:    io.Discard,
 	}
 
 	for _, opt := range options {
 		if opt != nil {
 			opt(s)
 		}
+	}
+
+	if s.manualRefresh == nil {
+		s.manualRefresh = make(chan interface{})
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
