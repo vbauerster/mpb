@@ -306,13 +306,13 @@ func (s *pState) render(cw *cwriter.Writer) (err error) {
 		go b.render(width)
 	}
 
-	wg := new(sync.WaitGroup)
-	err = s.flush(wg, cw, height)
-	wg.Wait()
-	return err
+	return s.flush(cw, height)
 }
 
-func (s *pState) flush(wg *sync.WaitGroup, cw *cwriter.Writer, height int) error {
+func (s *pState) flush(cw *cwriter.Writer, height int) error {
+	wg := new(sync.WaitGroup)
+	defer wg.Wait() // waiting for all s.hm.push to complete
+
 	var popCount int
 	s.rows = s.rows[:0]
 
