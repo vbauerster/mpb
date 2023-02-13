@@ -50,7 +50,6 @@ type bState struct {
 	shutdownListeners []decor.ShutdownListener
 	buffers           [3]*bytes.Buffer
 	filler            BarFiller
-	middleware        func(BarFiller) BarFiller
 	extender          extenderFunc
 	manualRefresh     chan interface{}
 

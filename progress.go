@@ -413,11 +413,6 @@ func (s *pState) makeBarState(total int64, filler BarFiller, options ...BarOptio
 		}
 	}
 
-	if bs.middleware != nil {
-		bs.filler = bs.middleware(filler)
-		bs.middleware = nil
-	}
-
 	for i := 0; i < len(bs.buffers); i++ {
 		bs.buffers[i] = bytes.NewBuffer(make([]byte, 0, 512))
 	}
