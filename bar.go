@@ -162,7 +162,7 @@ func (b *Bar) TraverseDecorators(cb func(decor.Decorator)) {
 			s.aDecorators,
 		} {
 			for _, d := range decorators {
-				cb(extractBaseDecorator(d))
+				cb(unwrap(d))
 			}
 		}
 	}:
@@ -591,7 +591,7 @@ func (s *bState) subscribeDecorators() {
 		s.aDecorators,
 	} {
 		for _, d := range decorators {
-			d = extractBaseDecorator(d)
+			d = unwrap(d)
 			if d, ok := d.(decor.AverageDecorator); ok {
 				s.averageDecorators = append(s.averageDecorators, d)
 			}
@@ -669,9 +669,9 @@ func newStatistics(tw int, s *bState) decor.Statistics {
 	}
 }
 
-func extractBaseDecorator(d decor.Decorator) decor.Decorator {
+func unwrap(d decor.Decorator) decor.Decorator {
 	if d, ok := d.(decor.Wrapper); ok {
-		return extractBaseDecorator(d.Unwrap())
+		return unwrap(d.Unwrap())
 	}
 	return d
 }
