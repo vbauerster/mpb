@@ -153,20 +153,22 @@ func (b *Bar) SetRefill(amount int64) {
 
 // TraverseDecorators traverses all available decorators and calls cb func on each.
 func (b *Bar) TraverseDecorators(cb func(decor.Decorator)) {
-	sync := make(chan struct{})
+	iter := make(chan decor.Decorator)
 	select {
 	case b.operateState <- func(s *bState) {
-		defer close(sync)
 		for _, decorators := range [][]decor.Decorator{
 			s.pDecorators,
 			s.aDecorators,
 		} {
 			for _, d := range decorators {
-				cb(unwrap(d))
+				iter <- d
 			}
 		}
+		close(iter)
 	}:
-		<-sync
+		for d := range iter {
+			cb(unwrap(d))
+		}
 	case <-b.done:
 	}
 }
