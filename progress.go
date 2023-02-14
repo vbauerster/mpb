@@ -37,10 +37,10 @@ type pState struct {
 	hm           heapManager
 	dropS, dropD chan struct{}
 	refreshCh    chan time.Time
+	idCount      int
 
 	// following are provided/overrided by user
 	refreshRate      time.Duration
-	idCount          int
 	reqWidth         int
 	popPriority      int
 	popCompleted     bool
