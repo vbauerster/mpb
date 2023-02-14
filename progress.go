@@ -37,7 +37,6 @@ type pState struct {
 	hm           heapManager
 	dropS, dropD chan struct{}
 	refreshCh    chan time.Time
-	rows         []io.Reader
 
 	// following are provided/overrided by user
 	refreshRate      time.Duration
@@ -72,7 +71,6 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 		dropS:       make(chan struct{}),
 		dropD:       make(chan struct{}),
 		refreshCh:   make(chan time.Time),
-		rows:        make([]io.Reader, 32),
 		refreshRate: defaultRefreshRate,
 		popPriority: math.MinInt32,
 		queueBars:   make(map[*Bar]*Bar),
@@ -321,10 +319,10 @@ func (s *pState) flush(cw *cwriter.Writer, height int) error {
 	defer wg.Wait() // waiting for all s.hm.push to complete
 
 	var popCount int
+	var rows []io.Reader
 
 	iter := make(chan *Bar)
 	s.hm.drain(iter, s.dropD)
-	s.rows = s.rows[:0]
 
 	for b := range iter {
 		frame := <-b.frameCh
@@ -335,8 +333,8 @@ func (s *pState) flush(cw *cwriter.Writer, height int) error {
 		}
 		var usedRows int
 		for i := len(frame.rows) - 1; i >= 0; i-- {
-			if row := frame.rows[i]; len(s.rows) < height {
-				s.rows = append(s.rows, row)
+			if row := frame.rows[i]; len(rows) < height {
+				rows = append(rows, row)
 				usedRows++
 			} else {
 				_, _ = io.Copy(io.Discard, row)
@@ -376,14 +374,14 @@ func (s *pState) flush(cw *cwriter.Writer, height int) error {
 		}(b)
 	}
 
-	for i := len(s.rows) - 1; i >= 0; i-- {
-		_, err := cw.ReadFrom(s.rows[i])
+	for i := len(rows) - 1; i >= 0; i-- {
+		_, err := cw.ReadFrom(rows[i])
 		if err != nil {
 			return err
 		}
 	}
 
-	return cw.Flush(len(s.rows) - popCount)
+	return cw.Flush(len(rows) - popCount)
 }
 
 func (s *pState) makeBarState(total int64, filler BarFiller, options ...BarOption) *bState {
