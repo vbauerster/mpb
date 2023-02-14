@@ -38,11 +38,11 @@ type pState struct {
 	dropS, dropD chan struct{}
 	refreshCh    chan time.Time
 	idCount      int
+	popPriority  int
 
 	// following are provided/overrided by user
 	refreshRate      time.Duration
 	reqWidth         int
-	popPriority      int
 	popCompleted     bool
 	manualRefresh    bool
 	forceAutoRefresh bool
