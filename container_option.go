@@ -77,9 +77,9 @@ func WithShutdownNotifier(ch chan<- interface{}) ContainerOption {
 	}
 }
 
-// WithOutput overrides default os.Stdout output. Setting it to nil
-// will effectively disable auto refresh rate and discard any output,
-// useful if you want to disable progress bars with little overhead.
+// WithOutput overrides default os.Stdout output. If underlying io.Writer
+// is not a terminal then auto refresh is disabled unless ForceAutoRefresh
+// option is provided.
 func WithOutput(w io.Writer) ContainerOption {
 	if w == nil {
 		w = io.Discard
