@@ -307,7 +307,11 @@ func (s *pState) render(cw *cwriter.Writer) (err error) {
 			return err
 		}
 	} else {
-		width = s.reqWidth
+		if s.reqWidth > 0 {
+			width = s.reqWidth
+		} else {
+			width = 100
+		}
 		height = 100
 	}
 
