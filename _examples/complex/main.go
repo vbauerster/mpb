@@ -29,7 +29,7 @@ func main() {
 			mpb.AppendDecorators(decor.Percentage(decor.WC{W: 5})),
 		)
 		queue[1] = p.AddBar(rand.Int63n(101)+100,
-			mpb.BarQueueAfter(queue[0], false), // this bar is queued
+			mpb.BarQueueAfter(queue[0]), // this bar is queued
 			mpb.BarFillerClearOnComplete(),
 			mpb.PrependDecorators(
 				decor.Name(task, decor.WC{W: len(task) + 1, C: decor.DidentRight}),

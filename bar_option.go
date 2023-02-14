@@ -59,15 +59,9 @@ func BarWidth(width int) BarOption {
 // BarQueueAfter puts this (being constructed) bar into the queue.
 // BarPriority will be inherited from the argument bar.
 // When argument bar completes or aborts queued bar replaces its place.
-// If sync is true queued bar is suspended until argument bar completes
-// or aborts.
-func BarQueueAfter(bar *Bar, sync bool) BarOption {
-	if bar == nil {
-		return nil
-	}
+func BarQueueAfter(bar *Bar) BarOption {
 	return func(s *bState) {
-		s.wait.bar = bar
-		s.wait.sync = sync
+		s.waitBar = bar
 	}
 }
 

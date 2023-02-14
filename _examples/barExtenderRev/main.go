@@ -45,7 +45,7 @@ func main() {
 		bar := p.AddBar(tasks[i].total,
 			mpb.BarExtender(filler, true),
 			mpb.BarFuncOptional(func() mpb.BarOption {
-				return mpb.BarQueueAfter(tasks[i-1].bar, false)
+				return mpb.BarQueueAfter(tasks[i-1].bar)
 			}, i != 0),
 			mpb.PrependDecorators(
 				decor.Name("current:", decor.WCSyncWidthR),

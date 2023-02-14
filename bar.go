@@ -52,11 +52,7 @@ type bState struct {
 	filler            BarFiller
 	extender          extenderFunc
 	refreshCh         chan time.Time
-
-	wait struct {
-		bar  *Bar // key for (*pState).queueBars
-		sync bool
-	}
+	waitBar           *Bar // key for (*pState).queueBars
 }
 
 type renderFrame struct {
@@ -400,9 +396,6 @@ func (b *Bar) Wait() {
 
 func (b *Bar) serve(ctx context.Context, bs *bState) {
 	defer b.container.bwg.Done()
-	if bs.wait.bar != nil && bs.wait.sync {
-		bs.wait.bar.Wait()
-	}
 	for {
 		select {
 		case op := <-b.operateState:

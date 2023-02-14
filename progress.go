@@ -135,8 +135,8 @@ func (p *Progress) AddFiller(total int64, filler BarFiller, options ...BarOption
 	case p.operateState <- func(ps *pState) {
 		bs := ps.makeBarState(total, filler, options...)
 		bar := newBar(ps.ctx, p, bs)
-		if bs.wait.bar != nil {
-			ps.queueBars[bs.wait.bar] = bar
+		if bs.waitBar != nil {
+			ps.queueBars[bs.waitBar] = bar
 		} else {
 			ps.hm.push(bar, true)
 		}
