@@ -34,9 +34,10 @@ type Progress struct {
 
 // pState holds bars in its priorityQueue, it gets passed to (*Progress).serve monitor goroutine.
 type pState struct {
-	ctx  context.Context
-	hm   heapManager
-	rows []io.Reader
+	ctx          context.Context
+	hm           heapManager
+	dropS, dropD chan struct{}
+	rows         []io.Reader
 
 	// following are provided/overrided by user
 	refreshRate        time.Duration
@@ -69,6 +70,8 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 	s := &pState{
 		ctx:         ctx,
 		hm:          make(heapManager),
+		dropS:       make(chan struct{}),
+		dropD:       make(chan struct{}),
 		rows:        make([]io.Reader, 32),
 		refreshRate: defaultRefreshRate,
 		popPriority: math.MinInt32,
@@ -300,10 +303,13 @@ func (s *pState) newTicker(isTerminal bool, done chan struct{}) chan time.Time {
 }
 
 func (s *pState) render(cw *cwriter.Writer) (err error) {
+	s.hm.sync(s.dropS)
+
 	var width, height int
 	if cw.IsTerminal() {
 		width, height, err = cw.GetTermSize()
 		if err != nil {
+			close(s.dropS)
 			return err
 		}
 	} else {
@@ -315,7 +321,6 @@ func (s *pState) render(cw *cwriter.Writer) (err error) {
 		height = 100
 	}
 
-	s.hm.sync()
 	iter := make(chan *Bar)
 	s.hm.iter(iter, nil)
 	for b := range iter {
@@ -331,14 +336,14 @@ func (s *pState) flush(cw *cwriter.Writer, height int) error {
 
 	var popCount int
 
-	iter, drop := make(chan *Bar), make(chan struct{})
-	s.hm.drain(iter, drop)
+	iter := make(chan *Bar)
+	s.hm.drain(iter, s.dropD)
 	s.rows = s.rows[:0]
 
 	for b := range iter {
 		frame := <-b.frameCh
 		if frame.err != nil {
-			close(drop)
+			close(s.dropD)
 			b.cancel()
 			return frame.err // b.frameCh is buffered it's ok to return here
 		}

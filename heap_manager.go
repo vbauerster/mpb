@@ -65,8 +65,9 @@ func (m heapManager) run() {
 				sync = false
 				l = bHeap.Len()
 			}
-			syncWidth(pMatrix)
-			syncWidth(aMatrix)
+			drop := req.data.(<-chan struct{})
+			syncWidth(pMatrix, drop)
+			syncWidth(aMatrix, drop)
 		case h_iter:
 			data := req.data.(iterData)
 			for _, b := range bHeap {
@@ -104,8 +105,8 @@ func (m heapManager) run() {
 	}
 }
 
-func (m heapManager) sync() {
-	m <- heapRequest{cmd: h_sync}
+func (m heapManager) sync(drop <-chan struct{}) {
+	m <- heapRequest{cmd: h_sync, data: drop}
 }
 
 func (m heapManager) push(b *Bar, sync bool) {
@@ -135,17 +136,22 @@ func (m heapManager) end(ch chan<- interface{}) {
 	m <- heapRequest{cmd: h_end, data: ch}
 }
 
-func syncWidth(matrix map[int][]chan int) {
+func syncWidth(matrix map[int][]chan int, drop <-chan struct{}) {
 	for _, column := range matrix {
-		go maxWidthDistributor(column)
+		go maxWidthDistributor(column, drop)
 	}
 }
 
-func maxWidthDistributor(column []chan int) {
+func maxWidthDistributor(column []chan int, drop <-chan struct{}) {
 	var maxWidth int
 	for _, ch := range column {
-		if w := <-ch; w > maxWidth {
-			maxWidth = w
+		select {
+		case w := <-ch:
+			if w > maxWidth {
+				maxWidth = w
+			}
+		case <-drop:
+			return
 		}
 	}
 	for _, ch := range column {
