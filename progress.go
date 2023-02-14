@@ -155,7 +155,6 @@ func (p *Progress) AddFiller(total int64, filler BarFiller, options ...BarOption
 				res.bs.shutdownListeners = append(res.bs.shutdownListeners, d)
 			}
 		})
-		p.bwg.Add(1)
 		return res.bar
 	case <-p.done:
 		panic(DoneError)

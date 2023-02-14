@@ -77,6 +77,7 @@ func newBar(ctx context.Context, container *Progress, bs *bState) *Bar {
 		cancel:       cancel,
 	}
 
+	container.bwg.Add(1)
 	go bar.serve(ctx, bs)
 	return bar
 }
