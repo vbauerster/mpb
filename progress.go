@@ -23,12 +23,12 @@ var DoneError = fmt.Errorf("%T instance can't be reused after it's done!", (*Pro
 
 // Progress represents a container that renders one or more progress bars.
 type Progress struct {
-	uwg            *sync.WaitGroup
-	bwg            *sync.WaitGroup
-	operateState   chan func(*pState)
-	interceptIO    chan func(io.Writer)
-	done, shutdown chan struct{}
-	cancel         func()
+	uwg          *sync.WaitGroup
+	pwg, bwg     sync.WaitGroup
+	operateState chan func(*pState)
+	interceptIO  chan func(io.Writer)
+	done         <-chan struct{}
+	cancel       func()
 }
 
 // pState holds bars in its priorityQueue, it gets passed to (*Progress).serve monitor goroutine.
@@ -86,18 +86,23 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 		}
 	}
 
+	go s.hm.run()
+
+	cw := cwriter.New(s.output)
+	if (cw.IsTerminal() || s.forceAutoRefresh) && !s.manualRefresh {
+		go s.autoRefresh()
+	}
+
 	p := &Progress{
 		uwg:          s.uwg,
-		bwg:          new(sync.WaitGroup),
 		operateState: make(chan func(*pState)),
 		interceptIO:  make(chan func(io.Writer)),
-		done:         make(chan struct{}),
-		shutdown:     make(chan struct{}),
+		done:         ctx.Done(),
 		cancel:       cancel,
 	}
-	cw := cwriter.New(s.output)
-	go p.serve(s, cw, s.newTicker(cw.IsTerminal(), p.done))
-	go s.hm.run()
+
+	p.pwg.Add(1)
+	go p.serve(s, cw)
 	return p
 }
 
@@ -227,12 +232,13 @@ func (p *Progress) Wait() {
 // are doing. Proper way to shutdown is to call (*Progress).Wait() instead.
 func (p *Progress) Shutdown() {
 	p.cancel()
-	<-p.shutdown
+	p.pwg.Wait()
 }
 
-func (p *Progress) serve(s *pState, cw *cwriter.Writer, tickerC <-chan time.Time) {
-	var err error
+func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
+	defer p.pwg.Done()
 	render := func() error { return s.render(cw) }
+	var err error
 
 	for {
 		select {
@@ -240,7 +246,7 @@ func (p *Progress) serve(s *pState, cw *cwriter.Writer, tickerC <-chan time.Time
 			op(s)
 		case fn := <-p.interceptIO:
 			fn(cw)
-		case <-tickerC:
+		case <-s.refreshCh:
 			e := render()
 			if e != nil {
 				p.cancel() // cancel all bars
@@ -261,37 +267,25 @@ func (p *Progress) serve(s *pState, cw *cwriter.Writer, tickerC <-chan time.Time
 				_, _ = fmt.Fprintln(s.debugOut, err.Error())
 			}
 			s.hm.end(s.shutdownNotifier)
-			close(p.shutdown)
 			return
 		}
 	}
 }
 
-func (s *pState) newTicker(isTerminal bool, done chan struct{}) chan time.Time {
-	ch := make(chan time.Time, 1)
-	go func() {
-		var autoRefresh <-chan time.Time
-		if (isTerminal || s.forceAutoRefresh) && !s.manualRefresh {
-			if s.renderDelay != nil {
-				<-s.renderDelay
-			}
-			ticker := time.NewTicker(s.refreshRate)
-			defer ticker.Stop()
-			autoRefresh = ticker.C
+func (s *pState) autoRefresh() {
+	if s.renderDelay != nil {
+		<-s.renderDelay
+	}
+	ticker := time.NewTicker(s.refreshRate)
+	defer ticker.Stop()
+	for {
+		select {
+		case t := <-ticker.C:
+			s.refreshCh <- t
+		case <-s.ctx.Done():
+			return
 		}
-		for {
-			select {
-			case t := <-autoRefresh:
-				ch <- t
-			case t := <-s.refreshCh:
-				ch <- t
-			case <-s.ctx.Done():
-				close(done)
-				return
-			}
-		}
-	}()
-	return ch
+	}
 }
 
 func (s *pState) render(cw *cwriter.Writer) (err error) {
