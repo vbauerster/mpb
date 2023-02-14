@@ -23,13 +23,12 @@ var DoneError = fmt.Errorf("%T instance can't be reused after it's done!", (*Pro
 
 // Progress represents a container that renders one or more progress bars.
 type Progress struct {
-	uwg          *sync.WaitGroup
-	bwg          *sync.WaitGroup
-	operateState chan func(*pState)
-	interceptIO  chan func(io.Writer)
-	done         chan struct{}
-	shutdown     chan struct{}
-	cancel       func()
+	uwg            *sync.WaitGroup
+	bwg            *sync.WaitGroup
+	operateState   chan func(*pState)
+	interceptIO    chan func(io.Writer)
+	done, shutdown chan struct{}
+	cancel         func()
 }
 
 // pState holds bars in its priorityQueue, it gets passed to (*Progress).serve monitor goroutine.

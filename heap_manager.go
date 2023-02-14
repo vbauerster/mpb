@@ -35,8 +35,7 @@ type pushData struct {
 
 func (m heapManager) run() {
 	var bHeap priorityQueue
-	var pMatrix map[int][]chan int
-	var aMatrix map[int][]chan int
+	var pMatrix, aMatrix map[int][]chan int
 
 	var l int
 	var sync bool
