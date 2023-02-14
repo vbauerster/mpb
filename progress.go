@@ -23,7 +23,6 @@ var DoneError = fmt.Errorf("%T instance can't be reused after it's done!", (*Pro
 
 // Progress represents a container that renders one or more progress bars.
 type Progress struct {
-	ctx          context.Context
 	uwg          *sync.WaitGroup
 	bwg          *sync.WaitGroup
 	operateState chan func(*pState)
@@ -35,6 +34,7 @@ type Progress struct {
 
 // pState holds bars in its priorityQueue, it gets passed to (*Progress).serve monitor goroutine.
 type pState struct {
+	ctx  context.Context
 	hm   heapManager
 	rows []io.Reader
 
@@ -65,7 +65,9 @@ func New(options ...ContainerOption) *Progress {
 // context. It's not possible to reuse instance after (*Progress).Wait
 // method has been called.
 func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
+	ctx, cancel := context.WithCancel(ctx)
 	s := &pState{
+		ctx:         ctx,
 		hm:          make(heapManager),
 		rows:        make([]io.Reader, 32),
 		refreshRate: defaultRefreshRate,
@@ -85,9 +87,7 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 		s.manualRefresh = make(chan interface{})
 	}
 
-	ctx, cancel := context.WithCancel(ctx)
 	p := &Progress{
-		ctx:          ctx,
 		uwg:          s.uwg,
 		bwg:          new(sync.WaitGroup),
 		operateState: make(chan func(*pState)),
@@ -96,8 +96,9 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 		shutdown:     make(chan struct{}),
 		cancel:       cancel,
 	}
-
-	go p.serve(s, cwriter.New(s.output))
+	cw := cwriter.New(s.output)
+	go p.serve(s, cw, s.newTicker(cw.IsTerminal(), p.done))
+	go s.hm.run()
 	return p
 }
 
@@ -131,7 +132,7 @@ func (p *Progress) AddFiller(total int64, filler BarFiller, options ...BarOption
 	select {
 	case p.operateState <- func(ps *pState) {
 		bs := ps.makeBarState(total, filler, options...)
-		bar := newBar(p, bs)
+		bar := newBar(ps.ctx, p, bs)
 		if bs.wait.bar != nil {
 			ps.queueBars[bs.wait.bar] = bar
 		} else {
@@ -230,12 +231,9 @@ func (p *Progress) Shutdown() {
 	<-p.shutdown
 }
 
-func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
+func (p *Progress) serve(s *pState, cw *cwriter.Writer, tickerC <-chan time.Time) {
 	var err error
 	render := func() error { return s.render(cw) }
-	tickerC := s.newTicker(p.ctx, cw.IsTerminal(), p.done)
-
-	go s.hm.run()
 
 	for {
 		select {
@@ -270,7 +268,7 @@ func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 	}
 }
 
-func (s *pState) newTicker(ctx context.Context, isTerminal bool, done chan struct{}) chan time.Time {
+func (s *pState) newTicker(isTerminal bool, done chan struct{}) chan time.Time {
 	ch := make(chan time.Time, 1)
 	go func() {
 		var autoRefresh <-chan time.Time
@@ -292,7 +290,7 @@ func (s *pState) newTicker(ctx context.Context, isTerminal bool, done chan struc
 				} else {
 					ch <- time.Now()
 				}
-			case <-ctx.Done():
+			case <-s.ctx.Done():
 				close(done)
 				return
 			}

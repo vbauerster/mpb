@@ -65,8 +65,8 @@ type renderFrame struct {
 	err      error
 }
 
-func newBar(container *Progress, bs *bState) *Bar {
-	ctx, cancel := context.WithCancel(container.ctx)
+func newBar(ctx context.Context, container *Progress, bs *bState) *Bar {
+	ctx, cancel := context.WithCancel(ctx)
 
 	bar := &Bar{
 		priority:     bs.priority,
