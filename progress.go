@@ -140,8 +140,8 @@ func (p *Progress) AddFiller(total int64, filler BarFiller, options ...BarOption
 		} else {
 			ps.hm.push(bar, true)
 		}
-		ch <- result{bar, bs}
 		ps.idCount++
+		ch <- result{bar, bs}
 	}:
 		res := <-ch
 		res.bar.TraverseDecorators(func(d decor.Decorator) {
