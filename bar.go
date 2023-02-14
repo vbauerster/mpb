@@ -51,7 +51,7 @@ type bState struct {
 	buffers           [3]*bytes.Buffer
 	filler            BarFiller
 	extender          extenderFunc
-	manualRefresh     chan interface{}
+	refreshCh         chan time.Time
 
 	wait struct {
 		bar  *Bar // key for (*pState).queueBars
@@ -186,7 +186,7 @@ func (b *Bar) EnableTriggerComplete() {
 		if s.current >= s.total {
 			s.current = s.total
 			s.completed = true
-			b.forceRefresh(s.manualRefresh)
+			b.forceRefresh(s.refreshCh)
 		} else {
 			s.triggerComplete = true
 		}
@@ -214,7 +214,7 @@ func (b *Bar) SetTotal(total int64, triggerCompleteNow bool) {
 		if triggerCompleteNow {
 			s.current = s.total
 			s.completed = true
-			b.forceRefresh(s.manualRefresh)
+			b.forceRefresh(s.refreshCh)
 		}
 	}:
 	case <-b.done:
@@ -232,7 +232,7 @@ func (b *Bar) SetCurrent(current int64) {
 		if s.triggerComplete && s.current >= s.total {
 			s.current = s.total
 			s.completed = true
-			b.forceRefresh(s.manualRefresh)
+			b.forceRefresh(s.refreshCh)
 		}
 	}:
 	case <-b.done:
@@ -254,7 +254,7 @@ func (b *Bar) EwmaSetCurrent(current int64, iterDur time.Duration) {
 		if s.triggerComplete && s.current >= s.total {
 			s.current = s.total
 			s.completed = true
-			b.forceRefresh(s.manualRefresh)
+			b.forceRefresh(s.refreshCh)
 		}
 	}:
 	case <-b.done:
@@ -282,7 +282,7 @@ func (b *Bar) IncrInt64(n int64) {
 		if s.triggerComplete && s.current >= s.total {
 			s.current = s.total
 			s.completed = true
-			b.forceRefresh(s.manualRefresh)
+			b.forceRefresh(s.refreshCh)
 		}
 	}:
 	case <-b.done:
@@ -312,7 +312,7 @@ func (b *Bar) EwmaIncrInt64(n int64, iterDur time.Duration) {
 		if s.triggerComplete && s.current >= s.total {
 			s.current = s.total
 			s.completed = true
-			b.forceRefresh(s.manualRefresh)
+			b.forceRefresh(s.refreshCh)
 		}
 	}:
 	case <-b.done:
@@ -350,7 +350,7 @@ func (b *Bar) Abort(drop bool) {
 		}
 		s.aborted = true
 		s.dropOnComplete = drop
-		b.forceRefresh(s.manualRefresh)
+		b.forceRefresh(s.refreshCh)
 	}:
 	case <-b.done:
 	}
@@ -449,12 +449,12 @@ func (b *Bar) render(tw int) {
 	}
 }
 
-func (b *Bar) forceRefresh(refreshCh chan<- interface{}) {
+func (b *Bar) forceRefresh(refreshCh chan<- time.Time) {
 	b.container.bwg.Add(1)
 	go b.forceRefreshImpl(refreshCh)
 }
 
-func (b *Bar) forceRefreshImpl(refreshCh chan<- interface{}) {
+func (b *Bar) forceRefreshImpl(refreshCh chan<- time.Time) {
 	defer b.container.bwg.Done()
 	var anyOtherRunning bool
 	b.container.traverseBars(func(bar *Bar) bool {

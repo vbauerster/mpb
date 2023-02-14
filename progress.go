@@ -36,23 +36,23 @@ type pState struct {
 	ctx          context.Context
 	hm           heapManager
 	dropS, dropD chan struct{}
+	refreshCh    chan time.Time
 	rows         []io.Reader
 
 	// following are provided/overrided by user
-	refreshRate        time.Duration
-	idCount            int
-	reqWidth           int
-	popPriority        int
-	popCompleted       bool
-	disableAutoRefresh bool
-	forceAutoRefresh   bool
-	manualRefresh      chan interface{}
-	renderDelay        <-chan struct{}
-	shutdownNotifier   chan<- interface{}
-	queueBars          map[*Bar]*Bar
-	output             io.Writer
-	debugOut           io.Writer
-	uwg                *sync.WaitGroup
+	refreshRate      time.Duration
+	idCount          int
+	reqWidth         int
+	popPriority      int
+	popCompleted     bool
+	manualRefresh    bool
+	forceAutoRefresh bool
+	renderDelay      <-chan struct{}
+	shutdownNotifier chan<- interface{}
+	queueBars        map[*Bar]*Bar
+	output           io.Writer
+	debugOut         io.Writer
+	uwg              *sync.WaitGroup
 }
 
 // New creates new Progress container instance. It's not possible to
@@ -71,6 +71,7 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 		hm:          make(heapManager),
 		dropS:       make(chan struct{}),
 		dropD:       make(chan struct{}),
+		refreshCh:   make(chan time.Time),
 		rows:        make([]io.Reader, 32),
 		refreshRate: defaultRefreshRate,
 		popPriority: math.MinInt32,
@@ -83,10 +84,6 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 		if opt != nil {
 			opt(s)
 		}
-	}
-
-	if s.manualRefresh == nil {
-		s.manualRefresh = make(chan interface{})
 	}
 
 	p := &Progress{
@@ -274,7 +271,7 @@ func (s *pState) newTicker(isTerminal bool, done chan struct{}) chan time.Time {
 	ch := make(chan time.Time, 1)
 	go func() {
 		var autoRefresh <-chan time.Time
-		if (isTerminal || s.forceAutoRefresh) && !s.disableAutoRefresh {
+		if (isTerminal || s.forceAutoRefresh) && !s.manualRefresh {
 			if s.renderDelay != nil {
 				<-s.renderDelay
 			}
@@ -286,12 +283,8 @@ func (s *pState) newTicker(isTerminal bool, done chan struct{}) chan time.Time {
 			select {
 			case t := <-autoRefresh:
 				ch <- t
-			case x := <-s.manualRefresh:
-				if t, ok := x.(time.Time); ok {
-					ch <- t
-				} else {
-					ch <- time.Now()
-				}
+			case t := <-s.refreshCh:
+				ch <- t
 			case <-s.ctx.Done():
 				close(done)
 				return
@@ -401,12 +394,12 @@ func (s *pState) flush(cw *cwriter.Writer, height int) error {
 
 func (s *pState) makeBarState(total int64, filler BarFiller, options ...BarOption) *bState {
 	bs := &bState{
-		id:            s.idCount,
-		priority:      s.idCount,
-		reqWidth:      s.reqWidth,
-		total:         total,
-		filler:        filler,
-		manualRefresh: s.manualRefresh,
+		id:        s.idCount,
+		priority:  s.idCount,
+		reqWidth:  s.reqWidth,
+		total:     total,
+		filler:    filler,
+		refreshCh: s.refreshCh,
 	}
 
 	if total > 0 {

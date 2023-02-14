@@ -39,10 +39,23 @@ func WithRefreshRate(d time.Duration) ContainerOption {
 
 // WithManualRefresh disables internal auto refresh time.Ticker.
 // Refresh will occur upon receive value from provided ch.
-func WithManualRefresh(ch chan interface{}) ContainerOption {
+func WithManualRefresh(ch <-chan interface{}) ContainerOption {
 	return func(s *pState) {
-		s.manualRefresh = ch
-		s.disableAutoRefresh = true
+		s.manualRefresh = true
+		go func(refreshCh chan<- time.Time, done <-chan struct{}) {
+			for {
+				select {
+				case x := <-ch:
+					if t, ok := x.(time.Time); ok {
+						refreshCh <- t
+					} else {
+						refreshCh <- time.Now()
+					}
+				case <-done:
+					return
+				}
+			}
+		}(s.refreshCh, s.ctx.Done())
 	}
 }
 
