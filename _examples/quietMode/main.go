@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"math/rand"
 	"sync"
 	"time"
@@ -23,14 +24,7 @@ func main() {
 	// passed wg will be accounted at p.Wait() call
 	p := mpb.New(
 		mpb.WithWaitGroup(&wg),
-		mpb.ContainerOptional(
-			// setting to nil will:
-			// set output to ioutil.Discard and disable refresh rate cycle, in
-			// order not to consume much CPU. Hovewer a single refresh still will
-			// be triggered on bar complete event, per each bar.
-			mpb.WithOutput(nil),
-			quietMode,
-		),
+		mpb.ContainerOptional(mpb.WithOutput(io.Discard), quietMode),
 	)
 	total, numBars := 100, 3
 	wg.Add(numBars)
