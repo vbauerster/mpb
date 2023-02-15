@@ -241,3 +241,28 @@ func TestDecorStatisticsAvailableWidth(t *testing.T) {
 		t.Errorf("expected AvailableWidth %d got %d", 40, availableWidth)
 	}
 }
+
+func TestBarQueueAfterBar(t *testing.T) {
+	shutdown := make(chan interface{})
+	ctx, cancel := context.WithCancel(context.Background())
+	p := mpb.NewWithContext(ctx,
+		mpb.WithOutput(io.Discard),
+		mpb.WithShutdownNotifier(shutdown),
+	)
+	b := p.AddBar(100)
+	q := p.AddBar(100, mpb.BarQueueAfter(b))
+
+	b.IncrBy(100)
+	b.Wait()
+	cancel()
+
+	bars := (<-shutdown).([]*mpb.Bar)
+	if l := len(bars); l != 1 {
+		t.Errorf("Expected len of bars: %d, got: %d", 1, l)
+	}
+
+	p.Wait()
+	if bars[0] != q {
+		t.Errorf("Expected bars[0]: %p, got: %p", q, bars[0])
+	}
+}
