@@ -144,18 +144,19 @@ func (p *Progress) AddFiller(total int64, filler BarFiller, options ...BarOption
 		ch <- result{bar, bs}
 	}:
 		res := <-ch
-		res.bar.TraverseDecorators(func(d decor.Decorator) {
+		bar, bs := res.bar, res.bs
+		bar.TraverseDecorators(func(d decor.Decorator) {
 			if d, ok := d.(decor.AverageDecorator); ok {
-				res.bs.averageDecorators = append(res.bs.averageDecorators, d)
+				bs.averageDecorators = append(bs.averageDecorators, d)
 			}
 			if d, ok := d.(decor.EwmaDecorator); ok {
-				res.bs.ewmaDecorators = append(res.bs.ewmaDecorators, d)
+				bs.ewmaDecorators = append(bs.ewmaDecorators, d)
 			}
 			if d, ok := d.(decor.ShutdownListener); ok {
-				res.bs.shutdownListeners = append(res.bs.shutdownListeners, d)
+				bs.shutdownListeners = append(bs.shutdownListeners, d)
 			}
 		})
-		return res.bar
+		return bar
 	case <-p.done:
 		panic(DoneError)
 	}
