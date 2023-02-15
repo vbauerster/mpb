@@ -88,7 +88,7 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 
 	cw := cwriter.New(s.output)
 	if (cw.IsTerminal() || s.forceAutoRefresh) && !s.manualRefresh {
-		go s.autoRefresh()
+		go s.autoRefresh(s.renderDelay != nil)
 	}
 
 	p := &Progress{
@@ -269,8 +269,8 @@ func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 	}
 }
 
-func (s *pState) autoRefresh() {
-	if s.renderDelay != nil {
+func (s *pState) autoRefresh(delay bool) {
+	if delay {
 		<-s.renderDelay
 	}
 	ticker := time.NewTicker(s.refreshRate)
