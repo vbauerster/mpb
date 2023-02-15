@@ -459,7 +459,6 @@ func (b *Bar) forceRefreshImpl(refreshCh chan<- time.Time) {
 		for {
 			select {
 			case refreshCh <- time.Now():
-				time.Sleep(10 * time.Millisecond)
 			case <-b.done:
 				return
 			}
