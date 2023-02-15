@@ -21,6 +21,7 @@ func TestWithContext(t *testing.T) {
 	shutdown := make(chan interface{})
 	ctx, cancel := context.WithCancel(context.Background())
 	p := mpb.NewWithContext(ctx,
+		mpb.WithOutput(io.Discard),
 		mpb.WithShutdownNotifier(shutdown),
 	)
 	_ = p.AddBar(0) // never complete bar
