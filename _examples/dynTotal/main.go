@@ -9,10 +9,6 @@ import (
 	"github.com/vbauerster/mpb/v8/decor"
 )
 
-func init() {
-	rand.Seed(time.Now().UnixNano())
-}
-
 func main() {
 	p := mpb.New(mpb.WithWidth(64))
 
