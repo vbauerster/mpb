@@ -179,13 +179,7 @@ func (p *Progress) traverseBars(cb func(b *Bar) bool) {
 // UpdateBarPriority same as *Bar.SetPriority(int).
 func (p *Progress) UpdateBarPriority(b *Bar, priority int) {
 	select {
-	case p.operateState <- func(s *pState) {
-		if b.index < 0 {
-			return
-		}
-		b.priority = priority
-		s.hm.fix(b.index)
-	}:
+	case p.operateState <- func(s *pState) { s.hm.fix(b, priority) }:
 	case <-p.done:
 	}
 }
