@@ -282,6 +282,8 @@ func (s *pState) autoRefresh(delay bool) {
 
 func (s *pState) render(cw *cwriter.Writer) (err error) {
 	s.hm.sync(s.dropS)
+	iter := make(chan *Bar)
+	go s.hm.iter(iter, s.dropS)
 
 	var width, height int
 	if cw.IsTerminal() {
@@ -299,8 +301,6 @@ func (s *pState) render(cw *cwriter.Writer) (err error) {
 		height = 100
 	}
 
-	iter := make(chan *Bar)
-	s.hm.iter(iter, nil)
 	for b := range iter {
 		go b.render(width)
 	}
