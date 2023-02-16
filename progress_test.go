@@ -166,6 +166,44 @@ func TestShutdownAfterBarAbortWithNoDrop(t *testing.T) {
 	}
 }
 
+func TestBarPriorityPopOrder(t *testing.T) {
+	shutdown := make(chan interface{})
+	ctx, cancel := context.WithCancel(context.Background())
+	p := mpb.NewWithContext(ctx,
+		mpb.WithOutput(io.Discard),
+		mpb.WithShutdownNotifier(shutdown),
+	)
+	a := p.AddBar(100, mpb.BarPriority(1))
+	b := p.AddBar(100, mpb.BarPriority(2))
+	c := p.AddBar(100, mpb.BarPriority(3))
+
+	identity := map[*mpb.Bar]string{
+		a: "a",
+		b: "b",
+		c: "c",
+	}
+
+	cancel()
+
+	bars := (<-shutdown).([]*mpb.Bar)
+	if l := len(bars); l != 3 {
+		t.Errorf("Expected len of bars: %d, got: %d", 3, l)
+	}
+
+	p.Wait()
+	pq := mpb.PriorityQueue(bars)
+
+	if bar := heap.Pop(&pq).(*mpb.Bar); bar != c {
+		t.Errorf("Expected bar c, got: %s", identity[bar])
+	}
+	if bar := heap.Pop(&pq).(*mpb.Bar); bar != b {
+		t.Errorf("Expected bar b, got: %s", identity[bar])
+	}
+	if bar := heap.Pop(&pq).(*mpb.Bar); bar != a {
+		t.Errorf("Expected bar a, got: %s", identity[bar])
+	}
+}
+
 func TestUpdateBarPriority(t *testing.T) {
 	shutdown := make(chan interface{})
 	ctx, cancel := context.WithCancel(context.Background())
