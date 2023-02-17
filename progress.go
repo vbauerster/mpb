@@ -385,13 +385,14 @@ func (s *pState) flush(cw *cwriter.Writer, height int) error {
 
 func (s *pState) makeBarState(total int64, filler BarFiller, options ...BarOption) *bState {
 	bs := &bState{
-		id:          s.idCount,
-		priority:    s.idCount,
-		reqWidth:    s.reqWidth,
-		total:       total,
-		filler:      filler,
-		refreshCh:   s.refreshCh,
-		autoRefresh: s.autoRefresh,
+		id:            s.idCount,
+		priority:      s.idCount,
+		reqWidth:      s.reqWidth,
+		total:         total,
+		filler:        filler,
+		refreshCh:     s.refreshCh,
+		autoRefresh:   s.autoRefresh,
+		manualRefresh: s.manualRefresh,
 	}
 
 	if total > 0 {
