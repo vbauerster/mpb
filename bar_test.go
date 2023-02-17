@@ -118,8 +118,11 @@ func TestBarID(t *testing.T) {
 
 func TestBarSetRefill(t *testing.T) {
 	var buf bytes.Buffer
-
-	p := mpb.New(mpb.WithOutput(&buf), mpb.WithWidth(100))
+	p := mpb.New(
+		mpb.WithWidth(100),
+		mpb.WithOutput(&buf),
+		mpb.ForceAutoRefresh(),
+	)
 
 	total := 100
 	till := 30
@@ -147,8 +150,11 @@ func TestBarSetRefill(t *testing.T) {
 
 func TestBarHas100PercentWithBarRemoveOnComplete(t *testing.T) {
 	var buf bytes.Buffer
-
-	p := mpb.New(mpb.WithWidth(80), mpb.WithOutput(&buf))
+	p := mpb.New(
+		mpb.WithWidth(80),
+		mpb.WithOutput(&buf),
+		mpb.ForceAutoRefresh(),
+	)
 
 	total := 50
 
@@ -172,7 +178,11 @@ func TestBarStyle(t *testing.T) {
 	customFormat := "╢▌▌░╟"
 	runes := []rune(customFormat)
 	total := 80
-	p := mpb.New(mpb.WithWidth(total), mpb.WithOutput(&buf))
+	p := mpb.New(
+		mpb.WithWidth(80),
+		mpb.WithOutput(&buf),
+		mpb.ForceAutoRefresh(),
+	)
 	bs := mpb.BarStyle()
 	bs.Lbound(string(runes[0]))
 	bs.Filler(string(runes[1]))
@@ -247,13 +257,18 @@ func TestBarQueueAfterBar(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	p := mpb.NewWithContext(ctx,
 		mpb.WithOutput(io.Discard),
+		mpb.ForceAutoRefresh(),
 		mpb.WithShutdownNotifier(shutdown),
 	)
-	b := p.AddBar(100)
-	q := p.AddBar(100, mpb.BarQueueAfter(b))
+	a := p.AddBar(100)
+	b := p.AddBar(100, mpb.BarQueueAfter(a))
+	identity := map[*mpb.Bar]string{
+		a: "a",
+		b: "b",
+	}
 
-	b.IncrBy(100)
-	b.Wait()
+	a.IncrBy(100)
+	a.Wait()
 	cancel()
 
 	bars := (<-shutdown).([]*mpb.Bar)
@@ -262,7 +277,7 @@ func TestBarQueueAfterBar(t *testing.T) {
 	}
 
 	p.Wait()
-	if bars[0] != q {
-		t.Errorf("Expected bars[0]: %p, got: %p", q, bars[0])
+	if bars[0] != b {
+		t.Errorf("Expected bars[0] == b, got: %s", identity[bars[0]])
 	}
 }
