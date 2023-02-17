@@ -22,7 +22,9 @@ func main() {
 				decor.Name("downloading", decor.WCSyncSpaceR),
 				decor.CountersNoUnit("%d / %d", decor.WCSyncWidth),
 			),
-			mpb.AppendDecorators(decor.Percentage(decor.WC{W: 5})),
+			mpb.AppendDecorators(
+				decor.OnComplete(decor.Percentage(decor.WC{W: 5}), "done"),
+			),
 		)
 		queue[1] = p.AddBar(rand.Int63n(101)+100,
 			mpb.BarQueueAfter(queue[0]), // this bar is queued
