@@ -43,7 +43,7 @@ type bState struct {
 	triggerComplete   bool
 	dropOnComplete    bool
 	noPop             bool
-	forceAutoRefresh  bool
+	autoRefresh       bool
 	aDecorators       []decor.Decorator
 	pDecorators       []decor.Decorator
 	averageDecorators []decor.AverageDecorator
@@ -186,7 +186,7 @@ func (b *Bar) EnableTriggerComplete() {
 		if s.current >= s.total {
 			s.current = s.total
 			s.completed = true
-			b.triggerCompletion(s.forceAutoRefresh, s.refreshCh)
+			b.triggerCompletion(s.autoRefresh, s.refreshCh)
 		} else {
 			s.triggerComplete = true
 		}
@@ -214,7 +214,7 @@ func (b *Bar) SetTotal(total int64, triggerCompleteNow bool) {
 		if triggerCompleteNow {
 			s.current = s.total
 			s.completed = true
-			b.triggerCompletion(s.forceAutoRefresh, s.refreshCh)
+			b.triggerCompletion(s.autoRefresh, s.refreshCh)
 		}
 	}:
 	case <-b.done:
@@ -232,7 +232,7 @@ func (b *Bar) SetCurrent(current int64) {
 		if s.triggerComplete && s.current >= s.total {
 			s.current = s.total
 			s.completed = true
-			b.triggerCompletion(s.forceAutoRefresh, s.refreshCh)
+			b.triggerCompletion(s.autoRefresh, s.refreshCh)
 		}
 	}:
 	case <-b.done:
@@ -254,7 +254,7 @@ func (b *Bar) EwmaSetCurrent(current int64, iterDur time.Duration) {
 		if s.triggerComplete && s.current >= s.total {
 			s.current = s.total
 			s.completed = true
-			b.triggerCompletion(s.forceAutoRefresh, s.refreshCh)
+			b.triggerCompletion(s.autoRefresh, s.refreshCh)
 		}
 	}:
 	case <-b.done:
@@ -282,7 +282,7 @@ func (b *Bar) IncrInt64(n int64) {
 		if s.triggerComplete && s.current >= s.total {
 			s.current = s.total
 			s.completed = true
-			b.triggerCompletion(s.forceAutoRefresh, s.refreshCh)
+			b.triggerCompletion(s.autoRefresh, s.refreshCh)
 		}
 	}:
 	case <-b.done:
@@ -312,7 +312,7 @@ func (b *Bar) EwmaIncrInt64(n int64, iterDur time.Duration) {
 		if s.triggerComplete && s.current >= s.total {
 			s.current = s.total
 			s.completed = true
-			b.triggerCompletion(s.forceAutoRefresh, s.refreshCh)
+			b.triggerCompletion(s.autoRefresh, s.refreshCh)
 		}
 	}:
 	case <-b.done:
@@ -350,7 +350,7 @@ func (b *Bar) Abort(drop bool) {
 		}
 		s.aborted = true
 		s.dropOnComplete = drop
-		b.triggerCompletion(s.forceAutoRefresh, s.refreshCh)
+		b.triggerCompletion(s.autoRefresh, s.refreshCh)
 	}:
 	case <-b.done:
 	}
