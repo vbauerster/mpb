@@ -103,7 +103,7 @@ func WithDebugOutput(w io.Writer) ContainerOption {
 // Useful for testing purposes.
 func ForceAutoRefresh() ContainerOption {
 	return func(s *pState) {
-		s.forceAutoRefresh = true
+		s.autoRefresh = true
 	}
 }
 

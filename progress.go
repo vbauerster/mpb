@@ -45,7 +45,7 @@ type pState struct {
 	reqWidth         int
 	popCompleted     bool
 	manualRefresh    bool
-	forceAutoRefresh bool
+	autoRefresh      bool
 	renderDelay      <-chan struct{}
 	shutdownNotifier chan<- interface{}
 	queueBars        map[*Bar]*Bar
@@ -87,11 +87,11 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 	go s.hm.run()
 
 	cw := cwriter.New(s.output)
-	if (cw.IsTerminal() || s.forceAutoRefresh) && !s.manualRefresh {
-		s.forceAutoRefresh = true
+	if (cw.IsTerminal() || s.autoRefresh) && !s.manualRefresh {
+		s.autoRefresh = true
 		go s.newTicker(s.renderDelay != nil)
 	} else {
-		s.forceAutoRefresh = false
+		s.autoRefresh = false
 	}
 
 	p := &Progress{
@@ -250,7 +250,7 @@ func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 			}
 		case <-p.done:
 			update := make(chan bool)
-			for s.forceAutoRefresh && err == nil {
+			for s.autoRefresh && err == nil {
 				s.hm.state(update)
 				if <-update {
 					err = render()
@@ -391,7 +391,7 @@ func (s *pState) makeBarState(total int64, filler BarFiller, options ...BarOptio
 		total:       total,
 		filler:      filler,
 		refreshCh:   s.refreshCh,
-		autoRefresh: s.forceAutoRefresh,
+		autoRefresh: s.autoRefresh,
 	}
 
 	if total > 0 {
