@@ -100,6 +100,7 @@ func WithDebugOutput(w io.Writer) ContainerOption {
 }
 
 // ForceAutoRefresh force auto refresh even if output is not terminal.
+// Applicable only if not WithManualRefresh set.
 // Useful for testing purposes.
 func ForceAutoRefresh() ContainerOption {
 	return func(s *pState) {
