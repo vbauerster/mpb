@@ -337,7 +337,7 @@ func (s *pState) flush(cw *cwriter.Writer, height int) error {
 				_, _ = io.Copy(io.Discard, row)
 			}
 		}
-		if frame.shutdown != 0 {
+		if frame.shutdown != 0 && !frame.done {
 			if qb, ok := s.queueBars[b]; ok {
 				b.cancel()
 				delete(s.queueBars, b)

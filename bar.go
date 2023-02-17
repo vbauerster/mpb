@@ -62,6 +62,7 @@ type renderFrame struct {
 	shutdown     int
 	rmOnComplete bool
 	noPop        bool
+	done         bool
 	err          error
 }
 
@@ -415,6 +416,7 @@ func (b *Bar) serve(ctx context.Context, bs *bState) {
 }
 
 func (b *Bar) render(tw int) {
+	var done bool
 	fn := func(s *bState) {
 		var rows []io.Reader
 		stat := newStatistics(tw, s)
@@ -436,6 +438,7 @@ func (b *Bar) render(tw int) {
 			shutdown:     s.shutdown,
 			rmOnComplete: s.rmOnComplete,
 			noPop:        s.noPop,
+			done:         done,
 		}
 		if s.completed || s.aborted {
 			// post increment makes sure OnComplete decorators are rendered
@@ -446,6 +449,7 @@ func (b *Bar) render(tw int) {
 	select {
 	case b.operateState <- fn:
 	case <-b.done:
+		done = true
 		fn(b.bs)
 	}
 }
