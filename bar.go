@@ -449,12 +449,10 @@ func (b *Bar) render(tw int) {
 }
 
 func (b *Bar) forceRefresh(refreshCh chan<- time.Time) {
-	b.container.bwg.Add(1)
 	go b.forceRefreshImpl(refreshCh)
 }
 
 func (b *Bar) forceRefreshImpl(refreshCh chan<- time.Time) {
-	defer b.container.bwg.Done()
 	var anyOtherRunning bool
 	b.container.traverseBars(func(bar *Bar) bool {
 		anyOtherRunning = b != bar && bar.IsRunning()
