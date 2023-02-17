@@ -41,7 +41,7 @@ type bState struct {
 	completed         bool
 	aborted           bool
 	triggerComplete   bool
-	dropOnComplete    bool
+	rmOnComplete      bool
 	noPop             bool
 	autoRefresh       bool
 	manualRefresh     bool
@@ -350,7 +350,7 @@ func (b *Bar) Abort(drop bool) {
 			return
 		}
 		s.aborted = true
-		s.dropOnComplete = drop
+		s.rmOnComplete = drop
 		b.triggerCompletion(s)
 	}:
 	case <-b.done:
@@ -434,7 +434,7 @@ func (b *Bar) render(tw int) {
 		frame := &renderFrame{
 			rows:         rows,
 			shutdown:     s.shutdown,
-			rmOnComplete: s.dropOnComplete,
+			rmOnComplete: s.rmOnComplete,
 			noPop:        s.noPop,
 		}
 		if s.completed || s.aborted {

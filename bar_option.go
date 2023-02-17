@@ -69,7 +69,7 @@ func BarQueueAfter(bar *Bar) BarOption {
 // on complete event.
 func BarRemoveOnComplete() BarOption {
 	return func(s *bState) {
-		s.dropOnComplete = true
+		s.rmOnComplete = true
 	}
 }
 
