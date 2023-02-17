@@ -334,9 +334,9 @@ func (s *pState) flush(cw *cwriter.Writer, height int) error {
 				_, _ = io.Copy(io.Discard, row)
 			}
 		}
-		if frame.shutdown {
-			b.Wait() // waiting for b.done, so it's safe to read b.bs
+		if frame.shutdown != 0 {
 			if qb, ok := s.queueBars[b]; ok {
+				b.cancel()
 				delete(s.queueBars, b)
 				qb.priority = b.priority
 				wg.Add(1)
@@ -346,19 +346,21 @@ func (s *pState) flush(cw *cwriter.Writer, height int) error {
 				}(qb)
 				continue
 			}
-			if s.popCompleted && !b.bs.noPop {
-				switch b.bs.shutdown++; b.bs.shutdown {
+			if s.popCompleted && !frame.noPop {
+				switch frame.shutdown {
 				case 1:
 					b.priority = s.popPriority
 					s.popPriority++
 				default:
-					if b.bs.dropOnComplete {
-						popCount += usedRows
-						continue
-					}
+					b.cancel()
+					popCount += usedRows
+					continue
 				}
-			} else if b.bs.dropOnComplete {
+			} else if frame.rmOnComplete {
+				b.cancel()
 				continue
+			} else {
+				b.cancel()
 			}
 		}
 		wg.Add(1)

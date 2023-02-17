@@ -56,9 +56,11 @@ type bState struct {
 }
 
 type renderFrame struct {
-	rows     []io.Reader
-	shutdown bool
-	err      error
+	rows         []io.Reader
+	shutdown     int
+	rmOnComplete bool
+	noPop        bool
+	err          error
 }
 
 func newBar(ctx context.Context, container *Progress, bs *bState) *Bar {
@@ -411,7 +413,6 @@ func (b *Bar) serve(ctx context.Context, bs *bState) {
 }
 
 func (b *Bar) render(tw int) {
-	var done bool
 	fn := func(s *bState) {
 		var rows []io.Reader
 		stat := newStatistics(tw, s)
@@ -428,17 +429,21 @@ func (b *Bar) render(tw int) {
 				return
 			}
 		}
-		frame := &renderFrame{rows: rows}
+		frame := &renderFrame{
+			rows:         rows,
+			shutdown:     s.shutdown,
+			rmOnComplete: s.dropOnComplete,
+			noPop:        s.noPop,
+		}
 		if s.completed || s.aborted {
-			frame.shutdown = !done || s.shutdown == 1
-			b.cancel()
+			// post increment makes sure OnComplete decorators are rendered
+			s.shutdown++
 		}
 		b.frameCh <- frame
 	}
 	select {
 	case b.operateState <- fn:
 	case <-b.done:
-		done = true
 		fn(b.bs)
 	}
 }
