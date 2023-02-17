@@ -88,7 +88,10 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 
 	cw := cwriter.New(s.output)
 	if (cw.IsTerminal() || s.forceAutoRefresh) && !s.manualRefresh {
+		s.forceAutoRefresh = true
 		go s.autoRefresh(s.renderDelay != nil)
+	} else {
+		s.forceAutoRefresh = false
 	}
 
 	p := &Progress{
@@ -247,7 +250,7 @@ func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 			}
 		case <-p.done:
 			update := make(chan bool)
-			for err == nil {
+			for s.forceAutoRefresh && err == nil {
 				s.hm.state(update)
 				if <-update {
 					err = render()
@@ -382,12 +385,13 @@ func (s *pState) flush(cw *cwriter.Writer, height int) error {
 
 func (s *pState) makeBarState(total int64, filler BarFiller, options ...BarOption) *bState {
 	bs := &bState{
-		id:        s.idCount,
-		priority:  s.idCount,
-		reqWidth:  s.reqWidth,
-		total:     total,
-		filler:    filler,
-		refreshCh: s.refreshCh,
+		id:               s.idCount,
+		priority:         s.idCount,
+		reqWidth:         s.reqWidth,
+		total:            total,
+		filler:           filler,
+		refreshCh:        s.refreshCh,
+		forceAutoRefresh: s.forceAutoRefresh,
 	}
 
 	if total > 0 {
