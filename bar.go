@@ -451,13 +451,13 @@ func (b *Bar) render(tw int) {
 
 func (b *Bar) triggerCompletion(autoRefresh bool, refreshCh chan<- time.Time) {
 	if autoRefresh {
-		go b.forceRefreshImpl(refreshCh)
+		go b.tryEarlyRefresh(refreshCh)
 	} else {
 		b.cancel()
 	}
 }
 
-func (b *Bar) forceRefreshImpl(refreshCh chan<- time.Time) {
+func (b *Bar) tryEarlyRefresh(refreshCh chan<- time.Time) {
 	var anyOtherRunning bool
 	b.container.traverseBars(func(bar *Bar) bool {
 		anyOtherRunning = b != bar && bar.IsRunning()
