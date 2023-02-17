@@ -17,7 +17,6 @@ func main() {
 		name := fmt.Sprintf("Bar#%d:", i)
 		bar := p.AddBar(int64(total),
 			mpb.BarFillerOnComplete(fmt.Sprintf("%s has been completed", name)),
-			mpb.BarRemoveOnComplete(),
 			mpb.BarFillerTrim(),
 			mpb.PrependDecorators(
 				decor.OnComplete(decor.Name(name), ""),
