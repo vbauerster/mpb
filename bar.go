@@ -451,6 +451,9 @@ func (b *Bar) render(tw int) {
 
 func (b *Bar) triggerCompletion(autoRefresh bool, refreshCh chan<- time.Time) {
 	if autoRefresh {
+		// Technically this call isn't required, but if refresh rate is set to
+		// one hour for example and bar completes within a few minutes p.Wait()
+		// will wait for one hour. This call helps to avoid unnecessary waiting.
 		go b.tryEarlyRefresh(refreshCh)
 	} else {
 		b.cancel()
