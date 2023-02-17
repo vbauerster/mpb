@@ -199,9 +199,9 @@ func (b *Bar) EnableTriggerComplete() {
 // SetTotal sets total to an arbitrary value. It's effective only for
 // bar which was constructed with `total <= 0`. Setting total to negative
 // value is equivalent to (*Bar).SetTotal((*Bar).Current(), bool) but faster.
-// If triggerCompleteNow is true, total value is set to current and
+// If triggerCompletion is true, total value is set to current and
 // complete event is triggered right away.
-func (b *Bar) SetTotal(total int64, triggerCompleteNow bool) {
+func (b *Bar) SetTotal(total int64, triggerCompletion bool) {
 	select {
 	case b.operateState <- func(s *bState) {
 		if s.triggerComplete {
@@ -212,7 +212,7 @@ func (b *Bar) SetTotal(total int64, triggerCompleteNow bool) {
 		} else {
 			s.total = total
 		}
-		if triggerCompleteNow {
+		if triggerCompletion {
 			s.current = s.total
 			s.completed = true
 			b.triggerCompletion(s)
