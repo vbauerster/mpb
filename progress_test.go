@@ -51,7 +51,7 @@ func TestShutdownsWithErrFiller(t *testing.T) {
 		mpb.WithShutdownNotifier(shutdown),
 		mpb.WithOutput(io.Discard),
 		mpb.WithDebugOutput(&debug),
-		mpb.ForceAutoRefresh(),
+		mpb.WithAutoRefresh(),
 	)
 
 	var errReturnCount int
@@ -99,7 +99,7 @@ func TestShutdownAfterBarAbortWithDrop(t *testing.T) {
 	p := mpb.New(
 		mpb.WithShutdownNotifier(shutdown),
 		mpb.WithOutput(io.Discard),
-		mpb.ForceAutoRefresh(),
+		mpb.WithAutoRefresh(),
 	)
 	b := p.AddBar(100)
 
@@ -135,7 +135,7 @@ func TestShutdownAfterBarAbortWithNoDrop(t *testing.T) {
 	p := mpb.New(
 		mpb.WithShutdownNotifier(shutdown),
 		mpb.WithOutput(io.Discard),
-		mpb.ForceAutoRefresh(),
+		mpb.WithAutoRefresh(),
 	)
 	b := p.AddBar(100)
 

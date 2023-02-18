@@ -78,8 +78,8 @@ func WithShutdownNotifier(ch chan<- interface{}) ContainerOption {
 }
 
 // WithOutput overrides default os.Stdout output. If underlying io.Writer
-// is not a terminal then auto refresh is disabled unless ForceAutoRefresh
-// option is provided.
+// is not a terminal then auto refresh is disabled unless WithAutoRefresh
+// option is set.
 func WithOutput(w io.Writer) ContainerOption {
 	if w == nil {
 		w = io.Discard
@@ -99,10 +99,9 @@ func WithDebugOutput(w io.Writer) ContainerOption {
 	}
 }
 
-// ForceAutoRefresh force auto refresh even if output is not terminal.
+// WithAutoRefresh force auto refresh regardless of what output is set to.
 // Applicable only if not WithManualRefresh set.
-// Useful for testing purposes.
-func ForceAutoRefresh() ContainerOption {
+func WithAutoRefresh() ContainerOption {
 	return func(s *pState) {
 		s.autoRefresh = true
 	}

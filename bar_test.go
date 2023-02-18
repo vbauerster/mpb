@@ -121,7 +121,7 @@ func TestBarSetRefill(t *testing.T) {
 	p := mpb.New(
 		mpb.WithWidth(100),
 		mpb.WithOutput(&buf),
-		mpb.ForceAutoRefresh(),
+		mpb.WithAutoRefresh(),
 	)
 
 	total := 100
@@ -153,7 +153,7 @@ func TestBarHas100PercentWithBarRemoveOnComplete(t *testing.T) {
 	p := mpb.New(
 		mpb.WithWidth(80),
 		mpb.WithOutput(&buf),
-		mpb.ForceAutoRefresh(),
+		mpb.WithAutoRefresh(),
 	)
 
 	total := 50
@@ -181,7 +181,7 @@ func TestBarStyle(t *testing.T) {
 	p := mpb.New(
 		mpb.WithWidth(80),
 		mpb.WithOutput(&buf),
-		mpb.ForceAutoRefresh(),
+		mpb.WithAutoRefresh(),
 	)
 	bs := mpb.BarStyle()
 	bs.Lbound(string(runes[0]))
@@ -257,7 +257,7 @@ func TestBarQueueAfterBar(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	p := mpb.NewWithContext(ctx,
 		mpb.WithOutput(io.Discard),
-		mpb.ForceAutoRefresh(),
+		mpb.WithAutoRefresh(),
 		mpb.WithShutdownNotifier(shutdown),
 	)
 	a := p.AddBar(100)
