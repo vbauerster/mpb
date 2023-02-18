@@ -385,9 +385,7 @@ func (b *Bar) Completed() bool {
 func (b *Bar) IsRunning() bool {
 	result := make(chan bool)
 	select {
-	case b.operateState <- func(s *bState) {
-		result <- !s.completed && !s.aborted
-	}:
+	case b.operateState <- func(s *bState) { result <- !s.completed && !s.aborted }:
 		return <-result
 	case <-b.done:
 		return false
