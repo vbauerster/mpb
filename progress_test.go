@@ -244,3 +244,21 @@ func TestUpdateBarPriority(t *testing.T) {
 		t.Errorf("Expected bar a, got: %s", identity[bar])
 	}
 }
+
+func TestNoOutput(t *testing.T) {
+	var buf bytes.Buffer
+	p := mpb.New(mpb.WithOutput(&buf))
+	bar := p.AddBar(100)
+
+	go func() {
+		for !bar.Completed() {
+			bar.Increment()
+		}
+	}()
+
+	p.Wait()
+
+	if buf.Len() != 0 {
+		t.Errorf("Expected buf.Len == 0, got: %d\n", buf.Len())
+	}
+}
