@@ -15,7 +15,7 @@ func main() {
 	total, numBars := 100, 2
 	var wg sync.WaitGroup
 	wg.Add(numBars)
-	done := make(chan struct{})
+	done := make(chan interface{})
 	p := mpb.New(
 		mpb.WithWidth(64),
 		mpb.WithWaitGroup(&wg),
