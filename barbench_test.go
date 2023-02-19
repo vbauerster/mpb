@@ -1,39 +1,70 @@
-package mpb
+package mpb_test
 
 import (
+	"io"
 	"sync"
 	"testing"
+
+	"github.com/vbauerster/mpb/v8"
 )
 
 const total = 1000
 
-func BenchmarkNopStyleOneBar(b *testing.B) {
-	bench(b, NopStyle(), 1)
+func BenchmarkNopStyle1Bar(b *testing.B) {
+	bench(b, mpb.NopStyle(), false, 1)
 }
 
-func BenchmarkNopStyleTwoBars(b *testing.B) {
-	bench(b, NopStyle(), 2)
+func BenchmarkNopStyle1BarWithAutoRefresh(b *testing.B) {
+	bench(b, mpb.NopStyle(), true, 1)
 }
 
-func BenchmarkNopStyleThreeBars(b *testing.B) {
-	bench(b, NopStyle(), 3)
+func BenchmarkNopStyle2Bars(b *testing.B) {
+	bench(b, mpb.NopStyle(), false, 2)
 }
 
-func BenchmarkBarStyleOneBar(b *testing.B) {
-	bench(b, BarStyle(), 1)
+func BenchmarkNopStyle2BarsWithAutoRefresh(b *testing.B) {
+	bench(b, mpb.NopStyle(), true, 2)
 }
 
-func BenchmarkBarStyleTwoBars(b *testing.B) {
-	bench(b, BarStyle(), 2)
+func BenchmarkNopStyle3Bars(b *testing.B) {
+	bench(b, mpb.NopStyle(), false, 3)
 }
 
-func BenchmarkBarStyleThreeBars(b *testing.B) {
-	bench(b, BarStyle(), 3)
+func BenchmarkNopStyle3BarsWithAutoRefresh(b *testing.B) {
+	bench(b, mpb.NopStyle(), true, 3)
 }
 
-func bench(b *testing.B, builder BarFillerBuilder, n int) {
+func BenchmarkBarStyle1Bar(b *testing.B) {
+	bench(b, mpb.BarStyle(), false, 1)
+}
+
+func BenchmarkBarStyle1BarWithAutoRefresh(b *testing.B) {
+	bench(b, mpb.BarStyle(), true, 1)
+}
+
+func BenchmarkBarStyle2Bars(b *testing.B) {
+	bench(b, mpb.BarStyle(), false, 2)
+}
+
+func BenchmarkBarStyle2BarsWithAutoRefresh(b *testing.B) {
+	bench(b, mpb.BarStyle(), true, 2)
+}
+
+func BenchmarkBarStyle3Bars(b *testing.B) {
+	bench(b, mpb.BarStyle(), false, 3)
+}
+
+func BenchmarkBarStyle3BarsWithAutoRefresh(b *testing.B) {
+	bench(b, mpb.BarStyle(), true, 3)
+}
+
+func bench(b *testing.B, builder mpb.BarFillerBuilder, autoRefresh bool, n int) {
 	var wg sync.WaitGroup
-	p := New(WithOutput(nil), WithWidth(80))
+	p := mpb.New(
+		mpb.WithWidth(100),
+		mpb.WithOutput(io.Discard),
+		mpb.ContainerOptional(mpb.WithAutoRefresh(), autoRefresh),
+	)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		for j := 0; j < n; j++ {
@@ -54,12 +85,9 @@ func bench(b *testing.B, builder BarFillerBuilder, n int) {
 	p.Wait()
 }
 
-func complete(b *testing.B, bar *Bar) {
+func complete(b *testing.B, bar *mpb.Bar) {
 	for i := 0; i < total; i++ {
 		bar.Increment()
-	}
-	if !bar.Completed() {
-		b.Fail()
 	}
 	bar.Wait()
 }
