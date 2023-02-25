@@ -106,7 +106,7 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 		s.autoRefresh = true
 		go s.autoRefreshListener(done)
 	} else {
-		p.done = s.ctx.Done()
+		p.done = ctx.Done()
 		s.autoRefresh = false
 	}
 
