@@ -144,9 +144,7 @@ func (b *Bar) Current() int64 {
 // operation for example.
 func (b *Bar) SetRefill(amount int64) {
 	select {
-	case b.operateState <- func(s *bState) {
-		s.refill = amount
-	}:
+	case b.operateState <- func(s *bState) { s.refill = amount }:
 	case <-b.done:
 	}
 }
@@ -325,9 +323,7 @@ func (b *Bar) EwmaIncrInt64(n int64, iterDur time.Duration) {
 // or after progress resume.
 func (b *Bar) DecoratorAverageAdjust(start time.Time) {
 	select {
-	case b.operateState <- func(s *bState) {
-		s.decoratorAverageAdjust(start)
-	}:
+	case b.operateState <- func(s *bState) { s.decoratorAverageAdjust(start) }:
 	case <-b.done:
 	}
 }
