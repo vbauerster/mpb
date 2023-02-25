@@ -167,7 +167,7 @@ func (wc *WC) Init() WC {
 }
 
 // Sync is implementation of Synchronizer interface.
-func (wc *WC) Sync() (chan int, bool) {
+func (wc WC) Sync() (chan int, bool) {
 	if (wc.C&DSyncWidth) != 0 && wc.wsync == nil {
 		panic(fmt.Sprintf("%T is not initialized", wc))
 	}
