@@ -52,7 +52,7 @@ type bState struct {
 	buffers           [3]*bytes.Buffer
 	filler            BarFiller
 	extender          extenderFunc
-	refreshCh         chan time.Time
+	renderReq         chan<- time.Time
 	waitBar           *Bar // key for (*pState).queueBars
 }
 
@@ -456,13 +456,13 @@ func (b *Bar) triggerCompletion(s *bState) {
 		// Technically this call isn't required, but if refresh rate is set to
 		// one hour for example and bar completes within a few minutes p.Wait()
 		// will wait for one hour. This call helps to avoid unnecessary waiting.
-		go b.tryEarlyRefresh(s.refreshCh)
+		go b.tryEarlyRefresh(s.renderReq)
 	} else {
 		b.cancel()
 	}
 }
 
-func (b *Bar) tryEarlyRefresh(refreshCh chan<- time.Time) {
+func (b *Bar) tryEarlyRefresh(renderReq chan<- time.Time) {
 	var anyOtherRunning bool
 	b.container.traverseBars(func(bar *Bar) bool {
 		anyOtherRunning = b != bar && bar.IsRunning()
@@ -471,7 +471,7 @@ func (b *Bar) tryEarlyRefresh(refreshCh chan<- time.Time) {
 	if !anyOtherRunning {
 		for {
 			select {
-			case refreshCh <- time.Now():
+			case renderReq <- time.Now():
 			case <-b.done:
 				return
 			}

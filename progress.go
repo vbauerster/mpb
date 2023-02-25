@@ -36,7 +36,7 @@ type pState struct {
 	ctx          context.Context
 	hm           heapManager
 	dropS, dropD chan struct{}
-	refreshCh    chan time.Time
+	renderReq    chan time.Time
 	idCount      int
 	popPriority  int
 
@@ -70,7 +70,7 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 		hm:          make(heapManager),
 		dropS:       make(chan struct{}),
 		dropD:       make(chan struct{}),
-		refreshCh:   make(chan time.Time),
+		renderReq:   make(chan time.Time),
 		refreshRate: defaultRefreshRate,
 		popPriority: math.MinInt32,
 		queueBars:   make(map[*Bar]*Bar),
@@ -247,7 +247,7 @@ func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 			op(s)
 		case fn := <-p.interceptIO:
 			fn(cw)
-		case <-s.refreshCh:
+		case <-s.renderReq:
 			e := render()
 			if e != nil {
 				p.cancel() // cancel all bars
@@ -282,7 +282,7 @@ func (s pState) autoRefreshListener(done chan struct{}) {
 	for {
 		select {
 		case t := <-ticker.C:
-			s.refreshCh <- t
+			s.renderReq <- t
 		case <-s.ctx.Done():
 			close(done)
 			return
@@ -295,9 +295,9 @@ func (s pState) manualRefreshListener(done chan struct{}) {
 		select {
 		case x := <-s.manualRC:
 			if t, ok := x.(time.Time); ok {
-				s.refreshCh <- t
+				s.renderReq <- t
 			} else {
-				s.refreshCh <- time.Now()
+				s.renderReq <- time.Now()
 			}
 		case <-s.ctx.Done():
 			close(done)
@@ -413,7 +413,7 @@ func (s pState) makeBarState(total int64, filler BarFiller, options ...BarOption
 		reqWidth:    s.reqWidth,
 		total:       total,
 		filler:      filler,
-		refreshCh:   s.refreshCh,
+		renderReq:   s.renderReq,
 		autoRefresh: s.autoRefresh,
 	}
 
