@@ -7,6 +7,12 @@ import (
 	"github.com/mattn/go-runewidth"
 )
 
+var (
+	_ Decorator = (*mergeDecorator)(nil)
+	_ Wrapper   = (*mergeDecorator)(nil)
+	_ Decorator = (*placeHolderDecorator)(nil)
+)
+
 // Merge wraps its decorator argument with intention to sync width
 // with several decorators of another bar. Visual example:
 //

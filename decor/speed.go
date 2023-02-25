@@ -8,6 +8,13 @@ import (
 	"github.com/VividCortex/ewma"
 )
 
+var (
+	_ Decorator        = (*movingAverageSpeed)(nil)
+	_ EwmaDecorator    = (*movingAverageSpeed)(nil)
+	_ Decorator        = (*averageSpeed)(nil)
+	_ AverageDecorator = (*averageSpeed)(nil)
+)
+
 // FmtAsSpeed adds "/s" to the end of the input formatter. To be
 // used with SizeB1000 or SizeB1024 types, for example:
 //
