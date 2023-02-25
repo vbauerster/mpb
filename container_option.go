@@ -51,7 +51,7 @@ func WithManualRefresh(ch <-chan interface{}) ContainerOption {
 // rendering will start as soon as provided chan is closed.
 func WithRenderDelay(ch <-chan struct{}) ContainerOption {
 	return func(s *pState) {
-		s.renderDelay = ch
+		s.delayRC = ch
 	}
 }
 

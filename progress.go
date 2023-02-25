@@ -45,7 +45,7 @@ type pState struct {
 	reqWidth         int
 	popCompleted     bool
 	autoRefresh      bool
-	renderDelay      <-chan struct{}
+	delayRC          <-chan struct{}
 	manualRC         <-chan interface{}
 	shutdownNotifier chan<- interface{}
 	queueBars        map[*Bar]*Bar
@@ -274,8 +274,8 @@ func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 }
 
 func (s pState) autoRefreshListener(done chan struct{}) {
-	if s.renderDelay != nil {
-		<-s.renderDelay
+	if s.delayRC != nil {
+		<-s.delayRC
 	}
 	ticker := time.NewTicker(s.refreshRate)
 	defer ticker.Stop()
