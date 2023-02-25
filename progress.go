@@ -64,6 +64,9 @@ func New(options ...ContainerOption) *Progress {
 // context. It's not possible to reuse instance after (*Progress).Wait
 // method has been called.
 func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	ctx, cancel := context.WithCancel(ctx)
 	s := &pState{
 		ctx:         ctx,
