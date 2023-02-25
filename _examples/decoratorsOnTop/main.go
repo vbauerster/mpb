@@ -43,7 +43,7 @@ func extended(base mpb.BarFiller) mpb.BarFiller {
 		if err != nil {
 			return err
 		}
-		_, err = w.Write([]byte("\n"))
+		_, err = io.WriteString(w, "\n")
 		return err
 	})
 }
