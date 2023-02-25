@@ -2,6 +2,7 @@ package decor
 
 import (
 	"fmt"
+	"io"
 	"math"
 	"time"
 
@@ -29,7 +30,7 @@ type speedFormatter struct {
 
 func (self speedFormatter) Format(st fmt.State, verb rune) {
 	self.Formatter.Format(st, verb)
-	_, err := st.Write([]byte("/s"))
+	_, err := io.WriteString(st, "/s")
 	if err != nil {
 		panic(err)
 	}
