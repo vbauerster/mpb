@@ -44,7 +44,6 @@ type bState struct {
 	rmOnComplete      bool
 	noPop             bool
 	autoRefresh       bool
-	manualRefresh     bool
 	aDecorators       []decor.Decorator
 	pDecorators       []decor.Decorator
 	averageDecorators []decor.AverageDecorator
@@ -458,7 +457,7 @@ func (b *Bar) triggerCompletion(s *bState) {
 		// one hour for example and bar completes within a few minutes p.Wait()
 		// will wait for one hour. This call helps to avoid unnecessary waiting.
 		go b.tryEarlyRefresh(s.refreshCh)
-	} else if !s.manualRefresh {
+	} else {
 		b.cancel()
 	}
 }
