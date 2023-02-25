@@ -137,7 +137,7 @@ type WC struct {
 
 // FormatMsg formats final message according to WC.W and WC.C.
 // Should be called by any Decorator implementation.
-func (wc *WC) FormatMsg(msg string) string {
+func (wc WC) FormatMsg(msg string) string {
 	pureWidth := runewidth.StringWidth(msg)
 	viewWidth := runewidth.StringWidth(stripansi.Strip(msg))
 	max := wc.W
