@@ -154,9 +154,10 @@ func (wc WC) FormatMsg(msg string) string {
 
 // Init initializes width related config.
 func (wc *WC) Init() WC {
-	wc.fill = runewidth.FillLeft
 	if (wc.C & DidentRight) != 0 {
 		wc.fill = runewidth.FillRight
+	} else {
+		wc.fill = runewidth.FillLeft
 	}
 	if (wc.C & DSyncWidth) != 0 {
 		// it's deliberate choice to override wsync on each Init() call,
