@@ -406,7 +406,7 @@ func (s *pState) flush(cw *cwriter.Writer, height int) error {
 	return cw.Flush(len(rows) - popCount)
 }
 
-func (s *pState) makeBarState(total int64, filler BarFiller, options ...BarOption) *bState {
+func (s pState) makeBarState(total int64, filler BarFiller, options ...BarOption) *bState {
 	bs := &bState{
 		id:          s.idCount,
 		priority:    s.idCount,
