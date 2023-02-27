@@ -247,7 +247,7 @@ func (b *Bar) EwmaSetCurrent(current int64, iterDur time.Duration) {
 	select {
 	case b.operateState <- func(s *bState) {
 		if n := current - s.current; n > 0 {
-			s.ewmaUpdate(n, iterDur)
+			s.decoratorEwmaUpdate(n, iterDur)
 		}
 		s.current = current
 		if s.triggerComplete && s.current >= s.total {
@@ -306,7 +306,7 @@ func (b *Bar) EwmaIncrInt64(n int64, iterDur time.Duration) {
 	}
 	select {
 	case b.operateState <- func(s *bState) {
-		s.ewmaUpdate(n, iterDur)
+		s.decoratorEwmaUpdate(n, iterDur)
 		s.current += n
 		if s.triggerComplete && s.current >= s.total {
 			s.current = s.total
@@ -588,7 +588,7 @@ func (s *bState) wSyncTable() (table syncTable) {
 	return table
 }
 
-func (s bState) ewmaUpdate(n int64, dur time.Duration) {
+func (s bState) decoratorEwmaUpdate(n int64, dur time.Duration) {
 	var wg sync.WaitGroup
 	for i := 0; i < len(s.ewmaDecorators); i++ {
 		switch d := s.ewmaDecorators[i]; i {
