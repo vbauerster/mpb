@@ -50,6 +50,23 @@ func TestBarAborted(t *testing.T) {
 	p.Wait()
 }
 
+func TestBarSetTotal(t *testing.T) {
+	p := mpb.New(mpb.WithWidth(80), mpb.WithOutput(io.Discard))
+	bar := p.AddBar(0)
+
+	bar.SetTotal(0, false)
+	if bar.Completed() {
+		t.Error("expected bar not to complete")
+	}
+
+	bar.SetTotal(0, true)
+	if !bar.Completed() {
+		t.Error("expected bar to complete")
+	}
+
+	p.Wait()
+}
+
 func TestBarEnableTriggerCompleteAndIncrementBefore(t *testing.T) {
 	p := mpb.New(mpb.WithWidth(80), mpb.WithOutput(io.Discard))
 	bar := p.AddBar(0) // never complete bar
