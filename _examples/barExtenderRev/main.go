@@ -43,7 +43,7 @@ func main() {
 
 	for i := 0; i < numTasks; i++ {
 		bar := p.AddBar(tasks[i].total,
-			mpb.BarExtender(filler, true),
+			mpb.BarExtender(filler, true), // all bars share same extender filler
 			mpb.BarFuncOptional(func() mpb.BarOption {
 				return mpb.BarQueueAfter(tasks[i-1].bar)
 			}, i != 0),
@@ -72,7 +72,7 @@ func main() {
 
 	for _, t := range tasks {
 		atomic.StoreUint32(&curTask, t.id)
-		complete(tb, t)
+		complete(t.bar, tb)
 		atomic.AddUint32(&doneTasks, 1)
 	}
 
@@ -120,14 +120,18 @@ func newLineMiddleware(base mpb.BarFiller) mpb.BarFiller {
 	})
 }
 
-func complete(tb *mpb.Bar, t *task) {
-	bar := t.bar
+func complete(bar, totalBar *mpb.Bar) {
 	max := 100 * time.Millisecond
 	for !bar.Completed() {
 		n := rand.Int63n(10) + 1
-		bar.IncrInt64(n)
-		go tb.IncrInt64(n)
+		incrementBars(n, bar, totalBar)
 		time.Sleep(time.Duration(n) * max / 10)
 	}
 	bar.Wait()
+}
+
+func incrementBars(n int64, bb ...*mpb.Bar) {
+	for _, b := range bb {
+		b.IncrInt64(n)
+	}
 }
