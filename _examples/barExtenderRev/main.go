@@ -85,8 +85,7 @@ func middleware(base mpb.BarFiller, id uint32) mpb.BarFiller {
 	var done bool
 	fn := func(w io.Writer, st decor.Statistics) error {
 		if !done {
-			cur := atomic.LoadUint32(&curTask) == id
-			if !cur {
+			if atomic.LoadUint32(&curTask) != id {
 				_, err := fmt.Fprintf(w, "   Taksk %02d\n", id)
 				return err
 			}
@@ -94,7 +93,7 @@ func middleware(base mpb.BarFiller, id uint32) mpb.BarFiller {
 				_, err := fmt.Fprintf(w, "=> Taksk %02d\n", id)
 				return err
 			}
-			done = cur
+			done = true
 		}
 		_, err := fmt.Fprintf(w, "   Taksk %02d: Done!\n", id)
 		return err
