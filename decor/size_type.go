@@ -49,8 +49,7 @@ func (self SizeB1024) Format(st fmt.State, verb rune) {
 		unit = _iTiB
 	}
 
-	p := bytesPool.Get().(*[]byte)
-	b := strconv.AppendFloat(*p, float64(self)/float64(unit), 'f', prec, 64)
+	b := strconv.AppendFloat(make([]byte, 0, 32), float64(self)/float64(unit), 'f', prec, 64)
 	if st.Flag(' ') {
 		b = append(b, ' ')
 	}
@@ -59,7 +58,6 @@ func (self SizeB1024) Format(st fmt.State, verb rune) {
 	if err != nil {
 		panic(err)
 	}
-	bytesPool.Put(p)
 }
 
 const (
@@ -103,8 +101,7 @@ func (self SizeB1000) Format(st fmt.State, verb rune) {
 		unit = _TB
 	}
 
-	p := bytesPool.Get().(*[]byte)
-	b := strconv.AppendFloat(*p, float64(self)/float64(unit), 'f', prec, 64)
+	b := strconv.AppendFloat(make([]byte, 0, 32), float64(self)/float64(unit), 'f', prec, 64)
 	if st.Flag(' ') {
 		b = append(b, ' ')
 	}
@@ -113,5 +110,4 @@ func (self SizeB1000) Format(st fmt.State, verb rune) {
 	if err != nil {
 		panic(err)
 	}
-	bytesPool.Put(p)
 }
