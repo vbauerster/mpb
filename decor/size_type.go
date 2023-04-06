@@ -29,17 +29,17 @@ const (
 type SizeB1024 int64
 
 func (self SizeB1024) Format(st fmt.State, verb rune) {
-	var prec int
+	prec := -1
 	switch verb {
-	case 'd':
-	case 's':
-		prec = -1
-	default:
+	case 'f', 'e', 'E':
+		prec = 6 // default prec of fmt.Printf("%f|%e|%E")
+		fallthrough
+	case 'b', 'g', 'G', 'x', 'X':
 		if p, ok := st.Precision(); ok {
 			prec = p
-		} else {
-			prec = 6
 		}
+	default:
+		verb, prec = 'f', 0
 	}
 
 	var unit SizeB1024
@@ -56,7 +56,7 @@ func (self SizeB1024) Format(st fmt.State, verb rune) {
 		unit = _iTiB
 	}
 
-	b := strconv.AppendFloat(make([]byte, 0, 32), float64(self)/float64(unit), 'f', prec, 64)
+	b := strconv.AppendFloat(make([]byte, 0, 24), float64(self)/float64(unit), byte(verb), prec, 64)
 	if st.Flag(' ') {
 		b = append(b, ' ')
 	}
@@ -81,17 +81,17 @@ const (
 type SizeB1000 int64
 
 func (self SizeB1000) Format(st fmt.State, verb rune) {
-	var prec int
+	prec := -1
 	switch verb {
-	case 'd':
-	case 's':
-		prec = -1
-	default:
+	case 'f', 'e', 'E':
+		prec = 6 // default prec of fmt.Printf("%f|%e|%E")
+		fallthrough
+	case 'b', 'g', 'G', 'x', 'X':
 		if p, ok := st.Precision(); ok {
 			prec = p
-		} else {
-			prec = 6
 		}
+	default:
+		verb, prec = 'f', 0
 	}
 
 	var unit SizeB1000
@@ -108,7 +108,7 @@ func (self SizeB1000) Format(st fmt.State, verb rune) {
 		unit = _TB
 	}
 
-	b := strconv.AppendFloat(make([]byte, 0, 32), float64(self)/float64(unit), 'f', prec, 64)
+	b := strconv.AppendFloat(make([]byte, 0, 24), float64(self)/float64(unit), byte(verb), prec, 64)
 	if st.Flag(' ') {
 		b = append(b, ' ')
 	}
