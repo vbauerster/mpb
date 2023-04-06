@@ -7,6 +7,8 @@ import (
 	"github.com/vbauerster/mpb/v8/internal"
 )
 
+var _ fmt.Formatter = percentageType(0)
+
 type percentageType float64
 
 func (s percentageType) Format(st fmt.State, verb rune) {

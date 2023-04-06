@@ -8,6 +8,11 @@ import (
 //go:generate stringer -type=SizeB1024 -trimprefix=_i
 //go:generate stringer -type=SizeB1000 -trimprefix=_
 
+var (
+	_ fmt.Formatter = SizeB1024(0)
+	_ fmt.Formatter = SizeB1000(0)
+)
+
 const (
 	_ib   SizeB1024 = iota + 1
 	_iKiB SizeB1024 = 1 << (iota * 10)
