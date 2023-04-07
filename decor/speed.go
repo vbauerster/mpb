@@ -151,7 +151,6 @@ func (d *averageSpeed) Decor(s Statistics) string {
 		speed := float64(s.Current) / float64(time.Since(d.startTime))
 		d.msg = d.producer(speed * 1e9)
 	}
-
 	return d.FormatMsg(d.msg)
 }
 
