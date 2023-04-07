@@ -170,7 +170,7 @@ func chooseSpeedProducer(unit interface{}, format string) func(float64) string {
 		}
 	default:
 		return func(speed float64) string {
-			return fmt.Sprintf(format, int64(math.Round(speed)))
+			return fmt.Sprintf(format, speed)
 		}
 	}
 }
