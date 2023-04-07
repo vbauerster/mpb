@@ -39,7 +39,7 @@ func CountersKiloByte(pairFmt string, wcc ...WC) Decorator {
 //	pairFmt="% f / % f"     output: "1.000000 MB / 12.000000 MB"
 func Counters(unit interface{}, pairFmt string, wcc ...WC) Decorator {
 	if pairFmt == "" {
-		pairFmt = "%d / %d"
+		pairFmt = "% d / % d"
 	}
 	producer := func() DecorFunc {
 		switch unit.(type) {
@@ -95,7 +95,7 @@ func TotalKiloByte(format string, wcc ...WC) Decorator {
 //	format="% f"   output: "12.000000 MiB"
 func Total(unit interface{}, format string, wcc ...WC) Decorator {
 	if format == "" {
-		format = "%d"
+		format = "% d"
 	}
 	producer := func() DecorFunc {
 		switch unit.(type) {
@@ -207,7 +207,7 @@ func InvertedCurrentKiloByte(format string, wcc ...WC) Decorator {
 //	format="% f"   output: "12.000000 MiB"
 func InvertedCurrent(unit interface{}, format string, wcc ...WC) Decorator {
 	if format == "" {
-		format = "%d"
+		format = "% d"
 	}
 	producer := func() DecorFunc {
 		switch unit.(type) {
