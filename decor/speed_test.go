@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-func TestSpeedKiBDecor(t *testing.T) {
+func TestAverageSpeedSizeB1024(t *testing.T) {
 	cases := []struct {
 		name     string
 		fmt      string
@@ -133,7 +133,7 @@ func TestSpeedKiBDecor(t *testing.T) {
 	}
 }
 
-func TestSpeedKBDecor(t *testing.T) {
+func TestAverageSpeedSizeB1000(t *testing.T) {
 	cases := []struct {
 		name     string
 		fmt      string
