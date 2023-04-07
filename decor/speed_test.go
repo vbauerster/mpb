@@ -35,7 +35,7 @@ func TestAverageSpeedSizeB1024(t *testing.T) {
 			unit:     SizeB1024(0),
 			fmt:      "%f",
 			current:  0,
-			elapsed:  time.Duration(0),
+			elapsed:  time.Second,
 			expected: "0.000000b/s",
 		},
 		{
@@ -171,7 +171,7 @@ func TestAverageSpeedSizeB1000(t *testing.T) {
 			unit:     SizeB1000(0),
 			fmt:      "%f",
 			current:  0,
-			elapsed:  time.Duration(0),
+			elapsed:  time.Second,
 			expected: "0.000000b/s",
 		},
 		{
