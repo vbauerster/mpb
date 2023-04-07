@@ -40,7 +40,7 @@ func main() {
 		bar := p.AddBar(int64(total),
 			pdecorators,
 			mpb.AppendDecorators(
-				decor.OnComplete(decor.EwmaETA(decor.ET_STYLE_GO, 60), "done"),
+				decor.OnComplete(decor.EwmaETA(decor.ET_STYLE_GO, 30), "done"),
 			),
 		)
 		// simulating some work

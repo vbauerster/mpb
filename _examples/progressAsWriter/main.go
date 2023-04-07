@@ -33,7 +33,7 @@ func main() {
 			),
 			mpb.AppendDecorators(
 				decor.OnComplete(
-					decor.EwmaETA(decor.ET_STYLE_GO, 60, decor.WCSyncWidth), "done",
+					decor.EwmaETA(decor.ET_STYLE_GO, 30, decor.WCSyncWidth), "done",
 				),
 			),
 		)

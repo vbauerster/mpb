@@ -25,9 +25,9 @@ func main() {
 			decor.Counters(decor.SizeB1024(0), "% .2f / % .2f"),
 		),
 		mpb.AppendDecorators(
-			decor.EwmaETA(decor.ET_STYLE_GO, 90),
+			decor.EwmaETA(decor.ET_STYLE_GO, 30),
 			decor.Name(" ] "),
-			decor.EwmaSpeed(decor.SizeB1024(0), "% .2f", 60),
+			decor.EwmaSpeed(decor.SizeB1024(0), "% .2f", 30),
 		),
 	)
 

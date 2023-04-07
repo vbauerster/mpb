@@ -27,7 +27,7 @@ func main() {
 		bar := p.AddBar(int64(total),
 			mpb.PrependDecorators(
 				decor.Name(name, decor.WCSyncWidthR),
-				decor.EwmaETA(decor.ET_STYLE_GO, 60, decor.WCSyncWidth),
+				decor.EwmaETA(decor.ET_STYLE_GO, 30, decor.WCSyncWidth),
 			),
 			mpb.AppendDecorators(
 				// note that OnComplete will not be fired, because of cancel
