@@ -2,7 +2,6 @@ package decor
 
 import (
 	"fmt"
-	"strings"
 )
 
 // CountersNoUnit is a wrapper around Counters with no unit param.
@@ -41,8 +40,6 @@ func CountersKiloByte(pairFmt string, wcc ...WC) Decorator {
 func Counters(unit interface{}, pairFmt string, wcc ...WC) Decorator {
 	if pairFmt == "" {
 		pairFmt = "%d / %d"
-	} else if strings.Count(pairFmt, "%") != 2 {
-		panic("expected pairFmt with exactly 2 verbs")
 	}
 	producer := func() DecorFunc {
 		switch unit.(type) {
@@ -99,8 +96,6 @@ func TotalKiloByte(format string, wcc ...WC) Decorator {
 func Total(unit interface{}, format string, wcc ...WC) Decorator {
 	if format == "" {
 		format = "%d"
-	} else if strings.Count(format, "%") != 1 {
-		panic("expected format with exactly 1 verb")
 	}
 	producer := func() DecorFunc {
 		switch unit.(type) {
@@ -157,8 +152,6 @@ func CurrentKiloByte(format string, wcc ...WC) Decorator {
 func Current(unit interface{}, format string, wcc ...WC) Decorator {
 	if format == "" {
 		format = "%d"
-	} else if strings.Count(format, "%") != 1 {
-		panic("expected format with exactly 1 verb")
 	}
 	producer := func() DecorFunc {
 		switch unit.(type) {
@@ -215,8 +208,6 @@ func InvertedCurrentKiloByte(format string, wcc ...WC) Decorator {
 func InvertedCurrent(unit interface{}, format string, wcc ...WC) Decorator {
 	if format == "" {
 		format = "%d"
-	} else if strings.Count(format, "%") != 1 {
-		panic("expected format with exactly 1 verb")
 	}
 	producer := func() DecorFunc {
 		switch unit.(type) {

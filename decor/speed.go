@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"math"
-	"strings"
 	"time"
 
 	"github.com/VividCortex/ewma"
@@ -70,8 +69,6 @@ func EwmaSpeed(unit interface{}, format string, age float64, wcc ...WC) Decorato
 func MovingAverageSpeed(unit interface{}, format string, average ewma.MovingAverage, wcc ...WC) Decorator {
 	if format == "" {
 		format = "%.0f"
-	} else if strings.Count(format, "%") != 1 {
-		panic("expected format with exactly 1 verb")
 	}
 	d := &movingAverageSpeed{
 		WC:       initWC(wcc...),
@@ -133,8 +130,6 @@ func AverageSpeed(unit int, format string, wcc ...WC) Decorator {
 func NewAverageSpeed(unit interface{}, format string, startTime time.Time, wcc ...WC) Decorator {
 	if format == "" {
 		format = "%.0f"
-	} else if strings.Count(format, "%") != 1 {
-		panic("expected format with exactly 1 verb")
 	}
 	d := &averageSpeed{
 		WC:        initWC(wcc...),
