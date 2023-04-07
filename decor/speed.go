@@ -103,7 +103,7 @@ func (d *movingAverageSpeed) EwmaUpdate(n int64, dur time.Duration) {
 
 // AverageSpeed decorator with dynamic unit measure adjustment. It's
 // a wrapper of NewAverageSpeed.
-func AverageSpeed(unit int, format string, wcc ...WC) Decorator {
+func AverageSpeed(unit interface{}, format string, wcc ...WC) Decorator {
 	return NewAverageSpeed(unit, format, time.Now(), wcc...)
 }
 
