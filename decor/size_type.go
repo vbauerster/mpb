@@ -10,7 +10,9 @@ import (
 
 var (
 	_ fmt.Formatter = SizeB1024(0)
+	_ fmt.Stringer  = SizeB1024(0)
 	_ fmt.Formatter = SizeB1000(0)
+	_ fmt.Stringer  = SizeB1000(0)
 )
 
 const (
