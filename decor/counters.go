@@ -5,12 +5,6 @@ import (
 	"strings"
 )
 
-const (
-	_ = iota
-	UnitKiB
-	UnitKB
-)
-
 // CountersNoUnit is a wrapper around Counters with no unit param.
 func CountersNoUnit(pairFmt string, wcc ...WC) Decorator {
 	return Counters(0, pairFmt, wcc...)
