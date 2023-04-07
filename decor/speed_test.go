@@ -20,7 +20,7 @@ func TestSpeedKiBDecor(t *testing.T) {
 			fmt:      "",
 			current:  0,
 			elapsed:  time.Second,
-			expected: "0b/s",
+			expected: "0 b/s",
 		},
 		{
 			name:     "SizeB1024(0):%d:0b",
@@ -148,7 +148,7 @@ func TestSpeedKBDecor(t *testing.T) {
 			fmt:      "",
 			current:  0,
 			elapsed:  time.Second,
-			expected: "0b/s",
+			expected: "0 b/s",
 		},
 		{
 			name:     "SizeB1000(0):%d:0b",

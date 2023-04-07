@@ -151,7 +151,7 @@ func CurrentKiloByte(format string, wcc ...WC) Decorator {
 //	format="% f"   output: "12.000000 MiB"
 func Current(unit interface{}, format string, wcc ...WC) Decorator {
 	if format == "" {
-		format = "%d"
+		format = "% d"
 	}
 	producer := func() DecorFunc {
 		switch unit.(type) {

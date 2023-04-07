@@ -68,7 +68,7 @@ func EwmaSpeed(unit interface{}, format string, age float64, wcc ...WC) Decorato
 //	unit=SizeB1000(0), format="% .1f" output: "1.0 MB/s"
 func MovingAverageSpeed(unit interface{}, format string, average ewma.MovingAverage, wcc ...WC) Decorator {
 	if format == "" {
-		format = "%.0f"
+		format = "% d"
 	}
 	d := &movingAverageSpeed{
 		WC:       initWC(wcc...),
@@ -129,7 +129,7 @@ func AverageSpeed(unit int, format string, wcc ...WC) Decorator {
 //	unit=SizeB1000(0), format="% .1f" output: "1.0 MB/s"
 func NewAverageSpeed(unit interface{}, format string, startTime time.Time, wcc ...WC) Decorator {
 	if format == "" {
-		format = "%.0f"
+		format = "% d"
 	}
 	d := &averageSpeed{
 		WC:        initWC(wcc...),
