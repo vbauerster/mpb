@@ -14,7 +14,7 @@ func main() {
 
 	// new bar with 'trigger complete event' disabled, because total is zero
 	bar := p.AddBar(0,
-		mpb.PrependDecorators(decor.Counters(decor.UnitKiB, "% .1f / % .1f")),
+		mpb.PrependDecorators(decor.Counters(decor.SizeB1024(0), "% .1f / % .1f")),
 		mpb.AppendDecorators(decor.Percentage()),
 	)
 

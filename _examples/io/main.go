@@ -22,12 +22,12 @@ func main() {
 	bar := p.New(total,
 		mpb.BarStyle().Rbound("|"),
 		mpb.PrependDecorators(
-			decor.CountersKibiByte("% .2f / % .2f"),
+			decor.Counters(decor.SizeB1024(0), "% .2f / % .2f"),
 		),
 		mpb.AppendDecorators(
 			decor.EwmaETA(decor.ET_STYLE_GO, 90),
 			decor.Name(" ] "),
-			decor.EwmaSpeed(decor.UnitKiB, "% .2f", 60),
+			decor.EwmaSpeed(decor.SizeB1024(0), "% .2f", 60),
 		),
 	)
 
