@@ -19,7 +19,7 @@ func TestAverageSpeedSizeB1024(t *testing.T) {
 			unit:     SizeB1024(0),
 			fmt:      "",
 			current:  0,
-			elapsed:  time.Second,
+			elapsed:  time.Duration(0),
 			expected: "0 b/s",
 		},
 		{
@@ -27,7 +27,7 @@ func TestAverageSpeedSizeB1024(t *testing.T) {
 			unit:     SizeB1024(0),
 			fmt:      "%d",
 			current:  0,
-			elapsed:  time.Second,
+			elapsed:  time.Duration(0),
 			expected: "0b/s",
 		},
 		{
@@ -35,7 +35,7 @@ func TestAverageSpeedSizeB1024(t *testing.T) {
 			unit:     SizeB1024(0),
 			fmt:      "% .2f",
 			current:  0,
-			elapsed:  time.Second,
+			elapsed:  time.Duration(0),
 			expected: "0.00 b/s",
 		},
 		{
@@ -59,7 +59,7 @@ func TestAverageSpeedSizeB1024(t *testing.T) {
 			unit:     SizeB1024(0),
 			fmt:      "%d",
 			current:  2 * int64(_iKiB),
-			elapsed:  1 * time.Second,
+			elapsed:  time.Second,
 			expected: "2KiB/s",
 		},
 		{
@@ -67,7 +67,7 @@ func TestAverageSpeedSizeB1024(t *testing.T) {
 			unit:     SizeB1024(0),
 			fmt:      "% .2f",
 			current:  2 * int64(_iKiB),
-			elapsed:  1 * time.Second,
+			elapsed:  time.Second,
 			expected: "2.00 KiB/s",
 		},
 		{
@@ -75,7 +75,7 @@ func TestAverageSpeedSizeB1024(t *testing.T) {
 			unit:     SizeB1024(0),
 			fmt:      "%d",
 			current:  2 * int64(_iMiB),
-			elapsed:  1 * time.Second,
+			elapsed:  time.Second,
 			expected: "2MiB/s",
 		},
 		{
@@ -83,7 +83,7 @@ func TestAverageSpeedSizeB1024(t *testing.T) {
 			unit:     SizeB1024(0),
 			fmt:      "% .2f",
 			current:  2 * int64(_iMiB),
-			elapsed:  1 * time.Second,
+			elapsed:  time.Second,
 			expected: "2.00 MiB/s",
 		},
 		{
@@ -91,7 +91,7 @@ func TestAverageSpeedSizeB1024(t *testing.T) {
 			unit:     SizeB1024(0),
 			fmt:      "%d",
 			current:  2 * int64(_iGiB),
-			elapsed:  1 * time.Second,
+			elapsed:  time.Second,
 			expected: "2GiB/s",
 		},
 		{
@@ -99,7 +99,7 @@ func TestAverageSpeedSizeB1024(t *testing.T) {
 			unit:     SizeB1024(0),
 			fmt:      "% .2f",
 			current:  2 * int64(_iGiB),
-			elapsed:  1 * time.Second,
+			elapsed:  time.Second,
 			expected: "2.00 GiB/s",
 		},
 		{
@@ -107,7 +107,7 @@ func TestAverageSpeedSizeB1024(t *testing.T) {
 			unit:     SizeB1024(0),
 			fmt:      "%d",
 			current:  2 * int64(_iTiB),
-			elapsed:  1 * time.Second,
+			elapsed:  time.Second,
 			expected: "2TiB/s",
 		},
 		{
@@ -115,7 +115,7 @@ func TestAverageSpeedSizeB1024(t *testing.T) {
 			unit:     SizeB1024(0),
 			fmt:      "% .2f",
 			current:  2 * int64(_iTiB),
-			elapsed:  1 * time.Second,
+			elapsed:  time.Second,
 			expected: "2.00 TiB/s",
 		},
 	}
@@ -147,7 +147,7 @@ func TestAverageSpeedSizeB1000(t *testing.T) {
 			unit:     SizeB1000(0),
 			fmt:      "",
 			current:  0,
-			elapsed:  time.Second,
+			elapsed:  time.Duration(0),
 			expected: "0 b/s",
 		},
 		{
@@ -155,7 +155,7 @@ func TestAverageSpeedSizeB1000(t *testing.T) {
 			unit:     SizeB1000(0),
 			fmt:      "%d",
 			current:  0,
-			elapsed:  time.Second,
+			elapsed:  time.Duration(0),
 			expected: "0b/s",
 		},
 		{
@@ -163,7 +163,7 @@ func TestAverageSpeedSizeB1000(t *testing.T) {
 			unit:     SizeB1000(0),
 			fmt:      "% .2f",
 			current:  0,
-			elapsed:  time.Second,
+			elapsed:  time.Duration(0),
 			expected: "0.00 b/s",
 		},
 		{
@@ -187,7 +187,7 @@ func TestAverageSpeedSizeB1000(t *testing.T) {
 			unit:     SizeB1000(0),
 			fmt:      "%d",
 			current:  2 * int64(_KB),
-			elapsed:  1 * time.Second,
+			elapsed:  time.Second,
 			expected: "2KB/s",
 		},
 		{
@@ -195,7 +195,7 @@ func TestAverageSpeedSizeB1000(t *testing.T) {
 			unit:     SizeB1000(0),
 			fmt:      "% .2f",
 			current:  2 * int64(_KB),
-			elapsed:  1 * time.Second,
+			elapsed:  time.Second,
 			expected: "2.00 KB/s",
 		},
 		{
@@ -203,7 +203,7 @@ func TestAverageSpeedSizeB1000(t *testing.T) {
 			unit:     SizeB1000(0),
 			fmt:      "%d",
 			current:  2 * int64(_MB),
-			elapsed:  1 * time.Second,
+			elapsed:  time.Second,
 			expected: "2MB/s",
 		},
 		{
@@ -211,7 +211,7 @@ func TestAverageSpeedSizeB1000(t *testing.T) {
 			unit:     SizeB1000(0),
 			fmt:      "% .2f",
 			current:  2 * int64(_MB),
-			elapsed:  1 * time.Second,
+			elapsed:  time.Second,
 			expected: "2.00 MB/s",
 		},
 		{
@@ -219,7 +219,7 @@ func TestAverageSpeedSizeB1000(t *testing.T) {
 			unit:     SizeB1000(0),
 			fmt:      "%d",
 			current:  2 * int64(_GB),
-			elapsed:  1 * time.Second,
+			elapsed:  time.Second,
 			expected: "2GB/s",
 		},
 		{
@@ -227,7 +227,7 @@ func TestAverageSpeedSizeB1000(t *testing.T) {
 			unit:     SizeB1000(0),
 			fmt:      "% .2f",
 			current:  2 * int64(_GB),
-			elapsed:  1 * time.Second,
+			elapsed:  time.Second,
 			expected: "2.00 GB/s",
 		},
 		{
@@ -235,7 +235,7 @@ func TestAverageSpeedSizeB1000(t *testing.T) {
 			unit:     SizeB1000(0),
 			fmt:      "%d",
 			current:  2 * int64(_TB),
-			elapsed:  1 * time.Second,
+			elapsed:  time.Second,
 			expected: "2TB/s",
 		},
 		{
@@ -243,7 +243,7 @@ func TestAverageSpeedSizeB1000(t *testing.T) {
 			unit:     SizeB1000(0),
 			fmt:      "% .2f",
 			current:  2 * int64(_TB),
-			elapsed:  1 * time.Second,
+			elapsed:  time.Second,
 			expected: "2.00 TB/s",
 		},
 	}
