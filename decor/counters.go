@@ -38,20 +38,26 @@ func CountersKiloByte(pairFmt string, wcc ...WC) Decorator {
 //	pairFmt="%f / %f"       output: "1.000000MB / 12.000000MB"
 //	pairFmt="% f / % f"     output: "1.000000 MB / 12.000000 MB"
 func Counters(unit interface{}, pairFmt string, wcc ...WC) Decorator {
-	if pairFmt == "" {
-		pairFmt = "% d / % d"
-	}
 	producer := func() DecorFunc {
 		switch unit.(type) {
 		case SizeB1024:
+			if pairFmt == "" {
+				pairFmt = "% d / % d"
+			}
 			return func(s Statistics) string {
 				return fmt.Sprintf(pairFmt, SizeB1024(s.Current), SizeB1024(s.Total))
 			}
 		case SizeB1000:
+			if pairFmt == "" {
+				pairFmt = "% d / % d"
+			}
 			return func(s Statistics) string {
 				return fmt.Sprintf(pairFmt, SizeB1000(s.Current), SizeB1000(s.Total))
 			}
 		default:
+			if pairFmt == "" {
+				pairFmt = "%d / %d"
+			}
 			return func(s Statistics) string {
 				return fmt.Sprintf(pairFmt, s.Current, s.Total)
 			}
@@ -94,20 +100,26 @@ func TotalKiloByte(format string, wcc ...WC) Decorator {
 //	format="%f"    output: "12.000000MiB"
 //	format="% f"   output: "12.000000 MiB"
 func Total(unit interface{}, format string, wcc ...WC) Decorator {
-	if format == "" {
-		format = "% d"
-	}
 	producer := func() DecorFunc {
 		switch unit.(type) {
 		case SizeB1024:
+			if format == "" {
+				format = "% d"
+			}
 			return func(s Statistics) string {
 				return fmt.Sprintf(format, SizeB1024(s.Total))
 			}
 		case SizeB1000:
+			if format == "" {
+				format = "% d"
+			}
 			return func(s Statistics) string {
 				return fmt.Sprintf(format, SizeB1000(s.Total))
 			}
 		default:
+			if format == "" {
+				format = "%d"
+			}
 			return func(s Statistics) string {
 				return fmt.Sprintf(format, s.Total)
 			}
@@ -150,20 +162,26 @@ func CurrentKiloByte(format string, wcc ...WC) Decorator {
 //	format="%f"    output: "12.000000MiB"
 //	format="% f"   output: "12.000000 MiB"
 func Current(unit interface{}, format string, wcc ...WC) Decorator {
-	if format == "" {
-		format = "% d"
-	}
 	producer := func() DecorFunc {
 		switch unit.(type) {
 		case SizeB1024:
+			if format == "" {
+				format = "% d"
+			}
 			return func(s Statistics) string {
 				return fmt.Sprintf(format, SizeB1024(s.Current))
 			}
 		case SizeB1000:
+			if format == "" {
+				format = "% d"
+			}
 			return func(s Statistics) string {
 				return fmt.Sprintf(format, SizeB1000(s.Current))
 			}
 		default:
+			if format == "" {
+				format = "%d"
+			}
 			return func(s Statistics) string {
 				return fmt.Sprintf(format, s.Current)
 			}
@@ -206,20 +224,26 @@ func InvertedCurrentKiloByte(format string, wcc ...WC) Decorator {
 //	format="%f"    output: "12.000000MiB"
 //	format="% f"   output: "12.000000 MiB"
 func InvertedCurrent(unit interface{}, format string, wcc ...WC) Decorator {
-	if format == "" {
-		format = "% d"
-	}
 	producer := func() DecorFunc {
 		switch unit.(type) {
 		case SizeB1024:
+			if format == "" {
+				format = "% d"
+			}
 			return func(s Statistics) string {
 				return fmt.Sprintf(format, SizeB1024(s.Total-s.Current))
 			}
 		case SizeB1000:
+			if format == "" {
+				format = "% d"
+			}
 			return func(s Statistics) string {
 				return fmt.Sprintf(format, SizeB1000(s.Total-s.Current))
 			}
 		default:
+			if format == "" {
+				format = "%d"
+			}
 			return func(s Statistics) string {
 				return fmt.Sprintf(format, s.Total-s.Current)
 			}

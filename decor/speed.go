@@ -67,9 +67,6 @@ func EwmaSpeed(unit interface{}, format string, age float64, wcc ...WC) Decorato
 //	unit=SizeB1000(0), format="%.1f"  output: "1.0MB/s"
 //	unit=SizeB1000(0), format="% .1f" output: "1.0 MB/s"
 func MovingAverageSpeed(unit interface{}, format string, average ewma.MovingAverage, wcc ...WC) Decorator {
-	if format == "" {
-		format = "% d"
-	}
 	d := &movingAverageSpeed{
 		WC:       initWC(wcc...),
 		average:  average,
@@ -128,9 +125,6 @@ func AverageSpeed(unit int, format string, wcc ...WC) Decorator {
 //	unit=SizeB1000(0), format="%.1f"  output: "1.0MB/s"
 //	unit=SizeB1000(0), format="% .1f" output: "1.0 MB/s"
 func NewAverageSpeed(unit interface{}, format string, startTime time.Time, wcc ...WC) Decorator {
-	if format == "" {
-		format = "% d"
-	}
 	d := &averageSpeed{
 		WC:        initWC(wcc...),
 		startTime: startTime,
@@ -161,14 +155,23 @@ func (d *averageSpeed) AverageAdjust(startTime time.Time) {
 func chooseSpeedProducer(unit interface{}, format string) func(float64) string {
 	switch unit.(type) {
 	case SizeB1024:
+		if format == "" {
+			format = "% d"
+		}
 		return func(speed float64) string {
 			return fmt.Sprintf(format, FmtAsSpeed(SizeB1024(math.Round(speed))))
 		}
 	case SizeB1000:
+		if format == "" {
+			format = "% d"
+		}
 		return func(speed float64) string {
 			return fmt.Sprintf(format, FmtAsSpeed(SizeB1000(math.Round(speed))))
 		}
 	default:
+		if format == "" {
+			format = "%f"
+		}
 		return func(speed float64) string {
 			return fmt.Sprintf(format, speed)
 		}
