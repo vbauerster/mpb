@@ -351,7 +351,7 @@ func (s *pState) render(cw *cwriter.Writer) (err error) {
 }
 
 func (s *pState) flush(cw *cwriter.Writer, height int) error {
-	wg := new(sync.WaitGroup)
+	var wg sync.WaitGroup
 	defer wg.Wait() // waiting for all s.hm.push to complete
 
 	var popCount int
