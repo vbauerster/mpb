@@ -20,7 +20,6 @@ jobs:
       matrix:
         go-version: ['stable']
         os: [ubuntu-latest, macos-latest]
-    name: lint
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
