@@ -15,11 +15,6 @@ func inspect(decorators []decor.Decorator) (dest []decor.Decorator) {
 		if decorator == nil {
 			continue
 		}
-		if d, ok := decorator.(interface {
-			PlaceHolders() []decor.Decorator
-		}); ok {
-			dest = append(dest, d.PlaceHolders()...)
-		}
 		dest = append(dest, decorator)
 	}
 	return
