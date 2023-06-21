@@ -810,14 +810,14 @@ func TestDrawTipOnComplete(t *testing.T) {
 	}{
 		3: {
 			{
-				style:   BarStyle().TipOnComplete(">"),
+				style:   BarStyle().TipOnComplete(),
 				name:    "t,c{60,60}",
 				total:   60,
 				current: 60,
 				want:    "  ",
 			},
 			{
-				style:   BarStyle().TipOnComplete(">"),
+				style:   BarStyle().TipOnComplete(),
 				name:    "t,c{60,60}trim",
 				total:   60,
 				current: 60,
@@ -827,14 +827,14 @@ func TestDrawTipOnComplete(t *testing.T) {
 		},
 		4: {
 			{
-				style:   BarStyle().TipOnComplete(">"),
+				style:   BarStyle().TipOnComplete(),
 				name:    "t,c{60,59}",
 				total:   60,
 				current: 59,
 				want:    " [] ",
 			},
 			{
-				style:   BarStyle().TipOnComplete(">"),
+				style:   BarStyle().TipOnComplete(),
 				name:    "t,c{60,59}trim",
 				total:   60,
 				current: 59,
@@ -842,14 +842,14 @@ func TestDrawTipOnComplete(t *testing.T) {
 				want:    "[=>]",
 			},
 			{
-				style:   BarStyle().TipOnComplete(">"),
+				style:   BarStyle().TipOnComplete(),
 				name:    "t,c{60,60}",
 				total:   60,
 				current: 60,
 				want:    " [] ",
 			},
 			{
-				style:   BarStyle().TipOnComplete(">"),
+				style:   BarStyle().TipOnComplete(),
 				name:    "t,c{60,60}trim",
 				total:   60,
 				current: 60,
@@ -859,14 +859,14 @@ func TestDrawTipOnComplete(t *testing.T) {
 		},
 		5: {
 			{
-				style:   BarStyle().TipOnComplete(">"),
+				style:   BarStyle().TipOnComplete(),
 				name:    "t,c{60,59}",
 				total:   60,
 				current: 59,
 				want:    " [>] ",
 			},
 			{
-				style:   BarStyle().TipOnComplete(">"),
+				style:   BarStyle().TipOnComplete(),
 				name:    "t,c{60,59}trim",
 				total:   60,
 				current: 59,
@@ -874,14 +874,14 @@ func TestDrawTipOnComplete(t *testing.T) {
 				want:    "[==>]",
 			},
 			{
-				style:   BarStyle().TipOnComplete(">"),
+				style:   BarStyle().TipOnComplete(),
 				name:    "t,c{60,60}",
 				total:   60,
 				current: 60,
 				want:    " [>] ",
 			},
 			{
-				style:   BarStyle().TipOnComplete(">"),
+				style:   BarStyle().TipOnComplete(),
 				name:    "t,c{60,60}trim",
 				total:   60,
 				current: 60,
@@ -891,14 +891,14 @@ func TestDrawTipOnComplete(t *testing.T) {
 		},
 		6: {
 			{
-				style:   BarStyle().TipOnComplete(">"),
+				style:   BarStyle().TipOnComplete(),
 				name:    "t,c{60,59}",
 				total:   60,
 				current: 59,
 				want:    " [=>] ",
 			},
 			{
-				style:   BarStyle().TipOnComplete(">"),
+				style:   BarStyle().TipOnComplete(),
 				name:    "t,c{60,59}trim",
 				total:   60,
 				current: 59,
@@ -906,14 +906,14 @@ func TestDrawTipOnComplete(t *testing.T) {
 				want:    "[===>]",
 			},
 			{
-				style:   BarStyle().TipOnComplete(">"),
+				style:   BarStyle().TipOnComplete(),
 				name:    "t,c{60,60}",
 				total:   60,
 				current: 60,
 				want:    " [=>] ",
 			},
 			{
-				style:   BarStyle().TipOnComplete(">"),
+				style:   BarStyle().TipOnComplete(),
 				name:    "t,c{60,60}trim",
 				total:   60,
 				current: 60,
@@ -923,14 +923,14 @@ func TestDrawTipOnComplete(t *testing.T) {
 		},
 		7: {
 			{
-				style:   BarStyle().TipOnComplete(">"),
+				style:   BarStyle().TipOnComplete(),
 				name:    "t,c{60,59}",
 				total:   60,
 				current: 59,
 				want:    " [==>] ",
 			},
 			{
-				style:   BarStyle().TipOnComplete(">"),
+				style:   BarStyle().TipOnComplete(),
 				name:    "t,c{60,59}trim",
 				total:   60,
 				current: 59,
@@ -938,14 +938,14 @@ func TestDrawTipOnComplete(t *testing.T) {
 				want:    "[====>]",
 			},
 			{
-				style:   BarStyle().TipOnComplete(">"),
+				style:   BarStyle().TipOnComplete(),
 				name:    "t,c{60,60}",
 				total:   60,
 				current: 60,
 				want:    " [==>] ",
 			},
 			{
-				style:   BarStyle().TipOnComplete(">"),
+				style:   BarStyle().TipOnComplete(),
 				name:    "t,c{60,60}trim",
 				total:   60,
 				current: 60,
@@ -955,14 +955,14 @@ func TestDrawTipOnComplete(t *testing.T) {
 		},
 		8: {
 			{
-				style:   BarStyle().TipOnComplete(">"),
+				style:   BarStyle().TipOnComplete(),
 				name:    "t,c{60,59}",
 				total:   60,
 				current: 59,
 				want:    " [===>] ",
 			},
 			{
-				style:   BarStyle().TipOnComplete(">"),
+				style:   BarStyle().TipOnComplete(),
 				name:    "t,c{60,59}trim",
 				total:   60,
 				current: 59,
@@ -970,14 +970,14 @@ func TestDrawTipOnComplete(t *testing.T) {
 				want:    "[=====>]",
 			},
 			{
-				style:   BarStyle().TipOnComplete(">"),
+				style:   BarStyle().TipOnComplete(),
 				name:    "t,c{60,60}",
 				total:   60,
 				current: 60,
 				want:    " [===>] ",
 			},
 			{
-				style:   BarStyle().TipOnComplete(">"),
+				style:   BarStyle().TipOnComplete(),
 				name:    "t,c{60,60}trim",
 				total:   60,
 				current: 60,
@@ -987,14 +987,14 @@ func TestDrawTipOnComplete(t *testing.T) {
 		},
 		80: {
 			{
-				style:   BarStyle().TipOnComplete(">"),
+				style:   BarStyle().TipOnComplete(),
 				name:    "t,c{60,59}",
 				total:   60,
 				current: 59,
 				want:    " [==========================================================================>-] ",
 			},
 			{
-				style:   BarStyle().TipOnComplete(">"),
+				style:   BarStyle().TipOnComplete(),
 				name:    "t,c{60,59}trim",
 				total:   60,
 				current: 59,
@@ -1002,7 +1002,7 @@ func TestDrawTipOnComplete(t *testing.T) {
 				want:    "[============================================================================>-]",
 			},
 			{
-				style:    BarStyle().TipOnComplete(">"),
+				style:    BarStyle().TipOnComplete(),
 				name:     "t,c,bw{60,59,60}",
 				total:    60,
 				current:  59,
@@ -1010,7 +1010,7 @@ func TestDrawTipOnComplete(t *testing.T) {
 				want:     " [========================================================>-] ",
 			},
 			{
-				style:    BarStyle().TipOnComplete(">"),
+				style:    BarStyle().TipOnComplete(),
 				name:     "t,c,bw{60,59,60}trim",
 				total:    60,
 				current:  59,
@@ -1019,14 +1019,14 @@ func TestDrawTipOnComplete(t *testing.T) {
 				want:     "[========================================================>-]",
 			},
 			{
-				style:   BarStyle().TipOnComplete(">"),
+				style:   BarStyle().TipOnComplete(),
 				name:    "t,c{60,60}",
 				total:   60,
 				current: 60,
 				want:    " [===========================================================================>] ",
 			},
 			{
-				style:   BarStyle().TipOnComplete(">"),
+				style:   BarStyle().TipOnComplete(),
 				name:    "t,c{60,60}trim",
 				total:   60,
 				current: 60,
@@ -1034,7 +1034,7 @@ func TestDrawTipOnComplete(t *testing.T) {
 				want:    "[=============================================================================>]",
 			},
 			{
-				style:    BarStyle().TipOnComplete(">"),
+				style:    BarStyle().TipOnComplete(),
 				name:     "t,c,bw{60,60,60}",
 				total:    60,
 				current:  60,
@@ -1042,7 +1042,7 @@ func TestDrawTipOnComplete(t *testing.T) {
 				want:     " [=========================================================>] ",
 			},
 			{
-				style:    BarStyle().TipOnComplete(">"),
+				style:    BarStyle().TipOnComplete(),
 				name:     "t,c,bw{60,60,60}trim",
 				total:    60,
 				current:  60,
@@ -1053,14 +1053,14 @@ func TestDrawTipOnComplete(t *testing.T) {
 		},
 		99: {
 			{
-				style:   BarStyle().TipOnComplete(">"),
+				style:   BarStyle().TipOnComplete(),
 				name:    "t,c{100,99}",
 				total:   100,
 				current: 99,
 				want:    " [=============================================================================================>-] ",
 			},
 			{
-				style:   BarStyle().TipOnComplete(">"),
+				style:   BarStyle().TipOnComplete(),
 				name:    "t,c{100,99}trim",
 				total:   100,
 				current: 99,
@@ -1068,14 +1068,14 @@ func TestDrawTipOnComplete(t *testing.T) {
 				want:    "[===============================================================================================>-]",
 			},
 			{
-				style:   BarStyle().TipOnComplete(">"),
+				style:   BarStyle().TipOnComplete(),
 				name:    "t,c{100,100}",
 				total:   100,
 				current: 100,
 				want:    " [==============================================================================================>] ",
 			},
 			{
-				style:   BarStyle().TipOnComplete(">"),
+				style:   BarStyle().TipOnComplete(),
 				name:    "t,c{100,100}trim",
 				total:   100,
 				current: 100,
@@ -1083,7 +1083,7 @@ func TestDrawTipOnComplete(t *testing.T) {
 				want:    "[================================================================================================>]",
 			},
 			{
-				style:   BarStyle().TipOnComplete(">"),
+				style:   BarStyle().TipOnComplete(),
 				name:    "t,c,r{100,100,99}",
 				total:   100,
 				current: 100,
@@ -1091,7 +1091,7 @@ func TestDrawTipOnComplete(t *testing.T) {
 				want:    " [++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++>] ",
 			},
 			{
-				style:   BarStyle().TipOnComplete(">"),
+				style:   BarStyle().TipOnComplete(),
 				name:    "t,c,r{100,100,99}trim",
 				total:   100,
 				current: 100,
@@ -1100,16 +1100,16 @@ func TestDrawTipOnComplete(t *testing.T) {
 				want:    "[++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++>]",
 			},
 			{
-				style:   BarStyle().TipOnComplete("<").Reverse(),
-				name:    `t,c,r{100,100,99}TipOnComplete("<").Reverse()`,
+				style:   BarStyle().Tip("<").TipOnComplete().Reverse(),
+				name:    `t,c,r{100,100,99}.Tip("<").TipOnComplete().Reverse()`,
 				total:   100,
 				current: 100,
 				refill:  99,
 				want:    " [<++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++] ",
 			},
 			{
-				style:   BarStyle().TipOnComplete("<").Reverse(),
-				name:    `t,c,r{100,100,99}TipOnComplete("<").Reverse()trim`,
+				style:   BarStyle().Tip("<").TipOnComplete().Reverse(),
+				name:    `t,c,r{100,100,99}.Tip("<").TipOnComplete().Reverse()trim`,
 				total:   100,
 				current: 100,
 				refill:  99,
@@ -1117,7 +1117,7 @@ func TestDrawTipOnComplete(t *testing.T) {
 				want:    "[<++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++]",
 			},
 			{
-				style:   BarStyle().TipOnComplete(">"),
+				style:   BarStyle().TipOnComplete(),
 				name:    "t,c,r{100,100,100}",
 				total:   100,
 				current: 100,
@@ -1125,7 +1125,7 @@ func TestDrawTipOnComplete(t *testing.T) {
 				want:    " [++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++>] ",
 			},
 			{
-				style:   BarStyle().TipOnComplete(">"),
+				style:   BarStyle().TipOnComplete(),
 				name:    "t,c,r{100,100,100}trim",
 				total:   100,
 				current: 100,
@@ -1134,16 +1134,16 @@ func TestDrawTipOnComplete(t *testing.T) {
 				want:    "[++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++>]",
 			},
 			{
-				style:   BarStyle().TipOnComplete("<").Reverse(),
-				name:    `t,c,r{100,100,100}TipOnComplete("<").Reverse()`,
+				style:   BarStyle().Tip("<").TipOnComplete().Reverse(),
+				name:    `t,c,r{100,100,100}.Tip("<").TipOnComplete().Reverse()`,
 				total:   100,
 				current: 100,
 				refill:  100,
 				want:    " [<++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++] ",
 			},
 			{
-				style:   BarStyle().TipOnComplete("<").Reverse(),
-				name:    `t,c,r{100,100,100}TipOnComplete("<").Reverse()trim`,
+				style:   BarStyle().Tip("<").TipOnComplete().Reverse(),
+				name:    `t,c,r{100,100,100}.Tip("<").TipOnComplete().Reverse()trim`,
 				total:   100,
 				current: 100,
 				refill:  100,
@@ -1153,14 +1153,14 @@ func TestDrawTipOnComplete(t *testing.T) {
 		},
 		100: {
 			{
-				style:   BarStyle().TipOnComplete(">"),
+				style:   BarStyle().TipOnComplete(),
 				name:    "t,c{100,99}",
 				total:   100,
 				current: 99,
 				want:    " [==============================================================================================>-] ",
 			},
 			{
-				style:   BarStyle().TipOnComplete(">"),
+				style:   BarStyle().TipOnComplete(),
 				name:    "t,c{100,99}trim",
 				total:   100,
 				current: 99,
@@ -1168,14 +1168,14 @@ func TestDrawTipOnComplete(t *testing.T) {
 				want:    "[================================================================================================>-]",
 			},
 			{
-				style:   BarStyle().TipOnComplete(">"),
+				style:   BarStyle().TipOnComplete(),
 				name:    "t,c{100,100}",
 				total:   100,
 				current: 100,
 				want:    " [===============================================================================================>] ",
 			},
 			{
-				style:   BarStyle().TipOnComplete(">"),
+				style:   BarStyle().TipOnComplete(),
 				name:    "t,c{100,100}trim",
 				total:   100,
 				current: 100,
@@ -1183,7 +1183,7 @@ func TestDrawTipOnComplete(t *testing.T) {
 				want:    "[=================================================================================================>]",
 			},
 			{
-				style:   BarStyle().TipOnComplete(">"),
+				style:   BarStyle().TipOnComplete(),
 				name:    "t,c,r{100,100,99}",
 				total:   100,
 				current: 100,
@@ -1191,7 +1191,7 @@ func TestDrawTipOnComplete(t *testing.T) {
 				want:    " [+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++>] ",
 			},
 			{
-				style:   BarStyle().TipOnComplete(">"),
+				style:   BarStyle().TipOnComplete(),
 				name:    "t,c,r{100,100,99}trim",
 				total:   100,
 				current: 100,
@@ -1200,7 +1200,7 @@ func TestDrawTipOnComplete(t *testing.T) {
 				want:    "[+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++>]",
 			},
 			{
-				style:   BarStyle().TipOnComplete(">"),
+				style:   BarStyle().TipOnComplete(),
 				name:    "t,c,r{100,100,100}",
 				total:   100,
 				current: 100,
@@ -1208,7 +1208,7 @@ func TestDrawTipOnComplete(t *testing.T) {
 				want:    " [+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++>] ",
 			},
 			{
-				style:   BarStyle().TipOnComplete(">"),
+				style:   BarStyle().TipOnComplete(),
 				name:    "t,c,r{100,100,100}trim",
 				total:   100,
 				current: 100,
@@ -1314,8 +1314,8 @@ func TestDrawDoubleWidth(t *testing.T) {
 				want:    " [===============================================================================================] ",
 			},
 			{
-				style:   BarStyle().TipOnComplete("だ"),
-				name:    `t,c{100,100}TipOnComplete("だ")`,
+				style:   BarStyle().Tip("だ").TipOnComplete(),
+				name:    `t,c{100,100}.Tip("だ").TipOnComplete()`,
 				total:   100,
 				current: 100,
 				want:    " [=============================================================================================だ] ",
@@ -1356,22 +1356,22 @@ func TestDrawDoubleWidth(t *testing.T) {
 				want:    " [ののののののののののののののののののののののののののののののののののののののののののののののの…] ",
 			},
 			{
-				style:   BarStyle().Filler("の").Tip("だ").TipOnComplete("だ").Padding("つ"),
-				name:    `t,c{100,99}Filler("の").Tip("だ").TipOnComplete("だ").Padding("つ")`,
+				style:   BarStyle().Filler("の").Tip("だ").TipOnComplete().Padding("つ"),
+				name:    `t,c{100,99}Filler("の").Tip("だ").TipOnComplete().Padding("つ")`,
 				total:   100,
 				current: 99,
 				want:    " [ののののののののののののののののののののののののののののののののののののののののののののののだ…] ",
 			},
 			{
-				style:   BarStyle().Filler("の").Tip("だ").TipOnComplete("だ").Padding("つ"),
-				name:    `t,c{100,100}.Filler("の").Tip("だ").TipOnComplete("だ").Padding("つ")`,
+				style:   BarStyle().Filler("の").Tip("だ").TipOnComplete().Padding("つ"),
+				name:    `t,c{100,100}.Filler("の").Tip("だ").TipOnComplete().Padding("つ")`,
 				total:   100,
 				current: 100,
 				want:    " […ののののののののののののののののののののののののののののののののののののののののののののののだ] ",
 			},
 			{
-				style:   BarStyle().Filler("の").Tip("だ").TipOnComplete("だ").Padding("つ").Reverse(),
-				name:    `t,c{100,100}.Filler("の").Tip("だ").TipOnComplete("だ").Padding("つ").Reverse()`,
+				style:   BarStyle().Filler("の").Tip("だ").TipOnComplete().Padding("つ").Reverse(),
+				name:    `t,c{100,100}.Filler("の").Tip("だ").TipOnComplete().Padding("つ").Reverse()`,
 				total:   100,
 				current: 100,
 				want:    " [だのののののののののののののののののののののののののののののののののののののののののののののの…] ",
