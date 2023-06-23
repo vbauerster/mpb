@@ -229,7 +229,7 @@ func TestDecorStatisticsAvailableWidth(t *testing.T) {
 	ch := make(chan int, 2)
 	td1 := func(s decor.Statistics) string {
 		ch <- s.AvailableWidth
-		return fmt.Sprintf("\x1b[31;1;4m%s\x1b[0m", strings.Repeat("0", 20))
+		return strings.Repeat("0", 20)
 	}
 	td2 := func(s decor.Statistics) string {
 		ch <- s.AvailableWidth
@@ -246,7 +246,12 @@ func TestDecorStatisticsAvailableWidth(t *testing.T) {
 		mpb.BarFillerTrim(),
 		mpb.PrependDecorators(
 			decor.Name(strings.Repeat("0", 20)),
-			decor.Any(td1),
+			decor.Meta(
+				decor.Any(td1),
+				func(s string) string {
+					return fmt.Sprint("\x1b[31;1m", s, "\x1b[0m")
+				},
+			),
 		),
 		mpb.AppendDecorators(
 			decor.Name(strings.Repeat("0", 20)),
