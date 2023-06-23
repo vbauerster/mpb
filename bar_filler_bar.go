@@ -39,6 +39,16 @@ type BarStyleComposer interface {
 	Reverse() BarStyleComposer
 }
 
+type component struct {
+	width int
+	bytes []byte
+}
+
+type flushSection struct {
+	meta  func(io.Writer, ...interface{}) error
+	bytes []byte
+}
+
 type bFiller struct {
 	components    [components]component
 	meta          [components]func(io.Writer, ...interface{}) error
@@ -48,11 +58,6 @@ type bFiller struct {
 		frames []component
 		count  uint
 	}
-}
-
-type component struct {
-	width int
-	bytes []byte
 }
 
 type barStyle struct {
@@ -253,11 +258,6 @@ func (s *bFiller) Fill(w io.Writer, stat decor.Statistics) (err error) {
 		return err
 	}
 	return s.meta[iRbound](w, s.components[iRbound].bytes)
-}
-
-type flushSection struct {
-	meta  func(io.Writer, ...interface{}) error
-	bytes []byte
 }
 
 func flush(w io.Writer, rev bool, sections ...flushSection) error {
