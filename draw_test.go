@@ -1346,14 +1346,14 @@ func TestDrawDoubleWidth(t *testing.T) {
 				name:    `t,c{100,100}.Filler("の").Tip("だ").Padding("つ")`,
 				total:   100,
 				current: 100,
-				want:    " […ののののののののののののののののののののののののののののののののののののののののののののののの] ",
+				want:    " [ののののののののののののののののののののののののののののののののののののののののののののののの…] ",
 			},
 			{
 				style:   BarStyle().Filler("の").Tip("だ").Padding("つ").Reverse(),
 				name:    `t,c{100,100}Filler("の").Tip("だ").Padding("つ").Reverse()`,
 				total:   100,
 				current: 100,
-				want:    " [ののののののののののののののののののののののののののののののののののののののののののののののの…] ",
+				want:    " […ののののののののののののののののののののののののののののののののののののののののののののののの] ",
 			},
 			{
 				style:   BarStyle().Filler("の").Tip("だ").TipOnComplete().Padding("つ"),
@@ -1367,14 +1367,14 @@ func TestDrawDoubleWidth(t *testing.T) {
 				name:    `t,c{100,100}.Filler("の").Tip("だ").TipOnComplete().Padding("つ")`,
 				total:   100,
 				current: 100,
-				want:    " […ののののののののののののののののののののののののののののののののののののののののののののののだ] ",
+				want:    " [ののののののののののののののののののののののののののののののののののののののののののののののだ…] ",
 			},
 			{
 				style:   BarStyle().Filler("の").Tip("だ").TipOnComplete().Padding("つ").Reverse(),
 				name:    `t,c{100,100}.Filler("の").Tip("だ").TipOnComplete().Padding("つ").Reverse()`,
 				total:   100,
 				current: 100,
-				want:    " [だのののののののののののののののののののののののののののののののののののののののののののののの…] ",
+				want:    " […だのののののののののののののののののののののののののののののののののののののののののののののの] ",
 			},
 			{
 				style:   BarStyle().Refiller("の"),
