@@ -133,7 +133,7 @@ func TestAverageSpeedSizeB1024(t *testing.T) {
 			stat := Statistics{
 				Current: tc.current,
 			}
-			res := decor.Decor(stat)
+			res, _ := decor.Decor(stat)
 			if res != tc.expected {
 				t.Fatalf("expected: %q, got: %q\n", tc.expected, res)
 			}
@@ -269,7 +269,7 @@ func TestAverageSpeedSizeB1000(t *testing.T) {
 			stat := Statistics{
 				Current: tc.current,
 			}
-			res := decor.Decor(stat)
+			res, _ := decor.Decor(stat)
 			if res != tc.expected {
 				t.Fatalf("expected: %q, got: %q\n", tc.expected, res)
 			}

@@ -31,7 +31,7 @@ func TestNameDecorator(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		got := test.decorator.Decor(decor.Statistics{})
+		got, _ := test.decorator.Decor(decor.Statistics{})
 		if got != test.want {
 			t.Errorf("Want: %q, Got: %q\n", test.want, got)
 		}
@@ -188,7 +188,8 @@ func testDecoratorConcurrently(t *testing.T, testCases [][]step) {
 			step := step
 			ch := make(chan string)
 			go func() {
-				ch <- step.decorator.Decor(step.stat)
+				str, _ := step.decorator.Decor(step.stat)
+				ch <- str
 			}()
 			results = append(results, ch)
 		}
