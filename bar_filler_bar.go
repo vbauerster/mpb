@@ -256,17 +256,20 @@ func (s *bFiller) Fill(w io.Writer, stat decor.Statistics) error {
 func flush(w io.Writer, rev bool, sections ...flushSection) error {
 	if rev {
 		for i := len(sections) - 1; i >= 0; i-- {
-			s := sections[i]
-			err := s.meta(w, s.bytes)
-			if err != nil {
-				return err
+			if s := sections[i]; len(s.bytes) != 0 {
+				err := s.meta(w, s.bytes)
+				if err != nil {
+					return err
+				}
 			}
 		}
 	} else {
 		for _, s := range sections {
-			err := s.meta(w, s.bytes)
-			if err != nil {
-				return err
+			if len(s.bytes) != 0 {
+				err := s.meta(w, s.bytes)
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}
