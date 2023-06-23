@@ -11,14 +11,14 @@ import (
 const (
 	iLbound = iota
 	iRbound
-	iFiller
 	iRefiller
-	iPadding
+	iFiller
 	iTip
+	iPadding
 	components
 )
 
-var defaultBarStyle = [...]string{"[", "]", "=", "+", "-", ">"}
+var defaultBarStyle = [...]string{"[", "]", "+", "=", ">", "-"}
 
 // BarStyleComposer interface.
 type BarStyleComposer interface {
