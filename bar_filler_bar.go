@@ -189,7 +189,7 @@ func (s *barStyle) Build() BarFiller {
 	return bf
 }
 
-func (s *bFiller) Fill(w io.Writer, stat decor.Statistics) (err error) {
+func (s *bFiller) Fill(w io.Writer, stat decor.Statistics) error {
 	width := internal.CheckRequestedWidth(stat.RequestedWidth, stat.AvailableWidth)
 	// don't count brackets as progress
 	width -= (s.components[iLbound].width + s.components[iRbound].width)
@@ -197,7 +197,7 @@ func (s *bFiller) Fill(w io.Writer, stat decor.Statistics) (err error) {
 		return nil
 	}
 
-	err = s.meta[iLbound](w, s.components[iLbound].bytes)
+	err := s.meta[iLbound](w, s.components[iLbound].bytes)
 	if err != nil {
 		return err
 	}
