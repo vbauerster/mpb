@@ -75,12 +75,6 @@ func BarStyle() BarStyleComposer {
 		style:     defaultBarStyle,
 		tipFrames: []string{defaultBarStyle[iTip]},
 	}
-	defaultMeta := func(w io.Writer, a ...interface{}) (err error) {
-		for i := 0; i < len(a) && err == nil; i++ {
-			_, err = w.Write(a[i].([]byte))
-		}
-		return err
-	}
 	for i := range bs.metaFuncs {
 		bs.metaFuncs[i] = defaultMeta
 	}
@@ -287,4 +281,11 @@ func makeMetaFunc(fn func(...interface{}) string) func(io.Writer, ...interface{}
 		}
 		return err
 	}
+}
+
+func defaultMeta(w io.Writer, a ...interface{}) (err error) {
+	for i := 0; i < len(a) && err == nil; i++ {
+		_, err = w.Write(a[i].([]byte))
+	}
+	return err
 }
