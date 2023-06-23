@@ -147,8 +147,8 @@ func TestBarSetRefill(t *testing.T) {
 
 	bar := p.New(int64(total), mpb.BarStyle().Refiller(refiller), mpb.BarFillerTrim())
 
-	bar.SetRefill(int64(till))
 	bar.IncrBy(till)
+	bar.SetRefill(int64(till))
 	bar.IncrBy(total - till)
 
 	p.Wait()
