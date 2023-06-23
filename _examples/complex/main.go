@@ -5,13 +5,20 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/fatih/color"
 	"github.com/vbauerster/mpb/v8"
 	"github.com/vbauerster/mpb/v8/decor"
 )
 
 func main() {
 	numBars := 4
-	p := mpb.New()
+	// to support color in Windows following both options are required
+	p := mpb.New(
+		mpb.WithOutput(color.Output),
+		mpb.WithAutoRefresh(),
+	)
+
+	red, green := color.New(color.FgRed), color.New(color.FgGreen)
 
 	for i := 0; i < numBars; i++ {
 		task := fmt.Sprintf("Task#%02d:", i)
@@ -31,7 +38,13 @@ func main() {
 			mpb.BarFillerClearOnComplete(),
 			mpb.PrependDecorators(
 				decor.Name(task, decor.WC{W: len(task) + 1, C: decor.DidentRight}),
-				decor.OnComplete(decor.Name("\x1b[31minstalling\x1b[0m", decor.WCSyncSpaceR), "done!"),
+				decor.OnCompleteMeta(
+					decor.OnComplete(
+						decor.Meta(decor.Name("installing", decor.WCSyncSpaceR), toMetaFunc(red)),
+						"done!",
+					),
+					toMetaFunc(green),
+				),
 				decor.OnComplete(decor.EwmaETA(decor.ET_STYLE_MMSS, 0, decor.WCSyncWidth), ""),
 			),
 			mpb.AppendDecorators(
@@ -58,5 +71,11 @@ func complete(bar *mpb.Bar) {
 		time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
 		// we need to call EwmaIncrement to fulfill ewma decorator's contract
 		bar.EwmaIncrInt64(rand.Int63n(5)+1, time.Since(start))
+	}
+}
+
+func toMetaFunc(c *color.Color) func(string) string {
+	return func(s string) string {
+		return c.Sprint(s)
 	}
 }
