@@ -237,7 +237,7 @@ func (s *bFiller) Fill(w io.Writer, stat decor.Statistics) error {
 		padding = append(padding, s.components[iPadding].bytes...)
 	}
 
-	if width-fillCount != 0 {
+	for w := 1; width-fillCount >= w; fillCount += w {
 		padding = append(padding, "…"...)
 	}
 
