@@ -52,7 +52,7 @@ type flushSection struct {
 type bFiller struct {
 	components    [components]component
 	meta          [components]func(io.Writer, ...interface{}) error
-	rev           bool
+	flush         func(w io.Writer, sections ...flushSection) error
 	tipOnComplete bool
 	tip           struct {
 		frames []component
@@ -156,7 +156,6 @@ func (s *barStyle) Reverse() BarStyleComposer {
 func (s *barStyle) Build() BarFiller {
 	bf := &bFiller{
 		meta:          s.metaFuncs,
-		rev:           s.rev,
 		tipOnComplete: s.tipOnComplete,
 	}
 	bf.components[iLbound] = component{
@@ -184,6 +183,31 @@ func (s *barStyle) Build() BarFiller {
 		bf.tip.frames[i] = component{
 			width: runewidth.StringWidth(t),
 			bytes: []byte(t),
+		}
+	}
+	if s.rev {
+		bf.flush = func(w io.Writer, sections ...flushSection) error {
+			for i := len(sections) - 1; i >= 0; i-- {
+				if s := sections[i]; len(s.bytes) != 0 {
+					err := s.meta(w, s.bytes)
+					if err != nil {
+						return err
+					}
+				}
+			}
+			return nil
+		}
+	} else {
+		bf.flush = func(w io.Writer, sections ...flushSection) error {
+			for _, s := range sections {
+				if len(s.bytes) != 0 {
+					err := s.meta(w, s.bytes)
+					if err != nil {
+						return err
+					}
+				}
+			}
+			return nil
 		}
 	}
 	return bf
@@ -241,7 +265,7 @@ func (s *bFiller) Fill(w io.Writer, stat decor.Statistics) error {
 		padding = append(padding, "…"...)
 	}
 
-	err = flush(w, s.rev,
+	err = s.flush(w,
 		flushSection{s.meta[iRefiller], refilling},
 		flushSection{s.meta[iFiller], filling},
 		flushSection{s.meta[iTip], tip.bytes},
@@ -251,29 +275,6 @@ func (s *bFiller) Fill(w io.Writer, stat decor.Statistics) error {
 		return err
 	}
 	return s.meta[iRbound](w, s.components[iRbound].bytes)
-}
-
-func flush(w io.Writer, rev bool, sections ...flushSection) error {
-	if rev {
-		for i := len(sections) - 1; i >= 0; i-- {
-			if s := sections[i]; len(s.bytes) != 0 {
-				err := s.meta(w, s.bytes)
-				if err != nil {
-					return err
-				}
-			}
-		}
-	} else {
-		for _, s := range sections {
-			if len(s.bytes) != 0 {
-				err := s.meta(w, s.bytes)
-				if err != nil {
-					return err
-				}
-			}
-		}
-	}
-	return nil
 }
 
 func makeMetaFunc(fn func(...interface{}) string) func(io.Writer, ...interface{}) error {
