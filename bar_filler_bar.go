@@ -221,24 +221,20 @@ func (s *bFiller) Fill(w io.Writer, stat decor.Statistics) error {
 		refWidth := int(internal.PercentageRound(stat.Total, stat.Refill, uint(width)))
 		curWidth -= refWidth
 		refWidth += curWidth
-		for curWidth-fillCount >= s.components[iFiller].width {
+		for w := s.components[iFiller].width; curWidth-fillCount >= w; fillCount += w {
 			filling = append(filling, s.components[iFiller].bytes...)
-			fillCount += s.components[iFiller].width
 		}
-		for refWidth-fillCount >= s.components[iRefiller].width {
+		for w := s.components[iRefiller].width; refWidth-fillCount >= w; fillCount += w {
 			refilling = append(refilling, s.components[iRefiller].bytes...)
-			fillCount += s.components[iRefiller].width
 		}
 	} else {
-		for curWidth-fillCount >= s.components[iFiller].width {
+		for w := s.components[iFiller].width; curWidth-fillCount >= w; fillCount += w {
 			filling = append(filling, s.components[iFiller].bytes...)
-			fillCount += s.components[iFiller].width
 		}
 	}
 
-	for width-fillCount >= s.components[iPadding].width {
+	for w := s.components[iPadding].width; width-fillCount >= w; fillCount += w {
 		padding = append(padding, s.components[iPadding].bytes...)
-		fillCount += s.components[iPadding].width
 	}
 
 	if width-fillCount != 0 {
