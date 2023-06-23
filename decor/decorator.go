@@ -9,8 +9,9 @@ import (
 
 const (
 	// DidentRight bit specifies identation direction.
-	// |foo   |b     | With DidentRight
-	// |   foo|     b| Without DidentRight
+	//
+	//	|foo   |b     | With DidentRight
+	//	|   foo|     b| Without DidentRight
 	DidentRight = 1 << iota
 
 	// DextraSpace bit adds extra space, makes sense with DSyncWidth only.
@@ -71,7 +72,7 @@ type Decorator interface {
 }
 
 // DecorFunc func type.
-// To be used with `func Any`(DecorFunc, ...WC) Decorator`.
+// To be used with `func Any(DecorFunc, ...WC) Decorator`.
 type DecorFunc func(Statistics) string
 
 // Synchronizer interface.
