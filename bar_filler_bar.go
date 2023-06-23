@@ -208,7 +208,7 @@ func (s *bFiller) Fill(w io.Writer, stat decor.Statistics) error {
 
 	var tip component
 	var refilling, filling, padding []byte
-	var fillCount, refWidth int
+	var fillCount int
 	curWidth := int(internal.PercentageRound(stat.Total, stat.Current, uint(width)))
 
 	if curWidth != 0 && !stat.Completed || s.tipOnComplete {
@@ -218,19 +218,22 @@ func (s *bFiller) Fill(w io.Writer, stat decor.Statistics) error {
 	}
 
 	if stat.Refill != 0 {
-		refWidth = int(internal.PercentageRound(stat.Total, stat.Refill, uint(width)))
+		refWidth := int(internal.PercentageRound(stat.Total, stat.Refill, uint(width)))
 		curWidth -= refWidth
 		refWidth += curWidth
-	}
-
-	for curWidth-fillCount >= s.components[iFiller].width {
-		filling = append(filling, s.components[iFiller].bytes...)
-		fillCount += s.components[iFiller].width
-	}
-
-	for refWidth-fillCount >= s.components[iRefiller].width {
-		refilling = append(refilling, s.components[iRefiller].bytes...)
-		fillCount += s.components[iRefiller].width
+		for curWidth-fillCount >= s.components[iFiller].width {
+			filling = append(filling, s.components[iFiller].bytes...)
+			fillCount += s.components[iFiller].width
+		}
+		for refWidth-fillCount >= s.components[iRefiller].width {
+			refilling = append(refilling, s.components[iRefiller].bytes...)
+			fillCount += s.components[iRefiller].width
+		}
+	} else {
+		for curWidth-fillCount >= s.components[iFiller].width {
+			filling = append(filling, s.components[iFiller].bytes...)
+			fillCount += s.components[iFiller].width
+		}
 	}
 
 	for width-fillCount >= s.components[iPadding].width {
