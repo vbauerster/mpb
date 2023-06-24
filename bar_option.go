@@ -88,10 +88,10 @@ func BarFillerOnComplete(message string) BarOption {
 
 // BarFillerMiddleware provides a way to augment the underlying BarFiller.
 func BarFillerMiddleware(middle func(BarFiller) BarFiller) BarOption {
+	if middle == nil {
+		return nil
+	}
 	return func(s *bState) {
-		if middle == nil {
-			return
-		}
 		s.filler = middle(s.filler)
 	}
 }
