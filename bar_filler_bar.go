@@ -24,17 +24,17 @@ var defaultBarStyle = [...]string{"[", "]", "+", "=", ">", "-"}
 type BarStyleComposer interface {
 	BarFillerBuilder
 	Lbound(string) BarStyleComposer
-	LboundMeta(func(...interface{}) string) BarStyleComposer
+	LboundMeta(func(string) string) BarStyleComposer
 	Rbound(string) BarStyleComposer
-	RboundMeta(func(...interface{}) string) BarStyleComposer
+	RboundMeta(func(string) string) BarStyleComposer
 	Filler(string) BarStyleComposer
-	FillerMeta(func(...interface{}) string) BarStyleComposer
+	FillerMeta(func(string) string) BarStyleComposer
 	Refiller(string) BarStyleComposer
-	RefillerMeta(func(...interface{}) string) BarStyleComposer
+	RefillerMeta(func(string) string) BarStyleComposer
 	Padding(string) BarStyleComposer
-	PaddingMeta(func(...interface{}) string) BarStyleComposer
+	PaddingMeta(func(string) string) BarStyleComposer
 	Tip(frames ...string) BarStyleComposer
-	TipMeta(func(...interface{}) string) BarStyleComposer
+	TipMeta(func(string) string) BarStyleComposer
 	TipOnComplete() BarStyleComposer
 	Reverse() BarStyleComposer
 }
@@ -45,13 +45,13 @@ type component struct {
 }
 
 type flushSection struct {
-	meta  func(io.Writer, ...interface{}) error
+	meta  func(io.Writer, []byte) error
 	bytes []byte
 }
 
 type bFiller struct {
 	components    [components]component
-	meta          [components]func(io.Writer, ...interface{}) error
+	meta          [components]func(io.Writer, []byte) error
 	flush         func(w io.Writer, sections ...flushSection) error
 	tipOnComplete bool
 	tip           struct {
@@ -62,7 +62,7 @@ type bFiller struct {
 
 type barStyle struct {
 	style         [components]string
-	metaFuncs     [components]func(io.Writer, ...interface{}) error
+	metaFuncs     [components]func(io.Writer, []byte) error
 	tipFrames     []string
 	tipOnComplete bool
 	rev           bool
@@ -86,7 +86,7 @@ func (s *barStyle) Lbound(bound string) BarStyleComposer {
 	return s
 }
 
-func (s *barStyle) LboundMeta(fn func(...interface{}) string) BarStyleComposer {
+func (s *barStyle) LboundMeta(fn func(string) string) BarStyleComposer {
 	s.metaFuncs[iLbound] = makeMetaFunc(fn)
 	return s
 }
@@ -96,7 +96,7 @@ func (s *barStyle) Rbound(bound string) BarStyleComposer {
 	return s
 }
 
-func (s *barStyle) RboundMeta(fn func(...interface{}) string) BarStyleComposer {
+func (s *barStyle) RboundMeta(fn func(string) string) BarStyleComposer {
 	s.metaFuncs[iRbound] = makeMetaFunc(fn)
 	return s
 }
@@ -106,7 +106,7 @@ func (s *barStyle) Filler(filler string) BarStyleComposer {
 	return s
 }
 
-func (s *barStyle) FillerMeta(fn func(...interface{}) string) BarStyleComposer {
+func (s *barStyle) FillerMeta(fn func(string) string) BarStyleComposer {
 	s.metaFuncs[iFiller] = makeMetaFunc(fn)
 	return s
 }
@@ -116,7 +116,7 @@ func (s *barStyle) Refiller(refiller string) BarStyleComposer {
 	return s
 }
 
-func (s *barStyle) RefillerMeta(fn func(...interface{}) string) BarStyleComposer {
+func (s *barStyle) RefillerMeta(fn func(string) string) BarStyleComposer {
 	s.metaFuncs[iRefiller] = makeMetaFunc(fn)
 	return s
 }
@@ -126,7 +126,7 @@ func (s *barStyle) Padding(padding string) BarStyleComposer {
 	return s
 }
 
-func (s *barStyle) PaddingMeta(fn func(...interface{}) string) BarStyleComposer {
+func (s *barStyle) PaddingMeta(fn func(string) string) BarStyleComposer {
 	s.metaFuncs[iPadding] = makeMetaFunc(fn)
 	return s
 }
@@ -138,7 +138,7 @@ func (s *barStyle) Tip(frames ...string) BarStyleComposer {
 	return s
 }
 
-func (s *barStyle) TipMeta(fn func(...interface{}) string) BarStyleComposer {
+func (s *barStyle) TipMeta(fn func(string) string) BarStyleComposer {
 	s.metaFuncs[iTip] = makeMetaFunc(fn)
 	return s
 }
@@ -277,18 +277,14 @@ func (s *bFiller) Fill(w io.Writer, stat decor.Statistics) error {
 	return s.meta[iRbound](w, s.components[iRbound].bytes)
 }
 
-func makeMetaFunc(fn func(...interface{}) string) func(io.Writer, ...interface{}) error {
-	return func(w io.Writer, a ...interface{}) (err error) {
-		for i := 0; i < len(a) && err == nil; i++ {
-			_, err = io.WriteString(w, fn(string(a[i].([]byte))))
-		}
+func makeMetaFunc(fn func(string) string) func(io.Writer, []byte) error {
+	return func(w io.Writer, p []byte) (err error) {
+		_, err = io.WriteString(w, fn(string(p)))
 		return err
 	}
 }
 
-func defaultMeta(w io.Writer, a ...interface{}) (err error) {
-	for i := 0; i < len(a) && err == nil; i++ {
-		_, err = w.Write(a[i].([]byte))
-	}
+func defaultMeta(w io.Writer, p []byte) (err error) {
+	_, err = w.Write(p)
 	return err
 }
