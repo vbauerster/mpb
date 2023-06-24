@@ -20,9 +20,20 @@ func main() {
 	total, numBars := 101, 3
 	wg.Add(numBars)
 
+	condFn := func(cond bool) mpb.BarFiller {
+		if cond {
+			s := mpb.SpinnerStyle("∙∙∙", "●∙∙", "∙●∙", "∙∙●", "∙∙∙")
+			return s.Meta(func(s string) string {
+				return fmt.Sprint("\033[31m", s, "\033[0m") // red
+			}).Build()
+		}
+		return mpb.BarStyle().Lbound("╢").Filler("▌").Tip("▌").Padding("░").Rbound("╟").Build()
+	}
+
 	for i := 0; i < numBars; i++ {
 		name := fmt.Sprintf("Bar#%d:", i)
-		bar := p.New(int64(total), condBuilder(i != 0),
+		bar := p.MustAdd(int64(total),
+			condFn(i != 0),
 			mpb.PrependDecorators(
 				// simple name decorator
 				decor.Name(name),
@@ -52,15 +63,4 @@ func main() {
 	}
 	// wait for passed wg and for all bars to complete and flush
 	p.Wait()
-}
-
-func condBuilder(cond bool) mpb.BarFillerBuilder {
-	return mpb.BarFillerBuilderFunc(func() mpb.BarFiller {
-		if cond {
-			// spinner Bar on cond
-			frames := []string{"∙∙∙", "●∙∙", "∙●∙", "∙∙●", "∙∙∙"}
-			return mpb.SpinnerStyle(frames...).Build()
-		}
-		return mpb.BarStyle().Lbound("╢").Filler("▌").Tip("▌").Padding("░").Rbound("╟").Build()
-	})
 }
