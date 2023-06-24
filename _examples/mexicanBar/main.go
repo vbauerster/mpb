@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"math/rand"
 	"time"
 
@@ -15,11 +16,22 @@ func main() {
 	total := 100
 	name := "Complex Filler:"
 	bs := mpb.BarStyle()
-	bs.Lbound("[\u001b[36;1m")
-	bs.Filler("_")
-	bs.Tip("\u001b[0m⛵\u001b[36;1m")
-	bs.Padding("_")
-	bs.Rbound("\u001b[0m]")
+	bs.LboundMeta(func(s string) string {
+		return fmt.Sprint("\033[34m", s, "\033[0m") // blue
+	})
+	bs.Filler("_").FillerMeta(func(s string) string {
+		return fmt.Sprint("\033[36m", s, "\033[0m") // cyan
+	})
+	bs.Tip("⛵").TipMeta(func(s string) string {
+		return fmt.Sprint("\033[31m", s, "\033[0m") // red
+	})
+	bs.TipOnComplete() // leave tip on complete
+	bs.Padding("_").PaddingMeta(func(s string) string {
+		return fmt.Sprint("\033[36m", s, "\033[0m") // cyan
+	})
+	bs.RboundMeta(func(s string) string {
+		return fmt.Sprint("\033[34m", s, "\033[0m") // blue
+	})
 	bar := p.New(int64(total), bs,
 		mpb.PrependDecorators(decor.Name(name)),
 		mpb.AppendDecorators(decor.Percentage()),
