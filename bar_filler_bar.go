@@ -235,7 +235,7 @@ func (s *bFiller) Fill(w io.Writer, stat decor.Statistics) error {
 	var fillCount int
 	curWidth := int(internal.PercentageRound(stat.Total, stat.Current, uint(width)))
 
-	if curWidth != 0 && !stat.Completed || s.tipOnComplete {
+	if curWidth != 0 && (!stat.Completed || s.tipOnComplete) {
 		tip = s.tip.frames[s.tip.count%uint(len(s.tip.frames))]
 		s.tip.count++
 		fillCount += tip.width
