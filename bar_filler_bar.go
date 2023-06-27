@@ -71,7 +71,7 @@ type barStyle struct {
 // BarStyle constructs default bar style which can be altered via
 // BarStyleComposer interface.
 func BarStyle() BarStyleComposer {
-	bs := &barStyle{
+	bs := barStyle{
 		style:     defaultBarStyle,
 		tipFrames: []string{defaultBarStyle[iTip]},
 	}
@@ -81,79 +81,79 @@ func BarStyle() BarStyleComposer {
 	return bs
 }
 
-func (s *barStyle) Lbound(bound string) BarStyleComposer {
+func (s barStyle) Lbound(bound string) BarStyleComposer {
 	s.style[iLbound] = bound
 	return s
 }
 
-func (s *barStyle) LboundMeta(fn func(string) string) BarStyleComposer {
+func (s barStyle) LboundMeta(fn func(string) string) BarStyleComposer {
 	s.metaFuncs[iLbound] = makeMetaFunc(fn)
 	return s
 }
 
-func (s *barStyle) Rbound(bound string) BarStyleComposer {
+func (s barStyle) Rbound(bound string) BarStyleComposer {
 	s.style[iRbound] = bound
 	return s
 }
 
-func (s *barStyle) RboundMeta(fn func(string) string) BarStyleComposer {
+func (s barStyle) RboundMeta(fn func(string) string) BarStyleComposer {
 	s.metaFuncs[iRbound] = makeMetaFunc(fn)
 	return s
 }
 
-func (s *barStyle) Filler(filler string) BarStyleComposer {
+func (s barStyle) Filler(filler string) BarStyleComposer {
 	s.style[iFiller] = filler
 	return s
 }
 
-func (s *barStyle) FillerMeta(fn func(string) string) BarStyleComposer {
+func (s barStyle) FillerMeta(fn func(string) string) BarStyleComposer {
 	s.metaFuncs[iFiller] = makeMetaFunc(fn)
 	return s
 }
 
-func (s *barStyle) Refiller(refiller string) BarStyleComposer {
+func (s barStyle) Refiller(refiller string) BarStyleComposer {
 	s.style[iRefiller] = refiller
 	return s
 }
 
-func (s *barStyle) RefillerMeta(fn func(string) string) BarStyleComposer {
+func (s barStyle) RefillerMeta(fn func(string) string) BarStyleComposer {
 	s.metaFuncs[iRefiller] = makeMetaFunc(fn)
 	return s
 }
 
-func (s *barStyle) Padding(padding string) BarStyleComposer {
+func (s barStyle) Padding(padding string) BarStyleComposer {
 	s.style[iPadding] = padding
 	return s
 }
 
-func (s *barStyle) PaddingMeta(fn func(string) string) BarStyleComposer {
+func (s barStyle) PaddingMeta(fn func(string) string) BarStyleComposer {
 	s.metaFuncs[iPadding] = makeMetaFunc(fn)
 	return s
 }
 
-func (s *barStyle) Tip(frames ...string) BarStyleComposer {
+func (s barStyle) Tip(frames ...string) BarStyleComposer {
 	if len(frames) != 0 {
 		s.tipFrames = frames
 	}
 	return s
 }
 
-func (s *barStyle) TipMeta(fn func(string) string) BarStyleComposer {
+func (s barStyle) TipMeta(fn func(string) string) BarStyleComposer {
 	s.metaFuncs[iTip] = makeMetaFunc(fn)
 	return s
 }
 
-func (s *barStyle) TipOnComplete() BarStyleComposer {
+func (s barStyle) TipOnComplete() BarStyleComposer {
 	s.tipOnComplete = true
 	return s
 }
 
-func (s *barStyle) Reverse() BarStyleComposer {
+func (s barStyle) Reverse() BarStyleComposer {
 	s.rev = true
 	return s
 }
 
-func (s *barStyle) Build() BarFiller {
+func (s barStyle) Build() BarFiller {
 	bf := &bFiller{
 		meta:          s.metaFuncs,
 		tipOnComplete: s.tipOnComplete,

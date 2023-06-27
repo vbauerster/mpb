@@ -201,11 +201,11 @@ func TestBarStyle(t *testing.T) {
 		mpb.WithAutoRefresh(),
 	)
 	bs := mpb.BarStyle()
-	bs.Lbound(string(runes[0]))
-	bs.Filler(string(runes[1]))
-	bs.Tip(string(runes[2]))
-	bs.Padding(string(runes[3]))
-	bs.Rbound(string(runes[4]))
+	bs = bs.Lbound(string(runes[0]))
+	bs = bs.Filler(string(runes[1]))
+	bs = bs.Tip(string(runes[2]))
+	bs = bs.Padding(string(runes[3]))
+	bs = bs.Rbound(string(runes[4]))
 	bar := p.New(int64(total), bs, mpb.BarFillerTrim())
 
 	bar.IncrBy(total)
