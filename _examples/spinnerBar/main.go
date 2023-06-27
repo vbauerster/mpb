@@ -20,20 +20,20 @@ func main() {
 	total, numBars := 101, 3
 	wg.Add(numBars)
 
-	condFn := func(cond bool) mpb.BarFiller {
+	condFillerBuilder := func(cond bool) mpb.BarFillerBuilder {
 		if cond {
 			s := mpb.SpinnerStyle("∙∙∙", "●∙∙", "∙●∙", "∙∙●", "∙∙∙")
 			return s.Meta(func(s string) string {
 				return fmt.Sprint("\033[31m", s, "\033[0m") // red
-			}).Build()
+			})
 		}
-		return mpb.BarStyle().Lbound("╢").Filler("▌").Tip("▌").Padding("░").Rbound("╟").Build()
+		return mpb.BarStyle().Lbound("╢").Filler("▌").Tip("▌").Padding("░").Rbound("╟")
 	}
 
 	for i := 0; i < numBars; i++ {
 		name := fmt.Sprintf("Bar#%d:", i)
-		bar := p.MustAdd(int64(total),
-			condFn(i != 0),
+		bar := p.New(int64(total),
+			condFillerBuilder(i != 0),
 			mpb.PrependDecorators(
 				// simple name decorator
 				decor.Name(name),
