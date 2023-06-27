@@ -235,25 +235,26 @@ func (s *bFiller) Fill(w io.Writer, stat decor.Statistics) error {
 	var fillCount int
 	curWidth := int(internal.PercentageRound(stat.Total, stat.Current, uint(width)))
 
-	if curWidth != 0 && (!stat.Completed || s.tipOnComplete) {
-		tip = s.tip.frames[s.tip.count%uint(len(s.tip.frames))]
-		s.tip.count++
-		fillCount += tip.width
-	}
-
-	if stat.Refill != 0 {
-		refWidth := int(internal.PercentageRound(stat.Total, stat.Refill, uint(width)))
-		curWidth -= refWidth
-		refWidth += curWidth
-		for w := s.components[iFiller].width; curWidth-fillCount >= w; fillCount += w {
-			filling = append(filling, s.components[iFiller].bytes...)
+	if curWidth != 0 {
+		if !stat.Completed || s.tipOnComplete {
+			tip = s.tip.frames[s.tip.count%uint(len(s.tip.frames))]
+			s.tip.count++
+			fillCount += tip.width
 		}
-		for w := s.components[iRefiller].width; refWidth-fillCount >= w; fillCount += w {
-			refilling = append(refilling, s.components[iRefiller].bytes...)
-		}
-	} else {
-		for w := s.components[iFiller].width; curWidth-fillCount >= w; fillCount += w {
-			filling = append(filling, s.components[iFiller].bytes...)
+		if stat.Refill != 0 {
+			refWidth := int(internal.PercentageRound(stat.Total, stat.Refill, uint(width)))
+			curWidth -= refWidth
+			refWidth += curWidth
+			for w := s.components[iFiller].width; curWidth-fillCount >= w; fillCount += w {
+				filling = append(filling, s.components[iFiller].bytes...)
+			}
+			for w := s.components[iRefiller].width; refWidth-fillCount >= w; fillCount += w {
+				refilling = append(refilling, s.components[iRefiller].bytes...)
+			}
+		} else {
+			for w := s.components[iFiller].width; curWidth-fillCount >= w; fillCount += w {
+				filling = append(filling, s.components[iFiller].bytes...)
+			}
 		}
 	}
 
