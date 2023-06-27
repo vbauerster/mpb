@@ -40,7 +40,7 @@ type spinnerStyle struct {
 // SpinnerStyle constructs default spinner style which can be altered via
 // SpinnerStyleComposer interface.
 func SpinnerStyle(frames ...string) SpinnerStyleComposer {
-	ss := &spinnerStyle{
+	ss := spinnerStyle{
 		meta: func(s string) string {
 			return s
 		},
@@ -53,22 +53,22 @@ func SpinnerStyle(frames ...string) SpinnerStyleComposer {
 	return ss
 }
 
-func (s *spinnerStyle) PositionLeft() SpinnerStyleComposer {
+func (s spinnerStyle) PositionLeft() SpinnerStyleComposer {
 	s.position = positionLeft
 	return s
 }
 
-func (s *spinnerStyle) PositionRight() SpinnerStyleComposer {
+func (s spinnerStyle) PositionRight() SpinnerStyleComposer {
 	s.position = positionRight
 	return s
 }
 
-func (s *spinnerStyle) Meta(fn func(string) string) SpinnerStyleComposer {
+func (s spinnerStyle) Meta(fn func(string) string) SpinnerStyleComposer {
 	s.meta = fn
 	return s
 }
 
-func (s *spinnerStyle) Build() BarFiller {
+func (s spinnerStyle) Build() BarFiller {
 	sf := &sFiller{
 		position: s.position,
 		frames:   s.frames,
