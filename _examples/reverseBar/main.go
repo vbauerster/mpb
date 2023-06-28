@@ -17,9 +17,17 @@ func main() {
 	total, numBars := 100, 3
 	wg.Add(numBars)
 
+	condFillerBuilder := func(cond bool) mpb.BarFillerBuilder {
+		if cond { // reverse Bar on cond
+			return mpb.BarStyle().Tip("<").Reverse()
+		}
+		return mpb.BarStyle()
+	}
+
 	for i := 0; i < numBars; i++ {
 		name := fmt.Sprintf("Bar#%d:", i)
-		bar := p.New(int64(total), condBuilder(i == 1),
+		bar := p.New(int64(total),
+			condFillerBuilder(i == 1),
 			mpb.PrependDecorators(
 				// simple name decorator
 				decor.Name(name),
@@ -51,15 +59,4 @@ func main() {
 	}
 	// wait for passed wg and for all bars to complete and flush
 	p.Wait()
-}
-
-func condBuilder(cond bool) mpb.BarFillerBuilder {
-	return mpb.BarFillerBuilderFunc(func() mpb.BarFiller {
-		bs := mpb.BarStyle()
-		if cond {
-			// reverse Bar on cond
-			bs = bs.Tip("<").Reverse()
-		}
-		return bs.Build()
-	})
 }
