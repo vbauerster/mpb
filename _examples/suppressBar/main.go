@@ -101,15 +101,23 @@ func (ew *errorWrapper) reset(err error) {
 	ew.Unlock()
 }
 
-func newCustomPercentage(nextCh <-chan struct{}) decor.Decorator {
-	base := decor.Percentage()
-	fn := func(s decor.Statistics) string {
-		select {
-		case <-nextCh:
-			return ""
-		default:
-			return base.Decor(s)
-		}
+type percentage struct {
+	decor.Decorator
+	suspend <-chan struct{}
+}
+
+func (d percentage) Decor(s decor.Statistics) (string, int) {
+	select {
+	case <-d.suspend:
+		return d.Format("")
+	default:
+		return d.Decorator.Decor(s)
 	}
-	return decor.Any(fn)
+}
+
+func newCustomPercentage(nextCh <-chan struct{}) decor.Decorator {
+	return percentage{
+		Decorator: decor.Percentage(),
+		suspend:   nextCh,
+	}
 }
