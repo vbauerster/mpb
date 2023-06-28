@@ -18,7 +18,7 @@ const (
 	components
 )
 
-var defaultBarStyle = [...]string{"[", "]", "+", "=", ">", "-"}
+var defaultBarStyle = [components]string{"[", "]", "+", "=", ">", "-"}
 
 // BarStyleComposer interface.
 type BarStyleComposer interface {
