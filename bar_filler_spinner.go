@@ -1,6 +1,7 @@
 package mpb
 
 import (
+	"fmt"
 	"io"
 	"strings"
 
@@ -25,10 +26,10 @@ type SpinnerStyleComposer interface {
 }
 
 type sFiller struct {
-	position uint
-	count    uint
 	frames   []string
+	count    uint
 	meta     func(string) string
+	position func(string, int) string
 }
 
 type spinnerStyle struct {
@@ -41,9 +42,7 @@ type spinnerStyle struct {
 // SpinnerStyleComposer interface.
 func SpinnerStyle(frames ...string) SpinnerStyleComposer {
 	ss := spinnerStyle{
-		meta: func(s string) string {
-			return s
-		},
+		meta: func(s string) string { return s },
 	}
 	if len(frames) != 0 {
 		ss.frames = frames
@@ -70,34 +69,36 @@ func (s spinnerStyle) Meta(fn func(string) string) SpinnerStyleComposer {
 
 func (s spinnerStyle) Build() BarFiller {
 	sf := &sFiller{
-		position: s.position,
-		frames:   s.frames,
-		meta:     s.meta,
+		frames: s.frames,
+		meta:   s.meta,
+	}
+	switch s.position {
+	case positionLeft:
+		sf.position = func(frame string, padWidth int) string {
+			return fmt.Sprint(frame, strings.Repeat(" ", padWidth))
+		}
+	case positionRight:
+		sf.position = func(frame string, padWidth int) string {
+			return fmt.Sprint(strings.Repeat(" ", padWidth), frame)
+		}
+	default:
+		sf.position = func(frame string, padWidth int) string {
+			return fmt.Sprint(strings.Repeat(" ", padWidth/2), frame, strings.Repeat(" ", padWidth/2+padWidth%2))
+		}
 	}
 	return sf
 }
 
-func (s *sFiller) Fill(w io.Writer, stat decor.Statistics) (err error) {
+func (s *sFiller) Fill(w io.Writer, stat decor.Statistics) error {
 	width := internal.CheckRequestedWidth(stat.RequestedWidth, stat.AvailableWidth)
-
 	frame := s.frames[s.count%uint(len(s.frames))]
 	frameWidth := runewidth.StringWidth(frame)
-	frame = s.meta(frame)
+	s.count++
 
 	if width < frameWidth {
 		return nil
 	}
 
-	rest := width - frameWidth
-	switch s.position {
-	case positionLeft:
-		_, err = io.WriteString(w, frame+strings.Repeat(" ", rest))
-	case positionRight:
-		_, err = io.WriteString(w, strings.Repeat(" ", rest)+frame)
-	default:
-		str := strings.Repeat(" ", rest/2) + frame + strings.Repeat(" ", rest/2+rest%2)
-		_, err = io.WriteString(w, str)
-	}
-	s.count++
+	_, err := io.WriteString(w, s.position(s.meta(frame), width-frameWidth))
 	return err
 }
