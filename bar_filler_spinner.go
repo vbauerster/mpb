@@ -15,7 +15,7 @@ const (
 	positionRight
 )
 
-var defaultSpinnerStyle = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
+var defaultSpinnerStyle = [...]string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
 
 // SpinnerStyleComposer interface.
 type SpinnerStyleComposer interface {
@@ -47,7 +47,7 @@ func SpinnerStyle(frames ...string) SpinnerStyleComposer {
 	if len(frames) != 0 {
 		ss.frames = frames
 	} else {
-		ss.frames = defaultSpinnerStyle
+		ss.frames = defaultSpinnerStyle[:]
 	}
 	return ss
 }
