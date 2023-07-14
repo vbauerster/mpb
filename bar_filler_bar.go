@@ -52,7 +52,7 @@ type flushSection struct {
 type bFiller struct {
 	components    [components]component
 	meta          [components]func(io.Writer, []byte) error
-	flush         func(w io.Writer, sections ...flushSection) error
+	flush         func(io.Writer, ...flushSection) error
 	tipOnComplete bool
 	tip           struct {
 		frames []component
