@@ -24,7 +24,7 @@ func main() {
 		if cond {
 			s := mpb.SpinnerStyle("∙∙∙", "●∙∙", "∙●∙", "∙∙●", "∙∙∙")
 			return s.Meta(func(s string) string {
-				return fmt.Sprint("\033[31m", s, "\033[0m") // red
+				return "\033[31m" + s + "\033[0m" // red
 			})
 		}
 		return mpb.BarStyle().Lbound("╢").Filler("▌").Tip("▌").Padding("░").Rbound("╟")

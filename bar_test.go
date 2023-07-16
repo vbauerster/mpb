@@ -249,7 +249,7 @@ func TestDecorStatisticsAvailableWidth(t *testing.T) {
 			decor.Meta(
 				decor.Any(td1),
 				func(s string) string {
-					return fmt.Sprint("\x1b[31;1m", s, "\x1b[0m")
+					return "\x1b[31;1m" + s + "\x1b[0m"
 				},
 			),
 		),

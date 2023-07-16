@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"math/rand"
 	"time"
 
@@ -17,7 +16,7 @@ func main() {
 	name := "Single Bar:"
 	bar := p.New(int64(total),
 		mpb.BarStyle().Tip(`-`, `\`, `|`, `/`).TipMeta(func(s string) string {
-			return fmt.Sprint("\033[31m", s, "\033[0m") // red
+			return "\033[31m" + s + "\033[0m" // red
 		}),
 		mpb.PrependDecorators(decor.Name(name)),
 		mpb.AppendDecorators(decor.Percentage()),
