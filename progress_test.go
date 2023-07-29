@@ -264,7 +264,7 @@ func TestUpdateBarPriorityLazy(t *testing.T) {
 		c: "c",
 	}
 
-	// UpdateBarPriority with lazy flat needs at least one refresh cycle to
+	// UpdateBarPriority with lazy flag needs at least one refresh cycle to
 	// update order inside underlying binary heap
 	p.UpdateBarPriority(c, 2, true)
 	p.UpdateBarPriority(b, 3, true)
