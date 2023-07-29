@@ -36,6 +36,7 @@ type pushData struct {
 type fixData struct {
 	bar      *Bar
 	priority int
+	lazy     bool
 }
 
 func (m heapManager) run() {
@@ -96,12 +97,13 @@ func (m heapManager) run() {
 			close(data.iter)
 		case h_fix:
 			data := req.data.(fixData)
-			bar, priority := data.bar, data.priority
-			if bar.index < 0 {
+			if data.bar.index < 0 {
 				break
 			}
-			bar.priority = priority
-			heap.Fix(&bHeap, bar.index)
+			data.bar.priority = data.priority
+			if !data.lazy {
+				heap.Fix(&bHeap, data.bar.index)
+			}
 		case h_state:
 			ch := req.data.(chan<- bool)
 			ch <- sync || l != bHeap.Len()
@@ -136,8 +138,8 @@ func (m heapManager) drain(iter chan<- *Bar, drop <-chan struct{}) {
 	m <- heapRequest{cmd: h_drain, data: data}
 }
 
-func (m heapManager) fix(b *Bar, priority int) {
-	data := fixData{b, priority}
+func (m heapManager) fix(b *Bar, priority int, lazy bool) {
+	data := fixData{b, priority, lazy}
 	m <- heapRequest{cmd: h_fix, data: data}
 }
 
