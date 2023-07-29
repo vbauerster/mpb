@@ -46,7 +46,6 @@ func (m heapManager) run() {
 	var sync bool
 
 	for req := range m {
-	next:
 		switch req.cmd {
 		case h_push:
 			data := req.data.(pushData)
@@ -75,23 +74,23 @@ func (m heapManager) run() {
 			syncWidth(aMatrix, drop)
 		case h_iter:
 			data := req.data.(iterData)
+		drop_iter:
 			for _, b := range bHeap {
 				select {
 				case data.iter <- b:
 				case <-data.drop:
-					close(data.iter)
-					break next
+					break drop_iter
 				}
 			}
 			close(data.iter)
 		case h_drain:
 			data := req.data.(iterData)
+		drop_drain:
 			for bHeap.Len() != 0 {
 				select {
 				case data.iter <- heap.Pop(&bHeap).(*Bar):
 				case <-data.drop:
-					close(data.iter)
-					break next
+					break drop_drain
 				}
 			}
 			close(data.iter)
