@@ -204,93 +204,59 @@ func TestBarPriorityPopOrder(t *testing.T) {
 	}
 }
 
-func TestUpdateBarPriority(t *testing.T) {
-	shutdown := make(chan interface{})
-	ctx, cancel := context.WithCancel(context.Background())
-	p := mpb.NewWithContext(ctx,
-		mpb.WithOutput(io.Discard), // auto refresh is disabled because of io.Discard
-		mpb.WithShutdownNotifier(shutdown),
-	)
-	a := p.AddBar(100, mpb.BarPriority(1))
-	b := p.AddBar(100, mpb.BarPriority(2))
-	c := p.AddBar(100, mpb.BarPriority(3))
+func makeUpdateBarPriorityTest(refresh, lazy bool) func(*testing.T) {
+	return func(t *testing.T) {
+		shutdown := make(chan interface{})
+		refreshCh := make(chan interface{})
+		ctx, cancel := context.WithCancel(context.Background())
+		p := mpb.NewWithContext(ctx,
+			mpb.WithOutput(io.Discard),
+			mpb.WithManualRefresh(refreshCh),
+			mpb.WithShutdownNotifier(shutdown),
+		)
+		a := p.AddBar(100, mpb.BarPriority(1), mpb.BarID(1))
+		b := p.AddBar(100, mpb.BarPriority(2), mpb.BarID(2))
+		c := p.AddBar(100, mpb.BarPriority(3), mpb.BarID(3))
 
-	identity := map[*mpb.Bar]string{
-		a: "a",
-		b: "b",
-		c: "c",
-	}
+		p.UpdateBarPriority(c, 2, lazy)
+		p.UpdateBarPriority(b, 3, lazy)
+		checkOrder := []*mpb.Bar{b, c, a} // updated order
 
-	p.UpdateBarPriority(c, 2, false)
-	p.UpdateBarPriority(b, 3, false)
+		if !refresh {
+			if lazy {
+				checkOrder = []*mpb.Bar{c, b, a} // pristine order
+			}
+		} else {
+			refreshCh <- time.Now()
+		}
 
-	go cancel()
+		go cancel()
 
-	bars := (<-shutdown).([]*mpb.Bar)
-	if l := len(bars); l != 3 {
-		t.Errorf("Expected len of bars: %d, got: %d", 3, l)
-	}
+		bars := (<-shutdown).([]*mpb.Bar)
+		if l := len(bars); l != 3 {
+			t.Errorf("Expected len of bars: %d, got: %d", 3, l)
+		}
 
-	p.Wait()
-	pq := mpb.PriorityQueue(bars)
+		p.Wait()
+		pq := mpb.PriorityQueue(bars)
 
-	if bar := heap.Pop(&pq).(*mpb.Bar); bar != b {
-		t.Errorf("Expected bar b, got: %s", identity[bar])
-	}
-	if bar := heap.Pop(&pq).(*mpb.Bar); bar != c {
-		t.Errorf("Expected bar c, got: %s", identity[bar])
-	}
-	if bar := heap.Pop(&pq).(*mpb.Bar); bar != a {
-		t.Errorf("Expected bar a, got: %s", identity[bar])
+		for _, b := range checkOrder {
+			// higher priority pops first
+			if bar := heap.Pop(&pq).(*mpb.Bar); bar.ID() != b.ID() {
+				t.Errorf("Expected bar id: %d, got bar id: %d", b.ID(), bar.ID())
+			}
+		}
 	}
 }
 
+func TestUpdateBarPriority(t *testing.T) {
+	makeUpdateBarPriorityTest(false, false)(t)
+	makeUpdateBarPriorityTest(true, false)(t)
+}
+
 func TestUpdateBarPriorityLazy(t *testing.T) {
-	shutdown := make(chan interface{})
-	refreshCh := make(chan interface{})
-	ctx, cancel := context.WithCancel(context.Background())
-	p := mpb.NewWithContext(ctx,
-		mpb.WithOutput(io.Discard),
-		mpb.WithManualRefresh(refreshCh),
-		mpb.WithShutdownNotifier(shutdown),
-	)
-	a := p.AddBar(100, mpb.BarPriority(1))
-	b := p.AddBar(100, mpb.BarPriority(2))
-	c := p.AddBar(100, mpb.BarPriority(3))
-
-	identity := map[*mpb.Bar]string{
-		a: "a",
-		b: "b",
-		c: "c",
-	}
-
-	// UpdateBarPriority with lazy flag needs at least one refresh cycle to
-	// update order inside underlying binary heap
-	p.UpdateBarPriority(c, 2, true)
-	p.UpdateBarPriority(b, 3, true)
-
-	// ommiting following line will fail the test which proves correct lazy behavior
-	refreshCh <- time.Now()
-
-	go cancel()
-
-	bars := (<-shutdown).([]*mpb.Bar)
-	if l := len(bars); l != 3 {
-		t.Errorf("Expected len of bars: %d, got: %d", 3, l)
-	}
-
-	p.Wait()
-	pq := mpb.PriorityQueue(bars)
-
-	if bar := heap.Pop(&pq).(*mpb.Bar); bar != b {
-		t.Errorf("Expected bar b, got: %s", identity[bar])
-	}
-	if bar := heap.Pop(&pq).(*mpb.Bar); bar != c {
-		t.Errorf("Expected bar c, got: %s", identity[bar])
-	}
-	if bar := heap.Pop(&pq).(*mpb.Bar); bar != a {
-		t.Errorf("Expected bar a, got: %s", identity[bar])
-	}
+	makeUpdateBarPriorityTest(false, true)(t)
+	makeUpdateBarPriorityTest(true, true)(t)
 }
 
 func TestNoOutput(t *testing.T) {
