@@ -166,41 +166,33 @@ func TestShutdownAfterBarAbortWithNoDrop(t *testing.T) {
 	}
 }
 
-func TestBarPriorityPopOrder(t *testing.T) {
+func TestBarPristinePopOrder(t *testing.T) {
 	shutdown := make(chan interface{})
 	ctx, cancel := context.WithCancel(context.Background())
 	p := mpb.NewWithContext(ctx,
-		mpb.WithOutput(io.Discard),
+		mpb.WithOutput(io.Discard), // auto refresh is disabled
 		mpb.WithShutdownNotifier(shutdown),
 	)
-	a := p.AddBar(100, mpb.BarPriority(1))
-	b := p.AddBar(100, mpb.BarPriority(2))
-	c := p.AddBar(100, mpb.BarPriority(3))
+	a := p.AddBar(100, mpb.BarPriority(1), mpb.BarID(1))
+	b := p.AddBar(100, mpb.BarPriority(2), mpb.BarID(2))
+	c := p.AddBar(100, mpb.BarPriority(3), mpb.BarID(3))
+	pristineOrder := []*mpb.Bar{c, b, a}
 
-	identity := map[*mpb.Bar]string{
-		a: "a",
-		b: "b",
-		c: "c",
-	}
-
-	cancel()
+	go cancel()
 
 	bars := (<-shutdown).([]*mpb.Bar)
 	if l := len(bars); l != 3 {
-		t.Errorf("Expected len of bars: %d, got: %d", 3, l)
+		t.Fatalf("Expected len of bars: %d, got: %d", 3, l)
 	}
 
 	p.Wait()
 	pq := mpb.PriorityQueue(bars)
 
-	if bar := heap.Pop(&pq).(*mpb.Bar); bar != c {
-		t.Errorf("Expected bar c, got: %s", identity[bar])
-	}
-	if bar := heap.Pop(&pq).(*mpb.Bar); bar != b {
-		t.Errorf("Expected bar b, got: %s", identity[bar])
-	}
-	if bar := heap.Pop(&pq).(*mpb.Bar); bar != a {
-		t.Errorf("Expected bar a, got: %s", identity[bar])
+	for _, b := range pristineOrder {
+		// higher priority pops first
+		if bar := heap.Pop(&pq).(*mpb.Bar); bar.ID() != b.ID() {
+			t.Errorf("Expected bar id: %d, got bar id: %d", b.ID(), bar.ID())
+		}
 	}
 }
 
