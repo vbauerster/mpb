@@ -234,7 +234,7 @@ func makeUpdateBarPriorityTest(refresh, lazy bool) func(*testing.T) {
 
 		bars := (<-shutdown).([]*mpb.Bar)
 		if l := len(bars); l != 3 {
-			t.Errorf("Expected len of bars: %d, got: %d", 3, l)
+			t.Fatalf("Expected len of bars: %d, got: %d", 3, l)
 		}
 
 		p.Wait()
