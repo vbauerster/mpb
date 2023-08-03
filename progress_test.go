@@ -222,12 +222,10 @@ func makeUpdateBarPriorityTest(refresh, lazy bool) func(*testing.T) {
 		p.UpdateBarPriority(b, 3, lazy)
 		checkOrder := []*mpb.Bar{b, c, a} // updated order
 
-		if !refresh {
-			if lazy {
-				checkOrder = []*mpb.Bar{c, b, a} // pristine order
-			}
-		} else {
+		if refresh {
 			refreshCh <- time.Now()
+		} else if lazy {
+			checkOrder = []*mpb.Bar{c, b, a} // pristine order
 		}
 
 		go cancel()
