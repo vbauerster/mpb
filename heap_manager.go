@@ -1,8 +1,6 @@
 package mpb
 
-import (
-	"container/heap"
-)
+import "container/heap"
 
 type heapManager chan heapRequest
 
