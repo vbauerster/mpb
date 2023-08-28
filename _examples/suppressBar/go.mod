@@ -4,7 +4,7 @@ go 1.17
 
 require (
 	github.com/mattn/go-runewidth v0.0.15
-	github.com/vbauerster/mpb/v8 v8.5.2
+	github.com/vbauerster/mpb/v8 v8.6.0
 )
 
 require (

@@ -2,7 +2,7 @@ module github.com/vbauerster/mpb/_examples/poplog
 
 go 1.17
 
-require github.com/vbauerster/mpb/v8 v8.5.2
+require github.com/vbauerster/mpb/v8 v8.6.0
 
 require (
 	github.com/VividCortex/ewma v1.2.0 // indirect
