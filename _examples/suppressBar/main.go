@@ -3,12 +3,11 @@ package main
 import (
 	"errors"
 	"fmt"
-	"io"
+	"math"
 	"math/rand"
 	"sync"
 	"time"
 
-	"github.com/mattn/go-runewidth"
 	"github.com/vbauerster/mpb/v8"
 	"github.com/vbauerster/mpb/v8/decor"
 )
@@ -16,71 +15,44 @@ import (
 func main() {
 	p := mpb.New()
 
-	total := 100
-	msgCh := make(chan string)
-	resumeCh := make(chan struct{})
-	nextCh := make(chan struct{}, 1)
-	ew := &errorWrapper{}
+	total, numBars := 100, 3
+	err := new(errorWrapper)
 	timer := time.AfterFunc(2*time.Second, func() {
-		ew.reset(errors.New("timeout"))
+		err.set(errors.New("timeout"), rand.Intn(numBars))
 	})
 	defer timer.Stop()
-	bar := p.AddBar(int64(total),
-		mpb.BarFillerMiddleware(func(base mpb.BarFiller) mpb.BarFiller {
-			var msg *string
-			var times int
-			return mpb.BarFillerFunc(func(w io.Writer, st decor.Statistics) error {
-				if msg == nil {
-					select {
-					case m := <-msgCh:
-						msg = &m
-						times = 10
-						nextCh <- struct{}{}
-					default:
-					}
-					return base.Fill(w, st)
+
+	for i := 0; i < numBars; i++ {
+		msgCh := make(chan string, 1)
+		bar := p.AddBar(int64(total),
+			mpb.PrependDecorators(newTitleDecorator(fmt.Sprintf("Bar#%d:", i), msgCh, 16)),
+			mpb.AppendDecorators(decor.Percentage(decor.WCSyncWidth)),
+		)
+		// simulating some work
+		barID := i
+		go func() {
+			max := 100 * time.Millisecond
+			for i := 0; i < total; i++ {
+				if err.check(barID) {
+					msgCh <- fmt.Sprintf("%s at %d, retrying...", err.Error(), i)
+					bar.SetRefill(int64(i))
+					err.reset()
+					i--
+					continue
 				}
-				switch {
-				case times == 0, st.Completed, st.Aborted:
-					defer func() {
-						msg = nil
-					}()
-					resumeCh <- struct{}{}
-				default:
-					times--
-				}
-				_, err := io.WriteString(w, runewidth.Truncate(*msg, st.AvailableWidth, "…"))
-				nextCh <- struct{}{}
-				return err
-			})
-		}),
-		mpb.PrependDecorators(decor.Name("my bar:")),
-		mpb.AppendDecorators(newCustomPercentage(nextCh)),
-	)
-	// simulating some work
-	go func() {
-		rng := rand.New(rand.NewSource(time.Now().UnixNano()))
-		max := 100 * time.Millisecond
-		for i := 0; i < total; i++ {
-			time.Sleep(time.Duration(rng.Intn(10)+1) * max / 10)
-			if ew.isErr() {
-				msgCh <- fmt.Sprintf("%s at %d, retrying...", ew.Error(), i)
-				i--
-				bar.SetRefill(int64(i))
-				ew.reset(nil)
-				<-resumeCh
-				continue
+				time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
+				bar.Increment()
 			}
-			bar.Increment()
-		}
-	}()
+		}()
+	}
 
 	p.Wait()
 }
 
 type errorWrapper struct {
 	sync.RWMutex
-	err error
+	err   error
+	barID int
 }
 
 func (ew *errorWrapper) Error() string {
@@ -89,35 +61,54 @@ func (ew *errorWrapper) Error() string {
 	return ew.err.Error()
 }
 
-func (ew *errorWrapper) isErr() bool {
+func (ew *errorWrapper) check(barID int) bool {
 	ew.RLock()
 	defer ew.RUnlock()
-	return ew.err != nil
+	return ew.err != nil && ew.barID == barID
 }
 
-func (ew *errorWrapper) reset(err error) {
+func (ew *errorWrapper) set(err error, barID int) {
 	ew.Lock()
 	ew.err = err
+	ew.barID = barID
 	ew.Unlock()
 }
 
-type percentage struct {
+func (ew *errorWrapper) reset() {
+	ew.Lock()
+	ew.err = nil
+	ew.Unlock()
+}
+
+type title struct {
 	decor.Decorator
-	suspend <-chan struct{}
+	name  string
+	msgCh <-chan string
+	msg   string
+	count int
+	limit int
 }
 
-func (d percentage) Decor(s decor.Statistics) (string, int) {
-	select {
-	case <-d.suspend:
-		return d.Format("")
-	default:
-		return d.Decorator.Decor(s)
+func (d *title) Decor(stat decor.Statistics) (string, int) {
+	if d.count == 0 {
+		select {
+		case msg := <-d.msgCh:
+			d.count = d.limit
+			d.msg = msg
+		default:
+			return d.Decorator.Decor(stat)
+		}
 	}
+	d.count--
+	_, _ = d.Format("")
+	return fmt.Sprintf("%s %s", d.name, d.msg), math.MaxInt
 }
 
-func newCustomPercentage(nextCh <-chan struct{}) decor.Decorator {
-	return percentage{
-		Decorator: decor.Percentage(),
-		suspend:   nextCh,
+func newTitleDecorator(name string, msgCh <-chan string, limit int) decor.Decorator {
+	return &title{
+		Decorator: decor.Name(name),
+		name:      name,
+		msgCh:     msgCh,
+		limit:     limit,
 	}
 }
