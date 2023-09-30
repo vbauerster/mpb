@@ -35,9 +35,9 @@ func main() {
 			for i := 0; i < total; i++ {
 				if err.check(barID) {
 					msgCh <- fmt.Sprintf("%s at %d, retrying...", err.Error(), i)
-					bar.SetRefill(int64(i))
 					err.reset()
 					i--
+					bar.SetRefill(int64(i))
 					continue
 				}
 				time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
