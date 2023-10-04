@@ -357,7 +357,7 @@ func (s *pState) render(cw *cwriter.Writer) (err error) {
 
 func (s *pState) flush(cw *cwriter.Writer, height int) error {
 	var wg sync.WaitGroup
-	defer wg.Wait() // waiting for all s.hm.push to complete
+	defer wg.Wait() // waiting for all s.push to complete
 
 	var popCount int
 	var rows []io.Reader
@@ -381,40 +381,32 @@ func (s *pState) flush(cw *cwriter.Writer, height int) error {
 				_, _ = io.Copy(io.Discard, row)
 			}
 		}
-		if frame.shutdown != 0 && !frame.done {
+
+		switch frame.shutdown {
+		case 1:
+			b.cancel()
 			if qb, ok := s.queueBars[b]; ok {
-				b.cancel()
 				delete(s.queueBars, b)
 				qb.priority = b.priority
 				wg.Add(1)
-				go func(b *Bar) {
-					s.hm.push(b, true)
-					wg.Done()
-				}(qb)
-				continue
+				go s.push(&wg, qb, true)
+			} else if s.popCompleted && !frame.noPop {
+				b.priority = s.popPriority
+				s.popPriority++
+				wg.Add(1)
+				go s.push(&wg, b, false)
+			} else if !frame.rmOnComplete {
+				wg.Add(1)
+				go s.push(&wg, b, false)
 			}
+		case 2:
 			if s.popCompleted && !frame.noPop {
-				switch frame.shutdown {
-				case 1:
-					b.priority = s.popPriority
-					s.popPriority++
-				default:
-					b.cancel()
-					popCount += usedRows
-					continue
-				}
-			} else if frame.rmOnComplete {
-				b.cancel()
-				continue
-			} else {
-				b.cancel()
+				popCount += usedRows
 			}
+		default:
+			wg.Add(1)
+			go s.push(&wg, b, false)
 		}
-		wg.Add(1)
-		go func(b *Bar) {
-			s.hm.push(b, false)
-			wg.Done()
-		}(b)
 	}
 
 	for i := len(rows) - 1; i >= 0; i-- {
@@ -425,6 +417,11 @@ func (s *pState) flush(cw *cwriter.Writer, height int) error {
 	}
 
 	return cw.Flush(len(rows) - popCount)
+}
+
+func (s pState) push(wg *sync.WaitGroup, b *Bar, sync bool) {
+	s.hm.push(b, sync)
+	wg.Done()
 }
 
 func (s pState) makeBarState(total int64, filler BarFiller, options ...BarOption) *bState {
