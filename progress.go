@@ -402,7 +402,9 @@ func (s *pState) flush(cw *cwriter.Writer, height int) error {
 		case 2:
 			if s.popCompleted && !frame.noPop {
 				popCount += usedRows
+				continue
 			}
+			fallthrough
 		default:
 			wg.Add(1)
 			go s.push(&wg, b, false)
