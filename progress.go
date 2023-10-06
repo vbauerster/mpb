@@ -18,8 +18,8 @@ const (
 	defaultRefreshRate = 150 * time.Millisecond
 )
 
-// DoneError represents an error when `*mpb.Progress` is done but its functionality is requested.
-var DoneError = fmt.Errorf("%T instance can't be reused after it's done", (*Progress)(nil))
+// DoneError represents use after `(*Progress).Wait()` error.
+var DoneError = fmt.Errorf("%T instance can't be reused after %[1]T.Wait()", (*Progress)(nil))
 
 // Progress represents a container that renders one or more progress bars.
 type Progress struct {
@@ -55,13 +55,13 @@ type pState struct {
 }
 
 // New creates new Progress container instance. It's not possible to
-// reuse instance after (*Progress).Wait method has been called.
+// reuse instance after `(*Progress).Wait` method has been called.
 func New(options ...ContainerOption) *Progress {
 	return NewWithContext(context.Background(), options...)
 }
 
 // NewWithContext creates new Progress container instance with provided
-// context. It's not possible to reuse instance after (*Progress).Wait
+// context. It's not possible to reuse instance after `(*Progress).Wait`
 // method has been called.
 func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 	if ctx == nil {
@@ -133,8 +133,7 @@ func (p *Progress) New(total int64, builder BarFillerBuilder, options ...BarOpti
 
 // MustAdd creates a bar which renders itself by provided BarFiller.
 // If `total <= 0` triggering complete event by increment methods is
-// disabled. Panics if *Progress instance is done, i.e. called after
-// (*Progress).Wait().
+// disabled. Panics if called after `(*Progress).Wait()`.
 func (p *Progress) MustAdd(total int64, filler BarFiller, options ...BarOption) *Bar {
 	bar, err := p.Add(total, filler, options...)
 	if err != nil {
@@ -145,8 +144,8 @@ func (p *Progress) MustAdd(total int64, filler BarFiller, options ...BarOption) 
 
 // Add creates a bar which renders itself by provided BarFiller.
 // If `total <= 0` triggering complete event by increment methods
-// is disabled. If *Progress instance is done, i.e. called after
-// (*Progress).Wait(), return error == DoneError.
+// is disabled. If called after `(*Progress).Wait()` then
+// `(nil, DoneError)` is returned.
 func (p *Progress) Add(total int64, filler BarFiller, options ...BarOption) (*Bar, error) {
 	if filler == nil {
 		filler = NopStyle().Build()
@@ -203,7 +202,7 @@ func (p *Progress) traverseBars(cb func(b *Bar) bool) {
 
 // UpdateBarPriority either immediately or lazy.
 // With lazy flag order is updated after the next refresh cycle.
-// If you don't care about laziness just use *Bar.SetPriority(int).
+// If you don't care about laziness just use `(*Bar).SetPriority(int)`.
 func (p *Progress) UpdateBarPriority(b *Bar, priority int, lazy bool) {
 	if b == nil {
 		return
@@ -215,9 +214,9 @@ func (p *Progress) UpdateBarPriority(b *Bar, priority int, lazy bool) {
 }
 
 // Write is implementation of io.Writer.
-// Writing to `*mpb.Progress` will print lines above a running bar.
+// Writing to `*Progress` will print lines above a running bar.
 // Writes aren't flushed immediately, but at next refresh cycle.
-// If Write is called after `*mpb.Progress` is done, `mpb.DoneError`
+// If called after `(*Progress).Wait()` then `(0, DoneError)`
 // is returned.
 func (p *Progress) Write(b []byte) (int, error) {
 	type result struct {
@@ -238,7 +237,7 @@ func (p *Progress) Write(b []byte) (int, error) {
 }
 
 // Wait waits for all bars to complete and finally shutdowns container. After
-// this method has been called, there is no way to reuse (*Progress) instance.
+// this method has been called, there is no way to reuse `*Progress` instance.
 func (p *Progress) Wait() {
 	// wait for user wg, if any
 	if p.uwg != nil {
@@ -249,9 +248,9 @@ func (p *Progress) Wait() {
 	p.Shutdown()
 }
 
-// Shutdown cancels any running bar immediately and then shutdowns (*Progress)
+// Shutdown cancels any running bar immediately and then shutdowns `*Progress`
 // instance. Normally this method shouldn't be called unless you know what you
-// are doing. Proper way to shutdown is to call (*Progress).Wait() instead.
+// are doing. Proper way to shutdown is to call `(*Progress).Wait()` instead.
 func (p *Progress) Shutdown() {
 	p.cancel()
 	p.pwg.Wait()
