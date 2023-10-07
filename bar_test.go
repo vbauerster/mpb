@@ -71,10 +71,12 @@ func TestBarEnableTriggerCompleteAndIncrementBefore(t *testing.T) {
 	p := mpb.New(mpb.WithWidth(80), mpb.WithOutput(io.Discard))
 	bar := p.AddBar(0) // never complete bar
 
+	targetTotal := int64(80)
+
 	for _, f := range []func(){
 		func() { bar.SetTotal(40, false) },
 		func() { bar.IncrBy(60) },
-		func() { bar.SetTotal(80, false) },
+		func() { bar.SetTotal(targetTotal, false) },
 		func() { bar.IncrBy(20) },
 	} {
 		f()
@@ -87,6 +89,10 @@ func TestBarEnableTriggerCompleteAndIncrementBefore(t *testing.T) {
 
 	if !bar.Completed() {
 		t.Fail()
+	}
+
+	if current := bar.Current(); current != targetTotal {
+		t.Errorf("Expected current: %d, got: %d", targetTotal, current)
 	}
 
 	p.Wait()
