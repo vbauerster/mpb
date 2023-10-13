@@ -81,10 +81,10 @@ func newBar(ctx context.Context, container *Progress, bs *bState) *Bar {
 	return bar
 }
 
-// ProxyReader wraps io.Reader with metrics required for progress tracking.
-// If `r` is 'unknown total/size' reader it's mandatory to call
-// (*Bar).SetTotal(-1, true) method after (io.Reader).Read returns io.EOF.
-// If bar is already completed or aborted, returns nil.
+// ProxyReader wraps io.Reader with metrics required for progress
+// tracking. If `r` is 'unknown total/size' reader it's mandatory
+// to call `(*Bar).SetTotal(-1, true)` after the wrapper returns
+// `io.EOF`. If bar is already completed or aborted, returns nil.
 // Panics if `r` is nil.
 func (b *Bar) ProxyReader(r io.Reader) io.ReadCloser {
 	if r == nil {
@@ -176,11 +176,10 @@ func (b *Bar) TraverseDecorators(cb func(decor.Decorator)) {
 	}
 }
 
-// EnableTriggerComplete enables triggering complete event. It's
-// effective only for bars which were constructed with `total <= 0` and
-// after total has been set with (*Bar).SetTotal(int64, false). If bar
-// has been incremented to the total, complete event is triggered right
-// away.
+// EnableTriggerComplete enables triggering complete event. It's effective
+// only for bars which were constructed with `total <= 0` and after total
+// has been set with `(*Bar).SetTotal(int64, false)`. If `curren >= total`
+// at the moment of call, complete event is triggered right away.
 func (b *Bar) EnableTriggerComplete() {
 	select {
 	case b.operateState <- func(s *bState) {
@@ -199,11 +198,11 @@ func (b *Bar) EnableTriggerComplete() {
 	}
 }
 
-// SetTotal sets total to an arbitrary value. It's effective only for
-// bar which was constructed with `total <= 0`. Setting total to negative
-// value is equivalent to (*Bar).SetTotal((*Bar).Current(), bool) but faster.
-// If triggerCompletion is true, total value is set to current and
-// complete event is triggered right away.
+// SetTotal sets total to an arbitrary value. It's effective only for bar
+// which was constructed with `total <= 0`. Setting total to negative value
+// is equivalent to `(*Bar).SetTotal((*Bar).Current(), bool)` but faster. If
+// triggerCompletion is true, total value is set to current and complete
+// event is triggered right away.
 func (b *Bar) SetTotal(total int64, triggerCompletion bool) {
 	select {
 	case b.operateState <- func(s *bState) {
@@ -343,7 +342,7 @@ func (b *Bar) SetPriority(priority int) {
 // Abort interrupts bar's running goroutine. Abort won't be engaged
 // if bar is already in complete state. If drop is true bar will be
 // removed as well. To make sure that bar has been removed call
-// (*Bar).Wait method.
+// `(*Bar).Wait()` method.
 func (b *Bar) Abort(drop bool) {
 	select {
 	case b.operateState <- func(s *bState) {
