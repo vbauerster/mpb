@@ -25,7 +25,7 @@ func TestNameDecorator(t *testing.T) {
 			want:      "      Test",
 		},
 		{
-			decorator: decor.Name("Test", decor.WC{W: 10, C: decor.DidentRight}),
+			decorator: decor.Name("Test", decor.WC{W: 10, C: decor.DindentRight}),
 			want:      "Test      ",
 		},
 	}

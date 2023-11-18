@@ -8,14 +8,14 @@ import (
 )
 
 const (
-	// DidentRight bit specifies identation direction.
+	// DindentRight sets indentation from right to left.
 	//
-	//	|foo   |b     | With DidentRight
-	//	|   foo|     b| Without DidentRight
-	DidentRight = 1 << iota
+	//	|foo   |b     | DindentRight is set
+	//	|   foo|     b| DindentRight is not set
+	DindentRight = 1 << iota
 
 	// DextraSpace bit adds extra space, makes sense with DSyncWidth only.
-	// When DidentRight bit set, the space will be added to the right,
+	// When DindentRight bit set, the space will be added to the right,
 	// otherwise to the left.
 	DextraSpace
 
@@ -23,14 +23,14 @@ const (
 	// Effective with multiple bars only.
 	DSyncWidth
 
-	// DSyncWidthR is shortcut for DSyncWidth|DidentRight
-	DSyncWidthR = DSyncWidth | DidentRight
+	// DSyncWidthR is shortcut for DSyncWidth|DindentRight
+	DSyncWidthR = DSyncWidth | DindentRight
 
 	// DSyncSpace is shortcut for DSyncWidth|DextraSpace
 	DSyncSpace = DSyncWidth | DextraSpace
 
-	// DSyncSpaceR is shortcut for DSyncWidth|DextraSpace|DidentRight
-	DSyncSpaceR = DSyncWidth | DextraSpace | DidentRight
+	// DSyncSpaceR is shortcut for DSyncWidth|DextraSpace|DindentRight
+	DSyncSpaceR = DSyncWidth | DextraSpace | DindentRight
 )
 
 // TimeStyle enum.
@@ -156,7 +156,7 @@ func (wc WC) Format(str string) (string, int) {
 
 // Init initializes width related config.
 func (wc *WC) Init() WC {
-	if (wc.C & DidentRight) != 0 {
+	if (wc.C & DindentRight) != 0 {
 		wc.fill = runewidth.FillRight
 	} else {
 		wc.fill = runewidth.FillLeft
