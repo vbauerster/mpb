@@ -14,9 +14,7 @@ const (
 	//	|   foo|     b| DindentRight is not set
 	DindentRight = 1 << iota
 
-	// DextraSpace bit adds extra space, makes sense with DSyncWidth only.
-	// When DindentRight bit set, the space will be added to the right,
-	// otherwise to the left.
+	// DextraSpace bit adds extra indentation space.
 	DextraSpace
 
 	// DSyncWidth bit enables same column width synchronization.
@@ -143,11 +141,10 @@ func (wc WC) Format(str string) (string, int) {
 	viewWidth := runewidth.StringWidth(str)
 	if wc.W > viewWidth {
 		viewWidth = wc.W
+	} else if (wc.C & DextraSpace) != 0 {
+		viewWidth++
 	}
 	if (wc.C & DSyncWidth) != 0 {
-		if (wc.C & DextraSpace) != 0 {
-			viewWidth++
-		}
 		wc.wsync <- viewWidth
 		viewWidth = <-wc.wsync
 	}
