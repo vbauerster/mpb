@@ -88,7 +88,7 @@ func TestPercentageDwidthSync(t *testing.T) {
 	testDecoratorConcurrently(t, testCases)
 }
 
-func TestPercentageDwidthSyncDidentRight(t *testing.T) {
+func TestPercentageDwidthSyncDindentRight(t *testing.T) {
 
 	testCases := [][]step{
 		{
