@@ -25,7 +25,7 @@ func main() {
 		queue := make([]*mpb.Bar, 2)
 		queue[0] = p.AddBar(rand.Int63n(201)+100,
 			mpb.PrependDecorators(
-				decor.Name(task, decor.WC{W: len(task) + 1, C: decor.DidentRight}),
+				decor.Name(task, decor.WC{C: decor.DindentRight | decor.DextraSpace}),
 				decor.Name("downloading", decor.WCSyncSpaceR),
 				decor.CountersNoUnit("%d / %d", decor.WCSyncWidth),
 			),
@@ -37,7 +37,7 @@ func main() {
 			mpb.BarQueueAfter(queue[0]), // this bar is queued
 			mpb.BarFillerClearOnComplete(),
 			mpb.PrependDecorators(
-				decor.Name(task, decor.WC{W: len(task) + 1, C: decor.DidentRight}),
+				decor.Name(task, decor.WC{C: decor.DindentRight | decor.DextraSpace}),
 				decor.OnCompleteMeta(
 					decor.OnComplete(
 						decor.Meta(decor.Name("installing", decor.WCSyncSpaceR), toMetaFunc(red)),
