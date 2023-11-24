@@ -41,9 +41,7 @@ func main() {
 				decor.Elapsed(decor.ET_STYLE_GO, decor.WCSyncWidth),
 			),
 			mpb.AppendDecorators(
-				decor.OnComplete(
-					decor.Percentage(decor.WC{W: 5}), "done",
-				),
+				decor.OnComplete(decor.Percentage(decor.WCSyncWidth), "done"),
 			),
 		)
 
