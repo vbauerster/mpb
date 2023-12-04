@@ -22,11 +22,9 @@ func Example() {
 		mpb.BarStyle().Lbound("╢").Filler("▌").Tip("▌").Padding("░").Rbound("╟"),
 		mpb.PrependDecorators(
 			// display our name with one space on the right
-			decor.Name(name, decor.WC{W: len(name) + 1, C: decor.DindentRight}),
+			decor.Name(name, decor.WC{C: decor.DindentRight | decor.DextraSpace}),
 			// replace ETA decorator with "done" message, OnComplete event
-			decor.OnComplete(
-				decor.AverageETA(decor.ET_STYLE_GO, decor.WC{W: 4}), "done",
-			),
+			decor.OnComplete(decor.AverageETA(decor.ET_STYLE_GO), "done"),
 		),
 		mpb.AppendDecorators(decor.Percentage()),
 	)
