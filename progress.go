@@ -194,7 +194,7 @@ func (p *Progress) traverseBars(cb func(b *Bar) bool) {
 	select {
 	case p.operateState <- func(s *pState) { s.hm.iter(iter, drop) }:
 		for b := range iter {
-			if cb(b) {
+			if !cb(b) {
 				close(drop)
 				break
 			}
