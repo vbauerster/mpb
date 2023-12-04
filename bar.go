@@ -429,13 +429,11 @@ func (b *Bar) render(tw int) {
 				return
 			}
 		}
-		frame := &renderFrame{
-			rows:         rows,
-			shutdown:     s.shutdown,
-			rmOnComplete: s.rmOnComplete,
-			noPop:        s.noPop,
-		}
+		frame := &renderFrame{rows: rows}
 		if s.completed || s.aborted {
+			frame.shutdown = s.shutdown
+			frame.rmOnComplete = s.rmOnComplete
+			frame.noPop = s.noPop
 			// post increment makes sure OnComplete decorators are rendered
 			s.shutdown++
 		}
