@@ -68,14 +68,17 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 		ctx = context.Background()
 	}
 	ctx, cancel := context.WithCancel(ctx)
+	delayRC := make(chan struct{}, 1)
+	delayRC <- struct{}{}
 	s := &pState{
 		ctx:         ctx,
 		hm:          make(heapManager),
 		dropS:       make(chan struct{}),
 		dropD:       make(chan struct{}),
 		renderReq:   make(chan time.Time),
-		refreshRate: defaultRefreshRate,
 		popPriority: math.MinInt32,
+		refreshRate: defaultRefreshRate,
+		delayRC:     delayRC,
 		queueBars:   make(map[*Bar]*Bar),
 		output:      os.Stdout,
 		debugOut:    io.Discard,
@@ -260,6 +263,7 @@ func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 	defer p.pwg.Done()
 	render := func() error { return s.render(cw) }
 	var err error
+	var renderReq <-chan time.Time
 
 	for {
 		select {
@@ -267,7 +271,10 @@ func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 			op(s)
 		case fn := <-p.interceptIO:
 			fn(cw)
-		case <-s.renderReq:
+		case <-s.delayRC:
+			renderReq = s.renderReq
+			s.delayRC = nil
+		case <-renderReq:
 			e := render()
 			if e != nil {
 				p.cancel() // cancel all bars
@@ -294,9 +301,6 @@ func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 }
 
 func (s pState) autoRefreshListener(done chan struct{}) {
-	if s.delayRC != nil {
-		<-s.delayRC
-	}
 	ticker := time.NewTicker(s.refreshRate)
 	defer ticker.Stop()
 	for {
