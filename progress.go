@@ -261,7 +261,6 @@ func (p *Progress) Shutdown() {
 
 func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 	defer p.pwg.Done()
-	render := func() error { return s.render(cw) }
 	var err error
 	var renderReq <-chan time.Time
 
@@ -275,18 +274,26 @@ func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 			renderReq = s.renderReq
 			s.delayRC = nil
 		case <-renderReq:
-			e := render()
-			if e != nil {
+			err = s.render(cw)
+			if err != nil {
+				go func() {
+					for {
+						select {
+						case <-s.renderReq:
+						case <-p.done:
+							return
+						}
+					}
+				}()
 				p.cancel() // cancel all bars
-				render = func() error { return nil }
-				err = e
+				renderReq = nil
 			}
 		case <-p.done:
 			update := make(chan bool)
 			for s.autoRefresh && err == nil {
 				s.hm.state(update)
 				if <-update {
-					err = render()
+					err = s.render(cw)
 				} else {
 					break
 				}
