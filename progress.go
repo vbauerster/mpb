@@ -290,17 +290,16 @@ func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 				renderReq = nil
 			}
 		case <-p.done:
-			update := make(chan bool)
-			for s.autoRefresh && err == nil {
-				s.hm.state(update)
-				if <-update {
-					err = s.render(w)
-				} else {
-					break
-				}
-			}
 			if err != nil {
 				_, _ = fmt.Fprintln(s.debugOut, err.Error())
+			} else if s.autoRefresh {
+				update := make(chan bool)
+				for i := 0; i == 0 || <-update; i++ {
+					if err := s.render(w); err != nil {
+						_, _ = fmt.Fprintln(s.debugOut, err.Error())
+					}
+					s.hm.state(update)
+				}
 			}
 			s.hm.end(s.shutdownNotifier)
 			return
