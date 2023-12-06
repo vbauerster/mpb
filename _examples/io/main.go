@@ -11,8 +11,17 @@ import (
 )
 
 func main() {
-	var total int64 = 1024 * 1024 * 500
-	reader := io.LimitReader(rand.Reader, total)
+	var total int64 = 64 * 1024 * 1024
+
+	r, w := io.Pipe()
+
+	go func() {
+		for i := 0; i < 1024; i++ {
+			_, _ = io.Copy(w, io.LimitReader(rand.Reader, 64*1024))
+			time.Sleep(time.Second / 10)
+		}
+		w.Close()
+	}()
 
 	p := mpb.New(
 		mpb.WithWidth(60),
@@ -27,12 +36,12 @@ func main() {
 		mpb.AppendDecorators(
 			decor.EwmaETA(decor.ET_STYLE_GO, 30),
 			decor.Name(" ] "),
-			decor.EwmaSpeed(decor.SizeB1024(0), "% .2f", 30),
+			decor.EwmaSpeed(decor.SizeB1024(0), "% .2f", 60),
 		),
 	)
 
 	// create proxy reader
-	proxyReader := bar.ProxyReader(reader)
+	proxyReader := bar.ProxyReader(r)
 	defer proxyReader.Close()
 
 	// copy from proxyReader, ignoring errors
