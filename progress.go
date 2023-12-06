@@ -354,9 +354,9 @@ func (s *pState) render(cw *cwriter.Writer) (err error) {
 		if s.reqWidth > 0 {
 			width = s.reqWidth
 		} else {
-			width = 100
+			width = 80
 		}
-		height = 100
+		height = width
 	}
 
 	for b := range iter {
