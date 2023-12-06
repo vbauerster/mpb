@@ -297,6 +297,7 @@ func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 				for i := 0; i == 0 || <-update; i++ {
 					if err := s.render(w); err != nil {
 						_, _ = fmt.Fprintln(s.debugOut, err.Error())
+						break
 					}
 					s.hm.state(update)
 				}
