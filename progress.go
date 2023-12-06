@@ -262,19 +262,20 @@ func (p *Progress) Shutdown() {
 func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 	defer p.pwg.Done()
 	var err error
-	var renderReq <-chan time.Time
+	w := cwriter.New(io.Discard)
+	renderReq := s.renderReq
 
 	for {
 		select {
 		case op := <-p.operateState:
 			op(s)
 		case fn := <-p.interceptIO:
-			fn(cw)
+			fn(w)
 		case <-s.delayRC:
-			renderReq = s.renderReq
+			w, cw = cw, nil
 			s.delayRC = nil
 		case <-renderReq:
-			err = s.render(cw)
+			err = s.render(w)
 			if err != nil {
 				go func() {
 					for {
@@ -293,7 +294,7 @@ func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 			for s.autoRefresh && err == nil {
 				s.hm.state(update)
 				if <-update {
-					err = s.render(cw)
+					err = s.render(w)
 				} else {
 					break
 				}
