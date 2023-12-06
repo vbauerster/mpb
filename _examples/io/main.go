@@ -3,7 +3,6 @@ package main
 import (
 	"crypto/rand"
 	"io"
-	"io/ioutil"
 	"time"
 
 	"github.com/vbauerster/mpb/v8"
@@ -45,7 +44,7 @@ func main() {
 	defer proxyReader.Close()
 
 	// copy from proxyReader, ignoring errors
-	_, _ = io.Copy(ioutil.Discard, proxyReader)
+	_, _ = io.Copy(io.Discard, proxyReader)
 
 	p.Wait()
 }
