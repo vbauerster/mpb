@@ -264,16 +264,18 @@ func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 	var err error
 	w := cwriter.New(io.Discard)
 	renderReq := s.renderReq
+	operateState := p.operateState
+	interceptIO := p.interceptIO
 
 	for {
 		select {
-		case op := <-p.operateState:
-			op(s)
-		case fn := <-p.interceptIO:
-			fn(w)
 		case <-s.delayRC:
 			w, cw = cw, nil
 			s.delayRC = nil
+		case op := <-operateState:
+			op(s)
+		case fn := <-interceptIO:
+			fn(w)
 		case <-renderReq:
 			err = s.render(w)
 			if err != nil {
@@ -288,6 +290,8 @@ func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 				}()
 				p.cancel() // cancel all bars
 				renderReq = nil
+				operateState = nil
+				interceptIO = nil
 			}
 		case <-p.done:
 			if err != nil {
