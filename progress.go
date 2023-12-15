@@ -279,6 +279,8 @@ func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 		case <-renderReq:
 			err = s.render(w)
 			if err != nil {
+				// (*pState).(autoRefreshListener|manualRefreshListener) may block
+				// if not launching following short lived goroutine
 				go func() {
 					for {
 						select {
