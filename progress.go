@@ -312,7 +312,7 @@ func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 	}
 }
 
-func (s pState) autoRefreshListener(done chan struct{}) {
+func (s *pState) autoRefreshListener(done chan struct{}) {
 	ticker := time.NewTicker(s.refreshRate)
 	defer ticker.Stop()
 	for {
@@ -326,7 +326,7 @@ func (s pState) autoRefreshListener(done chan struct{}) {
 	}
 }
 
-func (s pState) manualRefreshListener(done chan struct{}) {
+func (s *pState) manualRefreshListener(done chan struct{}) {
 	for {
 		select {
 		case x := <-s.manualRC:
@@ -436,7 +436,7 @@ func (s *pState) flush(cw *cwriter.Writer, height int) error {
 	return cw.Flush(len(rows) - popCount)
 }
 
-func (s pState) push(wg *sync.WaitGroup, b *Bar, sync bool) {
+func (s *pState) push(wg *sync.WaitGroup, b *Bar, sync bool) {
 	s.hm.push(b, sync)
 	wg.Done()
 }
