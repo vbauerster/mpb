@@ -80,18 +80,16 @@ type movingAverageSpeed struct {
 	producer func(float64) string
 	average  ewma.MovingAverage
 	zDur     time.Duration
-	msg      string
 }
 
 func (d *movingAverageSpeed) Decor(s Statistics) (string, int) {
-	if !s.Completed {
-		if v := d.average.Value(); v != 0 {
-			d.msg = d.producer(float64(1e9) / v)
-		} else {
-			d.msg = d.producer(v)
-		}
+	var str string
+	if v := d.average.Value(); v != 0 {
+		str = d.producer(float64(1e9) / v)
+	} else {
+		str = d.producer(0)
 	}
-	return d.Format(d.msg)
+	return d.Format(str)
 }
 
 func (d *movingAverageSpeed) EwmaUpdate(n int64, dur time.Duration) {
@@ -102,8 +100,8 @@ func (d *movingAverageSpeed) EwmaUpdate(n int64, dur time.Duration) {
 		if math.IsInf(durPerByte, 0) || math.IsNaN(durPerByte) {
 			return
 		}
-		d.average.Add(durPerByte)
 		d.zDur = 0
+		d.average.Add(durPerByte)
 	}
 }
 
