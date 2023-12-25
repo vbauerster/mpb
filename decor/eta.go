@@ -63,9 +63,10 @@ func MovingAverageETA(style TimeStyle, average ewma.MovingAverage, normalizer Ti
 
 type movingAverageETA struct {
 	WC
+	producer   func(time.Duration) string
 	average    ewma.MovingAverage
 	normalizer TimeNormalizer
-	producer   func(time.Duration) string
+	zDur       time.Duration
 }
 
 func (d *movingAverageETA) Decor(s Statistics) (string, int) {
@@ -78,11 +79,16 @@ func (d *movingAverageETA) Decor(s Statistics) (string, int) {
 }
 
 func (d *movingAverageETA) EwmaUpdate(n int64, dur time.Duration) {
-	durPerItem := float64(dur) / float64(n)
-	if math.IsInf(durPerItem, 0) || math.IsNaN(durPerItem) {
-		return
+	if n <= 0 {
+		d.zDur += dur
+	} else {
+		durPerItem := float64(d.zDur+dur) / float64(n)
+		if math.IsInf(durPerItem, 0) || math.IsNaN(durPerItem) {
+			return
+		}
+		d.zDur = 0
+		d.average.Add(durPerItem)
 	}
-	d.average.Add(durPerItem)
 }
 
 // AverageETA decorator. It's wrapper of NewAverageETA.
