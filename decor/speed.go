@@ -79,6 +79,7 @@ type movingAverageSpeed struct {
 	WC
 	producer func(float64) string
 	average  ewma.MovingAverage
+	zDur     time.Duration
 	msg      string
 }
 
@@ -94,11 +95,16 @@ func (d *movingAverageSpeed) Decor(s Statistics) (string, int) {
 }
 
 func (d *movingAverageSpeed) EwmaUpdate(n int64, dur time.Duration) {
-	durPerByte := float64(dur) / float64(n)
-	if math.IsInf(durPerByte, 0) || math.IsNaN(durPerByte) {
-		return
+	if n <= 0 {
+		d.zDur += dur
+	} else {
+		durPerByte := float64(d.zDur+dur) / float64(n)
+		if math.IsInf(durPerByte, 0) || math.IsNaN(durPerByte) {
+			return
+		}
+		d.average.Add(durPerByte)
+		d.zDur = 0
 	}
-	d.average.Add(durPerByte)
 }
 
 // AverageSpeed decorator with dynamic unit measure adjustment. It's
