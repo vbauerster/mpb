@@ -69,8 +69,8 @@ func EwmaSpeed(unit interface{}, format string, age float64, wcc ...WC) Decorato
 func MovingAverageSpeed(unit interface{}, format string, average ewma.MovingAverage, wcc ...WC) Decorator {
 	d := &movingAverageSpeed{
 		WC:       initWC(wcc...),
-		average:  average,
 		producer: chooseSpeedProducer(unit, format),
+		average:  average,
 	}
 	return d
 }
