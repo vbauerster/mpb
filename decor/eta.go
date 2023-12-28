@@ -84,6 +84,7 @@ func (d *movingAverageETA) EwmaUpdate(n int64, dur time.Duration) {
 	} else {
 		durPerItem := float64(d.zDur+dur) / float64(n)
 		if math.IsInf(durPerItem, 0) || math.IsNaN(durPerItem) {
+			d.zDur += dur
 			return
 		}
 		d.zDur = 0
