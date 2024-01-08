@@ -86,7 +86,7 @@ func (d *movingAverageSpeed) Decor(s Statistics) (string, int) {
 	var str string
 	// ewma implementation may return 0 before accumulating certain number of samples
 	if v := d.average.Value(); v != 0 {
-		str = d.producer(float64(1e9) / v)
+		str = d.producer(1e9 / v)
 	} else {
 		str = d.producer(0)
 	}
