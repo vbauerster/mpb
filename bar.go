@@ -517,7 +517,7 @@ func (s *bState) drawImpl(stat decor.Statistics) (io.Reader, error) {
 
 	bufP, bufB, bufA := s.buffers[0], s.buffers[1], s.buffers[2]
 
-	err := eitherError(decorFiller(bufP, s.pDecorators), decorFiller(bufA, s.aDecorators))
+	err := firstNonNil(decorFiller(bufP, s.pDecorators), decorFiller(bufA, s.aDecorators))
 	if err != nil {
 		return nil, err
 	}
@@ -645,7 +645,7 @@ func writeSpace(buf *bytes.Buffer) error {
 	return buf.WriteByte(' ')
 }
 
-func eitherError(errors ...error) error {
+func firstNonNil(errors ...error) error {
 	for _, err := range errors {
 		if err != nil {
 			return err
