@@ -44,12 +44,11 @@ type bState struct {
 	rmOnComplete      bool
 	noPop             bool
 	autoRefresh       bool
-	aDecorators       []decor.Decorator
-	pDecorators       []decor.Decorator
+	buffers           [3]*bytes.Buffer
+	decorators        [2][]decor.Decorator
 	averageDecorators []decor.AverageDecorator
 	ewmaDecorators    []decor.EwmaDecorator
 	shutdownListeners []decor.ShutdownListener
-	buffers           [3]*bytes.Buffer
 	filler            BarFiller
 	extender          extenderFunc
 	renderReq         chan<- time.Time
@@ -159,10 +158,7 @@ func (b *Bar) TraverseDecorators(cb func(decor.Decorator)) {
 	iter := make(chan decor.Decorator)
 	select {
 	case b.operateState <- func(s *bState) {
-		for _, decorators := range [][]decor.Decorator{
-			s.pDecorators,
-			s.aDecorators,
-		} {
+		for _, decorators := range s.decorators {
 			for _, d := range decorators {
 				iter <- d
 			}
@@ -484,18 +480,14 @@ func (b *Bar) wSyncTable() syncTable {
 	}
 }
 
-func (s *bState) draw(stat decor.Statistics) (io.Reader, error) {
-	r, err := s.drawImpl(stat)
-	if err != nil {
-		for _, b := range s.buffers {
-			b.Reset()
+func (s *bState) draw(stat decor.Statistics) (_ io.Reader, err error) {
+	defer func() {
+		if err != nil {
+			for _, b := range s.buffers {
+				b.Reset()
+			}
 		}
-		return nil, err
-	}
-	return io.MultiReader(r, strings.NewReader("\n")), nil
-}
-
-func (s *bState) drawImpl(stat decor.Statistics) (io.Reader, error) {
+	}()
 	decorFiller := func(buf *bytes.Buffer, decorators []decor.Decorator) (err error) {
 		for _, d := range decorators {
 			// need to call Decor in any case becase of width synchronization
@@ -515,45 +507,45 @@ func (s *bState) drawImpl(stat decor.Statistics) (io.Reader, error) {
 		return err
 	}
 
-	bufP, bufB, bufA := s.buffers[0], s.buffers[1], s.buffers[2]
-
-	err := firstNonNil(decorFiller(bufP, s.pDecorators), decorFiller(bufA, s.aDecorators))
-	if err != nil {
-		return nil, err
-	}
-
-	if !s.trimSpace && stat.AvailableWidth >= 2 {
-		stat.AvailableWidth -= 2
-		writeFiller := func(buf *bytes.Buffer) error {
-			return s.filler.Fill(buf, stat)
-		}
-		for _, fn := range []func(*bytes.Buffer) error{
-			writeSpace,
-			writeFiller,
-			writeSpace,
-		} {
-			if err := fn(bufB); err != nil {
-				return nil, err
-			}
-		}
-	} else {
-		err := s.filler.Fill(bufB, stat)
+	for i, buf := range s.buffers[:2] {
+		err = decorFiller(buf, s.decorators[i])
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	return io.MultiReader(bufP, bufB, bufA), nil
+	spaces := []io.Reader{
+		strings.NewReader(" "),
+		strings.NewReader(" "),
+	}
+	if s.trimSpace || stat.AvailableWidth < 2 {
+		for _, r := range spaces {
+			_, _ = io.Copy(io.Discard, r)
+		}
+	} else {
+		stat.AvailableWidth -= 2
+	}
+
+	err = s.filler.Fill(s.buffers[2], stat)
+	if err != nil {
+		return nil, err
+	}
+
+	return io.MultiReader(
+		s.buffers[0],
+		spaces[0],
+		s.buffers[2],
+		spaces[1],
+		s.buffers[1],
+		strings.NewReader("\n"),
+	), nil
 }
 
 func (s *bState) wSyncTable() (table syncTable) {
 	var count int
 	var row []chan int
 
-	for i, decorators := range [][]decor.Decorator{
-		s.pDecorators,
-		s.aDecorators,
-	} {
+	for i, decorators := range s.decorators {
 		for _, d := range decorators {
 			if ch, ok := d.Sync(); ok {
 				row = append(row, ch)
@@ -643,13 +635,4 @@ func unwrap(d decor.Decorator) decor.Decorator {
 
 func writeSpace(buf *bytes.Buffer) error {
 	return buf.WriteByte(' ')
-}
-
-func firstNonNil(errors ...error) error {
-	for _, err := range errors {
-		if err != nil {
-			return err
-		}
-	}
-	return nil
 }
