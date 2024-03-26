@@ -632,7 +632,3 @@ func unwrap(d decor.Decorator) decor.Decorator {
 	}
 	return d
 }
-
-func writeSpace(buf *bytes.Buffer) error {
-	return buf.WriteByte(' ')
-}
