@@ -1432,7 +1432,7 @@ func newTestState(filler BarFiller) *bState {
 		filler: filler,
 	}
 	for i := 0; i < len(bs.buffers); i++ {
-		bs.buffers[i] = bytes.NewBuffer(make([]byte, 0, 512))
+		bs.buffers[i] = bytes.NewBuffer(make([]byte, 0, defaultStructBufCap))
 	}
 	return bs
 }
