@@ -774,17 +774,16 @@ func TestDrawDefault(t *testing.T) {
 			s.trimSpace = tc.trim
 			s.refill = tc.refill
 			s.completed = tc.total > 0 && tc.current >= tc.total
-			tmpBuf.Reset()
 			r, err := s.draw(newStatistics(tw, s))
 			if err != nil {
-				t.FailNow()
+				t.Fatalf("tw: %d case %q draw error: %s", tw, tc.name, err.Error())
 			}
+			tmpBuf.Reset()
 			_, err = tmpBuf.ReadFrom(r)
 			if err != nil {
 				t.FailNow()
 			}
 			by := tmpBuf.Bytes()
-
 			got := string(by[:len(by)-1])
 			if !utf8.ValidString(got) {
 				t.Fail()
@@ -1229,11 +1228,11 @@ func TestDrawTipOnComplete(t *testing.T) {
 			s.trimSpace = tc.trim
 			s.refill = tc.refill
 			s.completed = tc.total > 0 && tc.current >= tc.total
-			tmpBuf.Reset()
 			r, err := s.draw(newStatistics(tw, s))
 			if err != nil {
-				t.FailNow()
+				t.Fatalf("tw: %d case %q draw error: %s", tw, tc.name, err.Error())
 			}
+			tmpBuf.Reset()
 			_, err = tmpBuf.ReadFrom(r)
 			if err != nil {
 				t.FailNow()
@@ -1406,11 +1405,11 @@ func TestDrawDoubleWidth(t *testing.T) {
 			s.trimSpace = tc.trim
 			s.refill = tc.refill
 			s.completed = tc.total > 0 && tc.current >= tc.total
-			tmpBuf.Reset()
 			r, err := s.draw(newStatistics(tw, s))
 			if err != nil {
-				t.FailNow()
+				t.Fatalf("tw: %d case %q draw error: %s", tw, tc.name, err.Error())
 			}
+			tmpBuf.Reset()
 			_, err = tmpBuf.ReadFrom(r)
 			if err != nil {
 				t.FailNow()
