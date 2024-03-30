@@ -407,25 +407,21 @@ func (b *Bar) serve(ctx context.Context, bs *bState) {
 
 func (b *Bar) render(tw int) {
 	fn := func(s *bState) {
-		var rows []io.Reader
+		frame := new(renderFrame)
 		stat := newStatistics(tw, s)
 		r, err := s.draw(stat)
 		if err != nil {
 			for _, buf := range s.buffers {
 				buf.Reset()
 			}
-			b.frameCh <- &renderFrame{err: err}
+			frame.err = err
+			b.frameCh <- frame
 			return
 		}
-		rows = append(rows, r)
+		frame.rows = append(frame.rows, r)
 		if s.extender != nil {
-			rows, err = s.extender(rows, stat)
-			if err != nil {
-				b.frameCh <- &renderFrame{err: err}
-				return
-			}
+			frame.rows, frame.err = s.extender(frame.rows, stat)
 		}
-		frame := &renderFrame{rows: rows}
 		if s.completed || s.aborted {
 			frame.shutdown = s.shutdown
 			frame.rmOnComplete = s.rmOnComplete
