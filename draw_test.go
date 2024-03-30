@@ -767,9 +767,8 @@ func TestDrawDefault(t *testing.T) {
 	var tmpBuf bytes.Buffer
 	for tw, cases := range testSuite {
 		for _, tc := range cases {
-			s := newTestState(tc.style.Build())
-			s.reqWidth = tc.barWidth
-			s.total = tc.total
+			ps := pState{reqWidth: tc.barWidth}
+			s := ps.makeBarState(tc.total, tc.style.Build())
 			s.current = tc.current
 			s.trimSpace = tc.trim
 			s.refill = tc.refill
@@ -1221,9 +1220,8 @@ func TestDrawTipOnComplete(t *testing.T) {
 	var tmpBuf bytes.Buffer
 	for tw, cases := range testSuite {
 		for _, tc := range cases {
-			s := newTestState(tc.style.Build())
-			s.reqWidth = tc.barWidth
-			s.total = tc.total
+			ps := pState{reqWidth: tc.barWidth}
+			s := ps.makeBarState(tc.total, tc.style.Build())
 			s.current = tc.current
 			s.trimSpace = tc.trim
 			s.refill = tc.refill
@@ -1398,9 +1396,8 @@ func TestDrawDoubleWidth(t *testing.T) {
 	var tmpBuf bytes.Buffer
 	for tw, cases := range testSuite {
 		for _, tc := range cases {
-			s := newTestState(tc.style.Build())
-			s.reqWidth = tc.barWidth
-			s.total = tc.total
+			ps := pState{reqWidth: tc.barWidth}
+			s := ps.makeBarState(tc.total, tc.style.Build())
 			s.current = tc.current
 			s.trimSpace = tc.trim
 			s.refill = tc.refill
@@ -1425,14 +1422,4 @@ func TestDrawDoubleWidth(t *testing.T) {
 			}
 		}
 	}
-}
-
-func newTestState(filler BarFiller) *bState {
-	bs := &bState{
-		filler: filler,
-	}
-	for i := 0; i < len(bs.buffers); i++ {
-		bs.buffers[i] = bytes.NewBuffer(make([]byte, 0, defaultStructBufCap))
-	}
-	return bs
 }
