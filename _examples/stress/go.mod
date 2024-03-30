@@ -10,9 +10,9 @@ require (
 require (
 	github.com/VividCortex/ewma v1.2.0 // indirect
 	github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d // indirect
-	github.com/felixge/fgprof v0.9.3 // indirect
-	github.com/google/pprof v0.0.0-20231212022811-ec68065c825e // indirect
+	github.com/felixge/fgprof v0.9.4 // indirect
+	github.com/google/pprof v0.0.0-20240327155427-868f304927ed // indirect
 	github.com/mattn/go-runewidth v0.0.15 // indirect
-	github.com/rivo/uniseg v0.4.4 // indirect
-	golang.org/x/sys v0.16.0 // indirect
+	github.com/rivo/uniseg v0.4.7 // indirect
+	golang.org/x/sys v0.18.0 // indirect
 )
