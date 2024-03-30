@@ -129,11 +129,11 @@ func makeExtenderFunc(filler BarFiller, rev bool) extenderFunc {
 		for {
 			b, err := buf.ReadBytes('\n')
 			if err != nil {
+				buf.Reset()
 				break
 			}
 			rows = append(rows, bytes.NewReader(b))
 		}
-		buf.Reset()
 		return rows, err
 	}
 
