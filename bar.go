@@ -411,6 +411,9 @@ func (b *Bar) render(tw int) {
 		stat := newStatistics(tw, s)
 		r, err := s.draw(stat)
 		if err != nil {
+			for _, buf := range s.buffers {
+				buf.Reset()
+			}
 			b.frameCh <- &renderFrame{err: err}
 			return
 		}
@@ -481,13 +484,6 @@ func (b *Bar) wSyncTable() syncTable {
 }
 
 func (s *bState) draw(stat decor.Statistics) (_ io.Reader, err error) {
-	defer func() {
-		if err != nil {
-			for _, b := range s.buffers {
-				b.Reset()
-			}
-		}
-	}()
 	decorFiller := func(buf *bytes.Buffer, decorators []decor.Decorator) (err error) {
 		for _, d := range decorators {
 			// need to call Decor in any case becase of width synchronization
