@@ -1,4 +1,5 @@
 #!/bin/sh
+set -e
 
 for d in *; do
     [ ! -d "$d" ] && continue
