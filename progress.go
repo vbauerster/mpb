@@ -15,7 +15,7 @@ import (
 )
 
 // buffer capacity allocated per bar structure (prepend|filler|append)
-const defaultStructBufCap = 256
+const initialStructBufCap = 256
 const defaultRefreshRate = 150 * time.Millisecond
 
 // DoneError represents use after `(*Progress).Wait()` error.
@@ -468,7 +468,7 @@ func (s pState) makeBarState(total int64, filler BarFiller, options ...BarOption
 	}
 
 	for i := 0; i < len(bs.buffers); i++ {
-		bs.buffers[i] = bytes.NewBuffer(make([]byte, 0, defaultStructBufCap))
+		bs.buffers[i] = bytes.NewBuffer(make([]byte, 0, initialStructBufCap))
 	}
 
 	return bs
