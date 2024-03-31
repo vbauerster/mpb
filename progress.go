@@ -14,8 +14,6 @@ import (
 	"github.com/vbauerster/mpb/v8/decor"
 )
 
-// buffer capacity allocated per bar structure (prepend|filler|append)
-const initialStructBufCap = 256
 const defaultRefreshRate = 150 * time.Millisecond
 
 // DoneError represents use after `(*Progress).Wait()` error.
@@ -467,9 +465,9 @@ func (s pState) makeBarState(total int64, filler BarFiller, options ...BarOption
 		}
 	}
 
-	for i := 0; i < len(bs.buffers); i++ {
-		bs.buffers[i] = bytes.NewBuffer(make([]byte, 0, initialStructBufCap))
-	}
+	bs.buffers[0] = bytes.NewBuffer(make([]byte, 0, 128)) // prepend
+	bs.buffers[1] = bytes.NewBuffer(make([]byte, 0, 128)) // append
+	bs.buffers[2] = bytes.NewBuffer(make([]byte, 0, 256)) // filler
 
 	return bs
 }
