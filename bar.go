@@ -246,9 +246,7 @@ func (b *Bar) EwmaSetCurrent(current int64, iterDur time.Duration) {
 	}
 	select {
 	case b.operateState <- func(s *bState) {
-		if n := current - s.current; n > 0 {
-			s.decoratorEwmaUpdate(n, iterDur)
-		}
+		s.decoratorEwmaUpdate(current-s.current, iterDur)
 		s.current = current
 		if s.triggerComplete && s.current >= s.total {
 			s.current = s.total
