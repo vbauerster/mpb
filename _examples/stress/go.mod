@@ -4,7 +4,7 @@ go 1.17
 
 require (
 	github.com/pkg/profile v1.7.0
-	github.com/vbauerster/mpb/v8 v8.7.2
+	github.com/vbauerster/mpb/v8 v8.7.3
 )
 
 require (
