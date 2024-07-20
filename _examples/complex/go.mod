@@ -3,7 +3,7 @@ module github.com/vbauerster/mpb/_examples/complex
 go 1.17
 
 require (
-	github.com/fatih/color v1.16.0
+	github.com/fatih/color v1.17.0
 	github.com/vbauerster/mpb/v8 v8.7.3
 )
 
@@ -14,5 +14,5 @@ require (
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.15 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
-	golang.org/x/sys v0.19.0 // indirect
+	golang.org/x/sys v0.22.0 // indirect
 )
