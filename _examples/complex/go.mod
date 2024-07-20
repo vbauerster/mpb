@@ -4,7 +4,7 @@ go 1.17
 
 require (
 	github.com/fatih/color v1.17.0
-	github.com/vbauerster/mpb/v8 v8.7.3
+	github.com/vbauerster/mpb/v8 v8.7.4
 )
 
 require (
