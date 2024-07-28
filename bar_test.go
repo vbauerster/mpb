@@ -67,6 +67,25 @@ func TestBarSetTotal(t *testing.T) {
 	p.Wait()
 }
 
+func TestBarEnableTriggerCompleteZeroBar(t *testing.T) {
+	p := mpb.New(mpb.WithWidth(80), mpb.WithOutput(io.Discard))
+	bar := p.AddBar(0) // never complete bar
+
+	if bar.Completed() {
+		t.Fail()
+	}
+
+	// Calling bar.SetTotal(0, true) has same effect
+	// but this one is more concise and intuitive
+	bar.EnableTriggerComplete()
+
+	if !bar.Completed() {
+		t.Fail()
+	}
+
+	p.Wait()
+}
+
 func TestBarEnableTriggerCompleteAndIncrementBefore(t *testing.T) {
 	p := mpb.New(mpb.WithWidth(80), mpb.WithOutput(io.Discard))
 	bar := p.AddBar(0) // never complete bar
