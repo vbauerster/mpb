@@ -371,15 +371,13 @@ func (b *Bar) Completed() bool {
 	}
 }
 
-// IsRunning reports whether the bar is running, i.e. not yet completed
-// and not yet aborted.
+// IsRunning reports whether the bar is in running state.
 func (b *Bar) IsRunning() bool {
-	result := make(chan bool)
 	select {
-	case b.operateState <- func(s *bState) { result <- !s.completed && !s.aborted }:
-		return <-result
-	case <-b.done:
+	case <-b.ctx.Done():
 		return false
+	default:
+		return true
 	}
 }
 
