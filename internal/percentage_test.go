@@ -4,7 +4,7 @@ import "testing"
 
 func TestPercentage(t *testing.T) {
 	// key is barWidth
-	testSuite := map[int64][]struct {
+	testSuite := map[uint][]struct {
 		name     string
 		total    int64
 		current  int64
