@@ -384,16 +384,16 @@ func (b *Bar) Wait() {
 }
 
 func (b *Bar) serve(bs *bState) {
-	defer b.container.bwg.Done()
 	for {
 		select {
 		case op := <-b.operateState:
 			op(bs)
 		case <-b.ctx.Done():
 			bs.aborted = !bs.completed
-			bs.decoratorShutdownNotify()
+			bs.decoratorShutdownNotify(&b.container.bwg)
 			b.bs = bs
 			close(b.bsOk)
+			b.container.bwg.Done()
 			return
 		}
 	}
@@ -582,21 +582,20 @@ func (s bState) decoratorAverageAdjust(start time.Time) {
 	wg.Wait()
 }
 
-func (s bState) decoratorShutdownNotify() {
-	var wg sync.WaitGroup
+func (s bState) decoratorShutdownNotify(wg *sync.WaitGroup) {
 	for i := 0; i < len(s.shutdownListeners); i++ {
+		wg.Add(1)
 		switch d := s.shutdownListeners[i]; i {
 		case len(s.shutdownListeners) - 1:
 			d.OnShutdown()
+			wg.Done()
 		default:
-			wg.Add(1)
 			go func() {
 				d.OnShutdown()
 				wg.Done()
 			}()
 		}
 	}
-	wg.Wait()
 }
 
 func newStatistics(tw int, s *bState) decor.Statistics {
