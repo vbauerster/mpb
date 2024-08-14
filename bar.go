@@ -245,16 +245,21 @@ func (b *Bar) EwmaSetCurrent(current int64, iterDur time.Duration) {
 	if current < 0 {
 		return
 	}
+	result := make(chan *sync.WaitGroup)
 	select {
 	case b.operateState <- func(s *bState) {
-		s.decoratorEwmaUpdate(current-s.current, iterDur)
+		var wg sync.WaitGroup
+		s.decoratorEwmaUpdate(current-s.current, iterDur, &wg)
 		s.current = current
 		if s.triggerComplete && s.current >= s.total {
 			s.current = s.total
 			s.completed = true
 			b.triggerCompletion(s)
 		}
+		result <- &wg
 	}:
+		wg := <-result
+		wg.Wait()
 	case <-b.ctx.Done():
 	}
 }
@@ -297,16 +302,21 @@ func (b *Bar) EwmaIncrBy(n int, iterDur time.Duration) {
 // EwmaIncrInt64 increments progress by amount of n and updates EWMA based
 // decorators by dur of a single iteration.
 func (b *Bar) EwmaIncrInt64(n int64, iterDur time.Duration) {
+	result := make(chan *sync.WaitGroup)
 	select {
 	case b.operateState <- func(s *bState) {
-		s.decoratorEwmaUpdate(n, iterDur)
+		var wg sync.WaitGroup
+		s.decoratorEwmaUpdate(n, iterDur, &wg)
 		s.current += n
 		if s.triggerComplete && s.current >= s.total {
 			s.current = s.total
 			s.completed = true
 			b.triggerCompletion(s)
 		}
+		result <- &wg
 	}:
+		wg := <-result
+		wg.Wait()
 	case <-b.ctx.Done():
 	}
 }
@@ -555,21 +565,20 @@ func (s *bState) wSyncTable() (table syncTable) {
 	return table
 }
 
-func (s bState) decoratorEwmaUpdate(n int64, dur time.Duration) {
-	var wg sync.WaitGroup
+func (s bState) decoratorEwmaUpdate(n int64, dur time.Duration, wg *sync.WaitGroup) {
 	for i := 0; i < len(s.ewmaDecorators); i++ {
+		wg.Add(1)
 		switch d := s.ewmaDecorators[i]; i {
 		case len(s.ewmaDecorators) - 1:
 			d.EwmaUpdate(n, dur)
+			wg.Done()
 		default:
-			wg.Add(1)
 			go func() {
 				d.EwmaUpdate(n, dur)
 				wg.Done()
 			}()
 		}
 	}
-	wg.Wait()
 }
 
 func (s bState) decoratorAverageAdjust(start time.Time, wg *sync.WaitGroup) {
