@@ -271,9 +271,6 @@ func (b *Bar) IncrBy(n int) {
 
 // IncrInt64 increments progress by amount of n.
 func (b *Bar) IncrInt64(n int64) {
-	if n <= 0 {
-		return
-	}
 	select {
 	case b.operateState <- func(s *bState) {
 		s.current += n
