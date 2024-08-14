@@ -19,9 +19,9 @@ type Bar struct {
 	priority     int // used by heap
 	frameCh      chan *renderFrame
 	operateState chan func(*bState)
-	done         chan struct{}
 	container    *Progress
 	bs           *bState
+	bsOk         chan struct{}
 	ctx          context.Context
 	cancel       func()
 }
@@ -71,7 +71,7 @@ func newBar(ctx context.Context, container *Progress, bs *bState) *Bar {
 		priority:     bs.priority,
 		frameCh:      make(chan *renderFrame, 1),
 		operateState: make(chan func(*bState)),
-		done:         make(chan struct{}),
+		bsOk:         make(chan struct{}),
 		container:    container,
 		ctx:          ctx,
 		cancel:       cancel,
@@ -122,7 +122,7 @@ func (b *Bar) ID() int {
 	select {
 	case b.operateState <- func(s *bState) { result <- s.id }:
 		return <-result
-	case <-b.done:
+	case <-b.bsOk:
 		return b.bs.id
 	}
 }
@@ -133,7 +133,7 @@ func (b *Bar) Current() int64 {
 	select {
 	case b.operateState <- func(s *bState) { result <- s.current }:
 		return <-result
-	case <-b.done:
+	case <-b.bsOk:
 		return b.bs.current
 	}
 }
@@ -352,7 +352,7 @@ func (b *Bar) Aborted() bool {
 	select {
 	case b.operateState <- func(s *bState) { result <- s.aborted }:
 		return <-result
-	case <-b.done:
+	case <-b.bsOk:
 		return b.bs.aborted
 	}
 }
@@ -363,7 +363,7 @@ func (b *Bar) Completed() bool {
 	select {
 	case b.operateState <- func(s *bState) { result <- s.completed }:
 		return <-result
-	case <-b.done:
+	case <-b.bsOk:
 		return b.bs.completed
 	}
 }
@@ -393,7 +393,7 @@ func (b *Bar) serve(bs *bState) {
 			bs.aborted = !bs.completed
 			bs.decoratorShutdownNotify()
 			b.bs = bs
-			close(b.done)
+			close(b.bsOk)
 			return
 		}
 	}
@@ -427,7 +427,7 @@ func (b *Bar) render(tw int) {
 	}
 	select {
 	case b.operateState <- fn:
-	case <-b.done:
+	case <-b.bsOk:
 		fn(b.bs)
 	}
 }
@@ -468,7 +468,7 @@ func (b *Bar) wSyncTable() syncTable {
 	select {
 	case b.operateState <- func(s *bState) { result <- s.wSyncTable() }:
 		return <-result
-	case <-b.done:
+	case <-b.bsOk:
 		return b.bs.wSyncTable()
 	}
 }
