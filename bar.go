@@ -95,7 +95,7 @@ func (b *Bar) ProxyReader(r io.Reader) io.ReadCloser {
 	select {
 	case b.operateState <- func(s *bState) { result <- len(s.ewmaDecorators) != 0 }:
 		return newProxyReader(r, b, <-result)
-	case <-b.done:
+	case <-b.ctx.Done():
 		return nil
 	}
 }
@@ -111,7 +111,7 @@ func (b *Bar) ProxyWriter(w io.Writer) io.WriteCloser {
 	select {
 	case b.operateState <- func(s *bState) { result <- len(s.ewmaDecorators) != 0 }:
 		return newProxyWriter(w, b, <-result)
-	case <-b.done:
+	case <-b.ctx.Done():
 		return nil
 	}
 }
@@ -151,7 +151,7 @@ func (b *Bar) SetRefill(amount int64) {
 			s.refill = s.current
 		}
 	}:
-	case <-b.done:
+	case <-b.ctx.Done():
 	}
 }
 
@@ -170,7 +170,7 @@ func (b *Bar) TraverseDecorators(cb func(decor.Decorator)) {
 		for d := range iter {
 			cb(unwrap(d))
 		}
-	case <-b.done:
+	case <-b.ctx.Done():
 	}
 }
 
@@ -191,7 +191,7 @@ func (b *Bar) EnableTriggerComplete() {
 			s.triggerComplete = true
 		}
 	}:
-	case <-b.done:
+	case <-b.ctx.Done():
 	}
 }
 
@@ -217,7 +217,7 @@ func (b *Bar) SetTotal(total int64, complete bool) {
 			b.triggerCompletion(s)
 		}
 	}:
-	case <-b.done:
+	case <-b.ctx.Done():
 	}
 }
 
@@ -235,7 +235,7 @@ func (b *Bar) SetCurrent(current int64) {
 			b.triggerCompletion(s)
 		}
 	}:
-	case <-b.done:
+	case <-b.ctx.Done():
 	}
 }
 
@@ -255,7 +255,7 @@ func (b *Bar) EwmaSetCurrent(current int64, iterDur time.Duration) {
 			b.triggerCompletion(s)
 		}
 	}:
-	case <-b.done:
+	case <-b.ctx.Done():
 	}
 }
 
@@ -280,7 +280,7 @@ func (b *Bar) IncrInt64(n int64) {
 			b.triggerCompletion(s)
 		}
 	}:
-	case <-b.done:
+	case <-b.ctx.Done():
 	}
 }
 
@@ -307,7 +307,7 @@ func (b *Bar) EwmaIncrInt64(n int64, iterDur time.Duration) {
 			b.triggerCompletion(s)
 		}
 	}:
-	case <-b.done:
+	case <-b.ctx.Done():
 	}
 }
 
@@ -317,7 +317,7 @@ func (b *Bar) EwmaIncrInt64(n int64, iterDur time.Duration) {
 func (b *Bar) DecoratorAverageAdjust(start time.Time) {
 	select {
 	case b.operateState <- func(s *bState) { s.decoratorAverageAdjust(start) }:
-	case <-b.done:
+	case <-b.ctx.Done():
 	}
 }
 
@@ -342,7 +342,7 @@ func (b *Bar) Abort(drop bool) {
 		s.rmOnComplete = drop
 		b.triggerCompletion(s)
 	}:
-	case <-b.done:
+	case <-b.ctx.Done():
 	}
 }
 
@@ -380,7 +380,7 @@ func (b *Bar) IsRunning() bool {
 
 // Wait blocks until bar is completed or aborted.
 func (b *Bar) Wait() {
-	<-b.done
+	<-b.ctx.Done()
 }
 
 func (b *Bar) serve(bs *bState) {
