@@ -456,7 +456,7 @@ func (b *Bar) tryEarlyRefresh(renderReq chan<- time.Time) {
 		for {
 			select {
 			case renderReq <- time.Now():
-			case <-b.done:
+			case <-b.ctx.Done():
 				return
 			}
 		}
