@@ -22,6 +22,7 @@ type Bar struct {
 	done         chan struct{}
 	container    *Progress
 	bs           *bState
+	ctx          context.Context
 	cancel       func()
 }
 
@@ -72,11 +73,12 @@ func newBar(ctx context.Context, container *Progress, bs *bState) *Bar {
 		operateState: make(chan func(*bState)),
 		done:         make(chan struct{}),
 		container:    container,
+		ctx:          ctx,
 		cancel:       cancel,
 	}
 
 	container.bwg.Add(1)
-	go bar.serve(ctx, bs)
+	go bar.serve(bs)
 	return bar
 }
 
@@ -386,13 +388,13 @@ func (b *Bar) Wait() {
 	<-b.done
 }
 
-func (b *Bar) serve(ctx context.Context, bs *bState) {
+func (b *Bar) serve(bs *bState) {
 	defer b.container.bwg.Done()
 	for {
 		select {
 		case op := <-b.operateState:
 			op(bs)
-		case <-ctx.Done():
+		case <-b.ctx.Done():
 			bs.aborted = !bs.completed
 			bs.decoratorShutdownNotify()
 			b.bs = bs
