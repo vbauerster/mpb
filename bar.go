@@ -190,7 +190,7 @@ func (b *Bar) EnableTriggerComplete() {
 		if s.current >= s.total {
 			s.current = s.total
 			s.completed = true
-			b.triggerCompletion(s)
+			s.triggerCompletion(b)
 		} else {
 			s.triggerComplete = true
 		}
@@ -218,7 +218,7 @@ func (b *Bar) SetTotal(total int64, complete bool) {
 		if complete {
 			s.current = s.total
 			s.completed = true
-			b.triggerCompletion(s)
+			s.triggerCompletion(b)
 		}
 	}:
 	case <-b.ctx.Done():
@@ -236,7 +236,7 @@ func (b *Bar) SetCurrent(current int64) {
 		if s.triggerComplete && s.current >= s.total {
 			s.current = s.total
 			s.completed = true
-			b.triggerCompletion(s)
+			s.triggerCompletion(b)
 		}
 	}:
 	case <-b.ctx.Done():
@@ -258,7 +258,7 @@ func (b *Bar) EwmaSetCurrent(current int64, iterDur time.Duration) {
 		if s.triggerComplete && s.current >= s.total {
 			s.current = s.total
 			s.completed = true
-			b.triggerCompletion(s)
+			s.triggerCompletion(b)
 		}
 		result <- &wg
 	}:
@@ -286,7 +286,7 @@ func (b *Bar) IncrInt64(n int64) {
 		if s.triggerComplete && s.current >= s.total {
 			s.current = s.total
 			s.completed = true
-			b.triggerCompletion(s)
+			s.triggerCompletion(b)
 		}
 	}:
 	case <-b.ctx.Done():
@@ -315,7 +315,7 @@ func (b *Bar) EwmaIncrInt64(n int64, iterDur time.Duration) {
 		if s.triggerComplete && s.current >= s.total {
 			s.current = s.total
 			s.completed = true
-			b.triggerCompletion(s)
+			s.triggerCompletion(b)
 		}
 		result <- &wg
 	}:
@@ -361,7 +361,7 @@ func (b *Bar) Abort(drop bool) {
 		}
 		s.aborted = true
 		s.rmOnComplete = drop
-		b.triggerCompletion(s)
+		s.triggerCompletion(b)
 	}:
 	case <-b.ctx.Done():
 	}
@@ -450,17 +450,6 @@ func (b *Bar) render(tw int) {
 	case b.operateState <- fn:
 	case <-b.bsOk:
 		fn(b.bs)
-	}
-}
-
-func (b *Bar) triggerCompletion(s *bState) {
-	if s.autoRefresh {
-		// Technically this call isn't required, but if refresh rate is set to
-		// one hour for example and bar completes within a few minutes p.Wait()
-		// will wait for one hour. This call helps to avoid unnecessary waiting.
-		go b.tryEarlyRefresh(s.renderReq)
-	} else {
-		b.cancel()
 	}
 }
 
@@ -567,6 +556,17 @@ func (s *bState) wSyncTable() (table syncTable) {
 		}
 	}
 	return table
+}
+
+func (s bState) triggerCompletion(b *Bar) {
+	if s.autoRefresh {
+		// Technically this call isn't required, but if refresh rate is set to
+		// one hour for example and bar completes within a few minutes p.Wait()
+		// will wait for one hour. This call helps to avoid unnecessary waiting.
+		go b.tryEarlyRefresh(s.renderReq)
+	} else {
+		b.cancel()
+	}
 }
 
 func (s bState) decoratorEwmaUpdate(n int64, dur time.Duration, wg *sync.WaitGroup) {
