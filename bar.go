@@ -248,13 +248,14 @@ func (b *Bar) EwmaSetCurrent(current int64, iterDur time.Duration) {
 	result := make(chan *sync.WaitGroup)
 	select {
 	case b.operateState <- func(s *bState) {
-		var wg sync.WaitGroup
-		s.decoratorEwmaUpdate(current-s.current, iterDur, &wg)
+		n := current - s.current
 		s.current = current
 		if s.triggerComplete && s.current >= s.total {
 			s.current = s.total
 			s.triggerCompletion(b)
 		}
+		var wg sync.WaitGroup
+		s.decoratorEwmaUpdate(n, iterDur, &wg)
 		result <- &wg
 	}:
 		wg := <-result
@@ -303,13 +304,13 @@ func (b *Bar) EwmaIncrInt64(n int64, iterDur time.Duration) {
 	result := make(chan *sync.WaitGroup)
 	select {
 	case b.operateState <- func(s *bState) {
-		var wg sync.WaitGroup
-		s.decoratorEwmaUpdate(n, iterDur, &wg)
 		s.current += n
 		if s.triggerComplete && s.current >= s.total {
 			s.current = s.total
 			s.triggerCompletion(b)
 		}
+		var wg sync.WaitGroup
+		s.decoratorEwmaUpdate(n, iterDur, &wg)
 		result <- &wg
 	}:
 		wg := <-result
