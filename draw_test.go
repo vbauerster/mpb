@@ -786,7 +786,7 @@ func TestDrawDefault(t *testing.T) {
 			s.current = tc.current
 			s.trimSpace = tc.trim
 			s.refill = tc.refill
-			r, err := s.draw(newStatistics(tw, s))
+			r, err := s.draw(s.newStatistics(tw))
 			if err != nil {
 				t.Fatalf("tw: %d case %q draw error: %s", tw, tc.name, err.Error())
 			}
@@ -1238,7 +1238,7 @@ func TestDrawTipOnComplete(t *testing.T) {
 			s.current = tc.current
 			s.trimSpace = tc.trim
 			s.refill = tc.refill
-			r, err := s.draw(newStatistics(tw, s))
+			r, err := s.draw(s.newStatistics(tw))
 			if err != nil {
 				t.Fatalf("tw: %d case %q draw error: %s", tw, tc.name, err.Error())
 			}
@@ -1413,7 +1413,7 @@ func TestDrawDoubleWidth(t *testing.T) {
 			s.current = tc.current
 			s.trimSpace = tc.trim
 			s.refill = tc.refill
-			r, err := s.draw(newStatistics(tw, s))
+			r, err := s.draw(s.newStatistics(tw))
 			if err != nil {
 				t.Fatalf("tw: %d case %q draw error: %s", tw, tc.name, err.Error())
 			}

@@ -416,7 +416,7 @@ func (b *Bar) serve(bs *bState) {
 func (b *Bar) render(tw int) {
 	fn := func(s *bState) {
 		frame := new(renderFrame)
-		stat := newStatistics(tw, s)
+		stat := s.newStatistics(tw)
 		r, err := s.draw(stat)
 		if err != nil {
 			for _, buf := range s.buffers {
@@ -615,7 +615,7 @@ func (s bState) decoratorShutdownNotify(wg *sync.WaitGroup) {
 	}
 }
 
-func newStatistics(tw int, s *bState) decor.Statistics {
+func (s bState) newStatistics(tw int) decor.Statistics {
 	return decor.Statistics{
 		AvailableWidth: tw,
 		RequestedWidth: s.reqWidth,
