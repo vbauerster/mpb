@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/vbauerster/mpb/v8/cwriter"
-	"github.com/vbauerster/mpb/v8/decor"
 )
 
 const defaultRefreshRate = 150 * time.Millisecond
@@ -153,17 +152,6 @@ func (p *Progress) Add(total int64, filler BarFiller, options ...BarOption) (*Ba
 	case p.operateState <- func(ps *pState) {
 		bs := ps.makeBarState(total, filler, options...)
 		bar := newBar(ps.ctx, p, bs)
-		bar.TraverseDecorators(func(d decor.Decorator) {
-			if d, ok := d.(decor.AverageDecorator); ok {
-				bs.averageDecorators = append(bs.averageDecorators, d)
-			}
-			if d, ok := d.(decor.EwmaDecorator); ok {
-				bs.ewmaDecorators = append(bs.ewmaDecorators, d)
-			}
-			if d, ok := d.(decor.ShutdownListener); ok {
-				bs.shutdownListeners = append(bs.shutdownListeners, d)
-			}
-		})
 		if bs.waitBar != nil {
 			ps.queueBars[bs.waitBar] = bar
 		} else {
@@ -462,6 +450,8 @@ func (s pState) makeBarState(total int64, filler BarFiller, options ...BarOption
 	bs.buffers[0] = bytes.NewBuffer(make([]byte, 0, 128)) // prepend
 	bs.buffers[1] = bytes.NewBuffer(make([]byte, 0, 128)) // append
 	bs.buffers[2] = bytes.NewBuffer(make([]byte, 0, 256)) // filler
+
+	bs.sortDecorators()
 
 	return bs
 }
