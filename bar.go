@@ -189,7 +189,6 @@ func (b *Bar) EnableTriggerComplete() {
 		}
 		if s.current >= s.total {
 			s.current = s.total
-			s.completed = true
 			s.triggerCompletion(b)
 		} else {
 			s.triggerComplete = true
@@ -217,7 +216,6 @@ func (b *Bar) SetTotal(total int64, complete bool) {
 		}
 		if complete {
 			s.current = s.total
-			s.completed = true
 			s.triggerCompletion(b)
 		}
 	}:
@@ -235,7 +233,6 @@ func (b *Bar) SetCurrent(current int64) {
 		s.current = current
 		if s.triggerComplete && s.current >= s.total {
 			s.current = s.total
-			s.completed = true
 			s.triggerCompletion(b)
 		}
 	}:
@@ -257,7 +254,6 @@ func (b *Bar) EwmaSetCurrent(current int64, iterDur time.Duration) {
 		s.current = current
 		if s.triggerComplete && s.current >= s.total {
 			s.current = s.total
-			s.completed = true
 			s.triggerCompletion(b)
 		}
 		result <- &wg
@@ -285,7 +281,6 @@ func (b *Bar) IncrInt64(n int64) {
 		s.current += n
 		if s.triggerComplete && s.current >= s.total {
 			s.current = s.total
-			s.completed = true
 			s.triggerCompletion(b)
 		}
 	}:
@@ -314,7 +309,6 @@ func (b *Bar) EwmaIncrInt64(n int64, iterDur time.Duration) {
 		s.current += n
 		if s.triggerComplete && s.current >= s.total {
 			s.current = s.total
-			s.completed = true
 			s.triggerCompletion(b)
 		}
 		result <- &wg
@@ -558,7 +552,8 @@ func (s *bState) wSyncTable() (table syncTable) {
 	return table
 }
 
-func (s bState) triggerCompletion(b *Bar) {
+func (s *bState) triggerCompletion(b *Bar) {
+	s.completed = s.current == s.total
 	if s.autoRefresh {
 		// Technically this call isn't required, but if refresh rate is set to
 		// one hour for example and bar completes within a few minutes p.Wait()
