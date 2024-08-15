@@ -20,13 +20,13 @@ func TestBarCompleted(t *testing.T) {
 	bar := p.AddBar(int64(total))
 
 	if bar.Completed() {
-		t.Fail()
+		t.Error("expected bar not to complete")
 	}
 
 	bar.IncrBy(total)
 
 	if !bar.Completed() {
-		t.Error("bar isn't completed after increment")
+		t.Error("expected bar to complete")
 	}
 
 	p.Wait()
@@ -38,13 +38,13 @@ func TestBarAborted(t *testing.T) {
 	bar := p.AddBar(int64(total))
 
 	if bar.Aborted() {
-		t.Fail()
+		t.Error("expected bar not to be aborted")
 	}
 
 	bar.Abort(false)
 
 	if !bar.Aborted() {
-		t.Error("bar isn't aborted after abort call")
+		t.Error("expected bar to be aborted")
 	}
 
 	p.Wait()
@@ -72,7 +72,7 @@ func TestBarEnableTriggerCompleteZeroBar(t *testing.T) {
 	bar := p.AddBar(0) // never complete bar
 
 	if bar.Completed() {
-		t.Fail()
+		t.Error("expected bar not to complete")
 	}
 
 	// Calling bar.SetTotal(0, true) has same effect
@@ -80,7 +80,7 @@ func TestBarEnableTriggerCompleteZeroBar(t *testing.T) {
 	bar.EnableTriggerComplete()
 
 	if !bar.Completed() {
-		t.Fail()
+		t.Error("expected bar to complete")
 	}
 
 	p.Wait()
@@ -100,14 +100,14 @@ func TestBarEnableTriggerCompleteAndIncrementBefore(t *testing.T) {
 	} {
 		f()
 		if bar.Completed() {
-			t.Fail()
+			t.Error("expected bar not to complete")
 		}
 	}
 
 	bar.EnableTriggerComplete()
 
 	if !bar.Completed() {
-		t.Fail()
+		t.Error("expected bar to complete")
 	}
 
 	if current := bar.Current(); current != targetTotal {
@@ -132,14 +132,14 @@ func TestBarEnableTriggerCompleteAndIncrementAfter(t *testing.T) {
 	} {
 		f()
 		if bar.Completed() {
-			t.Fail()
+			t.Error("expected bar not to complete")
 		}
 	}
 
 	bar.IncrBy(20)
 
 	if !bar.Completed() {
-		t.Fail()
+		t.Error("expected bar to complete")
 	}
 
 	if current := bar.Current(); current != targetTotal {
