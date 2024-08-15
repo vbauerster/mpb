@@ -401,7 +401,7 @@ func (b *Bar) IsRunning() bool {
 
 // Wait blocks until bar is completed or aborted.
 func (b *Bar) Wait() {
-	<-b.ctx.Done()
+	<-b.bsOk
 }
 
 func (b *Bar) serve(bs *bState) {
