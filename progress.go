@@ -148,25 +148,11 @@ func (p *Progress) Add(total int64, filler BarFiller, options ...BarOption) (*Ba
 	if filler == nil {
 		filler = NopStyle().Build()
 	}
-	type result struct {
-		bar *Bar
-		bs  *bState
-	}
-	ch := make(chan result)
+	ch := make(chan *Bar)
 	select {
 	case p.operateState <- func(ps *pState) {
 		bs := ps.makeBarState(total, filler, options...)
 		bar := newBar(ps.ctx, p, bs)
-		if bs.waitBar != nil {
-			ps.queueBars[bs.waitBar] = bar
-		} else {
-			ps.hm.push(bar, true)
-		}
-		ps.idCount++
-		ch <- result{bar, bs}
-	}:
-		res := <-ch
-		bar, bs := res.bar, res.bs
 		bar.TraverseDecorators(func(d decor.Decorator) {
 			if d, ok := d.(decor.AverageDecorator); ok {
 				bs.averageDecorators = append(bs.averageDecorators, d)
@@ -178,7 +164,15 @@ func (p *Progress) Add(total int64, filler BarFiller, options ...BarOption) (*Ba
 				bs.shutdownListeners = append(bs.shutdownListeners, d)
 			}
 		})
-		return bar, nil
+		if bs.waitBar != nil {
+			ps.queueBars[bs.waitBar] = bar
+		} else {
+			ps.hm.push(bar, true)
+		}
+		ps.idCount++
+		ch <- bar
+	}:
+		return <-ch, nil
 	case <-p.done:
 		return nil, DoneError
 	}
