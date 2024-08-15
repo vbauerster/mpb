@@ -39,7 +39,6 @@ type bState struct {
 	current           int64
 	refill            int64
 	trimSpace         bool
-	completed         bool
 	aborted           bool
 	triggerComplete   bool
 	rmOnComplete      bool
@@ -350,7 +349,7 @@ func (b *Bar) SetPriority(priority int) {
 func (b *Bar) Abort(drop bool) {
 	select {
 	case b.operateState <- func(s *bState) {
-		if s.completed || s.aborted {
+		if s.aborted || s.completed() {
 			return
 		}
 		s.aborted = true
@@ -376,10 +375,10 @@ func (b *Bar) Aborted() bool {
 func (b *Bar) Completed() bool {
 	result := make(chan bool)
 	select {
-	case b.operateState <- func(s *bState) { result <- s.completed }:
+	case b.operateState <- func(s *bState) { result <- s.completed() }:
 		return <-result
 	case <-b.bsOk:
-		return b.bs.completed
+		return b.bs.completed()
 	}
 }
 
@@ -404,7 +403,7 @@ func (b *Bar) serve(bs *bState) {
 		case op := <-b.operateState:
 			op(bs)
 		case <-b.ctx.Done():
-			bs.aborted = !bs.completed
+			bs.aborted = !bs.completed()
 			bs.decoratorShutdownNotify(&b.container.bwg)
 			b.bs = bs
 			close(b.bsOk)
@@ -431,7 +430,7 @@ func (b *Bar) render(tw int) {
 		if s.extender != nil {
 			frame.rows, frame.err = s.extender(frame.rows, stat)
 		}
-		if s.completed || s.aborted {
+		if s.aborted || s.completed() {
 			frame.shutdown = s.shutdown
 			frame.rmOnComplete = s.rmOnComplete
 			frame.noPop = s.noPop
@@ -553,7 +552,7 @@ func (s *bState) wSyncTable() (table syncTable) {
 }
 
 func (s *bState) triggerCompletion(b *Bar) {
-	s.completed = s.current == s.total
+	s.triggerComplete = true
 	if s.autoRefresh {
 		// Technically this call isn't required, but if refresh rate is set to
 		// one hour for example and bar completes within a few minutes p.Wait()
@@ -562,6 +561,10 @@ func (s *bState) triggerCompletion(b *Bar) {
 	} else {
 		b.cancel()
 	}
+}
+
+func (s bState) completed() bool {
+	return s.triggerComplete && s.current == s.total
 }
 
 func (s bState) decoratorEwmaUpdate(n int64, dur time.Duration, wg *sync.WaitGroup) {
@@ -620,7 +623,7 @@ func newStatistics(tw int, s *bState) decor.Statistics {
 		Total:          s.total,
 		Current:        s.current,
 		Refill:         s.refill,
-		Completed:      s.completed,
+		Completed:      s.completed(),
 		Aborted:        s.aborted,
 	}
 }
