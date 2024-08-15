@@ -568,50 +568,35 @@ func (s bState) completed() bool {
 }
 
 func (s bState) decoratorEwmaUpdate(n int64, dur time.Duration, wg *sync.WaitGroup) {
-	for i := 0; i < len(s.ewmaDecorators); i++ {
+	for _, d := range s.ewmaDecorators {
 		wg.Add(1)
-		switch d := s.ewmaDecorators[i]; i {
-		case len(s.ewmaDecorators) - 1:
+		d := d
+		go func() {
 			d.EwmaUpdate(n, dur)
 			wg.Done()
-		default:
-			go func() {
-				d.EwmaUpdate(n, dur)
-				wg.Done()
-			}()
-		}
+		}()
 	}
 }
 
 func (s bState) decoratorAverageAdjust(start time.Time, wg *sync.WaitGroup) {
-	for i := 0; i < len(s.averageDecorators); i++ {
+	for _, d := range s.averageDecorators {
 		wg.Add(1)
-		switch d := s.averageDecorators[i]; i {
-		case len(s.averageDecorators) - 1:
+		d := d
+		go func() {
 			d.AverageAdjust(start)
 			wg.Done()
-		default:
-			go func() {
-				d.AverageAdjust(start)
-				wg.Done()
-			}()
-		}
+		}()
 	}
 }
 
 func (s bState) decoratorShutdownNotify(wg *sync.WaitGroup) {
-	for i := 0; i < len(s.shutdownListeners); i++ {
+	for _, d := range s.shutdownListeners {
 		wg.Add(1)
-		switch d := s.shutdownListeners[i]; i {
-		case len(s.shutdownListeners) - 1:
+		d := d
+		go func() {
 			d.OnShutdown()
 			wg.Done()
-		default:
-			go func() {
-				d.OnShutdown()
-				wg.Done()
-			}()
-		}
+		}()
 	}
 }
 
