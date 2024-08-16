@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	totalBars = 32
+	totalBars = 42
 )
 
 var proftype = flag.String("prof", "", "profile type (cpu, mem)")
@@ -38,10 +38,11 @@ func main() {
 		bar := p.AddBar(int64(total),
 			mpb.PrependDecorators(
 				decor.Name(name, decor.WCSyncWidthR),
-				decor.Elapsed(decor.ET_STYLE_GO, decor.WCSyncWidth),
+				decor.OnComplete(decor.Percentage(decor.WCSyncWidth), "done"),
 			),
 			mpb.AppendDecorators(
-				decor.OnComplete(decor.Percentage(decor.WCSyncWidth), "done"),
+				decor.OnComplete(decor.EwmaETA(decor.ET_STYLE_GO, 30, decor.WCSyncWidth), ""),
+				decor.EwmaSpeed(decor.SizeB1024(0), "% .2f", 30, decor.WCSyncSpace),
 			),
 		)
 
@@ -49,9 +50,10 @@ func main() {
 			defer wg.Done()
 			rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 			max := 100 * time.Millisecond
-			for !bar.Completed() {
+			for bar.IsRunning() {
+				start := time.Now()
 				time.Sleep(time.Duration(rng.Intn(10)+1) * max / 10)
-				bar.Increment()
+				bar.EwmaIncrement(time.Since(start))
 			}
 		}()
 	}
