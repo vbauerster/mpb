@@ -33,13 +33,18 @@ func (f TimeNormalizerFunc) Normalize(src time.Duration) time.Duration {
 // decorator to work correctly you have to measure each iteration's duration
 // and pass it to one of the (*Bar).EwmaIncr... family methods.
 func EwmaETA(style TimeStyle, age float64, wcc ...WC) Decorator {
+	return EwmaNormalizedETA(style, age, nil, wcc...)
+}
+
+// EwmaNormalizedETA same as EwmaETA but with TimeNormalizer option.
+func EwmaNormalizedETA(style TimeStyle, age float64, normalizer TimeNormalizer, wcc ...WC) Decorator {
 	var average ewma.MovingAverage
 	if age == 0 {
 		average = ewma.NewMovingAverage()
 	} else {
 		average = ewma.NewMovingAverage(age)
 	}
-	return MovingAverageETA(style, NewThreadSafeMovingAverage(average), nil, wcc...)
+	return MovingAverageETA(style, NewThreadSafeMovingAverage(average), normalizer, wcc...)
 }
 
 // MovingAverageETA decorator relies on MovingAverage implementation to calculate its average.
