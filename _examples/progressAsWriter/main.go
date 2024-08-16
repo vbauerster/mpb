@@ -13,12 +13,30 @@ import (
 
 func main() {
 	total, numBars := 100, 2
-	var bwg sync.WaitGroup
+	var bwg, qwg sync.WaitGroup
 	bwg.Add(numBars)
+	qwg.Add(1)
 	done := make(chan interface{})
-	p := mpb.New(mpb.WithWidth(64), mpb.WithShutdownNotifier(done))
+	p := mpb.New(mpb.WithWidth(64), mpb.WithShutdownNotifier(done), mpb.WithWaitGroup(&qwg))
 
 	log.SetOutput(p)
+
+	go func() {
+		defer qwg.Done()
+		for {
+			select {
+			case <-done:
+				// after done, underlying io.Writer returns mpb.DoneError
+				// so following isn't printed
+				log.Println("all done")
+				return
+			default:
+				log.Println("waiting for done")
+				time.Sleep(150 * time.Millisecond)
+			}
+		}
+	}()
+
 	nopBar := p.MustAdd(0, nil)
 
 	for i := 0; i < numBars; i++ {
@@ -51,28 +69,9 @@ func main() {
 		}()
 	}
 
-	var qwg sync.WaitGroup
-	qwg.Add(1)
-	go func() {
-		defer qwg.Done()
-		for {
-			select {
-			case <-done:
-				// after done, underlying io.Writer returns mpb.DoneError
-				// so following isn't printed
-				log.Println("all done")
-				return
-			default:
-				log.Println("waiting for done")
-				time.Sleep(150 * time.Millisecond)
-			}
-		}
-	}()
-
 	bwg.Wait()
 	log.Println("completing nop bar")
 	nopBar.EnableTriggerComplete()
 
 	p.Wait()
-	qwg.Wait()
 }
