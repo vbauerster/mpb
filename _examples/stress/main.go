@@ -42,7 +42,7 @@ func main() {
 			),
 			mpb.AppendDecorators(
 				decor.OnComplete(decor.EwmaETA(decor.ET_STYLE_GO, 30, decor.WCSyncWidth), ""),
-				decor.EwmaSpeed(decor.SizeB1024(0), "% .2f", 30, decor.WCSyncSpace),
+				decor.EwmaSpeed(decor.SizeB1024(0), "", 30, decor.WCSyncSpace),
 			),
 		)
 
