@@ -35,7 +35,7 @@ func main() {
 		mpb.AppendDecorators(
 			decor.EwmaETA(decor.ET_STYLE_GO, 30),
 			decor.Name(" ] "),
-			decor.EwmaSpeed(decor.SizeB1024(0), "% .2f", 60),
+			decor.EwmaSpeed(decor.SizeB1024(0), "% .2f", 30),
 		),
 	)
 

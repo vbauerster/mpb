@@ -24,7 +24,7 @@ func main() {
 			),
 			mpb.AppendDecorators(
 				decor.OnComplete(decor.Name(" "), ""),
-				decor.OnComplete(decor.EwmaETA(decor.ET_STYLE_GO, 60), ""),
+				decor.OnComplete(decor.EwmaETA(decor.ET_STYLE_GO, 30), ""),
 			),
 		)
 		// simulating some work
