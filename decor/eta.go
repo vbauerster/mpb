@@ -81,6 +81,7 @@ func (d *movingAverageETA) Decor(s Statistics) (string, int) {
 	return d.Format(d.producer(remaining))
 }
 
+// EwmaUpdate is called concurrently with (d *movingAverageETA).Decor
 func (d *movingAverageETA) EwmaUpdate(n int64, dur time.Duration) {
 	if n <= 0 {
 		d.zDur += dur
