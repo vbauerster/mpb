@@ -323,15 +323,12 @@ func (b *Bar) EwmaIncrInt64(n int64, iterDur time.Duration) {
 // if you need to adjust start time of all average based decorators
 // or after progress resume.
 func (b *Bar) DecoratorAverageAdjust(start time.Time) {
-	result := make(chan *sync.WaitGroup)
 	select {
 	case b.operateState <- func(s *bState) {
-		var wg sync.WaitGroup
-		s.decoratorAverageAdjust(start, &wg)
-		result <- &wg
+		for _, d := range s.averageDecorators {
+			d.AverageAdjust(start)
+		}
 	}:
-		wg := <-result
-		wg.Wait()
 	case <-b.ctx.Done():
 	}
 }
@@ -586,17 +583,6 @@ func (s bState) decoratorEwmaUpdate(n int64, dur time.Duration, wg *sync.WaitGro
 		d := d
 		go func() {
 			d.EwmaUpdate(n, dur)
-			wg.Done()
-		}()
-	}
-}
-
-func (s bState) decoratorAverageAdjust(start time.Time, wg *sync.WaitGroup) {
-	wg.Add(len(s.averageDecorators))
-	for _, d := range s.averageDecorators {
-		d := d
-		go func() {
-			d.AverageAdjust(start)
 			wg.Done()
 		}()
 	}
