@@ -401,10 +401,13 @@ func (b *Bar) serve(bs *bState) {
 		case op := <-b.operateState:
 			op(bs)
 		case <-b.ctx.Done():
+			shutdownListeners := bs.shutdownListeners
 			bs.aborted = !bs.completed()
-			bs.decoratorShutdownNotify(&b.container.bwg)
 			b.bs = bs
 			close(b.bsOk)
+			for _, d := range shutdownListeners {
+				d.OnShutdown()
+			}
 			b.container.bwg.Done()
 			return
 		}
@@ -583,17 +586,6 @@ func (s bState) decoratorEwmaUpdate(n int64, dur time.Duration, wg *sync.WaitGro
 		d := d
 		go func() {
 			d.EwmaUpdate(n, dur)
-			wg.Done()
-		}()
-	}
-}
-
-func (s bState) decoratorShutdownNotify(wg *sync.WaitGroup) {
-	wg.Add(len(s.shutdownListeners))
-	for _, d := range s.shutdownListeners {
-		d := d
-		go func() {
-			d.OnShutdown()
 			wg.Done()
 		}()
 	}
