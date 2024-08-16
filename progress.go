@@ -225,13 +225,12 @@ func (p *Progress) Write(b []byte) (int, error) {
 // Wait waits for all bars to complete and finally shutdowns container. After
 // this method has been called, there is no way to reuse `*Progress` instance.
 func (p *Progress) Wait() {
+	p.bwg.Wait()
+	p.Shutdown()
 	// wait for user wg, if any
 	if p.uwg != nil {
 		p.uwg.Wait()
 	}
-
-	p.bwg.Wait()
-	p.Shutdown()
 }
 
 // Shutdown cancels any running bar immediately and then shutdowns `*Progress`
