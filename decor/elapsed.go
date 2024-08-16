@@ -24,7 +24,7 @@ func NewElapsed(style TimeStyle, start time.Time, wcc ...WC) Decorator {
 	var msg string
 	producer := chooseTimeProducer(style)
 	fn := func(s Statistics) string {
-		if !s.Completed {
+		if !s.Completed && !s.Aborted {
 			msg = producer(time.Since(start))
 		}
 		return msg
