@@ -13,16 +13,13 @@ import (
 
 func main() {
 	total, numBars := 100, 2
-	var wg sync.WaitGroup
-	wg.Add(numBars)
+	var bwg sync.WaitGroup
+	bwg.Add(numBars)
 	done := make(chan interface{})
-	p := mpb.New(
-		mpb.WithWidth(64),
-		mpb.WithWaitGroup(&wg),
-		mpb.WithShutdownNotifier(done),
-	)
+	p := mpb.New(mpb.WithWidth(64), mpb.WithShutdownNotifier(done))
 
 	log.SetOutput(p)
+	nopBar := p.MustAdd(0, nil)
 
 	for i := 0; i < numBars; i++ {
 		name := fmt.Sprintf("Bar#%d:", i)
@@ -39,7 +36,7 @@ func main() {
 		)
 		// simulating some work
 		go func() {
-			defer wg.Done()
+			defer bwg.Done()
 			rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 			max := 100 * time.Millisecond
 			for i := 0; i < total; i++ {
@@ -67,11 +64,15 @@ func main() {
 				break quit
 			default:
 				log.Println("waiting for done")
-				time.Sleep(100 * time.Millisecond)
+				time.Sleep(150 * time.Millisecond)
 			}
 		}
 		qwg.Done()
 	}()
+
+	bwg.Wait()
+	log.Println("completing nop bar")
+	nopBar.EnableTriggerComplete()
 
 	p.Wait()
 	qwg.Wait()
