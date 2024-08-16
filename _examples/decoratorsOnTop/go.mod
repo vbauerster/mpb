@@ -2,7 +2,7 @@ module github.com/vbauerster/mpb/_examples/decoratorsOnTop
 
 go 1.17
 
-require github.com/vbauerster/mpb/v8 v8.7.5
+require github.com/vbauerster/mpb/v8 v8.8.0
 
 require (
 	github.com/VividCortex/ewma v1.2.0 // indirect
