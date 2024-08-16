@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/vbauerster/mpb/v8/cwriter"
+	"github.com/vbauerster/mpb/v8/decor"
 )
 
 const defaultRefreshRate = 150 * time.Millisecond
@@ -435,6 +436,9 @@ func (s pState) makeBarState(total int64, filler BarFiller, options ...BarOption
 		filler:      filler,
 		renderReq:   s.renderReq,
 		autoRefresh: s.autoRefresh,
+		extender: func(_ decor.Statistics, rows ...io.Reader) ([]io.Reader, error) {
+			return rows, nil
+		},
 	}
 
 	if total > 0 {

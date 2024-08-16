@@ -27,7 +27,7 @@ type Bar struct {
 }
 
 type syncTable [2][]chan int
-type extenderFunc func([]io.Reader, decor.Statistics) ([]io.Reader, error)
+type extenderFunc func(decor.Statistics, ...io.Reader) ([]io.Reader, error)
 
 // bState is actual bar's state.
 type bState struct {
@@ -427,10 +427,7 @@ func (b *Bar) render(tw int) {
 			b.frameCh <- frame
 			return
 		}
-		frame.rows = append(frame.rows, r)
-		if s.extender != nil {
-			frame.rows, frame.err = s.extender(frame.rows, stat)
-		}
+		frame.rows, frame.err = s.extender(stat, r)
 		if s.aborted || s.completed() {
 			frame.shutdown = s.shutdown
 			frame.rmOnComplete = s.rmOnComplete
