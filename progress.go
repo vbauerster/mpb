@@ -150,6 +150,8 @@ func (p *Progress) MustAdd(total int64, filler BarFiller, options ...BarOption) 
 func (p *Progress) Add(total int64, filler BarFiller, options ...BarOption) (*Bar, error) {
 	if filler == nil {
 		filler = NopStyle().Build()
+	} else if f, ok := filler.(BarFillerFunc); ok && f == nil {
+		filler = NopStyle().Build()
 	}
 	ch := make(chan *Bar)
 	select {
