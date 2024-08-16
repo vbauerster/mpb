@@ -52,6 +52,9 @@ func EwmaETA(style TimeStyle, age float64, wcc ...WC) Decorator {
 //
 //	`wcc` optional WC config
 func MovingAverageETA(style TimeStyle, average ewma.MovingAverage, normalizer TimeNormalizer, wcc ...WC) Decorator {
+	if average == nil {
+		average = NewMedian()
+	}
 	d := &movingAverageETA{
 		WC:         initWC(wcc...),
 		producer:   chooseTimeProducer(style),
