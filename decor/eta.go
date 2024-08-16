@@ -105,15 +105,15 @@ func AverageETA(style TimeStyle, wcc ...WC) Decorator {
 //
 //	`style` one of [ET_STYLE_GO|ET_STYLE_HHMMSS|ET_STYLE_HHMM|ET_STYLE_MMSS]
 //
-//	`startTime` start time
+//	`start` start time
 //
 //	`normalizer` available implementations are [FixedIntervalTimeNormalizer|MaxTolerateTimeNormalizer]
 //
 //	`wcc` optional WC config
-func NewAverageETA(style TimeStyle, startTime time.Time, normalizer TimeNormalizer, wcc ...WC) Decorator {
+func NewAverageETA(style TimeStyle, start time.Time, normalizer TimeNormalizer, wcc ...WC) Decorator {
 	d := &averageETA{
 		WC:         initWC(wcc...),
-		startTime:  startTime,
+		start:      start,
 		normalizer: normalizer,
 		producer:   chooseTimeProducer(style),
 	}
@@ -122,7 +122,7 @@ func NewAverageETA(style TimeStyle, startTime time.Time, normalizer TimeNormaliz
 
 type averageETA struct {
 	WC
-	startTime  time.Time
+	start      time.Time
 	normalizer TimeNormalizer
 	producer   func(time.Duration) string
 }
@@ -130,7 +130,7 @@ type averageETA struct {
 func (d *averageETA) Decor(s Statistics) (string, int) {
 	var remaining time.Duration
 	if s.Current != 0 {
-		durPerItem := float64(time.Since(d.startTime)) / float64(s.Current)
+		durPerItem := float64(time.Since(d.start)) / float64(s.Current)
 		durPerItem = math.Round(durPerItem)
 		remaining = time.Duration((s.Total - s.Current) * int64(durPerItem))
 		if d.normalizer != nil {
@@ -140,8 +140,8 @@ func (d *averageETA) Decor(s Statistics) (string, int) {
 	return d.Format(d.producer(remaining))
 }
 
-func (d *averageETA) AverageAdjust(startTime time.Time) {
-	d.startTime = startTime
+func (d *averageETA) AverageAdjust(start time.Time) {
+	d.start = start
 }
 
 // MaxTolerateTimeNormalizer returns implementation of TimeNormalizer.

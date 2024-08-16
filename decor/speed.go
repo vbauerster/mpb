@@ -120,7 +120,7 @@ func AverageSpeed(unit interface{}, format string, wcc ...WC) Decorator {
 //
 //	`format` printf compatible verb for value, like "%f" or "%d"
 //
-//	`startTime` start time
+//	`start` start time
 //
 //	`wcc` optional WC config
 //
@@ -130,32 +130,32 @@ func AverageSpeed(unit interface{}, format string, wcc ...WC) Decorator {
 //	unit=SizeB1024(0), format="% .1f" output: "1.0 MiB/s"
 //	unit=SizeB1000(0), format="%.1f"  output: "1.0MB/s"
 //	unit=SizeB1000(0), format="% .1f" output: "1.0 MB/s"
-func NewAverageSpeed(unit interface{}, format string, startTime time.Time, wcc ...WC) Decorator {
+func NewAverageSpeed(unit interface{}, format string, start time.Time, wcc ...WC) Decorator {
 	d := &averageSpeed{
-		WC:        initWC(wcc...),
-		startTime: startTime,
-		producer:  chooseSpeedProducer(unit, format),
+		WC:       initWC(wcc...),
+		start:    start,
+		producer: chooseSpeedProducer(unit, format),
 	}
 	return d
 }
 
 type averageSpeed struct {
 	WC
-	startTime time.Time
-	producer  func(float64) string
-	msg       string
+	start    time.Time
+	producer func(float64) string
+	msg      string
 }
 
 func (d *averageSpeed) Decor(s Statistics) (string, int) {
 	if !s.Completed {
-		speed := float64(s.Current) / float64(time.Since(d.startTime))
+		speed := float64(s.Current) / float64(time.Since(d.start))
 		d.msg = d.producer(speed * 1e9)
 	}
 	return d.Format(d.msg)
 }
 
-func (d *averageSpeed) AverageAdjust(startTime time.Time) {
-	d.startTime = startTime
+func (d *averageSpeed) AverageAdjust(start time.Time) {
+	d.start = start
 }
 
 func chooseSpeedProducer(unit interface{}, format string) func(float64) string {
