@@ -552,19 +552,17 @@ func (s *bState) wSyncTable() (table syncTable) {
 	return table
 }
 
-func (s *bState) sortDecorators() {
-	for _, decorators := range s.decorators {
-		for _, d := range decorators {
-			d := unwrap(d)
-			if d, ok := d.(decor.AverageDecorator); ok {
-				s.averageDecorators = append(s.averageDecorators, d)
-			}
-			if d, ok := d.(decor.EwmaDecorator); ok {
-				s.ewmaDecorators = append(s.ewmaDecorators, d)
-			}
-			if d, ok := d.(decor.ShutdownListener); ok {
-				s.shutdownListeners = append(s.shutdownListeners, d)
-			}
+func (s *bState) sortDecorators(decorators []decor.Decorator) {
+	for _, d := range decorators {
+		d := unwrap(d)
+		if d, ok := d.(decor.AverageDecorator); ok {
+			s.averageDecorators = append(s.averageDecorators, d)
+		}
+		if d, ok := d.(decor.EwmaDecorator); ok {
+			s.ewmaDecorators = append(s.ewmaDecorators, d)
+		}
+		if d, ok := d.(decor.ShutdownListener); ok {
+			s.shutdownListeners = append(s.shutdownListeners, d)
 		}
 	}
 }

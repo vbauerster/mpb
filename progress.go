@@ -451,7 +451,5 @@ func (s pState) makeBarState(total int64, filler BarFiller, options ...BarOption
 	bs.buffers[1] = bytes.NewBuffer(make([]byte, 0, 128)) // append
 	bs.buffers[2] = bytes.NewBuffer(make([]byte, 0, 256)) // filler
 
-	bs.sortDecorators()
-
 	return bs
 }
