@@ -54,20 +54,19 @@ func main() {
 	var qwg sync.WaitGroup
 	qwg.Add(1)
 	go func() {
-	quit:
+		defer qwg.Done()
 		for {
 			select {
 			case <-done:
 				// after done, underlying io.Writer returns mpb.DoneError
 				// so following isn't printed
 				log.Println("all done")
-				break quit
+				return
 			default:
 				log.Println("waiting for done")
 				time.Sleep(150 * time.Millisecond)
 			}
 		}
-		qwg.Done()
 	}()
 
 	bwg.Wait()
