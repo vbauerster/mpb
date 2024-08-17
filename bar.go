@@ -424,13 +424,17 @@ func (b *Bar) serve(bs *bState) {
 		case op := <-b.operateState:
 			op(bs)
 		case <-b.ctx.Done():
-			shutdownListeners := bs.shutdownListeners
+			for _, d := range bs.shutdownListeners {
+				b.container.bwg.Add(1)
+				d := d
+				go func() {
+					d.OnShutdown()
+					b.container.bwg.Done()
+				}()
+			}
 			bs.aborted = !bs.completed()
 			b.bs = bs
 			close(b.bsOk)
-			for _, d := range shutdownListeners {
-				d.OnShutdown()
-			}
 			b.container.bwg.Done()
 			return
 		}
