@@ -156,7 +156,9 @@ func (b *Bar) SetRefill(amount int64) {
 	}
 }
 
-// TraverseDecorators traverses all available decorators and calls cb func on each.
+// TraverseDecorators traverses available decorators and calls cb func
+// on each in a new goroutine. Decorators implementing decor.Wrapper
+// interface are unwrapped first.
 func (b *Bar) TraverseDecorators(cb func(decor.Decorator)) {
 	select {
 	case b.operateState <- func(s *bState) {
@@ -327,7 +329,7 @@ func (b *Bar) EwmaSetCurrent(current int64, iterDur time.Duration) {
 	}
 }
 
-// DecoratorAverageAdjust adjusts decorators which implement decor.AverageDecorator interface.
+// DecoratorAverageAdjust adjusts decorators implementing decor.AverageDecorator interface.
 // Call if there is need to set start time after decorators have been constructed.
 func (b *Bar) DecoratorAverageAdjust(start time.Time) {
 	b.TraverseDecorators(func(d decor.Decorator) {
