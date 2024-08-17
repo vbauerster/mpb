@@ -346,10 +346,8 @@ func (b *Bar) EwmaIncrInt64(n int64, iterDur time.Duration) {
 	}
 }
 
-// DecoratorAverageAdjust adjusts all average based decorators.
-// Call if you need to set start time after decorators have been constructed.
-// For this method to work average decorators must implement
-// decor.AverageDecorator interface.
+// DecoratorAverageAdjust adjusts decorators which implement decor.AverageDecorator interface.
+// Call if there is need to set start time after decorators have been constructed.
 func (b *Bar) DecoratorAverageAdjust(start time.Time) {
 	b.TraverseDecorators(func(d decor.Decorator) {
 		if d, ok := d.(decor.AverageDecorator); ok {
