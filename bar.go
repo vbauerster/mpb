@@ -31,27 +31,26 @@ type extenderFunc func(decor.Statistics, ...io.Reader) ([]io.Reader, error)
 
 // bState is actual bar's state.
 type bState struct {
-	id                int
-	priority          int
-	reqWidth          int
-	shutdown          int
-	total             int64
-	current           int64
-	refill            int64
-	trimSpace         bool
-	aborted           bool
-	triggerComplete   bool
-	rmOnComplete      bool
-	noPop             bool
-	autoRefresh       bool
-	buffers           [3]*bytes.Buffer
-	decorators        [2][]decor.Decorator
-	ewmaDecorators    []decor.EwmaDecorator
-	shutdownListeners []decor.ShutdownListener
-	filler            BarFiller
-	extender          extenderFunc
-	renderReq         chan<- time.Time
-	waitBar           *Bar // key for (*pState).queueBars
+	id              int
+	priority        int
+	reqWidth        int
+	shutdown        int
+	total           int64
+	current         int64
+	refill          int64
+	trimSpace       bool
+	aborted         bool
+	triggerComplete bool
+	rmOnComplete    bool
+	noPop           bool
+	autoRefresh     bool
+	buffers         [3]*bytes.Buffer
+	decorators      [2][]decor.Decorator
+	ewmaDecorators  []decor.EwmaDecorator
+	filler          BarFiller
+	extender        extenderFunc
+	renderReq       chan<- time.Time
+	waitBar         *Bar // key for (*pState).queueBars
 }
 
 type renderFrame struct {
@@ -401,19 +400,24 @@ func (b *Bar) Wait() {
 }
 
 func (b *Bar) serve(bs *bState) {
-	for {
-		select {
-		case op := <-b.operateState:
-			op(bs)
-		case <-b.ctx.Done():
-			for _, d := range bs.shutdownListeners {
+	decoratorsOnShutdown := func(decorators []decor.Decorator) {
+		for _, d := range decorators {
+			if d, ok := unwrap(d).(decor.ShutdownListener); ok {
 				b.container.bwg.Add(1)
-				d := d
 				go func() {
 					d.OnShutdown()
 					b.container.bwg.Done()
 				}()
 			}
+		}
+	}
+	for {
+		select {
+		case op := <-b.operateState:
+			op(bs)
+		case <-b.ctx.Done():
+			decoratorsOnShutdown(bs.decorators[0])
+			decoratorsOnShutdown(bs.decorators[1])
 			bs.aborted = !bs.completed()
 			b.bs = bs
 			close(b.bsOk)
@@ -563,9 +567,6 @@ func (s *bState) sortDecorators(decorators []decor.Decorator) {
 		d := unwrap(d)
 		if d, ok := d.(decor.EwmaDecorator); ok {
 			s.ewmaDecorators = append(s.ewmaDecorators, d)
-		}
-		if d, ok := d.(decor.ShutdownListener); ok {
-			s.shutdownListeners = append(s.shutdownListeners, d)
 		}
 	}
 }
