@@ -46,7 +46,6 @@ type bState struct {
 	autoRefresh       bool
 	buffers           [3]*bytes.Buffer
 	decorators        [2][]decor.Decorator
-	averageDecorators []decor.AverageDecorator
 	ewmaDecorators    []decor.EwmaDecorator
 	shutdownListeners []decor.ShutdownListener
 	filler            BarFiller
@@ -319,18 +318,16 @@ func (b *Bar) EwmaIncrInt64(n int64, iterDur time.Duration) {
 	}
 }
 
-// DecoratorAverageAdjust adjusts all average based decorators. Call
-// if you need to adjust start time of all average based decorators
-// or after progress resume.
+// DecoratorAverageAdjust adjusts all average based decorators.
+// Call if you need to set start time after decorators have been constructed.
+// For this method to work average decorators must implement
+// decor.AverageDecorator interface.
 func (b *Bar) DecoratorAverageAdjust(start time.Time) {
-	select {
-	case b.operateState <- func(s *bState) {
-		for _, d := range s.averageDecorators {
+	b.TraverseDecorators(func(d decor.Decorator) {
+		if d, ok := d.(decor.AverageDecorator); ok {
 			d.AverageAdjust(start)
 		}
-	}:
-	case <-b.ctx.Done():
-	}
+	})
 }
 
 // SetPriority changes bar's order among multiple bars. Zero is highest
@@ -552,9 +549,6 @@ func (s *bState) wSyncTable() (table syncTable) {
 func (s *bState) sortDecorators(decorators []decor.Decorator) {
 	for _, d := range decorators {
 		d := unwrap(d)
-		if d, ok := d.(decor.AverageDecorator); ok {
-			s.averageDecorators = append(s.averageDecorators, d)
-		}
 		if d, ok := d.(decor.EwmaDecorator); ok {
 			s.ewmaDecorators = append(s.ewmaDecorators, d)
 		}
