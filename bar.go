@@ -418,8 +418,7 @@ func (b *Bar) serve(bs *bState) {
 		case <-b.ctx.Done():
 			decoratorsOnShutdown(bs.decorators[0])
 			decoratorsOnShutdown(bs.decorators[1])
-			// bar can be aborted by canceling parent ctx
-			// without actually calling b.Abort
+			// bar can be aborted by canceling parent ctx without calling b.Abort
 			bs.aborted = !bs.completed()
 			b.bs = bs
 			close(b.bsOk)
