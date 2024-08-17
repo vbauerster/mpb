@@ -159,25 +159,21 @@ func (b *Bar) SetRefill(amount int64) {
 
 // TraverseDecorators traverses all available decorators and calls cb func on each.
 func (b *Bar) TraverseDecorators(cb func(decor.Decorator)) {
-	var wg sync.WaitGroup
-	iter := make(chan decor.Decorator)
 	select {
 	case b.operateState <- func(s *bState) {
+		var wg sync.WaitGroup
 		for _, decorators := range s.decorators {
+			wg.Add(len(decorators))
 			for _, d := range decorators {
-				iter <- d
+				d := d
+				go func() {
+					cb(unwrap(d))
+					wg.Done()
+				}()
 			}
 		}
-		close(iter)
 		wg.Wait()
 	}:
-		for d := range iter {
-			d := d
-			go func() {
-				cb(unwrap(d))
-				wg.Done()
-			}()
-		}
 	case <-b.ctx.Done():
 	}
 }
@@ -281,15 +277,17 @@ func (b *Bar) EwmaIncrBy(n int, iterDur time.Duration) {
 // EwmaIncrInt64 increments progress by amount of n and updates EWMA based
 // decorators by dur of a single iteration.
 func (b *Bar) EwmaIncrInt64(n int64, iterDur time.Duration) {
-	var wg sync.WaitGroup
-	iter := make(chan decor.EwmaDecorator)
 	select {
 	case b.operateState <- func(s *bState) {
+		var wg sync.WaitGroup
 		wg.Add(len(s.ewmaDecorators))
 		for _, d := range s.ewmaDecorators {
-			iter <- d
+			d := d
+			go func() {
+				d.EwmaUpdate(n, iterDur)
+				wg.Done()
+			}()
 		}
-		close(iter)
 		s.current += n
 		if s.triggerComplete && s.current >= s.total {
 			s.current = s.total
@@ -297,13 +295,6 @@ func (b *Bar) EwmaIncrInt64(n int64, iterDur time.Duration) {
 		}
 		wg.Wait()
 	}:
-		for d := range iter {
-			d := d
-			go func() {
-				d.EwmaUpdate(n, iterDur)
-				wg.Done()
-			}()
-		}
 	case <-b.ctx.Done():
 	}
 }
@@ -314,20 +305,18 @@ func (b *Bar) EwmaSetCurrent(current int64, iterDur time.Duration) {
 	if current < 0 {
 		return
 	}
-	type item struct {
-		decor.EwmaDecorator
-		n int64
-	}
-	var wg sync.WaitGroup
-	iter := make(chan item)
 	select {
 	case b.operateState <- func(s *bState) {
 		n := current - s.current
+		var wg sync.WaitGroup
 		wg.Add(len(s.ewmaDecorators))
 		for _, d := range s.ewmaDecorators {
-			iter <- item{d, n}
+			d := d
+			go func() {
+				d.EwmaUpdate(n, iterDur)
+				wg.Done()
+			}()
 		}
-		close(iter)
 		s.current = current
 		if s.triggerComplete && s.current >= s.total {
 			s.current = s.total
@@ -335,13 +324,6 @@ func (b *Bar) EwmaSetCurrent(current int64, iterDur time.Duration) {
 		}
 		wg.Wait()
 	}:
-		for d := range iter {
-			d := d
-			go func() {
-				d.EwmaUpdate(d.n, iterDur)
-				wg.Done()
-			}()
-		}
 	case <-b.ctx.Done():
 	}
 }
