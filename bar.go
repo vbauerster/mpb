@@ -562,10 +562,9 @@ func (s *bState) wSyncTable() (table syncTable) {
 	return table
 }
 
-func (s *bState) sortDecorators(decorators []decor.Decorator) {
+func (s *bState) populateEwmaDecorators(decorators []decor.Decorator) {
 	for _, d := range decorators {
-		d := unwrap(d)
-		if d, ok := d.(decor.EwmaDecorator); ok {
+		if d, ok := unwrap(d).(decor.EwmaDecorator); ok {
 			s.ewmaDecorators = append(s.ewmaDecorators, d)
 		}
 	}
