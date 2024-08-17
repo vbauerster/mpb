@@ -244,44 +244,6 @@ func (b *Bar) SetCurrent(current int64) {
 	}
 }
 
-// EwmaSetCurrent sets progress' current to an arbitrary value and updates
-// EWMA based decorators by dur of a single iteration.
-func (b *Bar) EwmaSetCurrent(current int64, iterDur time.Duration) {
-	if current < 0 {
-		return
-	}
-	type item struct {
-		decor.EwmaDecorator
-		n int64
-	}
-	var wg sync.WaitGroup
-	iter := make(chan item)
-	select {
-	case b.operateState <- func(s *bState) {
-		n := current - s.current
-		wg.Add(len(s.ewmaDecorators))
-		for _, d := range s.ewmaDecorators {
-			iter <- item{d, n}
-		}
-		close(iter)
-		s.current = current
-		if s.triggerComplete && s.current >= s.total {
-			s.current = s.total
-			s.triggerCompletion(b)
-		}
-		wg.Wait()
-	}:
-		for d := range iter {
-			d := d
-			go func() {
-				d.EwmaUpdate(d.n, iterDur)
-				wg.Done()
-			}()
-		}
-	case <-b.ctx.Done():
-	}
-}
-
 // Increment is a shorthand for b.IncrInt64(1).
 func (b *Bar) Increment() {
 	b.IncrInt64(1)
@@ -339,6 +301,44 @@ func (b *Bar) EwmaIncrInt64(n int64, iterDur time.Duration) {
 			d := d
 			go func() {
 				d.EwmaUpdate(n, iterDur)
+				wg.Done()
+			}()
+		}
+	case <-b.ctx.Done():
+	}
+}
+
+// EwmaSetCurrent sets progress' current to an arbitrary value and updates
+// EWMA based decorators by dur of a single iteration.
+func (b *Bar) EwmaSetCurrent(current int64, iterDur time.Duration) {
+	if current < 0 {
+		return
+	}
+	type item struct {
+		decor.EwmaDecorator
+		n int64
+	}
+	var wg sync.WaitGroup
+	iter := make(chan item)
+	select {
+	case b.operateState <- func(s *bState) {
+		n := current - s.current
+		wg.Add(len(s.ewmaDecorators))
+		for _, d := range s.ewmaDecorators {
+			iter <- item{d, n}
+		}
+		close(iter)
+		s.current = current
+		if s.triggerComplete && s.current >= s.total {
+			s.current = s.total
+			s.triggerCompletion(b)
+		}
+		wg.Wait()
+	}:
+		for d := range iter {
+			d := d
+			go func() {
+				d.EwmaUpdate(d.n, iterDur)
 				wg.Done()
 			}()
 		}
