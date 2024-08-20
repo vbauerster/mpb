@@ -164,7 +164,10 @@ func MaxTolerateTimeNormalizer(maxTolerate time.Duration) TimeNormalizer {
 		}
 		normalized -= time.Since(lastCall)
 		lastCall = time.Now()
-		return normalized
+		if normalized > 0 {
+			return normalized
+		}
+		return remaining
 	})
 }
 
@@ -183,7 +186,10 @@ func FixedIntervalTimeNormalizer(updInterval int) TimeNormalizer {
 		count--
 		normalized -= time.Since(lastCall)
 		lastCall = time.Now()
-		return normalized
+		if normalized > 0 {
+			return normalized
+		}
+		return remaining
 	})
 }
 
