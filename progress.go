@@ -15,6 +15,7 @@ import (
 )
 
 const defaultRefreshRate = 150 * time.Millisecond
+const defaultHmQueueLength = 255
 
 // DoneError represents use after `(*Progress).Wait()` error.
 var DoneError = fmt.Errorf("%T instance can't be reused after %[1]T.Wait()", (*Progress)(nil))
@@ -39,8 +40,9 @@ type pState struct {
 	popPriority  int
 
 	// following are provided/overrided by user
-	refreshRate      time.Duration
+	hmQueueLen       int
 	reqWidth         int
+	refreshRate      time.Duration
 	popCompleted     bool
 	autoRefresh      bool
 	delayRC          <-chan struct{}
@@ -68,7 +70,7 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 	ctx, cancel := context.WithCancel(ctx)
 	s := &pState{
 		ctx:         ctx,
-		hm:          make(heapManager),
+		hmQueueLen:  defaultHmQueueLength,
 		dropS:       make(chan struct{}),
 		dropD:       make(chan struct{}),
 		renderReq:   make(chan time.Time),
@@ -84,6 +86,8 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 			opt(s)
 		}
 	}
+
+	s.hm = make(heapManager, s.hmQueueLen)
 
 	p := &Progress{
 		uwg:          s.uwg,
@@ -333,9 +337,9 @@ func (s *pState) manualRefreshListener(done chan struct{}) {
 }
 
 func (s *pState) render(cw *cwriter.Writer) (err error) {
-	s.hm.sync(s.dropS)
 	iter := make(chan *Bar)
-	go s.hm.iter(iter, s.dropS)
+	s.hm.sync(s.dropS)
+	s.hm.iter(iter, s.dropS)
 
 	var width, height int
 	if cw.IsTerminal() {
@@ -361,9 +365,6 @@ func (s *pState) render(cw *cwriter.Writer) (err error) {
 }
 
 func (s *pState) flush(cw *cwriter.Writer, height int) error {
-	var wg sync.WaitGroup
-	defer wg.Wait() // waiting for all s.push to complete
-
 	var popCount int
 	var rows []io.Reader
 
@@ -393,16 +394,13 @@ func (s *pState) flush(cw *cwriter.Writer, height int) error {
 			if qb, ok := s.queueBars[b]; ok {
 				delete(s.queueBars, b)
 				qb.priority = b.priority
-				wg.Add(1)
-				go s.push(&wg, qb, true)
+				s.hm.push(qb, true)
 			} else if s.popCompleted && !frame.noPop {
 				b.priority = s.popPriority
 				s.popPriority++
-				wg.Add(1)
-				go s.push(&wg, b, false)
+				s.hm.push(b, false)
 			} else if !frame.rmOnComplete {
-				wg.Add(1)
-				go s.push(&wg, b, false)
+				s.hm.push(b, false)
 			}
 		case 2:
 			if s.popCompleted && !frame.noPop {
@@ -411,8 +409,7 @@ func (s *pState) flush(cw *cwriter.Writer, height int) error {
 			}
 			fallthrough
 		default:
-			wg.Add(1)
-			go s.push(&wg, b, false)
+			s.hm.push(b, false)
 		}
 	}
 
@@ -424,11 +421,6 @@ func (s *pState) flush(cw *cwriter.Writer, height int) error {
 	}
 
 	return cw.Flush(len(rows) - popCount)
-}
-
-func (s *pState) push(wg *sync.WaitGroup, b *Bar, sync bool) {
-	s.hm.push(b, sync)
-	wg.Done()
 }
 
 func (s pState) makeBarState(total int64, filler BarFiller, options ...BarOption) *bState {

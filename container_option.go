@@ -30,6 +30,16 @@ func WithWidth(width int) ContainerOption {
 	}
 }
 
+// WithQueueLen sets buffer size of heap manager channel. It must be kept
+// at MAX-1 value, where MAX is number of bars to be rendered at the same
+// time. If len < MAX-1 then progress render loop will hang. Default queue
+// len is 255 which is enough for most use cases.
+func WithQueueLen(len int) ContainerOption {
+	return func(s *pState) {
+		s.hmQueueLen = len
+	}
+}
+
 // WithRefreshRate overrides default 150ms refresh rate.
 func WithRefreshRate(d time.Duration) ContainerOption {
 	return func(s *pState) {
