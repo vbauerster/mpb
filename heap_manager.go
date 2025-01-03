@@ -127,7 +127,14 @@ func (m heapManager) sync(drop <-chan struct{}) {
 
 func (m heapManager) push(b *Bar, sync bool) {
 	data := pushData{b, sync}
-	m <- heapRequest{cmd: h_push, data: data}
+	req := heapRequest{cmd: h_push, data: data}
+	select {
+	case m <- req:
+	default:
+		go func() {
+			m <- req
+		}()
+	}
 }
 
 func (m heapManager) iter(drop <-chan struct{}, iter, iterPop chan<- *Bar) {

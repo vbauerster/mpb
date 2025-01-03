@@ -30,10 +30,11 @@ func WithWidth(width int) ContainerOption {
 	}
 }
 
-// WithQueueLen sets buffer size of heap manager channel. It must be kept
-// at MAX-1 value, where MAX is number of bars to be rendered at the same
-// time. If len < MAX-1 then progress render loop will hang. Default queue
-// len is 255 which is enough for most use cases.
+// WithQueueLen sets buffer size of heap manager channel. Ideally it must be
+// kept at MAX value, where MAX is number of bars to be rendered at the same
+// time. If len < MAX then backpressure to the scheduler will be increased as
+// MAX-len extra goroutines will be launched at each render cycle.
+// Default queue len is 255.
 func WithQueueLen(len int) ContainerOption {
 	return func(s *pState) {
 		s.hmQueueLen = len
