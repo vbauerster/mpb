@@ -10,7 +10,6 @@ const (
 	h_sync heapCmd = iota
 	h_push
 	h_iter
-	h_drain
 	h_fix
 	h_state
 	h_end
@@ -22,8 +21,9 @@ type heapRequest struct {
 }
 
 type iterData struct {
-	iter chan<- *Bar
-	drop <-chan struct{}
+	drop    <-chan struct{}
+	iter    chan<- *Bar
+	iterPop chan<- *Bar
 }
 
 type pushData struct {
@@ -78,23 +78,25 @@ func (m heapManager) run() {
 				select {
 				case data.iter <- b:
 				case <-data.drop:
+					data.iterPop = nil
 					break drop_iter
 				}
 			}
 			close(data.iter)
-		case h_drain:
-			data := req.data.(iterData)
+			if data.iterPop == nil {
+				break
+			}
 		drop_drain:
 			for bHeap.Len() != 0 {
 				bar := heap.Pop(&bHeap).(*Bar)
 				select {
-				case data.iter <- bar:
+				case data.iterPop <- bar:
 				case <-data.drop:
 					heap.Push(&bHeap, bar)
 					break drop_drain
 				}
 			}
-			close(data.iter)
+			close(data.iterPop)
 		case h_fix:
 			data := req.data.(fixData)
 			if data.bar.index < 0 {
@@ -128,14 +130,9 @@ func (m heapManager) push(b *Bar, sync bool) {
 	m <- heapRequest{cmd: h_push, data: data}
 }
 
-func (m heapManager) iter(iter chan<- *Bar, drop <-chan struct{}) {
-	data := iterData{iter, drop}
+func (m heapManager) iter(drop <-chan struct{}, iter, iterPop chan<- *Bar) {
+	data := iterData{drop, iter, iterPop}
 	m <- heapRequest{cmd: h_iter, data: data}
-}
-
-func (m heapManager) drain(iter chan<- *Bar, drop <-chan struct{}) {
-	data := iterData{iter, drop}
-	m <- heapRequest{cmd: h_drain, data: data}
 }
 
 func (m heapManager) fix(b *Bar, priority int, lazy bool) {

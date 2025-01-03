@@ -179,7 +179,7 @@ func (p *Progress) Add(total int64, filler BarFiller, options ...BarOption) (*Ba
 func (p *Progress) traverseBars(cb func(b *Bar) bool) {
 	iter, drop := make(chan *Bar), make(chan struct{})
 	select {
-	case p.operateState <- func(s *pState) { s.hm.iter(iter, drop) }:
+	case p.operateState <- func(s *pState) { s.hm.iter(drop, iter, nil) }:
 		for b := range iter {
 			if !cb(b) {
 				close(drop)
@@ -337,9 +337,9 @@ func (s *pState) manualRefreshListener(done chan struct{}) {
 }
 
 func (s *pState) render(cw *cwriter.Writer) (err error) {
-	iter := make(chan *Bar)
+	iter, iterPop := make(chan *Bar), make(chan *Bar)
 	s.hm.sync(s.dropS)
-	s.hm.iter(iter, s.dropS)
+	s.hm.iter(s.dropS, iter, iterPop)
 
 	var width, height int
 	if cw.IsTerminal() {
@@ -361,15 +361,12 @@ func (s *pState) render(cw *cwriter.Writer) (err error) {
 		go b.render(width)
 	}
 
-	return s.flush(cw, height)
+	return s.flush(cw, height, iterPop)
 }
 
-func (s *pState) flush(cw *cwriter.Writer, height int) error {
+func (s *pState) flush(cw *cwriter.Writer, height int, iter <-chan *Bar) error {
 	var popCount int
 	var rows []io.Reader
-
-	iter := make(chan *Bar)
-	s.hm.drain(iter, s.dropD)
 
 	for b := range iter {
 		frame := <-b.frameCh
