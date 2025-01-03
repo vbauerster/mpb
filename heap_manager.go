@@ -73,27 +73,27 @@ func (m heapManager) run() {
 			syncWidth(aMatrix, drop)
 		case h_iter:
 			data := req.data.(iterData)
-		drop_iter:
+		loop: // unordered iteration
 			for _, b := range bHeap {
 				select {
 				case data.iter <- b:
 				case <-data.drop:
 					data.iterPop = nil
-					break drop_iter
+					break loop
 				}
 			}
 			close(data.iter)
 			if data.iterPop == nil {
 				break
 			}
-		drop_drain:
+		loop_pop: // ordered iteration
 			for bHeap.Len() != 0 {
 				bar := heap.Pop(&bHeap).(*Bar)
 				select {
 				case data.iterPop <- bar:
 				case <-data.drop:
 					heap.Push(&bHeap, bar)
-					break drop_drain
+					break loop_pop
 				}
 			}
 			close(data.iterPop)
