@@ -86,9 +86,11 @@ func (m heapManager) run() {
 			data := req.data.(iterData)
 		drop_drain:
 			for bHeap.Len() != 0 {
+				bar := heap.Pop(&bHeap).(*Bar)
 				select {
-				case data.iter <- heap.Pop(&bHeap).(*Bar):
+				case data.iter <- bar:
 				case <-data.drop:
+					heap.Push(&bHeap, bar)
 					break drop_drain
 				}
 			}
