@@ -15,7 +15,7 @@ import (
 )
 
 const defaultRefreshRate = 150 * time.Millisecond
-const defaultHmQueueLength = 255
+const defaultHmQueueLength = 128
 
 // DoneError represents use after `(*Progress).Wait()` error.
 var DoneError = fmt.Errorf("%T instance can't be reused after %[1]T.Wait()", (*Progress)(nil))

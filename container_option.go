@@ -34,7 +34,7 @@ func WithWidth(width int) ContainerOption {
 // kept at MAX value, where MAX is number of bars to be rendered at the same
 // time. If len < MAX then backpressure to the scheduler will be increased as
 // MAX-len extra goroutines will be launched at each render cycle.
-// Default queue len is 255.
+// Default queue len is 128.
 func WithQueueLen(len int) ContainerOption {
 	return func(s *pState) {
 		s.hmQueueLen = len
