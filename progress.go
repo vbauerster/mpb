@@ -32,12 +32,12 @@ type Progress struct {
 
 // pState holds bars in its priorityQueue, it gets passed to (*Progress).serve monitor goroutine.
 type pState struct {
-	ctx          context.Context
-	hm           heapManager
-	dropS, dropD chan struct{}
-	renderReq    chan time.Time
-	idCount      int
-	popPriority  int
+	ctx         context.Context
+	hm          heapManager
+	iterDrop    chan struct{}
+	renderReq   chan time.Time
+	idCount     int
+	popPriority int
 
 	// following are provided/overrided by user
 	hmQueueLen       int
@@ -71,8 +71,7 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 	s := &pState{
 		ctx:         ctx,
 		hmQueueLen:  defaultHmQueueLength,
-		dropS:       make(chan struct{}),
-		dropD:       make(chan struct{}),
+		iterDrop:    make(chan struct{}),
 		renderReq:   make(chan time.Time),
 		popPriority: math.MinInt32,
 		refreshRate: defaultRefreshRate,
@@ -338,14 +337,14 @@ func (s *pState) manualRefreshListener(done chan struct{}) {
 
 func (s *pState) render(cw *cwriter.Writer) (err error) {
 	iter, iterPop := make(chan *Bar), make(chan *Bar)
-	s.hm.sync(s.dropS)
-	s.hm.iter(s.dropS, iter, iterPop)
+	s.hm.sync(s.iterDrop)
+	s.hm.iter(s.iterDrop, iter, iterPop)
 
 	var width, height int
 	if cw.IsTerminal() {
 		width, height, err = cw.GetTermSize()
 		if err != nil {
-			close(s.dropS)
+			close(s.iterDrop)
 			return err
 		}
 	} else {
@@ -371,7 +370,7 @@ func (s *pState) flush(cw *cwriter.Writer, height int, iter <-chan *Bar) error {
 	for b := range iter {
 		frame := <-b.frameCh
 		if frame.err != nil {
-			close(s.dropD)
+			close(s.iterDrop)
 			b.cancel()
 			return frame.err // b.frameCh is buffered it's ok to return here
 		}
