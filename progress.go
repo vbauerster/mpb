@@ -176,7 +176,7 @@ func (p *Progress) Add(total int64, filler BarFiller, options ...BarOption) (*Ba
 }
 
 func (p *Progress) traverseBars(cb func(b *Bar) bool) {
-	iter, drop := make(chan *Bar), make(chan struct{})
+	drop, iter := make(chan struct{}), make(chan *Bar)
 	select {
 	case p.operateState <- func(s *pState) { s.hm.iter(drop, iter, nil) }:
 		for b := range iter {
