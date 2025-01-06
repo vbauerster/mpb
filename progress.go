@@ -39,7 +39,7 @@ type pState struct {
 	idCount     int
 	popPriority int
 
-	// following are provided/overrided by user
+	// following are provided/overrode by user
 	hmQueueLen       int
 	reqWidth         int
 	refreshRate      time.Duration
