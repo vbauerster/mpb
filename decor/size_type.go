@@ -28,7 +28,7 @@ const (
 // appropriate size marker (KiB, MiB, GiB, TiB).
 type SizeB1024 int64
 
-func (self SizeB1024) Format(st fmt.State, verb rune) {
+func (s SizeB1024) Format(st fmt.State, verb rune) {
 	prec := -1
 	switch verb {
 	case 'f', 'e', 'E':
@@ -44,19 +44,19 @@ func (self SizeB1024) Format(st fmt.State, verb rune) {
 
 	var unit SizeB1024
 	switch {
-	case self < _iKiB:
+	case s < _iKiB:
 		unit = _ib
-	case self < _iMiB:
+	case s < _iMiB:
 		unit = _iKiB
-	case self < _iGiB:
+	case s < _iGiB:
 		unit = _iMiB
-	case self < _iTiB:
+	case s < _iTiB:
 		unit = _iGiB
 	default:
 		unit = _iTiB
 	}
 
-	b := strconv.AppendFloat(make([]byte, 0, 24), float64(self)/float64(unit), byte(verb), prec, 64)
+	b := strconv.AppendFloat(make([]byte, 0, 24), float64(s)/float64(unit), byte(verb), prec, 64)
 	if st.Flag(' ') {
 		b = append(b, ' ')
 	}
@@ -80,7 +80,7 @@ const (
 // appropriate size marker (KB, MB, GB, TB).
 type SizeB1000 int64
 
-func (self SizeB1000) Format(st fmt.State, verb rune) {
+func (s SizeB1000) Format(st fmt.State, verb rune) {
 	prec := -1
 	switch verb {
 	case 'f', 'e', 'E':
@@ -96,19 +96,19 @@ func (self SizeB1000) Format(st fmt.State, verb rune) {
 
 	var unit SizeB1000
 	switch {
-	case self < _KB:
+	case s < _KB:
 		unit = _b
-	case self < _MB:
+	case s < _MB:
 		unit = _KB
-	case self < _GB:
+	case s < _GB:
 		unit = _MB
-	case self < _TB:
+	case s < _TB:
 		unit = _GB
 	default:
 		unit = _TB
 	}
 
-	b := strconv.AppendFloat(make([]byte, 0, 24), float64(self)/float64(unit), byte(verb), prec, 64)
+	b := strconv.AppendFloat(make([]byte, 0, 24), float64(s)/float64(unit), byte(verb), prec, 64)
 	if st.Flag(' ') {
 		b = append(b, ' ')
 	}
