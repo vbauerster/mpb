@@ -276,7 +276,7 @@ func TestAddAfterDone(t *testing.T) {
 
 	_, err := p.Add(100, nil)
 
-	if err != mpb.DoneError {
-		t.Errorf("Expected %q, got: %q\n", mpb.DoneError, err)
+	if err != mpb.ErrDone {
+		t.Errorf("Expected %q, got: %q\n", mpb.ErrDone, err)
 	}
 }

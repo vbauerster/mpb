@@ -17,8 +17,8 @@ import (
 const defaultRefreshRate = 150 * time.Millisecond
 const defaultHmQueueLength = 128
 
-// DoneError represents use after `(*Progress).Wait()` error.
-var DoneError = fmt.Errorf("%T instance can't be reused after %[1]T.Wait()", (*Progress)(nil))
+// ErrDone represents use after `(*Progress).Wait()` error.
+var ErrDone = fmt.Errorf("%T instance can't be reused after %[1]T.Wait()", (*Progress)(nil))
 
 // Progress represents a container that renders one or more progress bars.
 type Progress struct {
@@ -171,7 +171,7 @@ func (p *Progress) Add(total int64, filler BarFiller, options ...BarOption) (*Ba
 	}:
 		return <-ch, nil
 	case <-p.done:
-		return nil, DoneError
+		return nil, ErrDone
 	}
 }
 
@@ -221,7 +221,7 @@ func (p *Progress) Write(b []byte) (int, error) {
 		res := <-ch
 		return res.n, res.err
 	case <-p.done:
-		return 0, DoneError
+		return 0, ErrDone
 	}
 }
 
