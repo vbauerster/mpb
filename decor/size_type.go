@@ -28,14 +28,14 @@ const (
 // appropriate size marker (KiB, MiB, GiB, TiB).
 type SizeB1024 int64
 
-func (s SizeB1024) Format(st fmt.State, verb rune) {
+func (s SizeB1024) Format(f fmt.State, verb rune) {
 	prec := -1
 	switch verb {
 	case 'f', 'e', 'E':
 		prec = 6 // default prec of fmt.Printf("%f|%e|%E")
 		fallthrough
 	case 'b', 'g', 'G', 'x', 'X':
-		if p, ok := st.Precision(); ok {
+		if p, ok := f.Precision(); ok {
 			prec = p
 		}
 	default:
@@ -57,11 +57,11 @@ func (s SizeB1024) Format(st fmt.State, verb rune) {
 	}
 
 	b := strconv.AppendFloat(make([]byte, 0, 24), float64(s)/float64(unit), byte(verb), prec, 64)
-	if st.Flag(' ') {
+	if f.Flag(' ') {
 		b = append(b, ' ')
 	}
 	b = append(b, []byte(unit.String())...)
-	_, err := st.Write(b)
+	_, err := f.Write(b)
 	if err != nil {
 		panic(err)
 	}
@@ -80,14 +80,14 @@ const (
 // appropriate size marker (KB, MB, GB, TB).
 type SizeB1000 int64
 
-func (s SizeB1000) Format(st fmt.State, verb rune) {
+func (s SizeB1000) Format(f fmt.State, verb rune) {
 	prec := -1
 	switch verb {
 	case 'f', 'e', 'E':
 		prec = 6 // default prec of fmt.Printf("%f|%e|%E")
 		fallthrough
 	case 'b', 'g', 'G', 'x', 'X':
-		if p, ok := st.Precision(); ok {
+		if p, ok := f.Precision(); ok {
 			prec = p
 		}
 	default:
@@ -109,11 +109,11 @@ func (s SizeB1000) Format(st fmt.State, verb rune) {
 	}
 
 	b := strconv.AppendFloat(make([]byte, 0, 24), float64(s)/float64(unit), byte(verb), prec, 64)
-	if st.Flag(' ') {
+	if f.Flag(' ') {
 		b = append(b, ' ')
 	}
 	b = append(b, []byte(unit.String())...)
-	_, err := st.Write(b)
+	_, err := f.Write(b)
 	if err != nil {
 		panic(err)
 	}
