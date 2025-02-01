@@ -26,7 +26,7 @@ func main() {
 		for {
 			select {
 			case <-done:
-				// after done, underlying io.Writer returns mpb.DoneError
+				// after done, underlying io.Writer returns mpb.ErrDone
 				// so following isn't printed
 				log.Println("all done")
 				return
