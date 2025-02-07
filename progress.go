@@ -267,23 +267,25 @@ func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 		case fn := <-interceptIO:
 			fn(w)
 		case <-renderReq:
-			err = s.render(w)
-			if err != nil {
-				// (*pState).(autoRefreshListener|manualRefreshListener) may block
-				// if not launching following short lived goroutine
-				go func() {
-					for {
-						select {
-						case <-s.renderReq:
-						case <-p.done:
-							return
+			if w != nil {
+				err = s.render(w)
+				if err != nil {
+					// (*pState).(autoRefreshListener|manualRefreshListener) may block
+					// if not launching following short lived goroutine
+					go func() {
+						for {
+							select {
+							case <-s.renderReq:
+							case <-p.done:
+								return
+							}
 						}
-					}
-				}()
-				p.cancel() // cancel all bars
-				renderReq = nil
-				operateState = nil
-				interceptIO = nil
+					}()
+					p.cancel() // cancel all bars
+					renderReq = nil
+					operateState = nil
+					interceptIO = nil
+				}
 			}
 		case <-p.done:
 			if err != nil {
