@@ -537,22 +537,16 @@ func (s *bState) draw(stat decor.Statistics) (_ io.Reader, err error) {
 }
 
 func (s *bState) wSyncTable() (table syncTable) {
-	var count int
+	var start int
 	var row []chan int
 
-	for i, decorators := range s.decorGroups {
-		for _, d := range decorators {
+	for i, group := range s.decorGroups {
+		for _, d := range group {
 			if ch, ok := d.Sync(); ok {
 				row = append(row, ch)
-				count++
 			}
 		}
-		switch i {
-		case 0:
-			table[i] = row[0:count]
-		default:
-			table[i] = row[len(table[i-1]):count]
-		}
+		table[i], start = row[start:], len(row)
 	}
 	return table
 }
