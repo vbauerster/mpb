@@ -551,10 +551,12 @@ func (s *bState) wSyncTable() (table syncTable) {
 	return table
 }
 
-func (s *bState) populateEwmaDecorators(decorators []decor.Decorator) {
-	for _, d := range decorators {
-		if d, ok := unwrap(d).(decor.EwmaDecorator); ok {
-			s.ewmaDecorators = append(s.ewmaDecorators, d)
+func (s *bState) populateEwmaDecorators() {
+	for _, group := range s.decorGroups {
+		for _, d := range group {
+			if d, ok := unwrap(d).(decor.EwmaDecorator); ok {
+				s.ewmaDecorators = append(s.ewmaDecorators, d)
+			}
 		}
 	}
 }

@@ -19,7 +19,6 @@ func PrependDecorators(decorators ...decor.Decorator) BarOption {
 		}
 	}
 	return func(s *bState) {
-		s.populateEwmaDecorators(group)
 		s.decorGroups[0] = group
 	}
 }
@@ -33,7 +32,6 @@ func AppendDecorators(decorators ...decor.Decorator) BarOption {
 		}
 	}
 	return func(s *bState) {
-		s.populateEwmaDecorators(group)
 		s.decorGroups[1] = group
 	}
 }
