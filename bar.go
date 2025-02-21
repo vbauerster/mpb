@@ -45,7 +45,7 @@ type bState struct {
 	noPop           bool
 	autoRefresh     bool
 	buffers         [3]*bytes.Buffer
-	decorators      [2][]decor.Decorator
+	decorGroups     [2][]decor.Decorator
 	ewmaDecorators  []decor.EwmaDecorator
 	filler          BarFiller
 	extender        extenderFunc
@@ -163,7 +163,7 @@ func (b *Bar) TraverseDecorators(cb func(decor.Decorator)) {
 	select {
 	case b.operateState <- func(s *bState) {
 		var wg sync.WaitGroup
-		for _, decorators := range s.decorators {
+		for _, decorators := range s.decorGroups {
 			wg.Add(len(decorators))
 			for _, d := range decorators {
 				d := d
@@ -402,8 +402,8 @@ func (b *Bar) Wait() {
 }
 
 func (b *Bar) serve(bs *bState) {
-	decoratorsOnShutdown := func(decorators []decor.Decorator) {
-		for _, d := range decorators {
+	decoratorsOnShutdown := func(group []decor.Decorator) {
+		for _, d := range group {
 			if d, ok := unwrap(d).(decor.ShutdownListener); ok {
 				b.container.bwg.Add(1)
 				go func() {
@@ -418,8 +418,8 @@ func (b *Bar) serve(bs *bState) {
 		case op := <-b.operateState:
 			op(bs)
 		case <-b.ctx.Done():
-			decoratorsOnShutdown(bs.decorators[0])
-			decoratorsOnShutdown(bs.decorators[1])
+			decoratorsOnShutdown(bs.decorGroups[0])
+			decoratorsOnShutdown(bs.decorGroups[1])
 			// bar can be aborted by canceling parent ctx without calling b.Abort
 			bs.aborted = !bs.completed()
 			b.bs = bs
@@ -491,8 +491,8 @@ func (b *Bar) wSyncTable() syncTable {
 }
 
 func (s *bState) draw(stat decor.Statistics) (_ io.Reader, err error) {
-	decorFiller := func(buf *bytes.Buffer, decorators []decor.Decorator) (err error) {
-		for _, d := range decorators {
+	decorFiller := func(buf *bytes.Buffer, group []decor.Decorator) (err error) {
+		for _, d := range group {
 			// need to call Decor in any case because of width synchronization
 			str, width := d.Decor(stat)
 			if err != nil {
@@ -511,7 +511,7 @@ func (s *bState) draw(stat decor.Statistics) (_ io.Reader, err error) {
 	}
 
 	for i, buf := range s.buffers[:2] {
-		err = decorFiller(buf, s.decorators[i])
+		err = decorFiller(buf, s.decorGroups[i])
 		if err != nil {
 			return nil, err
 		}
@@ -548,7 +548,7 @@ func (s *bState) wSyncTable() (table syncTable) {
 	var count int
 	var row []chan int
 
-	for i, decorators := range s.decorators {
+	for i, decorators := range s.decorGroups {
 		for _, d := range decorators {
 			if ch, ok := d.Sync(); ok {
 				row = append(row, ch)

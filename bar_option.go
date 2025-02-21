@@ -25,7 +25,7 @@ func PrependDecorators(decorators ...decor.Decorator) BarOption {
 	decorators = inspect(decorators)
 	return func(s *bState) {
 		s.populateEwmaDecorators(decorators)
-		s.decorators[0] = decorators
+		s.decorGroups[0] = decorators
 	}
 }
 
@@ -34,7 +34,7 @@ func AppendDecorators(decorators ...decor.Decorator) BarOption {
 	decorators = inspect(decorators)
 	return func(s *bState) {
 		s.populateEwmaDecorators(decorators)
-		s.decorators[1] = decorators
+		s.decorGroups[1] = decorators
 	}
 }
 
