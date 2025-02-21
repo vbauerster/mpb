@@ -156,24 +156,16 @@ func (b *Bar) SetRefill(amount int64) {
 	}
 }
 
-// TraverseDecorators traverses available decorators and calls cb func
-// on each in a new goroutine. Decorators implementing decor.Wrapper
-// interface are unwrapped first.
+// TraverseDecorators traverses available decorators and calls `cb`
+// on each unwrapped one.
 func (b *Bar) TraverseDecorators(cb func(decor.Decorator)) {
 	select {
 	case b.operateState <- func(s *bState) {
-		var wg sync.WaitGroup
-		for _, decorators := range s.decorGroups {
-			wg.Add(len(decorators))
-			for _, d := range decorators {
-				d := d
-				go func() {
-					cb(unwrap(d))
-					wg.Done()
-				}()
+		for _, group := range s.decorGroups {
+			for _, d := range group {
+				cb(unwrap(d))
 			}
 		}
-		wg.Wait()
 	}:
 	case <-b.ctx.Done():
 	}
