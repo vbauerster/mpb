@@ -442,7 +442,13 @@ func (s pState) makeBarState(total int64, filler BarFiller, options ...BarOption
 		}
 	}
 
-	bs.populateEwmaDecorators()
+	for _, group := range bs.decorGroups {
+		for _, d := range group {
+			if d, ok := unwrap(d).(decor.EwmaDecorator); ok {
+				bs.ewmaDecorators = append(bs.ewmaDecorators, d)
+			}
+		}
+	}
 
 	bs.buffers[0] = bytes.NewBuffer(make([]byte, 0, 128)) // prepend
 	bs.buffers[1] = bytes.NewBuffer(make([]byte, 0, 128)) // append
