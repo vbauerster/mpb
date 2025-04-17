@@ -1247,13 +1247,12 @@ func TestDrawTipOnComplete(t *testing.T) {
 				tmpBuf.Reset()
 				_, err = tmpBuf.ReadFrom(r)
 				if err != nil {
-					t.FailNow()
+					t.Fatalf("read from r error: %s", err.Error())
 				}
 				by := tmpBuf.Bytes()
-
 				got := string(by[:len(by)-1])
 				if !utf8.ValidString(got) {
-					t.Fail()
+					t.Fatalf("not valid utf8: %#v", by)
 				}
 				if got != tc.want {
 					t.Errorf("want: %q %d, got: %q %d\n", tc.want, utf8.RuneCountInString(tc.want), got, utf8.RuneCountInString(got))
