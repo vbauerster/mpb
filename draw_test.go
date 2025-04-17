@@ -782,28 +782,30 @@ func TestDrawDefault(t *testing.T) {
 	var tmpBuf bytes.Buffer
 	for tw, cases := range testSuite {
 		for _, tc := range cases {
-			ps := pState{reqWidth: tc.barWidth}
-			s := ps.makeBarState(tc.total, tc.style.Build())
-			s.current = tc.current
-			s.trimSpace = tc.trim
-			s.refill = tc.refill
-			r, err := s.draw(s.newStatistics(tw))
-			if err != nil {
-				t.Fatalf("tw: %d case %q draw error: %s", tw, tc.name, err.Error())
-			}
-			tmpBuf.Reset()
-			_, err = tmpBuf.ReadFrom(r)
-			if err != nil {
-				t.FailNow()
-			}
-			by := tmpBuf.Bytes()
-			got := string(by[:len(by)-1])
-			if !utf8.ValidString(got) {
-				t.Fail()
-			}
-			if got != tc.want {
-				t.Errorf("termWidth:%d %q want: %q %d, got: %q %d\n", tw, tc.name, tc.want, utf8.RuneCountInString(tc.want), got, utf8.RuneCountInString(got))
-			}
+			t.Run(fmt.Sprintf("%d:%s", tw, tc.name), func(t *testing.T) {
+				ps := pState{reqWidth: tc.barWidth}
+				s := ps.makeBarState(tc.total, tc.style.Build())
+				s.current = tc.current
+				s.trimSpace = tc.trim
+				s.refill = tc.refill
+				r, err := s.draw(s.newStatistics(tw))
+				if err != nil {
+					t.Fatalf("draw error: %s", err.Error())
+				}
+				tmpBuf.Reset()
+				_, err = tmpBuf.ReadFrom(r)
+				if err != nil {
+					t.FailNow()
+				}
+				by := tmpBuf.Bytes()
+				got := string(by[:len(by)-1])
+				if !utf8.ValidString(got) {
+					t.Fail()
+				}
+				if got != tc.want {
+					t.Errorf("want: %q %d, got: %q %d\n", tc.want, utf8.RuneCountInString(tc.want), got, utf8.RuneCountInString(got))
+				}
+			})
 		}
 	}
 }
