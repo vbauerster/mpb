@@ -66,7 +66,9 @@ func ExampleBar_ProxyReader() {
 
 	// create proxy reader
 	proxyReader := bar.ProxyReader(reader)
-	defer proxyReader.Close()
+	defer func() {
+		_ = proxyReader.Close()
+	}()
 
 	// and copy from reader, ignoring errors
 	_, _ = io.Copy(io.Discard, proxyReader)
