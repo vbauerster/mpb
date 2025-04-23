@@ -163,9 +163,7 @@ func (s barStyle) Reverse() BarStyleComposer {
 }
 
 func (s barStyle) Build() BarFiller {
-	bf := &bFiller{
-		metas: s.metas,
-	}
+	bf := &bFiller{metas: s.metas}
 	bf.components[iLbound] = component{
 		width: runewidth.StringWidth(s.style[iLbound]),
 		bytes: []byte(s.style[iLbound]),
