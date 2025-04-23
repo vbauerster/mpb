@@ -10,7 +10,7 @@ import (
 func TestDrawDefault(t *testing.T) {
 	// key is termWidth
 	testSuite := map[int][]struct {
-		style    BarStyleComposer
+		filler   BarFiller
 		name     string
 		total    int64
 		current  int64
@@ -21,14 +21,14 @@ func TestDrawDefault(t *testing.T) {
 	}{
 		0: {
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c{60,20}",
 				total:   60,
 				current: 20,
 				want:    "",
 			},
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c{60,20}trim",
 				total:   60,
 				current: 20,
@@ -38,14 +38,14 @@ func TestDrawDefault(t *testing.T) {
 		},
 		1: {
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c{60,20}",
 				total:   60,
 				current: 20,
 				want:    "",
 			},
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c{60,20}trim",
 				total:   60,
 				current: 20,
@@ -55,14 +55,14 @@ func TestDrawDefault(t *testing.T) {
 		},
 		2: {
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c{60,20}",
 				total:   60,
 				current: 20,
 				want:    "  ",
 			},
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c{60,20}trim",
 				total:   60,
 				current: 20,
@@ -72,14 +72,14 @@ func TestDrawDefault(t *testing.T) {
 		},
 		3: {
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c{60,20}",
 				total:   60,
 				current: 20,
 				want:    "  ",
 			},
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c{60,20}trim",
 				total:   60,
 				current: 20,
@@ -87,14 +87,14 @@ func TestDrawDefault(t *testing.T) {
 				want:    "[-]",
 			},
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c{60,59}",
 				total:   60,
 				current: 59,
 				want:    "  ",
 			},
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c{60,59}trim",
 				total:   60,
 				current: 59,
@@ -102,14 +102,14 @@ func TestDrawDefault(t *testing.T) {
 				want:    "[>]",
 			},
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c{60,60}",
 				total:   60,
 				current: 60,
 				want:    "  ",
 			},
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c{60,60}trim",
 				total:   60,
 				current: 60,
@@ -119,14 +119,14 @@ func TestDrawDefault(t *testing.T) {
 		},
 		4: {
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c{60,20}",
 				total:   60,
 				current: 20,
 				want:    " [] ",
 			},
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c{60,20}trim",
 				total:   60,
 				current: 20,
@@ -134,14 +134,14 @@ func TestDrawDefault(t *testing.T) {
 				want:    "[>-]",
 			},
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c{60,59}",
 				total:   60,
 				current: 59,
 				want:    " [] ",
 			},
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c{60,59}trim",
 				total:   60,
 				current: 59,
@@ -149,14 +149,14 @@ func TestDrawDefault(t *testing.T) {
 				want:    "[=>]",
 			},
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c{60,60}",
 				total:   60,
 				current: 60,
 				want:    " [] ",
 			},
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c{60,60}trim",
 				total:   60,
 				current: 60,
@@ -166,14 +166,14 @@ func TestDrawDefault(t *testing.T) {
 		},
 		5: {
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c{60,20}",
 				total:   60,
 				current: 20,
 				want:    " [-] ",
 			},
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c{60,20}trim",
 				total:   60,
 				current: 20,
@@ -181,14 +181,14 @@ func TestDrawDefault(t *testing.T) {
 				want:    "[>--]",
 			},
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c{60,59}",
 				total:   60,
 				current: 59,
 				want:    " [>] ",
 			},
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c{60,59}trim",
 				total:   60,
 				current: 59,
@@ -196,14 +196,14 @@ func TestDrawDefault(t *testing.T) {
 				want:    "[==>]",
 			},
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c{60,60}",
 				total:   60,
 				current: 60,
 				want:    " [=] ",
 			},
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c{60,60}trim",
 				total:   60,
 				current: 60,
@@ -213,14 +213,14 @@ func TestDrawDefault(t *testing.T) {
 		},
 		6: {
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c{60,20}",
 				total:   60,
 				current: 20,
 				want:    " [>-] ",
 			},
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c{60,20}trim",
 				total:   60,
 				current: 20,
@@ -228,14 +228,14 @@ func TestDrawDefault(t *testing.T) {
 				want:    "[>---]",
 			},
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c{60,59}",
 				total:   60,
 				current: 59,
 				want:    " [=>] ",
 			},
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c{60,59}trim",
 				total:   60,
 				current: 59,
@@ -243,14 +243,14 @@ func TestDrawDefault(t *testing.T) {
 				want:    "[===>]",
 			},
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c{60,60}",
 				total:   60,
 				current: 60,
 				want:    " [==] ",
 			},
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c{60,60}trim",
 				total:   60,
 				current: 60,
@@ -260,14 +260,14 @@ func TestDrawDefault(t *testing.T) {
 		},
 		7: {
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c{60,20}",
 				total:   60,
 				current: 20,
 				want:    " [>--] ",
 			},
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c{60,20}trim",
 				total:   60,
 				current: 20,
@@ -275,14 +275,14 @@ func TestDrawDefault(t *testing.T) {
 				want:    "[=>---]",
 			},
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c{60,59}",
 				total:   60,
 				current: 59,
 				want:    " [==>] ",
 			},
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c{60,59}trim",
 				total:   60,
 				current: 59,
@@ -290,14 +290,14 @@ func TestDrawDefault(t *testing.T) {
 				want:    "[====>]",
 			},
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c{60,60}",
 				total:   60,
 				current: 60,
 				want:    " [===] ",
 			},
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c{60,60}trim",
 				total:   60,
 				current: 60,
@@ -307,14 +307,14 @@ func TestDrawDefault(t *testing.T) {
 		},
 		8: {
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c{60,20}",
 				total:   60,
 				current: 20,
 				want:    " [>---] ",
 			},
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c{60,20}trim",
 				total:   60,
 				current: 20,
@@ -322,14 +322,14 @@ func TestDrawDefault(t *testing.T) {
 				want:    "[=>----]",
 			},
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c{60,59}",
 				total:   60,
 				current: 59,
 				want:    " [===>] ",
 			},
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c{60,59}trim",
 				total:   60,
 				current: 59,
@@ -337,14 +337,14 @@ func TestDrawDefault(t *testing.T) {
 				want:    "[=====>]",
 			},
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c{60,60}",
 				total:   60,
 				current: 60,
 				want:    " [====] ",
 			},
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c{60,60}trim",
 				total:   60,
 				current: 60,
@@ -354,14 +354,14 @@ func TestDrawDefault(t *testing.T) {
 		},
 		80: {
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c{60,20}",
 				total:   60,
 				current: 20,
 				want:    " [========================>---------------------------------------------------] ",
 			},
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c{60,20}trim",
 				total:   60,
 				current: 20,
@@ -369,7 +369,7 @@ func TestDrawDefault(t *testing.T) {
 				want:    "[=========================>----------------------------------------------------]",
 			},
 			{
-				style:    BarStyle(),
+				filler:   BarStyle().Build(),
 				name:     "t,c,bw{60,20,60}",
 				total:    60,
 				current:  20,
@@ -377,7 +377,7 @@ func TestDrawDefault(t *testing.T) {
 				want:     " [==================>---------------------------------------] ",
 			},
 			{
-				style:    BarStyle(),
+				filler:   BarStyle().Build(),
 				name:     "t,c,bw{60,20,60}trim",
 				total:    60,
 				current:  20,
@@ -386,14 +386,14 @@ func TestDrawDefault(t *testing.T) {
 				want:     "[==================>---------------------------------------]",
 			},
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c{60,59}",
 				total:   60,
 				current: 59,
 				want:    " [==========================================================================>-] ",
 			},
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c{60,59}trim",
 				total:   60,
 				current: 59,
@@ -401,7 +401,7 @@ func TestDrawDefault(t *testing.T) {
 				want:    "[============================================================================>-]",
 			},
 			{
-				style:    BarStyle(),
+				filler:   BarStyle().Build(),
 				name:     "t,c,bw{60,59,60}",
 				total:    60,
 				current:  59,
@@ -409,7 +409,7 @@ func TestDrawDefault(t *testing.T) {
 				want:     " [========================================================>-] ",
 			},
 			{
-				style:    BarStyle(),
+				filler:   BarStyle().Build(),
 				name:     "t,c,bw{60,59,60}trim",
 				total:    60,
 				current:  59,
@@ -418,14 +418,14 @@ func TestDrawDefault(t *testing.T) {
 				want:     "[========================================================>-]",
 			},
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c{60,60}",
 				total:   60,
 				current: 60,
 				want:    " [============================================================================] ",
 			},
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c{60,60}trim",
 				total:   60,
 				current: 60,
@@ -433,7 +433,7 @@ func TestDrawDefault(t *testing.T) {
 				want:    "[==============================================================================]",
 			},
 			{
-				style:    BarStyle(),
+				filler:   BarStyle().Build(),
 				name:     "t,c,bw{60,60,60}",
 				total:    60,
 				current:  60,
@@ -441,7 +441,7 @@ func TestDrawDefault(t *testing.T) {
 				want:     " [==========================================================] ",
 			},
 			{
-				style:    BarStyle(),
+				filler:   BarStyle().Build(),
 				name:     "t,c,bw{60,60,60}trim",
 				total:    60,
 				current:  60,
@@ -452,14 +452,14 @@ func TestDrawDefault(t *testing.T) {
 		},
 		99: {
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c{100,1}",
 				total:   100,
 				current: 1,
 				want:    " [>----------------------------------------------------------------------------------------------] ",
 			},
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c{100,1}trim",
 				total:   100,
 				current: 1,
@@ -467,7 +467,7 @@ func TestDrawDefault(t *testing.T) {
 				want:    "[>------------------------------------------------------------------------------------------------]",
 			},
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c,r{100,40,33}",
 				total:   100,
 				current: 40,
@@ -475,7 +475,7 @@ func TestDrawDefault(t *testing.T) {
 				want:    " [+++++++++++++++++++++++++++++++======>---------------------------------------------------------] ",
 			},
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c,r{100,40,33}trim",
 				total:   100,
 				current: 40,
@@ -484,7 +484,7 @@ func TestDrawDefault(t *testing.T) {
 				want:    "[++++++++++++++++++++++++++++++++======>----------------------------------------------------------]",
 			},
 			{
-				style:   BarStyle().Tip("<").Reverse(),
+				filler:  BarStyle().Tip("<").Reverse().Build(),
 				name:    "t,c,r{100,40,33},rev",
 				total:   100,
 				current: 40,
@@ -492,7 +492,7 @@ func TestDrawDefault(t *testing.T) {
 				want:    " [---------------------------------------------------------<======+++++++++++++++++++++++++++++++] ",
 			},
 			{
-				style:   BarStyle().Tip("<").Reverse(),
+				filler:  BarStyle().Tip("<").Reverse().Build(),
 				name:    "t,c,r{100,40,33}trim,rev",
 				total:   100,
 				current: 40,
@@ -501,14 +501,14 @@ func TestDrawDefault(t *testing.T) {
 				want:    "[----------------------------------------------------------<======++++++++++++++++++++++++++++++++]",
 			},
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c{100,99}",
 				total:   100,
 				current: 99,
 				want:    " [=============================================================================================>-] ",
 			},
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c{100,99}trim",
 				total:   100,
 				current: 99,
@@ -516,14 +516,14 @@ func TestDrawDefault(t *testing.T) {
 				want:    "[===============================================================================================>-]",
 			},
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c{100,100}",
 				total:   100,
 				current: 100,
 				want:    " [===============================================================================================] ",
 			},
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c{100,100}trim",
 				total:   100,
 				current: 100,
@@ -531,7 +531,7 @@ func TestDrawDefault(t *testing.T) {
 				want:    "[=================================================================================================]",
 			},
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c,r{100,100,99}",
 				total:   100,
 				current: 100,
@@ -539,7 +539,7 @@ func TestDrawDefault(t *testing.T) {
 				want:    " [++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++=] ",
 			},
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c,r{100,100,99}trim",
 				total:   100,
 				current: 100,
@@ -548,7 +548,7 @@ func TestDrawDefault(t *testing.T) {
 				want:    "[++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++=]",
 			},
 			{
-				style:   BarStyle().Reverse(),
+				filler:  BarStyle().Reverse().Build(),
 				name:    "t,c,r{100,100,99}rev",
 				total:   100,
 				current: 100,
@@ -556,7 +556,7 @@ func TestDrawDefault(t *testing.T) {
 				want:    " [=++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++] ",
 			},
 			{
-				style:   BarStyle().Reverse(),
+				filler:  BarStyle().Reverse().Build(),
 				name:    "t,c,r{100,100,99}trim,rev",
 				total:   100,
 				current: 100,
@@ -565,7 +565,7 @@ func TestDrawDefault(t *testing.T) {
 				want:    "[=++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++]",
 			},
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c,r{100,100,100}",
 				total:   100,
 				current: 100,
@@ -573,7 +573,7 @@ func TestDrawDefault(t *testing.T) {
 				want:    " [+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++] ",
 			},
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c,r{100,100,100}trim",
 				total:   100,
 				current: 100,
@@ -582,7 +582,7 @@ func TestDrawDefault(t *testing.T) {
 				want:    "[+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++]",
 			},
 			{
-				style:   BarStyle().Reverse(),
+				filler:  BarStyle().Reverse().Build(),
 				name:    "t,c,r{100,100,100}rev",
 				total:   100,
 				current: 100,
@@ -590,7 +590,7 @@ func TestDrawDefault(t *testing.T) {
 				want:    " [+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++] ",
 			},
 			{
-				style:   BarStyle().Reverse(),
+				filler:  BarStyle().Reverse().Build(),
 				name:    "t,c,r{100,100,100}trim",
 				total:   100,
 				current: 100,
@@ -601,14 +601,14 @@ func TestDrawDefault(t *testing.T) {
 		},
 		100: {
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c{100,0}",
 				total:   100,
 				current: 0,
 				want:    " [------------------------------------------------------------------------------------------------] ",
 			},
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c{100,0}trim",
 				total:   100,
 				current: 0,
@@ -616,21 +616,21 @@ func TestDrawDefault(t *testing.T) {
 				want:    "[--------------------------------------------------------------------------------------------------]",
 			},
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c{100,1}",
 				total:   100,
 				current: 1,
 				want:    " [>-----------------------------------------------------------------------------------------------] ",
 			},
 			{
-				style:   BarStyle().Tip(""),
+				filler:  BarStyle().Tip("").Build(),
 				name:    "t,c{100,1}empty_tip",
 				total:   100,
 				current: 1,
 				want:    " [=-----------------------------------------------------------------------------------------------] ",
 			},
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c{100,1}trim",
 				total:   100,
 				current: 1,
@@ -638,21 +638,21 @@ func TestDrawDefault(t *testing.T) {
 				want:    "[>-------------------------------------------------------------------------------------------------]",
 			},
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c{100,99}",
 				total:   100,
 				current: 99,
 				want:    " [==============================================================================================>-] ",
 			},
 			{
-				style:   BarStyle().Tip(""),
+				filler:  BarStyle().Tip("").Build(),
 				name:    "t,c{100,99}empty_tip",
 				total:   100,
 				current: 99,
 				want:    " [===============================================================================================-] ",
 			},
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c{100,99}trim",
 				total:   100,
 				current: 99,
@@ -660,14 +660,14 @@ func TestDrawDefault(t *testing.T) {
 				want:    "[================================================================================================>-]",
 			},
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c{100,100}",
 				total:   100,
 				current: 100,
 				want:    " [================================================================================================] ",
 			},
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c{100,100}trim",
 				total:   100,
 				current: 100,
@@ -675,7 +675,7 @@ func TestDrawDefault(t *testing.T) {
 				want:    "[==================================================================================================]",
 			},
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c,r{100,100,99}",
 				total:   100,
 				current: 100,
@@ -683,7 +683,7 @@ func TestDrawDefault(t *testing.T) {
 				want:    " [+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++=] ",
 			},
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c,r{100,100,99}trim",
 				total:   100,
 				current: 100,
@@ -692,7 +692,7 @@ func TestDrawDefault(t *testing.T) {
 				want:    "[+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++=]",
 			},
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c,r{100,100,100}",
 				total:   100,
 				current: 100,
@@ -700,7 +700,7 @@ func TestDrawDefault(t *testing.T) {
 				want:    " [++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++] ",
 			},
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c,r{100,100,100}trim",
 				total:   100,
 				current: 100,
@@ -709,7 +709,7 @@ func TestDrawDefault(t *testing.T) {
 				want:    "[++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++]",
 			},
 			{
-				style:   BarStyle().Reverse(),
+				filler:  BarStyle().Reverse().Build(),
 				name:    "t,c,r{100,100,99}rev",
 				total:   100,
 				current: 100,
@@ -717,7 +717,7 @@ func TestDrawDefault(t *testing.T) {
 				want:    " [=+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++] ",
 			},
 			{
-				style:   BarStyle().Reverse(),
+				filler:  BarStyle().Reverse().Build(),
 				name:    "t,c,r{100,100,99}trim,rev",
 				total:   100,
 				current: 100,
@@ -726,7 +726,7 @@ func TestDrawDefault(t *testing.T) {
 				want:    "[=+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++]",
 			},
 			{
-				style:   BarStyle().Reverse(),
+				filler:  BarStyle().Reverse().Build(),
 				name:    "t,c,r{100,100,100}rev",
 				total:   100,
 				current: 100,
@@ -734,7 +734,7 @@ func TestDrawDefault(t *testing.T) {
 				want:    " [++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++] ",
 			},
 			{
-				style:   BarStyle().Reverse(),
+				filler:  BarStyle().Reverse().Build(),
 				name:    "t,c,r{100,100,100}trim",
 				total:   100,
 				current: 100,
@@ -743,7 +743,7 @@ func TestDrawDefault(t *testing.T) {
 				want:    "[++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++]",
 			},
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c,r{100,40,33}",
 				total:   100,
 				current: 40,
@@ -751,7 +751,7 @@ func TestDrawDefault(t *testing.T) {
 				want:    " [++++++++++++++++++++++++++++++++=====>----------------------------------------------------------] ",
 			},
 			{
-				style:   BarStyle(),
+				filler:  BarStyle().Build(),
 				name:    "t,c,r{100,40,33}trim",
 				total:   100,
 				current: 40,
@@ -760,7 +760,7 @@ func TestDrawDefault(t *testing.T) {
 				want:    "[++++++++++++++++++++++++++++++++======>-----------------------------------------------------------]",
 			},
 			{
-				style:   BarStyle().Tip("<").Reverse(),
+				filler:  BarStyle().Tip("<").Reverse().Build(),
 				name:    "t,c,r{100,40,33},rev",
 				total:   100,
 				current: 40,
@@ -768,7 +768,7 @@ func TestDrawDefault(t *testing.T) {
 				want:    " [----------------------------------------------------------<=====++++++++++++++++++++++++++++++++] ",
 			},
 			{
-				style:   BarStyle().Tip("<").Reverse(),
+				filler:  BarStyle().Tip("<").Reverse().Build(),
 				name:    "t,c,r{100,40,33}trim,rev",
 				total:   100,
 				current: 40,
@@ -784,7 +784,7 @@ func TestDrawDefault(t *testing.T) {
 		for _, tc := range cases {
 			t.Run(fmt.Sprintf("%d:%s", tw, tc.name), func(t *testing.T) {
 				ps := pState{reqWidth: tc.barWidth}
-				s := ps.makeBarState(tc.total, tc.style.Build())
+				s := ps.makeBarState(tc.total, tc.filler)
 				s.current = tc.current
 				s.trimSpace = tc.trim
 				s.refill = tc.refill
@@ -813,7 +813,7 @@ func TestDrawDefault(t *testing.T) {
 func TestDrawTipOnComplete(t *testing.T) {
 	// key is termWidth
 	testSuite := map[int][]struct {
-		style    BarStyleComposer
+		filler   BarFiller
 		name     string
 		total    int64
 		current  int64
@@ -824,14 +824,14 @@ func TestDrawTipOnComplete(t *testing.T) {
 	}{
 		3: {
 			{
-				style:   BarStyle().TipOnComplete(),
+				filler:  BarStyle().TipOnComplete().Build(),
 				name:    "t,c{60,60}",
 				total:   60,
 				current: 60,
 				want:    "  ",
 			},
 			{
-				style:   BarStyle().TipOnComplete(),
+				filler:  BarStyle().TipOnComplete().Build(),
 				name:    "t,c{60,60}trim",
 				total:   60,
 				current: 60,
@@ -841,14 +841,14 @@ func TestDrawTipOnComplete(t *testing.T) {
 		},
 		4: {
 			{
-				style:   BarStyle().TipOnComplete(),
+				filler:  BarStyle().TipOnComplete().Build(),
 				name:    "t,c{60,59}",
 				total:   60,
 				current: 59,
 				want:    " [] ",
 			},
 			{
-				style:   BarStyle().TipOnComplete(),
+				filler:  BarStyle().TipOnComplete().Build(),
 				name:    "t,c{60,59}trim",
 				total:   60,
 				current: 59,
@@ -856,14 +856,14 @@ func TestDrawTipOnComplete(t *testing.T) {
 				want:    "[=>]",
 			},
 			{
-				style:   BarStyle().TipOnComplete(),
+				filler:  BarStyle().TipOnComplete().Build(),
 				name:    "t,c{60,60}",
 				total:   60,
 				current: 60,
 				want:    " [] ",
 			},
 			{
-				style:   BarStyle().TipOnComplete(),
+				filler:  BarStyle().TipOnComplete().Build(),
 				name:    "t,c{60,60}trim",
 				total:   60,
 				current: 60,
@@ -873,14 +873,14 @@ func TestDrawTipOnComplete(t *testing.T) {
 		},
 		5: {
 			{
-				style:   BarStyle().TipOnComplete(),
+				filler:  BarStyle().TipOnComplete().Build(),
 				name:    "t,c{60,59}",
 				total:   60,
 				current: 59,
 				want:    " [>] ",
 			},
 			{
-				style:   BarStyle().TipOnComplete(),
+				filler:  BarStyle().TipOnComplete().Build(),
 				name:    "t,c{60,59}trim",
 				total:   60,
 				current: 59,
@@ -888,14 +888,14 @@ func TestDrawTipOnComplete(t *testing.T) {
 				want:    "[==>]",
 			},
 			{
-				style:   BarStyle().TipOnComplete(),
+				filler:  BarStyle().TipOnComplete().Build(),
 				name:    "t,c{60,60}",
 				total:   60,
 				current: 60,
 				want:    " [>] ",
 			},
 			{
-				style:   BarStyle().TipOnComplete(),
+				filler:  BarStyle().TipOnComplete().Build(),
 				name:    "t,c{60,60}trim",
 				total:   60,
 				current: 60,
@@ -905,14 +905,14 @@ func TestDrawTipOnComplete(t *testing.T) {
 		},
 		6: {
 			{
-				style:   BarStyle().TipOnComplete(),
+				filler:  BarStyle().TipOnComplete().Build(),
 				name:    "t,c{60,59}",
 				total:   60,
 				current: 59,
 				want:    " [=>] ",
 			},
 			{
-				style:   BarStyle().TipOnComplete(),
+				filler:  BarStyle().TipOnComplete().Build(),
 				name:    "t,c{60,59}trim",
 				total:   60,
 				current: 59,
@@ -920,14 +920,14 @@ func TestDrawTipOnComplete(t *testing.T) {
 				want:    "[===>]",
 			},
 			{
-				style:   BarStyle().TipOnComplete(),
+				filler:  BarStyle().TipOnComplete().Build(),
 				name:    "t,c{60,60}",
 				total:   60,
 				current: 60,
 				want:    " [=>] ",
 			},
 			{
-				style:   BarStyle().TipOnComplete(),
+				filler:  BarStyle().TipOnComplete().Build(),
 				name:    "t,c{60,60}trim",
 				total:   60,
 				current: 60,
@@ -937,14 +937,14 @@ func TestDrawTipOnComplete(t *testing.T) {
 		},
 		7: {
 			{
-				style:   BarStyle().TipOnComplete(),
+				filler:  BarStyle().TipOnComplete().Build(),
 				name:    "t,c{60,59}",
 				total:   60,
 				current: 59,
 				want:    " [==>] ",
 			},
 			{
-				style:   BarStyle().TipOnComplete(),
+				filler:  BarStyle().TipOnComplete().Build(),
 				name:    "t,c{60,59}trim",
 				total:   60,
 				current: 59,
@@ -952,14 +952,14 @@ func TestDrawTipOnComplete(t *testing.T) {
 				want:    "[====>]",
 			},
 			{
-				style:   BarStyle().TipOnComplete(),
+				filler:  BarStyle().TipOnComplete().Build(),
 				name:    "t,c{60,60}",
 				total:   60,
 				current: 60,
 				want:    " [==>] ",
 			},
 			{
-				style:   BarStyle().TipOnComplete(),
+				filler:  BarStyle().TipOnComplete().Build(),
 				name:    "t,c{60,60}trim",
 				total:   60,
 				current: 60,
@@ -969,14 +969,14 @@ func TestDrawTipOnComplete(t *testing.T) {
 		},
 		8: {
 			{
-				style:   BarStyle().TipOnComplete(),
+				filler:  BarStyle().TipOnComplete().Build(),
 				name:    "t,c{60,59}",
 				total:   60,
 				current: 59,
 				want:    " [===>] ",
 			},
 			{
-				style:   BarStyle().TipOnComplete(),
+				filler:  BarStyle().TipOnComplete().Build(),
 				name:    "t,c{60,59}trim",
 				total:   60,
 				current: 59,
@@ -984,14 +984,14 @@ func TestDrawTipOnComplete(t *testing.T) {
 				want:    "[=====>]",
 			},
 			{
-				style:   BarStyle().TipOnComplete(),
+				filler:  BarStyle().TipOnComplete().Build(),
 				name:    "t,c{60,60}",
 				total:   60,
 				current: 60,
 				want:    " [===>] ",
 			},
 			{
-				style:   BarStyle().TipOnComplete(),
+				filler:  BarStyle().TipOnComplete().Build(),
 				name:    "t,c{60,60}trim",
 				total:   60,
 				current: 60,
@@ -1001,14 +1001,14 @@ func TestDrawTipOnComplete(t *testing.T) {
 		},
 		80: {
 			{
-				style:   BarStyle().TipOnComplete(),
+				filler:  BarStyle().TipOnComplete().Build(),
 				name:    "t,c{60,59}",
 				total:   60,
 				current: 59,
 				want:    " [==========================================================================>-] ",
 			},
 			{
-				style:   BarStyle().TipOnComplete(),
+				filler:  BarStyle().TipOnComplete().Build(),
 				name:    "t,c{60,59}trim",
 				total:   60,
 				current: 59,
@@ -1016,7 +1016,7 @@ func TestDrawTipOnComplete(t *testing.T) {
 				want:    "[============================================================================>-]",
 			},
 			{
-				style:    BarStyle().TipOnComplete(),
+				filler:   BarStyle().TipOnComplete().Build(),
 				name:     "t,c,bw{60,59,60}",
 				total:    60,
 				current:  59,
@@ -1024,7 +1024,7 @@ func TestDrawTipOnComplete(t *testing.T) {
 				want:     " [========================================================>-] ",
 			},
 			{
-				style:    BarStyle().TipOnComplete(),
+				filler:   BarStyle().TipOnComplete().Build(),
 				name:     "t,c,bw{60,59,60}trim",
 				total:    60,
 				current:  59,
@@ -1033,14 +1033,14 @@ func TestDrawTipOnComplete(t *testing.T) {
 				want:     "[========================================================>-]",
 			},
 			{
-				style:   BarStyle().TipOnComplete(),
+				filler:  BarStyle().TipOnComplete().Build(),
 				name:    "t,c{60,60}",
 				total:   60,
 				current: 60,
 				want:    " [===========================================================================>] ",
 			},
 			{
-				style:   BarStyle().TipOnComplete(),
+				filler:  BarStyle().TipOnComplete().Build(),
 				name:    "t,c{60,60}trim",
 				total:   60,
 				current: 60,
@@ -1048,7 +1048,7 @@ func TestDrawTipOnComplete(t *testing.T) {
 				want:    "[=============================================================================>]",
 			},
 			{
-				style:    BarStyle().TipOnComplete(),
+				filler:   BarStyle().TipOnComplete().Build(),
 				name:     "t,c,bw{60,60,60}",
 				total:    60,
 				current:  60,
@@ -1056,7 +1056,7 @@ func TestDrawTipOnComplete(t *testing.T) {
 				want:     " [=========================================================>] ",
 			},
 			{
-				style:    BarStyle().TipOnComplete(),
+				filler:   BarStyle().TipOnComplete().Build(),
 				name:     "t,c,bw{60,60,60}trim",
 				total:    60,
 				current:  60,
@@ -1067,14 +1067,14 @@ func TestDrawTipOnComplete(t *testing.T) {
 		},
 		99: {
 			{
-				style:   BarStyle().TipOnComplete(),
+				filler:  BarStyle().TipOnComplete().Build(),
 				name:    "t,c{100,99}",
 				total:   100,
 				current: 99,
 				want:    " [=============================================================================================>-] ",
 			},
 			{
-				style:   BarStyle().TipOnComplete(),
+				filler:  BarStyle().TipOnComplete().Build(),
 				name:    "t,c{100,99}trim",
 				total:   100,
 				current: 99,
@@ -1082,14 +1082,14 @@ func TestDrawTipOnComplete(t *testing.T) {
 				want:    "[===============================================================================================>-]",
 			},
 			{
-				style:   BarStyle().TipOnComplete(),
+				filler:  BarStyle().TipOnComplete().Build(),
 				name:    "t,c{100,100}",
 				total:   100,
 				current: 100,
 				want:    " [==============================================================================================>] ",
 			},
 			{
-				style:   BarStyle().TipOnComplete(),
+				filler:  BarStyle().TipOnComplete().Build(),
 				name:    "t,c{100,100}trim",
 				total:   100,
 				current: 100,
@@ -1097,7 +1097,7 @@ func TestDrawTipOnComplete(t *testing.T) {
 				want:    "[================================================================================================>]",
 			},
 			{
-				style:   BarStyle().TipOnComplete(),
+				filler:  BarStyle().TipOnComplete().Build(),
 				name:    "t,c,r{100,100,99}",
 				total:   100,
 				current: 100,
@@ -1105,7 +1105,7 @@ func TestDrawTipOnComplete(t *testing.T) {
 				want:    " [++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++>] ",
 			},
 			{
-				style:   BarStyle().TipOnComplete(),
+				filler:  BarStyle().TipOnComplete().Build(),
 				name:    "t,c,r{100,100,99}trim",
 				total:   100,
 				current: 100,
@@ -1114,7 +1114,7 @@ func TestDrawTipOnComplete(t *testing.T) {
 				want:    "[++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++>]",
 			},
 			{
-				style:   BarStyle().Tip("<").TipOnComplete().Reverse(),
+				filler:  BarStyle().Tip("<").TipOnComplete().Reverse().Build(),
 				name:    `t,c,r{100,100,99}.Tip("<").TipOnComplete().Reverse()`,
 				total:   100,
 				current: 100,
@@ -1122,7 +1122,7 @@ func TestDrawTipOnComplete(t *testing.T) {
 				want:    " [<++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++] ",
 			},
 			{
-				style:   BarStyle().Tip("<").TipOnComplete().Reverse(),
+				filler:  BarStyle().Tip("<").TipOnComplete().Reverse().Build(),
 				name:    `t,c,r{100,100,99}.Tip("<").TipOnComplete().Reverse()trim`,
 				total:   100,
 				current: 100,
@@ -1131,7 +1131,7 @@ func TestDrawTipOnComplete(t *testing.T) {
 				want:    "[<++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++]",
 			},
 			{
-				style:   BarStyle().TipOnComplete(),
+				filler:  BarStyle().TipOnComplete().Build(),
 				name:    "t,c,r{100,100,100}",
 				total:   100,
 				current: 100,
@@ -1139,7 +1139,7 @@ func TestDrawTipOnComplete(t *testing.T) {
 				want:    " [++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++>] ",
 			},
 			{
-				style:   BarStyle().TipOnComplete(),
+				filler:  BarStyle().TipOnComplete().Build(),
 				name:    "t,c,r{100,100,100}trim",
 				total:   100,
 				current: 100,
@@ -1148,7 +1148,7 @@ func TestDrawTipOnComplete(t *testing.T) {
 				want:    "[++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++>]",
 			},
 			{
-				style:   BarStyle().Tip("<").TipOnComplete().Reverse(),
+				filler:  BarStyle().Tip("<").TipOnComplete().Reverse().Build(),
 				name:    `t,c,r{100,100,100}.Tip("<").TipOnComplete().Reverse()`,
 				total:   100,
 				current: 100,
@@ -1156,7 +1156,7 @@ func TestDrawTipOnComplete(t *testing.T) {
 				want:    " [<++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++] ",
 			},
 			{
-				style:   BarStyle().Tip("<").TipOnComplete().Reverse(),
+				filler:  BarStyle().Tip("<").TipOnComplete().Reverse().Build(),
 				name:    `t,c,r{100,100,100}.Tip("<").TipOnComplete().Reverse()trim`,
 				total:   100,
 				current: 100,
@@ -1167,14 +1167,14 @@ func TestDrawTipOnComplete(t *testing.T) {
 		},
 		100: {
 			{
-				style:   BarStyle().TipOnComplete(),
+				filler:  BarStyle().TipOnComplete().Build(),
 				name:    "t,c{100,99}",
 				total:   100,
 				current: 99,
 				want:    " [==============================================================================================>-] ",
 			},
 			{
-				style:   BarStyle().TipOnComplete(),
+				filler:  BarStyle().TipOnComplete().Build(),
 				name:    "t,c{100,99}trim",
 				total:   100,
 				current: 99,
@@ -1182,14 +1182,14 @@ func TestDrawTipOnComplete(t *testing.T) {
 				want:    "[================================================================================================>-]",
 			},
 			{
-				style:   BarStyle().TipOnComplete(),
+				filler:  BarStyle().TipOnComplete().Build(),
 				name:    "t,c{100,100}",
 				total:   100,
 				current: 100,
 				want:    " [===============================================================================================>] ",
 			},
 			{
-				style:   BarStyle().TipOnComplete(),
+				filler:  BarStyle().TipOnComplete().Build(),
 				name:    "t,c{100,100}trim",
 				total:   100,
 				current: 100,
@@ -1197,7 +1197,7 @@ func TestDrawTipOnComplete(t *testing.T) {
 				want:    "[=================================================================================================>]",
 			},
 			{
-				style:   BarStyle().TipOnComplete(),
+				filler:  BarStyle().TipOnComplete().Build(),
 				name:    "t,c,r{100,100,99}",
 				total:   100,
 				current: 100,
@@ -1205,7 +1205,7 @@ func TestDrawTipOnComplete(t *testing.T) {
 				want:    " [+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++>] ",
 			},
 			{
-				style:   BarStyle().TipOnComplete(),
+				filler:  BarStyle().TipOnComplete().Build(),
 				name:    "t,c,r{100,100,99}trim",
 				total:   100,
 				current: 100,
@@ -1214,7 +1214,7 @@ func TestDrawTipOnComplete(t *testing.T) {
 				want:    "[+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++>]",
 			},
 			{
-				style:   BarStyle().TipOnComplete(),
+				filler:  BarStyle().TipOnComplete().Build(),
 				name:    "t,c,r{100,100,100}",
 				total:   100,
 				current: 100,
@@ -1222,7 +1222,7 @@ func TestDrawTipOnComplete(t *testing.T) {
 				want:    " [+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++>] ",
 			},
 			{
-				style:   BarStyle().TipOnComplete(),
+				filler:  BarStyle().TipOnComplete().Build(),
 				name:    "t,c,r{100,100,100}trim",
 				total:   100,
 				current: 100,
@@ -1238,7 +1238,7 @@ func TestDrawTipOnComplete(t *testing.T) {
 		for _, tc := range cases {
 			t.Run(fmt.Sprintf("%d:%s", tw, tc.name), func(t *testing.T) {
 				ps := pState{reqWidth: tc.barWidth}
-				s := ps.makeBarState(tc.total, tc.style.Build())
+				s := ps.makeBarState(tc.total, tc.filler)
 				s.current = tc.current
 				s.trimSpace = tc.trim
 				s.refill = tc.refill
@@ -1267,7 +1267,7 @@ func TestDrawTipOnComplete(t *testing.T) {
 func TestDrawDoubleWidth(t *testing.T) {
 	// key is termWidth
 	testSuite := map[int][]struct {
-		style    BarStyleComposer
+		filler   BarFiller
 		name     string
 		total    int64
 		current  int64
@@ -1278,119 +1278,119 @@ func TestDrawDoubleWidth(t *testing.T) {
 	}{
 		99: {
 			{
-				style:   BarStyle().Lbound("の").Rbound("の"),
+				filler:  BarStyle().Lbound("の").Rbound("の").Build(),
 				name:    `t,c{100,1}.Lbound("の").Rbound("の")`,
 				total:   100,
 				current: 1,
 				want:    " の>--------------------------------------------------------------------------------------------の ",
 			},
 			{
-				style:   BarStyle().Lbound("の").Rbound("の"),
+				filler:  BarStyle().Lbound("の").Rbound("の").Build(),
 				name:    `t,c{100,1}.Lbound("の").Rbound("の")`,
 				total:   100,
 				current: 2,
 				want:    " の=>-------------------------------------------------------------------------------------------の ",
 			},
 			{
-				style:   BarStyle().Tip("だ"),
+				filler:  BarStyle().Tip("だ").Build(),
 				name:    `t,c{100,1}Tip("だ")`,
 				total:   100,
 				current: 1,
 				want:    " [だ---------------------------------------------------------------------------------------------] ",
 			},
 			{
-				style:   BarStyle().Tip("だ"),
+				filler:  BarStyle().Tip("だ").Build(),
 				name:    `t,c{100,2}Tip("だ")`,
 				total:   100,
 				current: 2,
 				want:    " [だ---------------------------------------------------------------------------------------------] ",
 			},
 			{
-				style:   BarStyle().Tip("だ"),
+				filler:  BarStyle().Tip("だ").Build(),
 				name:    `t,c{100,3}Tip("だ")`,
 				total:   100,
 				current: 3,
 				want:    " [=だ--------------------------------------------------------------------------------------------] ",
 			},
 			{
-				style:   BarStyle().Tip("だ"),
+				filler:  BarStyle().Tip("だ").Build(),
 				name:    `t,c{100,99}Tip("だ")`,
 				total:   100,
 				current: 99,
 				want:    " [============================================================================================だ-] ",
 			},
 			{
-				style:   BarStyle().Tip("だ"),
+				filler:  BarStyle().Tip("だ").Build(),
 				name:    `t,c{100,100}Tip("だ")`,
 				total:   100,
 				current: 100,
 				want:    " [===============================================================================================] ",
 			},
 			{
-				style:   BarStyle().Tip("だ").TipOnComplete(),
+				filler:  BarStyle().Tip("だ").TipOnComplete().Build(),
 				name:    `t,c{100,100}.Tip("だ").TipOnComplete()`,
 				total:   100,
 				current: 100,
 				want:    " [=============================================================================================だ] ",
 			},
 			{
-				style:   BarStyle().Filler("の").Tip("だ").Padding("つ"),
+				filler:  BarStyle().Filler("の").Tip("だ").Padding("つ").Build(),
 				name:    `t,c{100,1}Filler("の").Tip("だ").Padding("つ")`,
 				total:   100,
 				current: 1,
 				want:    " [だつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつ…] ",
 			},
 			{
-				style:   BarStyle().Filler("の").Tip("だ").Padding("つ"),
+				filler:  BarStyle().Filler("の").Tip("だ").Padding("つ").Build(),
 				name:    `t,c{100,2}Filler("の").Tip("だ").Padding("つ")`,
 				total:   100,
 				current: 2,
 				want:    " [だつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつつ…] ",
 			},
 			{
-				style:   BarStyle().Filler("の").Tip("だ").Padding("つ"),
+				filler:  BarStyle().Filler("の").Tip("だ").Padding("つ").Build(),
 				name:    `t,c{100,99}Filler("の").Tip("だ").Padding("つ")`,
 				total:   100,
 				current: 99,
 				want:    " [ののののののののののののののののののののののののののののののののののののののののののののののだ…] ",
 			},
 			{
-				style:   BarStyle().Filler("の").Tip("だ").Padding("つ"),
+				filler:  BarStyle().Filler("の").Tip("だ").Padding("つ").Build(),
 				name:    `t,c{100,100}.Filler("の").Tip("だ").Padding("つ")`,
 				total:   100,
 				current: 100,
 				want:    " [ののののののののののののののののののののののののののののののののののののののののののののののの…] ",
 			},
 			{
-				style:   BarStyle().Filler("の").Tip("だ").Padding("つ").Reverse(),
+				filler:  BarStyle().Filler("の").Tip("だ").Padding("つ").Reverse().Build(),
 				name:    `t,c{100,100}Filler("の").Tip("だ").Padding("つ").Reverse()`,
 				total:   100,
 				current: 100,
 				want:    " […ののののののののののののののののののののののののののののののののののののののののののののののの] ",
 			},
 			{
-				style:   BarStyle().Filler("の").Tip("だ").TipOnComplete().Padding("つ"),
+				filler:  BarStyle().Filler("の").Tip("だ").TipOnComplete().Padding("つ").Build(),
 				name:    `t,c{100,99}Filler("の").Tip("だ").TipOnComplete().Padding("つ")`,
 				total:   100,
 				current: 99,
 				want:    " [ののののののののののののののののののののののののののののののののののののののののののののののだ…] ",
 			},
 			{
-				style:   BarStyle().Filler("の").Tip("だ").TipOnComplete().Padding("つ"),
+				filler:  BarStyle().Filler("の").Tip("だ").TipOnComplete().Padding("つ").Build(),
 				name:    `t,c{100,100}.Filler("の").Tip("だ").TipOnComplete().Padding("つ")`,
 				total:   100,
 				current: 100,
 				want:    " [ののののののののののののののののののののののののののののののののののののののののののののののだ…] ",
 			},
 			{
-				style:   BarStyle().Filler("の").Tip("だ").TipOnComplete().Padding("つ").Reverse(),
+				filler:  BarStyle().Filler("の").Tip("だ").TipOnComplete().Padding("つ").Reverse().Build(),
 				name:    `t,c{100,100}.Filler("の").Tip("だ").TipOnComplete().Padding("つ").Reverse()`,
 				total:   100,
 				current: 100,
 				want:    " […だのののののののののののののののののののののののののののののののののののののののののののののの] ",
 			},
 			{
-				style:   BarStyle().Refiller("の"),
+				filler:  BarStyle().Refiller("の").Build(),
 				name:    `t,c,r{100,100,99}Refiller("の")`,
 				total:   100,
 				current: 100,
@@ -1398,7 +1398,7 @@ func TestDrawDoubleWidth(t *testing.T) {
 				want:    " [ののののののののののののののののののののののののののののののののののののののののののののののの=] ",
 			},
 			{
-				style:   BarStyle().Refiller("の"),
+				filler:  BarStyle().Refiller("の").Build(),
 				name:    `t,c,r{100,100,99}Refiller("の")trim`,
 				total:   100,
 				current: 100,
@@ -1414,7 +1414,7 @@ func TestDrawDoubleWidth(t *testing.T) {
 		for _, tc := range cases {
 			t.Run(fmt.Sprintf("%d:%s", tw, tc.name), func(t *testing.T) {
 				ps := pState{reqWidth: tc.barWidth}
-				s := ps.makeBarState(tc.total, tc.style.Build())
+				s := ps.makeBarState(tc.total, tc.filler)
 				s.current = tc.current
 				s.trimSpace = tc.trim
 				s.refill = tc.refill
