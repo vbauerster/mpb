@@ -60,7 +60,9 @@ func (s spinnerStyle) PositionRight() SpinnerStyleComposer {
 }
 
 func (s spinnerStyle) Meta(fn func(string) string) SpinnerStyleComposer {
-	s.meta = fn
+	if fn != nil && len(fn("")) != 0 {
+		s.meta = fn
+	}
 	return s
 }
 
