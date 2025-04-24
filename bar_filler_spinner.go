@@ -40,9 +40,7 @@ type spinnerStyle struct {
 // SpinnerStyle constructs default spinner style which can be altered via
 // SpinnerStyleComposer interface.
 func SpinnerStyle(frames ...string) SpinnerStyleComposer {
-	ss := spinnerStyle{
-		meta: func(s string) string { return s },
-	}
+	ss := spinnerStyle{meta: func(s string) string { return s }}
 	if len(frames) != 0 {
 		ss.frames = frames
 	} else {
