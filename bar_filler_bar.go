@@ -194,34 +194,32 @@ func (s barStyle) Build() BarFiller {
 	}
 	if s.rev {
 		bf.flush = func(w io.Writer, sections [iLen]flushSection) error {
-			flush := makeMetaFlusher(w)
-			err := flush(sections[0].bytes, sections[0].meta)
+			err := sections[0].flush(w)
 			if err != nil {
 				return err
 			}
 			ss := sections[2:]
 			for i := len(ss) - 1; i >= 0; i-- {
-				err := flush(ss[i].bytes, ss[i].meta)
+				err := ss[i].flush(w)
 				if err != nil {
 					return err
 				}
 			}
-			return flush(sections[1].bytes, sections[1].meta)
+			return sections[1].flush(w)
 		}
 	} else {
 		bf.flush = func(w io.Writer, sections [iLen]flushSection) error {
-			flush := makeMetaFlusher(w)
-			err := flush(sections[0].bytes, sections[0].meta)
+			err := sections[0].flush(w)
 			if err != nil {
 				return err
 			}
 			for _, s := range sections[2:] {
-				err := flush(s.bytes, s.meta)
+				err := s.flush(w)
 				if err != nil {
 					return err
 				}
 			}
-			return flush(sections[1].bytes, sections[1].meta)
+			return sections[1].flush(w)
 		}
 	}
 	return bf
@@ -280,13 +278,11 @@ func (s *bFiller) Fill(w io.Writer, stat decor.Statistics) error {
 	})
 }
 
-func makeMetaFlusher(w io.Writer) func([]byte, func(string) string) error {
-	return func(p []byte, meta func(string) string) (err error) {
-		if meta != nil {
-			_, err = io.WriteString(w, meta(string(p)))
-		} else {
-			_, err = w.Write(p)
-		}
-		return err
+func (s flushSection) flush(w io.Writer) (err error) {
+	if s.meta != nil {
+		_, err = io.WriteString(w, s.meta(string(s.bytes)))
+	} else {
+		_, err = w.Write(s.bytes)
 	}
+	return err
 }
