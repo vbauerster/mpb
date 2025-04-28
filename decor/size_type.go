@@ -5,8 +5,8 @@ import (
 	"strconv"
 )
 
-//go:generate stringer -type=SizeB1024 -trimprefix=_i
-//go:generate stringer -type=SizeB1000 -trimprefix=_
+//go:generate go tool stringer -type=SizeB1024 -trimprefix=_i
+//go:generate go tool stringer -type=SizeB1000 -trimprefix=_
 
 var (
 	_ fmt.Formatter = SizeB1024(0)
