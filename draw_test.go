@@ -800,10 +800,14 @@ func TestDrawDefault(t *testing.T) {
 					if err != nil {
 						t.Fatalf("read from r error: %s", err.Error())
 					}
-					by := tmpBuf.Bytes()
-					got := string(by[:len(by)-1])
+					var got string
+					if by := tmpBuf.Bytes(); len(by) != 0 && by[len(by)-1] == '\n' {
+						got = string(by[:len(by)-1])
+					} else {
+						got = string(by)
+					}
 					if !utf8.ValidString(got) {
-						t.Fatalf("not valid utf8: %#v", by)
+						t.Fatalf("not valid utf8: %#v", got)
 					}
 					if got != tc.want {
 						t.Errorf("want: %q %d, got: %q %d\n", tc.want, utf8.RuneCountInString(tc.want), got, utf8.RuneCountInString(got))
@@ -1258,10 +1262,14 @@ func TestDrawTipOnComplete(t *testing.T) {
 					if err != nil {
 						t.Fatalf("read from r error: %s", err.Error())
 					}
-					by := tmpBuf.Bytes()
-					got := string(by[:len(by)-1])
+					var got string
+					if by := tmpBuf.Bytes(); len(by) != 0 && by[len(by)-1] == '\n' {
+						got = string(by[:len(by)-1])
+					} else {
+						got = string(by)
+					}
 					if !utf8.ValidString(got) {
-						t.Fatalf("not valid utf8: %#v", by)
+						t.Fatalf("not valid utf8: %#v", got)
 					}
 					if got != tc.want {
 						t.Errorf("want: %q %d, got: %q %d\n", tc.want, utf8.RuneCountInString(tc.want), got, utf8.RuneCountInString(got))
@@ -1438,10 +1446,14 @@ func TestDrawDoubleWidth(t *testing.T) {
 					if err != nil {
 						t.Fatalf("read from r error: %s", err.Error())
 					}
-					by := tmpBuf.Bytes()
-					got := string(by[:len(by)-1])
+					var got string
+					if by := tmpBuf.Bytes(); len(by) != 0 && by[len(by)-1] == '\n' {
+						got = string(by[:len(by)-1])
+					} else {
+						got = string(by)
+					}
 					if !utf8.ValidString(got) {
-						t.Fatalf("not valid utf8: %#v", by)
+						t.Fatalf("not valid utf8: %#v", got)
 					}
 					if got != tc.want {
 						t.Errorf("want: %q %d, got: %q %d\n", tc.want, utf8.RuneCountInString(tc.want), got, utf8.RuneCountInString(got))
