@@ -8,6 +8,7 @@ import (
 )
 
 func TestDrawDefault(t *testing.T) {
+	t.Parallel()
 	// key is termWidth
 	testSuite := map[int][]struct {
 		filler   BarFiller
@@ -779,38 +780,42 @@ func TestDrawDefault(t *testing.T) {
 		},
 	}
 
-	var tmpBuf bytes.Buffer
 	for tw, cases := range testSuite {
-		for _, tc := range cases {
-			t.Run(fmt.Sprintf("%d:%s", tw, tc.name), func(t *testing.T) {
-				ps := pState{reqWidth: tc.barWidth}
-				s := ps.makeBarState(tc.total, tc.filler)
-				s.current = tc.current
-				s.trimSpace = tc.trim
-				s.refill = tc.refill
-				r, err := s.draw(s.newStatistics(tw))
-				if err != nil {
-					t.Fatalf("draw error: %s", err.Error())
-				}
-				tmpBuf.Reset()
-				_, err = tmpBuf.ReadFrom(r)
-				if err != nil {
-					t.Fatalf("read from r error: %s", err.Error())
-				}
-				by := tmpBuf.Bytes()
-				got := string(by[:len(by)-1])
-				if !utf8.ValidString(got) {
-					t.Fatalf("not valid utf8: %#v", by)
-				}
-				if got != tc.want {
-					t.Errorf("want: %q %d, got: %q %d\n", tc.want, utf8.RuneCountInString(tc.want), got, utf8.RuneCountInString(got))
-				}
-			})
-		}
+		t.Run(fmt.Sprintf("tw_%d", tw), func(t *testing.T) {
+			for _, tc := range cases {
+				// tc := tc // NOTE: uncomment for Go < 1.22, see /doc/faq#closures_and_goroutines
+				t.Run(tc.name, func(t *testing.T) {
+					t.Parallel()
+					var tmpBuf bytes.Buffer
+					ps := pState{reqWidth: tc.barWidth}
+					s := ps.makeBarState(tc.total, tc.filler)
+					s.current = tc.current
+					s.trimSpace = tc.trim
+					s.refill = tc.refill
+					r, err := s.draw(s.newStatistics(tw))
+					if err != nil {
+						t.Fatalf("draw error: %s", err.Error())
+					}
+					_, err = tmpBuf.ReadFrom(r)
+					if err != nil {
+						t.Fatalf("read from r error: %s", err.Error())
+					}
+					by := tmpBuf.Bytes()
+					got := string(by[:len(by)-1])
+					if !utf8.ValidString(got) {
+						t.Fatalf("not valid utf8: %#v", by)
+					}
+					if got != tc.want {
+						t.Errorf("want: %q %d, got: %q %d\n", tc.want, utf8.RuneCountInString(tc.want), got, utf8.RuneCountInString(got))
+					}
+				})
+			}
+		})
 	}
 }
 
 func TestDrawTipOnComplete(t *testing.T) {
+	t.Parallel()
 	// key is termWidth
 	testSuite := map[int][]struct {
 		filler   BarFiller
@@ -1233,38 +1238,42 @@ func TestDrawTipOnComplete(t *testing.T) {
 		},
 	}
 
-	var tmpBuf bytes.Buffer
 	for tw, cases := range testSuite {
-		for _, tc := range cases {
-			t.Run(fmt.Sprintf("%d:%s", tw, tc.name), func(t *testing.T) {
-				ps := pState{reqWidth: tc.barWidth}
-				s := ps.makeBarState(tc.total, tc.filler)
-				s.current = tc.current
-				s.trimSpace = tc.trim
-				s.refill = tc.refill
-				r, err := s.draw(s.newStatistics(tw))
-				if err != nil {
-					t.Fatalf("draw error: %s", err.Error())
-				}
-				tmpBuf.Reset()
-				_, err = tmpBuf.ReadFrom(r)
-				if err != nil {
-					t.Fatalf("read from r error: %s", err.Error())
-				}
-				by := tmpBuf.Bytes()
-				got := string(by[:len(by)-1])
-				if !utf8.ValidString(got) {
-					t.Fatalf("not valid utf8: %#v", by)
-				}
-				if got != tc.want {
-					t.Errorf("want: %q %d, got: %q %d\n", tc.want, utf8.RuneCountInString(tc.want), got, utf8.RuneCountInString(got))
-				}
-			})
-		}
+		t.Run(fmt.Sprintf("tw_%d", tw), func(t *testing.T) {
+			for _, tc := range cases {
+				// tc := tc // NOTE: uncomment for Go < 1.22, see /doc/faq#closures_and_goroutines
+				t.Run(tc.name, func(t *testing.T) {
+					t.Parallel()
+					var tmpBuf bytes.Buffer
+					ps := pState{reqWidth: tc.barWidth}
+					s := ps.makeBarState(tc.total, tc.filler)
+					s.current = tc.current
+					s.trimSpace = tc.trim
+					s.refill = tc.refill
+					r, err := s.draw(s.newStatistics(tw))
+					if err != nil {
+						t.Fatalf("draw error: %s", err.Error())
+					}
+					_, err = tmpBuf.ReadFrom(r)
+					if err != nil {
+						t.Fatalf("read from r error: %s", err.Error())
+					}
+					by := tmpBuf.Bytes()
+					got := string(by[:len(by)-1])
+					if !utf8.ValidString(got) {
+						t.Fatalf("not valid utf8: %#v", by)
+					}
+					if got != tc.want {
+						t.Errorf("want: %q %d, got: %q %d\n", tc.want, utf8.RuneCountInString(tc.want), got, utf8.RuneCountInString(got))
+					}
+				})
+			}
+		})
 	}
 }
 
 func TestDrawDoubleWidth(t *testing.T) {
+	t.Parallel()
 	// key is termWidth
 	testSuite := map[int][]struct {
 		filler   BarFiller
@@ -1409,33 +1418,36 @@ func TestDrawDoubleWidth(t *testing.T) {
 		},
 	}
 
-	var tmpBuf bytes.Buffer
 	for tw, cases := range testSuite {
-		for _, tc := range cases {
-			t.Run(fmt.Sprintf("%d:%s", tw, tc.name), func(t *testing.T) {
-				ps := pState{reqWidth: tc.barWidth}
-				s := ps.makeBarState(tc.total, tc.filler)
-				s.current = tc.current
-				s.trimSpace = tc.trim
-				s.refill = tc.refill
-				r, err := s.draw(s.newStatistics(tw))
-				if err != nil {
-					t.Fatalf("draw error: %s", err.Error())
-				}
-				tmpBuf.Reset()
-				_, err = tmpBuf.ReadFrom(r)
-				if err != nil {
-					t.Fatalf("read from r error: %s", err.Error())
-				}
-				by := tmpBuf.Bytes()
-				got := string(by[:len(by)-1])
-				if !utf8.ValidString(got) {
-					t.Fatalf("not valid utf8: %#v", by)
-				}
-				if got != tc.want {
-					t.Errorf("want: %q %d, got: %q %d\n", tc.want, utf8.RuneCountInString(tc.want), got, utf8.RuneCountInString(got))
-				}
-			})
-		}
+		t.Run(fmt.Sprintf("tw_%d", tw), func(t *testing.T) {
+			for _, tc := range cases {
+				// tc := tc // NOTE: uncomment for Go < 1.22, see /doc/faq#closures_and_goroutines
+				t.Run(tc.name, func(t *testing.T) {
+					t.Parallel()
+					var tmpBuf bytes.Buffer
+					ps := pState{reqWidth: tc.barWidth}
+					s := ps.makeBarState(tc.total, tc.filler)
+					s.current = tc.current
+					s.trimSpace = tc.trim
+					s.refill = tc.refill
+					r, err := s.draw(s.newStatistics(tw))
+					if err != nil {
+						t.Fatalf("draw error: %s", err.Error())
+					}
+					_, err = tmpBuf.ReadFrom(r)
+					if err != nil {
+						t.Fatalf("read from r error: %s", err.Error())
+					}
+					by := tmpBuf.Bytes()
+					got := string(by[:len(by)-1])
+					if !utf8.ValidString(got) {
+						t.Fatalf("not valid utf8: %#v", by)
+					}
+					if got != tc.want {
+						t.Errorf("want: %q %d, got: %q %d\n", tc.want, utf8.RuneCountInString(tc.want), got, utf8.RuneCountInString(got))
+					}
+				})
+			}
+		})
 	}
 }
