@@ -44,12 +44,12 @@ type component struct {
 	bytes []byte
 }
 
-type flushSection struct {
+type barSection struct {
 	meta  func(string) string
 	bytes []byte
 }
 
-type barSections [iLen]flushSection
+type barSections [iLen]barSection
 
 type bFiller struct {
 	components [iLen]component
@@ -245,7 +245,7 @@ func (s *bFiller) Fill(w io.Writer, stat decor.Statistics) error {
 		padding = append(padding, "…"...)
 	}
 
-	return s.flushOp([iLen]flushSection{
+	return s.flushOp([iLen]barSection{
 		{s.metas[iLbound], s.components[iLbound].bytes},
 		{s.metas[iRbound], s.components[iRbound].bytes},
 		{s.metas[iRefiller], refilling},
@@ -255,7 +255,7 @@ func (s *bFiller) Fill(w io.Writer, stat decor.Statistics) error {
 	}, w)
 }
 
-func (s flushSection) flush(w io.Writer) (err error) {
+func (s barSection) flush(w io.Writer) (err error) {
 	if s.meta != nil {
 		_, err = io.WriteString(w, s.meta(string(s.bytes)))
 	} else {
