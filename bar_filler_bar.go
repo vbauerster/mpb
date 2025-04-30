@@ -51,7 +51,7 @@ type barSection struct {
 
 type barSections [iLen]barSection
 
-type bFiller struct {
+type barFiller struct {
 	components [iLen]component
 	metas      [iLen]func(string) string
 	flushOp    func(barSections, io.Writer) error
@@ -165,7 +165,7 @@ func (s barStyle) Reverse() BarStyleComposer {
 }
 
 func (s barStyle) Build() BarFiller {
-	bf := &bFiller{metas: s.metas}
+	bf := &barFiller{metas: s.metas}
 	bf.components[iLbound] = component{
 		width: runewidth.StringWidth(s.style[iLbound]),
 		bytes: []byte(s.style[iLbound]),
@@ -202,7 +202,7 @@ func (s barStyle) Build() BarFiller {
 	return bf
 }
 
-func (s *bFiller) Fill(w io.Writer, stat decor.Statistics) error {
+func (s *barFiller) Fill(w io.Writer, stat decor.Statistics) error {
 	width := internal.CheckRequestedWidth(stat.RequestedWidth, stat.AvailableWidth)
 	// don't count brackets as progress
 	width -= (s.components[iLbound].width + s.components[iRbound].width)
