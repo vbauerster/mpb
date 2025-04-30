@@ -49,10 +49,12 @@ type flushSection struct {
 	bytes []byte
 }
 
+type barSections [iLen]flushSection
+
 type bFiller struct {
 	components [iLen]component
 	metas      [iLen]func(string) string
-	flush      func(io.Writer, [iLen]flushSection) error
+	flushOp    func(barSections, io.Writer) error
 	tip        struct {
 		onComplete bool
 		count      uint
@@ -193,34 +195,9 @@ func (s barStyle) Build() BarFiller {
 		}
 	}
 	if s.rev {
-		bf.flush = func(w io.Writer, sections [iLen]flushSection) error {
-			err := sections[0].flush(w)
-			if err != nil {
-				return err
-			}
-			ss := sections[2:]
-			for i := len(ss) - 1; i >= 0; i-- {
-				err := ss[i].flush(w)
-				if err != nil {
-					return err
-				}
-			}
-			return sections[1].flush(w)
-		}
+		bf.flushOp = barSections.flushRev
 	} else {
-		bf.flush = func(w io.Writer, sections [iLen]flushSection) error {
-			err := sections[0].flush(w)
-			if err != nil {
-				return err
-			}
-			for _, s := range sections[2:] {
-				err := s.flush(w)
-				if err != nil {
-					return err
-				}
-			}
-			return sections[1].flush(w)
-		}
+		bf.flushOp = barSections.flush
 	}
 	return bf
 }
@@ -268,14 +245,14 @@ func (s *bFiller) Fill(w io.Writer, stat decor.Statistics) error {
 		padding = append(padding, "…"...)
 	}
 
-	return s.flush(w, [iLen]flushSection{
+	return s.flushOp([iLen]flushSection{
 		{s.metas[iLbound], s.components[iLbound].bytes},
 		{s.metas[iRbound], s.components[iRbound].bytes},
 		{s.metas[iRefiller], refilling},
 		{s.metas[iFiller], filling},
 		{s.metas[iTip], tip.bytes},
 		{s.metas[iPadding], padding},
-	})
+	}, w)
 }
 
 func (s flushSection) flush(w io.Writer) (err error) {
@@ -285,4 +262,33 @@ func (s flushSection) flush(w io.Writer) (err error) {
 		_, err = w.Write(s.bytes)
 	}
 	return err
+}
+
+func (bb barSections) flush(w io.Writer) error {
+	err := bb[0].flush(w)
+	if err != nil {
+		return err
+	}
+	for _, s := range bb[2:] {
+		err := s.flush(w)
+		if err != nil {
+			return err
+		}
+	}
+	return bb[1].flush(w)
+}
+
+func (bb barSections) flushRev(w io.Writer) error {
+	err := bb[0].flush(w)
+	if err != nil {
+		return err
+	}
+	ss := bb[2:]
+	for i := len(ss) - 1; i >= 0; i-- {
+		err := ss[i].flush(w)
+		if err != nil {
+			return err
+		}
+	}
+	return bb[1].flush(w)
 }
