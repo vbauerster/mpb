@@ -245,7 +245,7 @@ func (s *barFiller) Fill(w io.Writer, stat decor.Statistics) error {
 		padding = append(padding, "…"...)
 	}
 
-	return s.flushOp([iLen]barSection{
+	return s.flushOp(barSections{
 		{s.metas[iLbound], s.components[iLbound].bytes},
 		{s.metas[iRbound], s.components[iRbound].bytes},
 		{s.metas[iRefiller], refilling},
