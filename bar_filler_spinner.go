@@ -24,7 +24,7 @@ type SpinnerStyleComposer interface {
 	Meta(func(string) string) SpinnerStyleComposer
 }
 
-type sFiller struct {
+type spinnerFiller struct {
 	frames   []string
 	count    uint
 	meta     func(string) string
@@ -67,7 +67,7 @@ func (s spinnerStyle) Meta(fn func(string) string) SpinnerStyleComposer {
 }
 
 func (s spinnerStyle) Build() BarFiller {
-	sf := &sFiller{
+	sf := &spinnerFiller{
 		frames: s.frames,
 		meta:   s.meta,
 	}
@@ -88,7 +88,7 @@ func (s spinnerStyle) Build() BarFiller {
 	return sf
 }
 
-func (s *sFiller) Fill(w io.Writer, stat decor.Statistics) error {
+func (s *spinnerFiller) Fill(w io.Writer, stat decor.Statistics) error {
 	width := internal.CheckRequestedWidth(stat.RequestedWidth, stat.AvailableWidth)
 	frame := s.frames[s.count%uint(len(s.frames))]
 	frameWidth := runewidth.StringWidth(frame)
