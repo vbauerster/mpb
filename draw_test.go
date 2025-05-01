@@ -1463,3 +1463,147 @@ func TestDrawDoubleWidth(t *testing.T) {
 		})
 	}
 }
+
+func TestDrawMeta(t *testing.T) {
+	t.Parallel()
+	meta := func(s string) string { return "{" + s + "}" }
+	nopMeta := func(s string) string { return s }
+	// key is termWidth
+	testSuite := map[int][]struct {
+		filler   BarFiller
+		name     string
+		total    int64
+		current  int64
+		refill   int64
+		barWidth int
+		want     string
+	}{
+		80: {
+			{
+				filler:  BarStyle().LboundMeta(meta).RboundMeta(meta).Build(),
+				name:    "LboundMeta RboundMeta",
+				total:   100,
+				current: 0,
+				want:    " {[}----------------------------------------------------------------------------{]} ",
+			},
+			{
+				filler:  BarStyle().TipMeta(meta).Build(),
+				name:    "TipMeta 1",
+				total:   100,
+				current: 1,
+				want:    " [{>}---------------------------------------------------------------------------] ",
+			},
+			{
+				filler:  BarStyle().TipMeta(meta).Tip("").Build(),
+				name:    "TipMeta EmptyTip 1",
+				total:   100,
+				current: 1,
+				want:    " [={}---------------------------------------------------------------------------] ",
+			},
+			{
+				filler:  BarStyle().FillerMeta(meta).Build(),
+				name:    "FillerMeta 1",
+				total:   100,
+				current: 1,
+				want:    " [{}>---------------------------------------------------------------------------] ",
+			},
+			{
+				filler:  BarStyle().FillerMeta(meta).Build(),
+				name:    "FillerMeta 2",
+				total:   100,
+				current: 2,
+				want:    " [{=}>--------------------------------------------------------------------------] ",
+			},
+			{
+				filler:  BarStyle().FillerMeta(meta).Build(),
+				name:    "FillerMeta 4",
+				total:   100,
+				current: 4,
+				want:    " [{==}>-------------------------------------------------------------------------] ",
+			},
+			{
+				filler:  BarStyle().PaddingMeta(meta).Build(),
+				name:    "PaddingMeta",
+				total:   100,
+				current: 0,
+				want:    " [{----------------------------------------------------------------------------}] ",
+			},
+			{
+				filler:  BarStyle().RefillerMeta(meta).Build(),
+				name:    "RefillerMeta",
+				total:   100,
+				current: 80,
+				refill:  50,
+				want:    " [{++++++++++++++++++++++++++++++++++++++}======================>---------------] ",
+			},
+			{
+				filler:  BarStyle().RefillerMeta(meta).FillerMeta(meta).PaddingMeta(meta).TipMeta(meta).Build(),
+				name:    "RefillerMeta FillerMeta PaddingMeta TipMeta",
+				total:   100,
+				current: 80,
+				refill:  50,
+				want:    " [{++++++++++++++++++++++++++++++++++++++}{======================}{>}{---------------}] ",
+			},
+			{
+				filler:  BarStyle().RefillerMeta(meta).FillerMeta(meta).PaddingMeta(meta).TipMeta(meta).LboundMeta(meta).RboundMeta(meta).Build(),
+				name:    "RefillerMeta FillerMeta PaddingMeta TipMeta LboundMeta RboundMeta",
+				total:   100,
+				current: 80,
+				refill:  50,
+				want:    " {[}{++++++++++++++++++++++++++++++++++++++}{======================}{>}{---------------}{]} ",
+			},
+			{
+				filler:  BarStyle().RefillerMeta(nopMeta).FillerMeta(nopMeta).PaddingMeta(nopMeta).TipMeta(nopMeta).LboundMeta(nopMeta).RboundMeta(nopMeta).Build(),
+				name:    "RefillerMeta FillerMeta PaddingMeta TipMeta LboundMeta RboundMeta nopMeta",
+				total:   100,
+				current: 80,
+				refill:  50,
+				want:    " [++++++++++++++++++++++++++++++++++++++======================>---------------] ",
+			},
+			{
+				filler:  BarStyle().RefillerMeta(nil).FillerMeta(nil).PaddingMeta(nil).TipMeta(nil).LboundMeta(nil).RboundMeta(nil).Build(),
+				name:    "RefillerMeta FillerMeta PaddingMeta TipMeta LboundMeta RboundMeta nilMeta",
+				total:   100,
+				current: 80,
+				refill:  50,
+				want:    " [++++++++++++++++++++++++++++++++++++++======================>---------------] ",
+			},
+		},
+	}
+
+	for tw, cases := range testSuite {
+		t.Run(fmt.Sprintf("tw_%d", tw), func(t *testing.T) {
+			for _, tc := range cases {
+				// tc := tc // NOTE: uncomment for Go < 1.22, see /doc/faq#closures_and_goroutines
+				t.Run(tc.name, func(t *testing.T) {
+					t.Parallel()
+					var tmpBuf bytes.Buffer
+					ps := pState{reqWidth: tc.barWidth}
+					s := ps.makeBarState(tc.total, tc.filler)
+					s.current = tc.current
+					s.refill = tc.refill
+					r, err := s.draw(s.newStatistics(tw))
+					if err != nil {
+						t.Fatalf("draw error: %s", err.Error())
+					}
+					_, err = tmpBuf.ReadFrom(r)
+					if err != nil {
+						t.Fatalf("read from r error: %s", err.Error())
+					}
+					var got string
+					if by := tmpBuf.Bytes(); len(by) != 0 && by[len(by)-1] == '\n' {
+						got = string(by[:len(by)-1])
+					} else {
+						got = string(by)
+					}
+					if !utf8.ValidString(got) {
+						t.Fatalf("not valid utf8: %#v", got)
+					}
+					if got != tc.want {
+						t.Errorf("want: %q %d, got: %q %d\n", tc.want, utf8.RuneCountInString(tc.want), got, utf8.RuneCountInString(got))
+					}
+				})
+			}
+		})
+	}
+}
