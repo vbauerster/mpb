@@ -4,7 +4,7 @@ go 1.23.0
 
 toolchain go1.24.2
 
-require github.com/vbauerster/mpb/v8 v8.9.3
+require github.com/vbauerster/mpb/v8 v8.10.0
 
 require (
 	github.com/VividCortex/ewma v1.2.0 // indirect
