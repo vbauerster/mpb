@@ -271,9 +271,8 @@ func (bb barSections) flushRev(w io.Writer) error {
 	if err != nil {
 		return err
 	}
-	ss := bb[2:]
-	for i := len(ss) - 1; i >= 0; i-- {
-		err := ss[i].flush(w)
+	for i := len(bb) - 1; i >= 2; i-- {
+		err := bb[i].flush(w)
 		if err != nil {
 			return err
 		}
