@@ -86,9 +86,7 @@ func (s barStyle) Lbound(bound string) BarStyleComposer {
 }
 
 func (s barStyle) LboundMeta(fn func(string) string) BarStyleComposer {
-	if fn != nil && len(fn("")) != 0 {
-		s.metas[iLbound] = fn
-	}
+	s.metas[iLbound] = fn
 	return s
 }
 
@@ -98,9 +96,7 @@ func (s barStyle) Rbound(bound string) BarStyleComposer {
 }
 
 func (s barStyle) RboundMeta(fn func(string) string) BarStyleComposer {
-	if fn != nil && len(fn("")) != 0 {
-		s.metas[iRbound] = fn
-	}
+	s.metas[iRbound] = fn
 	return s
 }
 
@@ -110,9 +106,7 @@ func (s barStyle) Filler(filler string) BarStyleComposer {
 }
 
 func (s barStyle) FillerMeta(fn func(string) string) BarStyleComposer {
-	if fn != nil && len(fn("")) != 0 {
-		s.metas[iFiller] = fn
-	}
+	s.metas[iFiller] = fn
 	return s
 }
 
@@ -122,9 +116,7 @@ func (s barStyle) Refiller(refiller string) BarStyleComposer {
 }
 
 func (s barStyle) RefillerMeta(fn func(string) string) BarStyleComposer {
-	if fn != nil && len(fn("")) != 0 {
-		s.metas[iRefiller] = fn
-	}
+	s.metas[iRefiller] = fn
 	return s
 }
 
@@ -134,9 +126,7 @@ func (s barStyle) Padding(padding string) BarStyleComposer {
 }
 
 func (s barStyle) PaddingMeta(fn func(string) string) BarStyleComposer {
-	if fn != nil && len(fn("")) != 0 {
-		s.metas[iPadding] = fn
-	}
+	s.metas[iPadding] = fn
 	return s
 }
 
@@ -148,9 +138,7 @@ func (s barStyle) Tip(frames ...string) BarStyleComposer {
 }
 
 func (s barStyle) TipMeta(fn func(string) string) BarStyleComposer {
-	if fn != nil && len(fn("")) != 0 {
-		s.metas[iTip] = fn
-	}
+	s.metas[iTip] = fn
 	return s
 }
 
