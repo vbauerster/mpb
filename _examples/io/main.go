@@ -19,7 +19,7 @@ func main() {
 			_, _ = io.Copy(w, io.LimitReader(rand.Reader, 64*1024))
 			time.Sleep(time.Second / 10)
 		}
-		w.Close()
+		_ = w.Close()
 	}()
 
 	p := mpb.New(
@@ -41,7 +41,9 @@ func main() {
 
 	// create proxy reader
 	proxyReader := bar.ProxyReader(r)
-	defer proxyReader.Close()
+	defer func() {
+		_ = proxyReader.Close()
+	}()
 
 	// copy from proxyReader, ignoring errors
 	_, _ = io.Copy(io.Discard, proxyReader)
