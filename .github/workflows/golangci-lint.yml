@@ -2,7 +2,7 @@ name: golangci-lint
 
 on:
   push:
-    tags:
+    tags-ignore:
       - v*
     branches:
       - master
