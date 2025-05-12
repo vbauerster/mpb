@@ -17,7 +17,7 @@ func BenchmarkWithFprintf(b *testing.B) {
 	verb := fmt.Sprintf("%s%%d%s", escOpen, cuuAndEd)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		fmt.Fprintf(out, verb, lines)
+		_, _ = fmt.Fprintf(out, verb, lines)
 	}
 }
 
