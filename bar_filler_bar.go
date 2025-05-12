@@ -10,15 +10,15 @@ import (
 
 const (
 	iLbound = iota
-	iRbound
 	iRefiller
 	iFiller
 	iTip
 	iPadding
+	iRbound
 	iLen
 )
 
-var defaultBarStyle = [iLen]string{"[", "]", "+", "=", ">", "-"}
+var defaultBarStyle = [iLen]string{"[", "+", "=", ">", "-", "]"}
 
 // BarStyleComposer interface.
 type BarStyleComposer interface {
@@ -235,11 +235,11 @@ func (s *barFiller) Fill(w io.Writer, stat decor.Statistics) error {
 
 	return s.flushOp(barSections{
 		{s.metas[iLbound], s.components[iLbound].bytes},
-		{s.metas[iRbound], s.components[iRbound].bytes},
 		{s.metas[iRefiller], refilling},
 		{s.metas[iFiller], filling},
 		{s.metas[iTip], tip.bytes},
 		{s.metas[iPadding], padding},
+		{s.metas[iRbound], s.components[iRbound].bytes},
 	}, w)
 }
 
@@ -253,29 +253,22 @@ func (s barSection) flush(w io.Writer) (err error) {
 }
 
 func (bb barSections) flush(w io.Writer) error {
-	err := bb[0].flush(w)
-	if err != nil {
-		return err
-	}
-	for _, s := range bb[2:] {
+	for _, s := range bb {
 		err := s.flush(w)
 		if err != nil {
 			return err
 		}
 	}
-	return bb[1].flush(w)
+	return nil
 }
 
 func (bb barSections) flushRev(w io.Writer) error {
-	err := bb[0].flush(w)
-	if err != nil {
-		return err
-	}
-	for i := len(bb) - 1; i >= 2; i-- {
+	bb[0], bb[len(bb)-1] = bb[len(bb)-1], bb[0]
+	for i := len(bb) - 1; i >= 0; i-- {
 		err := bb[i].flush(w)
 		if err != nil {
 			return err
 		}
 	}
-	return bb[1].flush(w)
+	return nil
 }
