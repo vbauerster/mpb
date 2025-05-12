@@ -6,7 +6,7 @@ toolchain go1.24.2
 
 require (
 	github.com/pkg/profile v1.7.0
-	github.com/vbauerster/mpb/v8 v8.10.0
+	github.com/vbauerster/mpb/v8 v8.10.1
 )
 
 require (
