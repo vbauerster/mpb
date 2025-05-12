@@ -8,10 +8,9 @@ import (
 	"testing"
 )
 
-var (
-	out   = io.Discard
-	lines = 99
-)
+const lines = 99
+
+var out = io.Discard
 
 func BenchmarkWithFprintf(b *testing.B) {
 	verb := fmt.Sprintf("%s%%d%s", escOpen, cuuAndEd)
