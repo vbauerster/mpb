@@ -277,8 +277,8 @@ func (b *Bar) EwmaIncrInt64(n int64, iterDur time.Duration) {
 		for _, d := range s.ewmaDecorators {
 			d := d
 			go func() {
+				defer wg.Done()
 				d.EwmaUpdate(n, iterDur)
-				wg.Done()
 			}()
 		}
 		s.current += n
@@ -306,8 +306,8 @@ func (b *Bar) EwmaSetCurrent(current int64, iterDur time.Duration) {
 		for _, d := range s.ewmaDecorators {
 			d := d
 			go func() {
+				defer wg.Done()
 				d.EwmaUpdate(n, iterDur)
-				wg.Done()
 			}()
 		}
 		s.current = current
@@ -394,13 +394,14 @@ func (b *Bar) Wait() {
 }
 
 func (b *Bar) serve(bs *bState) {
+	defer b.container.bwg.Done()
 	decoratorsOnShutdown := func(group []decor.Decorator) {
 		for _, d := range group {
 			if d, ok := unwrap(d).(decor.ShutdownListener); ok {
 				b.container.bwg.Add(1)
 				go func() {
+					defer b.container.bwg.Done()
 					d.OnShutdown()
-					b.container.bwg.Done()
 				}()
 			}
 		}
@@ -416,7 +417,6 @@ func (b *Bar) serve(bs *bState) {
 			bs.aborted = !bs.completed()
 			b.bs = bs
 			close(b.bsOk)
-			b.container.bwg.Done()
 			return
 		}
 	}
