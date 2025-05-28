@@ -275,7 +275,7 @@ func (b *Bar) EwmaIncrInt64(n int64, iterDur time.Duration) {
 		var wg sync.WaitGroup
 		wg.Add(len(s.ewmaDecorators))
 		for _, d := range s.ewmaDecorators {
-			d := d
+			// d := d // NOTE: uncomment for Go < 1.22, see /doc/faq#closures_and_goroutines
 			go func() {
 				defer wg.Done()
 				d.EwmaUpdate(n, iterDur)
@@ -304,7 +304,7 @@ func (b *Bar) EwmaSetCurrent(current int64, iterDur time.Duration) {
 		var wg sync.WaitGroup
 		wg.Add(len(s.ewmaDecorators))
 		for _, d := range s.ewmaDecorators {
-			d := d
+			// d := d // NOTE: uncomment for Go < 1.22, see /doc/faq#closures_and_goroutines
 			go func() {
 				defer wg.Done()
 				d.EwmaUpdate(n, iterDur)
