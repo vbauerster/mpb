@@ -145,13 +145,7 @@ func (b *Bar) Current() int64 {
 // operation for example.
 func (b *Bar) SetRefill(amount int64) {
 	select {
-	case b.operateState <- func(s *bState) {
-		if amount < s.current {
-			s.refill = amount
-		} else {
-			s.refill = s.current
-		}
-	}:
+	case b.operateState <- func(s *bState) { s.refill = min(amount, s.current) }:
 	case <-b.ctx.Done():
 	}
 }
