@@ -355,16 +355,18 @@ func (s *pState) render(cw *cwriter.Writer) (err error) {
 		height = width
 	}
 
+	var barCount int
 	for b := range iter {
+		barCount++
 		go b.render(width)
 	}
 
-	return s.flush(cw, height, iterPop)
+	return s.flush(cw, height, barCount, iterPop)
 }
 
-func (s *pState) flush(cw *cwriter.Writer, height int, iter <-chan *Bar) error {
+func (s *pState) flush(cw *cwriter.Writer, height, barCount int, iter <-chan *Bar) error {
 	var total, popCount int
-	var rows [][]io.Reader
+	rows := make([][]io.Reader, 0, barCount)
 
 	for b := range iter {
 		frame := <-b.frameCh
