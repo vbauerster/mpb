@@ -8,9 +8,10 @@ type priorityQueue []*Bar
 
 func (pq priorityQueue) Len() int { return len(pq) }
 
+// it's a reversed Less same as sort.Reverse(sort.Interface) would do
+// becasuse we need greater priority item to pop first
 func (pq priorityQueue) Less(i, j int) bool {
-	// greater priority pops first
-	return pq[i].priority > pq[j].priority
+	return pq[j].priority < pq[i].priority
 }
 
 func (pq priorityQueue) Swap(i, j int) {
