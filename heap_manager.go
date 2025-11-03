@@ -38,7 +38,7 @@ type fixData struct {
 }
 
 func (m heapManager) run() {
-	var bHeap priorityQueue
+	var bHeap barHeap
 	var pMatrix, aMatrix map[int][]chan int
 
 	var l int

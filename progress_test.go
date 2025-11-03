@@ -186,7 +186,7 @@ func TestBarPristinePopOrder(t *testing.T) {
 	}
 
 	p.Wait()
-	pq := mpb.PriorityQueue(bars)
+	pq := mpb.BarHeap(bars)
 
 	for _, b := range pristineOrder {
 		// higher priority pops first
@@ -228,7 +228,7 @@ func makeUpdateBarPriorityTest(refresh, lazy bool) func(*testing.T) {
 		}
 
 		p.Wait()
-		pq := mpb.PriorityQueue(bars)
+		pq := mpb.BarHeap(bars)
 
 		for _, b := range checkOrder {
 			// higher priority pops first
