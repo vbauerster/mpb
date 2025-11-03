@@ -185,7 +185,7 @@ func testDecoratorConcurrently(t *testing.T, testCases [][]step) {
 		mpb.SyncWidth(toSyncMatrix(columnCase))
 		var results []chan string
 		for _, step := range columnCase {
-			step := step
+			// step := step // NOTE: uncomment for Go < 1.22, see /doc/faq#closures_and_goroutines
 			ch := make(chan string)
 			go func() {
 				str, _ := step.decorator.Decor(step.stat)
