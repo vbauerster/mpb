@@ -47,10 +47,6 @@ func (m heapManager) run() {
 
 	for req := range m {
 		switch req.cmd {
-		case h_push:
-			data := req.data.(pushData)
-			heap.Push(&bHeap, data.bar)
-			sync = sync || data.sync
 		case h_sync:
 			if sync || ln != bHeap.Len() {
 				pMatrix = make(map[int][]*decor.Sync)
@@ -69,6 +65,10 @@ func (m heapManager) run() {
 			}
 			syncWidth(pMatrix)
 			syncWidth(aMatrix)
+		case h_push:
+			data := req.data.(pushData)
+			heap.Push(&bHeap, data.bar)
+			sync = sync || data.sync
 		case h_iter:
 			for i, req := range req.data.([]iterRequest) {
 				ch := make(chan *Bar, bHeap.Len())
