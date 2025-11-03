@@ -71,7 +71,6 @@ func TestShutdownsWithErrFiller(t *testing.T) {
 	go func() {
 		for bar.IsRunning() {
 			bar.Increment()
-			time.Sleep(10 * time.Millisecond)
 		}
 	}()
 
@@ -114,7 +113,6 @@ func TestShutdownAfterBarAbortWithDrop(t *testing.T) {
 			b.Abort(true)
 		} else {
 			b.Increment()
-			time.Sleep(10 * time.Millisecond)
 		}
 	}
 
@@ -150,7 +148,6 @@ func TestShutdownAfterBarAbortWithNoDrop(t *testing.T) {
 			b.Abort(false)
 		} else {
 			b.Increment()
-			time.Sleep(10 * time.Millisecond)
 		}
 	}
 
