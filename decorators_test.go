@@ -182,7 +182,7 @@ func testDecoratorConcurrently(t *testing.T, testCases [][]step) {
 	}
 
 	for _, columnCase := range testCases {
-		mpb.SyncWidth(toSyncMatrix(columnCase), nil)
+		mpb.SyncWidth(toSyncMatrix(columnCase))
 		var results []chan string
 		for _, step := range columnCase {
 			step := step

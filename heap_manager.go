@@ -10,7 +10,6 @@ const (
 	h_sync heapCmd = iota
 	h_push
 	h_iter
-	h_iter2
 	h_fix
 	h_state
 	h_end
@@ -21,15 +20,7 @@ type heapRequest struct {
 	data interface{}
 }
 
-type iter struct {
-	drop <-chan struct{}
-	dst  chan<- *Bar
-}
-
-type iter2 struct {
-	drop <-chan struct{}
-	dst  [2]chan<- *Bar
-}
+type iterRequest chan (<-chan *Bar)
 
 type pushData struct {
 	bar  *Bar
@@ -71,20 +62,17 @@ func (m heapManager) run() {
 				sync = false
 				ln = bHeap.Len()
 			}
-			drop := req.data.(<-chan struct{})
-			syncWidth(pMatrix, drop)
-			syncWidth(aMatrix, drop)
+			syncWidth(pMatrix)
+			syncWidth(aMatrix)
 		case h_iter:
-			data := req.data.(iter)
-			rangeOverSlice(bHeap, data.dst, data.drop)
-		case h_iter2:
-			var dropped bool
-			data := req.data.(iter2)
-			for i, dst := range data.dst {
-				if i == 0 {
-					dropped = rangeOverSlice(bHeap, dst, data.drop)
-				} else if !dropped {
-					popOverHeap(&bHeap, dst, data.drop)
+			for i, req := range req.data.([]iterRequest) {
+				ch := make(chan *Bar, bHeap.Len())
+				req <- ch
+				switch i {
+				case 0:
+					rangeOverSlice(bHeap, ch)
+				case 1:
+					popOverHeap(&bHeap, ch)
 				}
 			}
 		case h_fix:
@@ -111,8 +99,8 @@ func (m heapManager) run() {
 	}
 }
 
-func (m heapManager) sync(drop <-chan struct{}) {
-	m <- heapRequest{cmd: h_sync, data: drop}
+func (m heapManager) sync() {
+	m <- heapRequest{cmd: h_sync}
 }
 
 func (m heapManager) push(b *Bar, sync bool) {
@@ -127,14 +115,8 @@ func (m heapManager) push(b *Bar, sync bool) {
 	}
 }
 
-func (m heapManager) iter(drop <-chan struct{}, iterRange chan<- *Bar) {
-	data := iter{drop, iterRange}
-	m <- heapRequest{cmd: h_iter, data: data}
-}
-
-func (m heapManager) iter2(drop <-chan struct{}, iterRange, iterPop chan<- *Bar) {
-	data := iter2{drop, [2]chan<- *Bar{iterRange, iterPop}}
-	m <- heapRequest{cmd: h_iter2, data: data}
+func (m heapManager) iter(req ...iterRequest) {
+	m <- heapRequest{cmd: h_iter, data: req}
 }
 
 func (m heapManager) fix(b *Bar, priority int, lazy bool) {
@@ -150,22 +132,18 @@ func (m heapManager) end(ch chan<- interface{}) {
 	m <- heapRequest{cmd: h_end, data: ch}
 }
 
-func syncWidth(matrix map[int][]chan int, drop <-chan struct{}) {
+func syncWidth(matrix map[int][]chan int) {
 	for _, column := range matrix {
-		go maxWidthDistributor(column, drop)
+		go maxWidthDistributor(column)
 	}
 }
 
-func maxWidthDistributor(column []chan int, drop <-chan struct{}) {
+func maxWidthDistributor(column []chan int) {
 	var maxWidth int
 	for _, ch := range column {
-		select {
-		case w := <-ch:
-			if w > maxWidth {
-				maxWidth = w
-			}
-		case <-drop:
-			return
+		w := <-ch
+		if w > maxWidth {
+			maxWidth = w
 		}
 	}
 	for _, ch := range column {
@@ -174,28 +152,17 @@ func maxWidthDistributor(column []chan int, drop <-chan struct{}) {
 }
 
 // unordered iteration
-func rangeOverSlice(s barHeap, dst chan<- *Bar, drop <-chan struct{}) (dropped bool) {
+func rangeOverSlice(s barHeap, dst chan<- *Bar) {
 	defer close(dst)
 	for _, b := range s {
-		select {
-		case dst <- b:
-		case <-drop:
-			return true
-		}
+		dst <- b
 	}
-	return false
 }
 
 // ordered iteration
-func popOverHeap(h heap.Interface, dst chan<- *Bar, drop <-chan struct{}) {
+func popOverHeap(h heap.Interface, dst chan<- *Bar) {
 	defer close(dst)
 	for h.Len() != 0 {
-		bar := heap.Pop(h).(*Bar)
-		select {
-		case dst <- bar:
-		case <-drop:
-			heap.Push(h, bar)
-			return
-		}
+		dst <- heap.Pop(h).(*Bar)
 	}
 }
