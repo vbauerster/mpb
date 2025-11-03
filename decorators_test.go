@@ -204,12 +204,12 @@ func testDecoratorConcurrently(t *testing.T, testCases [][]step) {
 	}
 }
 
-func toSyncMatrix(ss []step) map[int][]chan int {
-	var column []chan int
-	for _, s := range ss {
-		if ch, ok := s.decorator.Sync(); ok {
-			column = append(column, ch)
+func toSyncMatrix(ss []step) map[int][]*decor.Sync {
+	var column []*decor.Sync
+	for _, step := range ss {
+		if s, ok := step.decorator.Sync(); ok {
+			column = append(column, s)
 		}
 	}
-	return map[int][]chan int{0: column}
+	return map[int][]*decor.Sync{0: column}
 }

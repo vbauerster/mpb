@@ -1,6 +1,10 @@
 package mpb
 
-import "container/heap"
+import (
+	"container/heap"
+
+	"github.com/vbauerster/mpb/v8/decor"
+)
 
 type heapManager chan heapRequest
 
@@ -35,7 +39,8 @@ type fixData struct {
 
 func (m heapManager) run() {
 	var bHeap barHeap
-	var pMatrix, aMatrix map[int][]chan int
+	var pMatrix map[int][]*decor.Sync
+	var aMatrix map[int][]*decor.Sync
 
 	var ln int
 	var sync bool
@@ -48,15 +53,15 @@ func (m heapManager) run() {
 			sync = sync || data.sync
 		case h_sync:
 			if sync || ln != bHeap.Len() {
-				pMatrix = make(map[int][]chan int)
-				aMatrix = make(map[int][]chan int)
+				pMatrix = make(map[int][]*decor.Sync)
+				aMatrix = make(map[int][]*decor.Sync)
 				for _, b := range bHeap {
 					table := b.wSyncTable()
-					for i, ch := range table[0] {
-						pMatrix[i] = append(pMatrix[i], ch)
+					for i, s := range table[0] {
+						pMatrix[i] = append(pMatrix[i], s)
 					}
-					for i, ch := range table[1] {
-						aMatrix[i] = append(aMatrix[i], ch)
+					for i, s := range table[1] {
+						aMatrix[i] = append(aMatrix[i], s)
 					}
 				}
 				sync = false
@@ -132,22 +137,22 @@ func (m heapManager) end(ch chan<- interface{}) {
 	m <- heapRequest{cmd: h_end, data: ch}
 }
 
-func syncWidth(matrix map[int][]chan int) {
+func syncWidth(matrix map[int][]*decor.Sync) {
 	for _, column := range matrix {
 		go maxWidthDistributor(column)
 	}
 }
 
-func maxWidthDistributor(column []chan int) {
+func maxWidthDistributor(column []*decor.Sync) {
 	var maxWidth int
-	for _, ch := range column {
-		w := <-ch
+	for _, s := range column {
+		w := <-s.Tx
 		if w > maxWidth {
 			maxWidth = w
 		}
 	}
-	for _, ch := range column {
-		ch <- maxWidth
+	for _, s := range column {
+		s.Rx <- maxWidth
 	}
 }
 
