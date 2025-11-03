@@ -82,9 +82,13 @@ func TestShutdownsWithErrFiller(t *testing.T) {
 	}
 
 	select {
-	case v := <-shutdown:
-		if l := len(v.([]*mpb.Bar)); l != 0 {
-			t.Errorf("Expected len of bars: %d, got: %d\n", 0, l)
+	case x := <-shutdown:
+		bars := x.([]*mpb.Bar)
+		if l := len(bars); l != 1 {
+			t.Errorf("Expected len of bars: %d, got: %d\n", 1, l)
+		}
+		if bars[0] != bar {
+			t.Errorf("Expected bar: %#v, got: %#v\n", bar, bars[0])
 		}
 		if err := strings.TrimSpace(debug.String()); err != testError.Error() {
 			t.Errorf("Expected err: %q, got %q\n", testError.Error(), err)
