@@ -106,7 +106,7 @@ func (m heapManager) run() {
 					ch <- []*Bar(bHeap)
 				}()
 			}
-			close(m)
+			return
 		}
 	}
 }
