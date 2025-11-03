@@ -178,7 +178,7 @@ func (p *Progress) Add(total int64, filler BarFiller, options ...BarOption) (*Ba
 func (p *Progress) traverseBars(cb func(b *Bar) bool) {
 	drop, iter := make(chan struct{}), make(chan *Bar)
 	select {
-	case p.operateState <- func(s *pState) { s.hm.iter(drop, iter, nil) }:
+	case p.operateState <- func(s *pState) { s.hm.iter(drop, iter) }:
 		for b := range iter {
 			if !cb(b) {
 				close(drop)
@@ -335,9 +335,9 @@ func (s *pState) manualRefreshListener(done chan struct{}) {
 }
 
 func (s *pState) render(cw *cwriter.Writer) (err error) {
-	iter, iterPop := make(chan *Bar), make(chan *Bar)
+	iter1, iter2 := make(chan *Bar), make(chan *Bar)
 	s.hm.sync(s.iterDrop)
-	s.hm.iter(s.iterDrop, iter, iterPop)
+	s.hm.iter2(s.iterDrop, iter1, iter2)
 
 	var width, height int
 	if cw.IsTerminal() {
@@ -356,12 +356,12 @@ func (s *pState) render(cw *cwriter.Writer) (err error) {
 	}
 
 	var barCount int
-	for b := range iter {
+	for b := range iter1 {
 		barCount++
 		go b.render(width)
 	}
 
-	return s.flush(cw, height, barCount, iterPop)
+	return s.flush(cw, height, barCount, iter2)
 }
 
 func (s *pState) flush(cw *cwriter.Writer, height, barCount int, iter <-chan *Bar) error {
