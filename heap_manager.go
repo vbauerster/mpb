@@ -46,7 +46,7 @@ func (m heapManager) run() {
 	var bHeap barHeap
 	var pMatrix, aMatrix map[int][]chan int
 
-	var l int
+	var ln int
 	var sync bool
 
 	for req := range m {
@@ -56,7 +56,7 @@ func (m heapManager) run() {
 			heap.Push(&bHeap, data.bar)
 			sync = sync || data.sync
 		case h_sync:
-			if sync || l != bHeap.Len() {
+			if sync || ln != bHeap.Len() {
 				pMatrix = make(map[int][]chan int)
 				aMatrix = make(map[int][]chan int)
 				for _, b := range bHeap {
@@ -69,7 +69,7 @@ func (m heapManager) run() {
 					}
 				}
 				sync = false
-				l = bHeap.Len()
+				ln = bHeap.Len()
 			}
 			drop := req.data.(<-chan struct{})
 			syncWidth(pMatrix, drop)
@@ -98,7 +98,7 @@ func (m heapManager) run() {
 			}
 		case h_state:
 			ch := req.data.(chan<- bool)
-			ch <- sync || l != bHeap.Len()
+			ch <- sync || ln != bHeap.Len()
 		case h_end:
 			ch := req.data.(chan<- interface{})
 			if ch != nil {
