@@ -13,21 +13,26 @@ import (
 
 func main() {
 	total, numBars := 100, 2
-	var bwg, qwg sync.WaitGroup
+	var bwg sync.WaitGroup
 	bwg.Add(numBars)
-	qwg.Add(1)
-	done := make(chan interface{})
-	p := mpb.New(mpb.WithWidth(64), mpb.WithShutdownNotifier(done), mpb.WithWaitGroup(&qwg))
+	done, exit := make(chan interface{}), make(chan interface{})
+	p := mpb.New(
+		mpb.WithWidth(64),
+		mpb.WithShutdownNotifier(done),
+		mpb.WithWaitGroup(&bwg),
+	)
 
 	log.SetOutput(p)
 
 	go func() {
-		defer qwg.Done()
+		defer close(exit)
 		for {
 			select {
 			case <-done:
-				// after done, underlying io.Writer returns mpb.ErrDone
-				// so following isn't printed
+				// after done any write to *mpb.Progress would return mpb.ErrDone
+				// std logger would ignore any errors silently
+				// 3rd party loggers may behave differently
+				// see https://github.com/vbauerster/mpb/issues/141
 				log.Println("all done")
 				return
 			default:
@@ -69,9 +74,9 @@ func main() {
 		}()
 	}
 
-	bwg.Wait()
 	log.Println("completing nop bar")
 	nopBar.EnableTriggerComplete()
 
 	p.Wait()
+	<-exit // make sure that line 36 was really called
 }
