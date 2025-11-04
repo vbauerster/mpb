@@ -2,6 +2,7 @@ package mpb
 
 import (
 	"container/heap"
+	"time"
 
 	"github.com/vbauerster/mpb/v8/decor"
 )
@@ -96,7 +97,10 @@ func (m heapManager) run() {
 			ch := req.data.(chan<- interface{})
 			if ch != nil {
 				go func() {
-					ch <- []*Bar(bHeap)
+					select {
+					case ch <- []*Bar(bHeap):
+					case <-time.After(time.Second):
+					}
 				}()
 			}
 			return
