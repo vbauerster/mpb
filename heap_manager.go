@@ -43,13 +43,13 @@ func (m heapManager) run() {
 	var pMatrix map[int][]*decor.Sync
 	var aMatrix map[int][]*decor.Sync
 
-	var ln int
 	var sync bool
+	var prevLen int
 
 	for req := range m {
 		switch req.cmd {
 		case h_sync:
-			if sync || ln != bHeap.Len() {
+			if sync || prevLen != bHeap.Len() {
 				pMatrix = make(map[int][]*decor.Sync)
 				aMatrix = make(map[int][]*decor.Sync)
 				for _, b := range bHeap {
@@ -61,8 +61,7 @@ func (m heapManager) run() {
 						aMatrix[i] = append(aMatrix[i], s)
 					}
 				}
-				sync = false
-				ln = bHeap.Len()
+				sync, prevLen = false, bHeap.Len()
 			}
 			syncWidth(pMatrix)
 			syncWidth(aMatrix)
@@ -92,7 +91,7 @@ func (m heapManager) run() {
 			}
 		case h_state:
 			ch := req.data.(chan<- bool)
-			ch <- sync || ln != bHeap.Len()
+			ch <- sync || prevLen != bHeap.Len()
 		case h_end:
 			ch := req.data.(chan<- interface{})
 			if ch != nil {
