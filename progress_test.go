@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -68,6 +69,8 @@ func TestShutdownsWithErrFiller(t *testing.T) {
 		}),
 	)
 
+	_ = p.MustAdd(0, nil)
+
 	go func() {
 		for bar.IsRunning() {
 			bar.Increment()
@@ -77,20 +80,20 @@ func TestShutdownsWithErrFiller(t *testing.T) {
 	p.Wait()
 
 	if errReturnCount != 1 {
-		t.Errorf("Expected errReturnCount: %d, got: %d\n", 1, errReturnCount)
+		t.Errorf("Expected errReturnCount: %d, got: %d", 1, errReturnCount)
 	}
 
 	select {
 	case x := <-shutdown:
 		bars := x.([]*mpb.Bar)
-		if l := len(bars); l != 1 {
-			t.Errorf("Expected len of bars: %d, got: %d\n", 1, l)
+		if len(bars) == 0 {
+			t.Error("Expected len([]*mpb.Bar) != 0")
 		}
-		if bars[0] != bar {
-			t.Errorf("Expected bar: %#v, got: %#v\n", bar, bars[0])
+		if !slices.Contains(bars, bar) {
+			t.Errorf("Expected []*mpb.Bar to contain: %#v", bar)
 		}
 		if err := strings.TrimSpace(debug.String()); err != testError.Error() {
-			t.Errorf("Expected err: %q, got %q\n", testError.Error(), err)
+			t.Errorf("Expected err: %q, got %q", testError.Error(), err)
 		}
 	case <-time.After(timeout):
 		t.Errorf("Progress didn't shutdown after %v", timeout)
