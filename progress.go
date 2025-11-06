@@ -334,7 +334,7 @@ func (s *pState) manualRefreshListener(done chan struct{}) {
 }
 
 func (s *pState) render(cw *cwriter.Writer) (err error) {
-	req := make(iterRequest, 1)
+	req := make(iterRequest, 2)
 	s.hm.sync()
 	s.hm.iter(req, req)
 
