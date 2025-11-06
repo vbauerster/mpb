@@ -115,14 +115,7 @@ func (m heapManager) sync() {
 
 func (m heapManager) push(b *Bar, sync bool) {
 	data := pushData{b, sync}
-	req := heapRequest{cmd: h_push, data: data}
-	select {
-	case m <- req:
-	default:
-		go func() {
-			m <- req
-		}()
-	}
+	m <- heapRequest{cmd: h_push, data: data}
 }
 
 func (m heapManager) iter(req ...iterRequest) {
