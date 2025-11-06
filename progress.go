@@ -2,6 +2,7 @@ package mpb
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"fmt"
 	"io"
@@ -345,11 +346,7 @@ func (s *pState) render(cw *cwriter.Writer) (err error) {
 			return err
 		}
 	} else {
-		if s.reqWidth > 0 {
-			width = s.reqWidth
-		} else {
-			width = 80
-		}
+		width = cmp.Or(s.reqWidth, 80)
 		height = width
 	}
 

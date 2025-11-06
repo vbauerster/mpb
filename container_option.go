@@ -1,6 +1,7 @@
 package mpb
 
 import (
+	"cmp"
 	"io"
 	"sync"
 	"time"
@@ -76,21 +77,15 @@ func WithShutdownNotifier(ch chan<- interface{}) ContainerOption {
 // is not a terminal then auto refresh is disabled unless WithAutoRefresh
 // option is set.
 func WithOutput(w io.Writer) ContainerOption {
-	if w == nil {
-		w = io.Discard
-	}
 	return func(s *pState) {
-		s.output = w
+		s.output = cmp.Or(w, io.Discard)
 	}
 }
 
 // WithDebugOutput sets debug output.
 func WithDebugOutput(w io.Writer) ContainerOption {
-	if w == nil {
-		w = io.Discard
-	}
 	return func(s *pState) {
-		s.debugOut = w
+		s.debugOut = cmp.Or(w, io.Discard)
 	}
 }
 
