@@ -111,8 +111,8 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 	}
 
 	p.pwg.Add(1)
+	go s.hm.run(s.shutdownNotifier)
 	go p.serve(s, cw)
-	go s.hm.run()
 	return p
 }
 
@@ -244,7 +244,10 @@ func (p *Progress) Shutdown() {
 }
 
 func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
-	defer p.pwg.Done()
+	defer func() {
+		close(s.hm)
+		p.pwg.Done()
+	}()
 	var err error
 	var w *cwriter.Writer
 	renderReq := s.renderReq
@@ -298,7 +301,6 @@ func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 					s.hm.state(update)
 				}
 			}
-			s.hm.end(s.shutdownNotifier)
 			return
 		}
 	}

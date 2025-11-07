@@ -17,7 +17,6 @@ const (
 	h_iter
 	h_fix
 	h_state
-	h_end
 )
 
 type heapRequest struct {
@@ -38,15 +37,25 @@ type fixData struct {
 	lazy     bool
 }
 
-func (m heapManager) run() {
+func (m heapManager) run(shutdownNotifier chan<- interface{}) {
+	var bHeap barHeap
+	done := make(chan struct{})
+	defer func() {
+		close(done)
+		if shutdownNotifier != nil {
+			go func() {
+				select {
+				case shutdownNotifier <- []*Bar(bHeap):
+				case <-time.After(time.Second):
+				}
+			}()
+		}
+	}()
+
 	var sync bool
 	var prevLen int
-	var bHeap barHeap
 	var pMatrix map[int][]*decor.Sync
 	var aMatrix map[int][]*decor.Sync
-
-	done := make(chan struct{})
-	defer close(done)
 
 	for req := range m {
 		switch req.cmd {
@@ -94,17 +103,6 @@ func (m heapManager) run() {
 		case h_state:
 			ch := req.data.(chan<- bool)
 			ch <- sync || prevLen != bHeap.Len()
-		case h_end:
-			ch := req.data.(chan<- interface{})
-			if ch != nil {
-				go func() {
-					select {
-					case ch <- []*Bar(bHeap):
-					case <-time.After(time.Second):
-					}
-				}()
-			}
-			return
 		}
 	}
 }
@@ -129,10 +127,6 @@ func (m heapManager) fix(b *Bar, priority int, lazy bool) {
 
 func (m heapManager) state(ch chan<- bool) {
 	m <- heapRequest{cmd: h_state, data: ch}
-}
-
-func (m heapManager) end(ch chan<- interface{}) {
-	m <- heapRequest{cmd: h_end, data: ch}
 }
 
 func syncWidth(matrix map[int][]*decor.Sync, done <-chan struct{}) {
