@@ -43,12 +43,10 @@ func (m heapManager) run(shutdownNotifier chan<- interface{}) {
 	defer func() {
 		close(done)
 		if shutdownNotifier != nil {
-			go func() {
-				select {
-				case shutdownNotifier <- []*Bar(bHeap):
-				case <-time.After(time.Second):
-				}
-			}()
+			select {
+			case shutdownNotifier <- []*Bar(bHeap):
+			case <-time.After(time.Second):
+			}
 		}
 	}()
 
