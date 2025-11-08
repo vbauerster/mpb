@@ -6,7 +6,7 @@ toolchain go1.24.2
 
 require (
 	github.com/pkg/profile v1.7.0
-	github.com/vbauerster/mpb/v8 v8.11.1
+	github.com/vbauerster/mpb/v8 v8.11.2
 )
 
 require (
@@ -17,5 +17,5 @@ require (
 	github.com/felixge/fgprof v0.9.5 // indirect
 	github.com/google/pprof v0.0.0-20251007162407-5df77e3f7d1d // indirect
 	github.com/mattn/go-runewidth v0.0.19 // indirect
-	golang.org/x/sys v0.37.0 // indirect
+	golang.org/x/sys v0.38.0 // indirect
 )
