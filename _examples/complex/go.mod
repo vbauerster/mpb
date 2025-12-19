@@ -6,7 +6,7 @@ toolchain go1.24.2
 
 require (
 	github.com/fatih/color v1.18.0
-	github.com/vbauerster/mpb/v8 v8.11.2
+	github.com/vbauerster/mpb/v8 v8.11.3
 )
 
 require (
