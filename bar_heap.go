@@ -21,10 +21,9 @@ func (s barHeap) Swap(i, j int) {
 }
 
 func (h *barHeap) Push(x interface{}) {
-	s := *h
 	b := x.(*Bar)
-	b.index = len(s)
-	*h = append(s, b)
+	b.index = h.Len()
+	*h = append(*h, b)
 }
 
 func (h *barHeap) Pop() interface{} {
