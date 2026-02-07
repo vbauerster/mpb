@@ -420,20 +420,18 @@ func (s *pState) flush(cw *cwriter.Writer, height int, iter <-chan *Bar) error {
 
 func (s pState) makeBarState(total int64, filler BarFiller, options ...BarOption) *bState {
 	bs := &bState{
-		id:          s.idCount,
-		priority:    s.idCount,
-		reqWidth:    s.reqWidth,
-		total:       total,
-		filler:      filler,
-		renderReq:   s.renderReq,
-		autoRefresh: s.autoRefresh,
-		extender: func(_ decor.Statistics, rows ...io.Reader) ([]io.Reader, error) {
-			return rows, nil
-		},
+		id:              s.idCount,
+		priority:        s.idCount,
+		reqWidth:        s.reqWidth,
+		total:           total,
+		filler:          filler,
+		renderReq:       s.renderReq,
+		triggerComplete: total > 0,
+		autoRefresh:     s.autoRefresh,
 	}
 
-	if total > 0 {
-		bs.triggerComplete = true
+	bs.extender = func(_ decor.Statistics, rows ...io.Reader) ([]io.Reader, error) {
+		return rows, nil
 	}
 
 	for _, opt := range options {
