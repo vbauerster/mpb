@@ -23,12 +23,11 @@ var ErrDone = fmt.Errorf("%T instance can't be reused after %[1]T.Wait()", (*Pro
 
 // Progress represents a container that renders one or more progress bars.
 type Progress struct {
-	uwg          *sync.WaitGroup
-	pwg, bwg     sync.WaitGroup
-	operateState chan func(*pState)
-	interceptIO  chan func(io.Writer)
-	done         <-chan struct{}
-	cancel       func()
+	pwg, bwg, uwg *sync.WaitGroup
+	operateState  chan func(*pState)
+	interceptIO   chan func(io.Writer)
+	done          <-chan struct{}
+	cancel        func()
 }
 
 // pState holds bars in its priorityQueue, it gets passed to (*Progress).serve monitor goroutine.
@@ -88,6 +87,8 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 	s.hm = make(heapManager, s.hmQueueLen)
 
 	p := &Progress{
+		pwg:          new(sync.WaitGroup),
+		bwg:          new(sync.WaitGroup),
 		uwg:          s.uwg,
 		operateState: make(chan func(*pState)),
 		interceptIO:  make(chan func(io.Writer)),
