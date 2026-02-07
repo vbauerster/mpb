@@ -38,12 +38,6 @@ type bState struct {
 	total           int64
 	current         int64
 	refill          int64
-	trimSpace       bool
-	aborted         bool
-	triggerComplete bool
-	rmOnComplete    bool
-	noPop           bool
-	autoRefresh     bool
 	buffers         [3]*bytes.Buffer
 	decorGroups     [2][]decor.Decorator
 	ewmaDecorators  []decor.EwmaDecorator
@@ -51,6 +45,12 @@ type bState struct {
 	extender        extenderFunc
 	renderReq       chan<- time.Time
 	waitBar         *Bar // key for (*pState).queueBars
+	trimSpace       bool
+	aborted         bool
+	triggerComplete bool
+	rmOnComplete    bool
+	noPop           bool
+	autoRefresh     bool
 }
 
 type renderFrame struct {

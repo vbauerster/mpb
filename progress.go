@@ -43,8 +43,6 @@ type pState struct {
 	hmQueueLen       int
 	reqWidth         int
 	refreshRate      time.Duration
-	popCompleted     bool
-	autoRefresh      bool
 	delayRC          <-chan struct{}
 	manualRC         <-chan interface{}
 	shutdownNotifier chan<- interface{}
@@ -52,6 +50,8 @@ type pState struct {
 	output           io.Writer
 	debugOut         io.Writer
 	uwg              *sync.WaitGroup
+	popCompleted     bool
+	autoRefresh      bool
 }
 
 // New creates new Progress container instance. It's not possible to
