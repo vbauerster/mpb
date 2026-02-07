@@ -526,15 +526,17 @@ func (s *bState) triggerCompletion(b *Bar) {
 }
 
 func (b *Bar) tryEarlyRefresh(renderReq chan<- time.Time) {
-	var otherRunning int
+	otherRunning := make(chan struct{})
 	b.container.traverseBars(func(bar *Bar) bool {
 		if b != bar && bar.isRunning() {
-			otherRunning++
+			close(otherRunning)
 			return false // stop traverse
 		}
 		return true // continue traverse
 	})
-	if otherRunning == 0 {
+	select {
+	case <-otherRunning:
+	default:
 		for {
 			select {
 			case renderReq <- time.Now():
