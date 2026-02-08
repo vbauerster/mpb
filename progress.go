@@ -449,9 +449,9 @@ func (s pState) makeBarState(total int64, filler BarFiller, options ...BarOption
 		}
 	}
 
-	bs.buffers[0] = bytes.NewBuffer(make([]byte, 0, 128)) // prepend
-	bs.buffers[1] = bytes.NewBuffer(make([]byte, 0, 128)) // append
-	bs.buffers[2] = bytes.NewBuffer(make([]byte, 0, 256)) // filler
+	bs.buffers[0] = bytes.NewBuffer(make([]byte, 0, 256)) // filler
+	bs.buffers[1] = bytes.NewBuffer(make([]byte, 0, 128)) // prepend
+	bs.buffers[2] = bytes.NewBuffer(make([]byte, 0, 128)) // append
 
 	return bs
 }
