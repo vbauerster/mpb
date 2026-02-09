@@ -246,56 +246,47 @@ func (p *Progress) Shutdown() {
 
 func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 	defer func() {
+		p.bwg.Wait()
 		close(s.hm)
 		p.pwg.Done()
 	}()
-	var err error
-	var w *cwriter.Writer
-	renderReq := s.renderReq
-	operateState := p.operateState
-	interceptIO := p.interceptIO
 
+	var dw *cwriter.Writer
 	if s.delayRC != nil {
-		w = cwriter.New(io.Discard)
+		dw = cwriter.New(io.Discard)
 	} else {
-		w, cw = cw, nil
+		dw = cw
 	}
 
 	for {
 		select {
 		case <-s.delayRC:
-			w, cw = cw, nil
+			dw = cw
 			s.delayRC = nil
-		case op := <-operateState:
+		case op := <-p.operateState:
 			op(s)
-		case fn := <-interceptIO:
-			fn(w)
-		case <-renderReq:
-			err = s.render(w)
+		case fn := <-p.interceptIO:
+			fn(cw)
+		case <-s.renderReq:
+			err := s.render(dw)
 			if err != nil {
+				p.cancel()
 				// (*pState).(autoRefreshListener|manualRefreshListener) may block
-				// if not launching following short lived goroutine
-				go func() {
-					for {
-						select {
-						case <-s.renderReq:
-						case <-p.done:
-							return
-						}
+				// if not depleting s.renderReq
+				for {
+					select {
+					case <-s.renderReq:
+					case <-p.done:
+						_, _ = fmt.Fprintln(s.debugOut, err.Error())
+						return
 					}
-				}()
-				p.cancel() // cancel all bars
-				renderReq = nil
-				operateState = nil
-				interceptIO = nil
+				}
 			}
 		case <-p.done:
-			if err != nil {
-				_, _ = fmt.Fprintln(s.debugOut, err.Error())
-			} else if s.autoRefresh {
+			if s.autoRefresh {
 				update := make(chan bool)
 				for i := 0; i == 0 || <-update; i++ {
-					if err := s.render(w); err != nil {
+					if err := s.render(dw); err != nil {
 						_, _ = fmt.Fprintln(s.debugOut, err.Error())
 						break
 					}
