@@ -2,7 +2,6 @@ package mpb
 
 import (
 	"container/heap"
-	"time"
 
 	"github.com/vbauerster/mpb/v8/decor"
 )
@@ -37,19 +36,8 @@ type fixData struct {
 	lazy     bool
 }
 
-func (m heapManager) run(shutdownNotifier chan<- interface{}) {
+func (m heapManager) run(shutdown <-chan interface{}) {
 	var bHeap barHeap
-	done := make(chan struct{})
-	defer func() {
-		close(done)
-		if shutdownNotifier != nil {
-			select {
-			case shutdownNotifier <- []*Bar(bHeap):
-			case <-time.After(time.Second):
-			}
-		}
-	}()
-
 	var sync bool
 	var prevLen int
 	var pMatrix map[int][]*decor.Sync
@@ -72,8 +60,8 @@ func (m heapManager) run(shutdownNotifier chan<- interface{}) {
 				}
 				sync, prevLen = false, bHeap.Len()
 			}
-			syncWidth(pMatrix, done)
-			syncWidth(aMatrix, done)
+			syncWidth(pMatrix, shutdown)
+			syncWidth(aMatrix, shutdown)
 		case h_push:
 			data := req.data.(pushData)
 			heap.Push(&bHeap, data.bar)
@@ -127,13 +115,13 @@ func (m heapManager) state(ch chan<- bool) {
 	m <- heapRequest{cmd: h_state, data: ch}
 }
 
-func syncWidth(matrix map[int][]*decor.Sync, done <-chan struct{}) {
+func syncWidth(matrix map[int][]*decor.Sync, done <-chan interface{}) {
 	for _, column := range matrix {
 		go maxWidthDistributor(column, done)
 	}
 }
 
-func maxWidthDistributor(column []*decor.Sync, done <-chan struct{}) {
+func maxWidthDistributor(column []*decor.Sync, done <-chan interface{}) {
 	var maxWidth int
 	for _, s := range column {
 		select {

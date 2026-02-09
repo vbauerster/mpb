@@ -44,7 +44,7 @@ type pState struct {
 	refreshRate      time.Duration
 	delayRC          <-chan struct{}
 	manualRC         <-chan interface{}
-	shutdownNotifier chan<- interface{}
+	shutdownNotifier chan interface{}
 	queueBars        map[*Bar]*Bar
 	output           io.Writer
 	debugOut         io.Writer
@@ -84,7 +84,12 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 		}
 	}
 
+	if s.shutdownNotifier == nil {
+		s.shutdownNotifier = make(chan interface{})
+	}
+
 	s.hm = make(heapManager, s.hmQueueLen)
+	go s.hm.run(s.shutdownNotifier)
 
 	p := &Progress{
 		pwg:          new(sync.WaitGroup),
@@ -112,7 +117,6 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 	}
 
 	p.pwg.Add(1)
-	go s.hm.run(s.shutdownNotifier)
 	go p.serve(s, cw)
 	return p
 }
@@ -248,6 +252,7 @@ func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 	defer func() {
 		p.bwg.Wait()
 		close(s.hm)
+		close(s.shutdownNotifier)
 		p.pwg.Done()
 	}()
 
