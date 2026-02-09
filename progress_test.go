@@ -72,7 +72,7 @@ func TestShutdownsWithErrFiller(t *testing.T) {
 	_ = p.MustAdd(0, nil)
 
 	go func() {
-		for bar.IsRunning() {
+		for !bar.AbortedOrCompleted() {
 			bar.Increment()
 		}
 	}()

@@ -363,13 +363,17 @@ func (b *Bar) Completed() bool {
 	}
 }
 
-// IsRunning reports whether the bar is in running state.
-func (b *Bar) IsRunning() bool {
+// AbortedOrCompleted reports whether a bar is in aborted or completed state.
+// Faster version of `(*Bar).Aborted() || (*Bar).Completed()`.
+func (b *Bar) AbortedOrCompleted() bool {
+	result := make(chan bool)
 	select {
-	case <-b.ctx.Done():
-		return false
-	default:
-		return true
+	case b.operateState <- func(s *bState) {
+		result <- s.aborted || s.completed()
+	}:
+		return <-result
+	case <-b.bsOk:
+		return b.bs.aborted || b.bs.completed()
 	}
 }
 
@@ -432,26 +436,6 @@ func (b *Bar) render(tw int) {
 	case b.operateState <- fn:
 	case <-b.bsOk:
 		fn(b.bs)
-	}
-}
-
-func (b *Bar) tryEarlyRefresh(renderReq chan<- time.Time) {
-	var otherRunning int
-	b.container.traverseBars(func(bar *Bar) bool {
-		if b != bar && bar.IsRunning() {
-			otherRunning++
-			return false // stop traverse
-		}
-		return true // continue traverse
-	})
-	if otherRunning == 0 {
-		for {
-			select {
-			case renderReq <- time.Now():
-			case <-b.ctx.Done():
-				return
-			}
-		}
 	}
 }
 
@@ -538,6 +522,35 @@ func (s *bState) triggerCompletion(b *Bar) {
 		go b.tryEarlyRefresh(s.renderReq)
 	} else {
 		b.cancel()
+	}
+}
+
+func (b *Bar) tryEarlyRefresh(renderReq chan<- time.Time) {
+	var otherRunning int
+	b.container.traverseBars(func(bar *Bar) bool {
+		if b != bar && bar.isRunning() {
+			otherRunning++
+			return false // stop traverse
+		}
+		return true // continue traverse
+	})
+	if otherRunning == 0 {
+		for {
+			select {
+			case renderReq <- time.Now():
+			case <-b.ctx.Done():
+				return
+			}
+		}
+	}
+}
+
+func (b *Bar) isRunning() bool {
+	select {
+	case <-b.ctx.Done():
+		return false
+	default:
+		return true
 	}
 }
 
