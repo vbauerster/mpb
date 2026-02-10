@@ -37,14 +37,23 @@ type fixData struct {
 	lazy     bool
 }
 
-func (m heapManager) run(pwg *sync.WaitGroup, shutdown <-chan interface{}) {
-	defer pwg.Done()
-
+func (m heapManager) run(pwg *sync.WaitGroup, shutdown <-chan interface{}, handOverBarHeap chan []*Bar) {
 	var bHeap barHeap
 	var sync bool
 	var prevLen int
 	var pMatrix map[int][]*decor.Sync
 	var aMatrix map[int][]*decor.Sync
+
+	defer func() {
+		if handOverBarHeap != nil {
+			var ordered []*Bar
+			for bHeap.Len() != 0 {
+				ordered = append(ordered, heap.Pop(&bHeap).(*Bar))
+			}
+			handOverBarHeap <- ordered
+		}
+		pwg.Done()
+	}()
 
 	for req := range m {
 		switch req.cmd {

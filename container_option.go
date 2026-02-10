@@ -137,3 +137,10 @@ func ContainerFuncOptOn(option func() ContainerOption, predicate func() bool) Co
 	}
 	return nil
 }
+
+// withHandOverBarHeap for test purposes only
+func withHandOverBarHeap(ch chan []*Bar) ContainerOption {
+	return func(s *pState) {
+		s.handOverBarHeap = ch
+	}
+}

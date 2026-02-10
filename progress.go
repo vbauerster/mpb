@@ -45,6 +45,7 @@ type pState struct {
 	delayRC          <-chan struct{}
 	manualRC         <-chan interface{}
 	shutdownNotifier chan interface{}
+	handOverBarHeap  chan []*Bar
 	queueBars        map[*Bar]*Bar
 	output           io.Writer
 	debugOut         io.Writer
@@ -116,7 +117,7 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 	}
 
 	p.pwg.Add(2)
-	go s.hm.run(p.pwg, s.shutdownNotifier)
+	go s.hm.run(p.pwg, s.shutdownNotifier, s.handOverBarHeap)
 	go p.serve(s, cw)
 	return p
 }
