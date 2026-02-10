@@ -548,11 +548,11 @@ func (s *bState) triggerCompletion(b *Bar) {
 	}
 }
 
-func (s bState) completed() bool {
+func (s *bState) completed() bool {
 	return s.triggerComplete && s.current == s.total
 }
 
-func (s bState) newStatistics(tw int) decor.Statistics {
+func (s *bState) newStatistics(tw int) decor.Statistics {
 	return decor.Statistics{
 		AvailableWidth: tw,
 		RequestedWidth: s.reqWidth,
