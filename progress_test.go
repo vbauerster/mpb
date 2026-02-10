@@ -21,27 +21,30 @@ const (
 
 func TestWithContext(t *testing.T) {
 	shutdown := make(chan interface{})
+	handOverBarHeap := make(chan []*mpb.Bar, 1)
 	ctx, cancel := context.WithCancel(context.Background())
 	p := mpb.NewWithContext(ctx,
 		mpb.WithOutput(io.Discard),
 		mpb.WithShutdownNotifier(shutdown),
+		mpb.WithHandOverBarHeap(handOverBarHeap),
 	)
 	_ = p.AddBar(0) // never complete bar
-	_ = p.AddBar(0) // never complete bar
-	go func() {
-		time.Sleep(10 * time.Millisecond)
-		cancel()
-	}()
 
-	p.Wait()
+	cancel()
 
 	select {
-	case v := <-shutdown:
-		if l := len(v.([]*mpb.Bar)); l != 2 {
-			t.Errorf("Expected len of bars: %d, got: %d", 2, l)
+	case <-shutdown:
+		p.Wait()
+		select {
+		case bars := <-handOverBarHeap:
+			if l := len(bars); l != 1 {
+				t.Errorf("Expected len of bars: %d, got: %d", 1, l)
+			}
+		default:
+			t.Fatal("<-handOverBarHeap failure")
 		}
 	case <-time.After(timeout):
-		t.Errorf("Progress didn't shutdown after %v", timeout)
+		t.Fatalf("Progress didn't shutdown after %v", timeout)
 	}
 }
 
