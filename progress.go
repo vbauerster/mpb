@@ -89,7 +89,6 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 	}
 
 	s.hm = make(heapManager, s.hmQueueLen)
-	go s.hm.run(s.shutdownNotifier)
 
 	p := &Progress{
 		pwg:          new(sync.WaitGroup),
@@ -116,7 +115,8 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 		s.autoRefresh = false
 	}
 
-	p.pwg.Add(1)
+	p.pwg.Add(2)
+	go s.hm.run(p.pwg, s.shutdownNotifier)
 	go p.serve(s, cw)
 	return p
 }

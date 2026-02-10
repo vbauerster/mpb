@@ -2,6 +2,7 @@ package mpb
 
 import (
 	"container/heap"
+	"sync"
 
 	"github.com/vbauerster/mpb/v8/decor"
 )
@@ -36,7 +37,9 @@ type fixData struct {
 	lazy     bool
 }
 
-func (m heapManager) run(shutdown <-chan interface{}) {
+func (m heapManager) run(pwg *sync.WaitGroup, shutdown <-chan interface{}) {
+	defer pwg.Done()
+
 	var bHeap barHeap
 	var sync bool
 	var prevLen int
