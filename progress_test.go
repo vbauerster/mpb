@@ -51,20 +51,20 @@ func TestWithContext(t *testing.T) {
 func TestShutdownsWithErrFiller(t *testing.T) {
 	var debug bytes.Buffer
 	shutdown := make(chan interface{})
+	handOverBarHeap := make(chan []*mpb.Bar, 1)
 	p := mpb.New(
-		mpb.WithShutdownNotifier(shutdown),
 		mpb.WithOutput(io.Discard),
 		mpb.WithDebugOutput(&debug),
 		mpb.WithAutoRefresh(),
+		mpb.WithShutdownNotifier(shutdown),
+		mpb.WithHandOverBarHeap(handOverBarHeap),
 	)
 
-	var errReturnCount int
 	testError := errors.New("test error")
 	bar := p.AddBar(100,
 		mpb.BarFillerMiddleware(func(base mpb.BarFiller) mpb.BarFiller {
 			return mpb.BarFillerFunc(func(w io.Writer, st decor.Statistics) error {
-				if st.Current >= 22 {
-					errReturnCount++
+				if st.Current > 21 {
 					return testError
 				}
 				return base.Fill(w, st)
@@ -72,34 +72,32 @@ func TestShutdownsWithErrFiller(t *testing.T) {
 		}),
 	)
 
-	_ = p.MustAdd(0, nil)
-
 	go func() {
 		for !bar.AbortedOrCompleted() {
 			bar.Increment()
 		}
+		p.Wait()
 	}()
 
-	p.Wait()
-
-	if errReturnCount != 1 {
-		t.Errorf("Expected errReturnCount: %d, got: %d", 1, errReturnCount)
-	}
-
 	select {
-	case x := <-shutdown:
-		bars := x.([]*mpb.Bar)
-		if len(bars) == 0 {
-			t.Error("Expected len([]*mpb.Bar) != 0")
-		}
-		if !slices.Contains(bars, bar) {
-			t.Errorf("Expected []*mpb.Bar to contain: %#v", bar)
-		}
-		if err := strings.TrimSpace(debug.String()); err != testError.Error() {
-			t.Errorf("Expected err: %q, got %q", testError.Error(), err)
+	case <-shutdown:
+		p.Wait()
+		select {
+		case bars := <-handOverBarHeap:
+			if l := len(bars); l != 1 {
+				t.Errorf("Expected len of bars: %d, got: %d", 1, l)
+			}
+			if !slices.Contains(bars, bar) {
+				t.Errorf("Expected []*mpb.Bar to contain: %#v", bar)
+			}
+			if err := strings.TrimSpace(debug.String()); err != testError.Error() {
+				t.Errorf("Expected err: %q, got %q", testError.Error(), err)
+			}
+		default:
+			t.Fatal("<-handOverBarHeap failure")
 		}
 	case <-time.After(timeout):
-		t.Errorf("Progress didn't shutdown after %v", timeout)
+		t.Fatalf("Progress didn't shutdown after %v", timeout)
 	}
 }
 
