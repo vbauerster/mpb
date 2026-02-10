@@ -379,29 +379,27 @@ func (b *Bar) Wait() {
 }
 
 func (b *Bar) serve(bs *bState) {
-	defer b.container.bwg.Done()
 	decoratorsOnShutdown := func(group []decor.Decorator) {
 		for _, d := range group {
 			if d, ok := unwrap(d).(decor.ShutdownListener); ok {
-				b.container.bwg.Add(1)
-				go func() {
-					defer b.container.bwg.Done()
-					d.OnShutdown()
-				}()
+				d.OnShutdown()
 			}
 		}
 	}
+	defer func() {
+		decoratorsOnShutdown(bs.decorGroups[0])
+		decoratorsOnShutdown(bs.decorGroups[1])
+		b.bs = bs
+		close(b.bsOk)
+		b.container.bwg.Done()
+	}()
 	for {
 		select {
 		case op := <-b.operateState:
 			op(bs)
 		case <-b.ctx.Done():
-			decoratorsOnShutdown(bs.decorGroups[0])
-			decoratorsOnShutdown(bs.decorGroups[1])
 			// bar can be aborted by canceling parent ctx without calling b.Abort
 			bs.aborted = !bs.completed()
-			b.bs = bs
-			close(b.bsOk)
 			return
 		}
 	}
