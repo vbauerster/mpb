@@ -177,31 +177,38 @@ func TestShutdownAfterBarAbortWithNoDrop(t *testing.T) {
 
 func TestBarPristinePopOrder(t *testing.T) {
 	shutdown := make(chan interface{})
+	handOverBarHeap := make(chan []*mpb.Bar, 1)
 	ctx, cancel := context.WithCancel(context.Background())
 	p := mpb.NewWithContext(ctx,
 		mpb.WithOutput(io.Discard), // auto refresh is disabled
 		mpb.WithShutdownNotifier(shutdown),
+		mpb.WithHandOverBarHeap(handOverBarHeap),
 	)
 	a := p.AddBar(100, mpb.BarPriority(1), mpb.BarID(1))
 	b := p.AddBar(100, mpb.BarPriority(2), mpb.BarID(2))
 	c := p.AddBar(100, mpb.BarPriority(3), mpb.BarID(3))
 	pristineOrder := []*mpb.Bar{c, b, a}
 
-	go cancel()
+	cancel()
 
-	bars := (<-shutdown).([]*mpb.Bar)
-	if l := len(bars); l != 3 {
-		t.Fatalf("Expected len of bars: %d, got: %d", 3, l)
-	}
-
-	p.Wait()
-	pq := mpb.BarHeap(bars)
-
-	for _, b := range pristineOrder {
-		// higher priority pops first
-		if bar := heap.Pop(&pq).(*mpb.Bar); bar.ID() != b.ID() {
-			t.Errorf("Expected bar id: %d, got bar id: %d", b.ID(), bar.ID())
+	select {
+	case <-shutdown:
+		p.Wait()
+		select {
+		case bars := <-handOverBarHeap:
+			if len(bars) != len(pristineOrder) {
+				t.Fatalf("Expected len of bars: %d, got: %d", len(pristineOrder), len(bars))
+			}
+			for i, b := range bars {
+				if bar := pristineOrder[i]; bar.ID() != b.ID() {
+					t.Errorf("Expected bar id: %d, got bar id: %d", bar.ID(), b.ID())
+				}
+			}
+		default:
+			t.Fatal("<-handOverBarHeap failure")
 		}
+	case <-time.After(timeout):
+		t.Fatalf("Progress didn't shutdown after %v", timeout)
 	}
 }
 
