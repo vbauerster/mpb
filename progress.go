@@ -171,7 +171,6 @@ func (p *Progress) Add(total int64, filler BarFiller, options ...BarOption) (*Ba
 		} else {
 			ps.hm.push(bar, true)
 		}
-		ps.idCount++
 		ch <- bar
 	}:
 		return <-ch, nil
@@ -416,7 +415,7 @@ func (s *pState) flush(cw *cwriter.Writer, height int, iter <-chan *Bar) error {
 	return cw.Flush(total - popCount)
 }
 
-func (s pState) makeBarState(total int64, filler BarFiller, options ...BarOption) *bState {
+func (s *pState) makeBarState(total int64, filler BarFiller, options ...BarOption) *bState {
 	bs := &bState{
 		id:              s.idCount,
 		priority:        s.idCount,
@@ -450,5 +449,6 @@ func (s pState) makeBarState(total int64, filler BarFiller, options ...BarOption
 	bs.buffers[1] = bytes.NewBuffer(make([]byte, 0, 128)) // prepend
 	bs.buffers[2] = bytes.NewBuffer(make([]byte, 0, 128)) // append
 
+	s.idCount++
 	return bs
 }
