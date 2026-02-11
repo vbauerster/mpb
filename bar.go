@@ -88,7 +88,7 @@ func (b *Bar) ProxyReader(r io.Reader) io.ReadCloser {
 	if r == nil {
 		panic("expected non nil io.Reader")
 	}
-	result := make(chan io.ReadCloser)
+	result := make(chan io.ReadCloser, 1)
 	select {
 	case b.operateState <- func(s *bState) {
 		result <- newProxyReader(r, b, len(s.ewmaDecorators) != 0)
@@ -106,7 +106,7 @@ func (b *Bar) ProxyWriter(w io.Writer) io.WriteCloser {
 	if w == nil {
 		panic("expected non nil io.Writer")
 	}
-	result := make(chan io.WriteCloser)
+	result := make(chan io.WriteCloser, 1)
 	select {
 	case b.operateState <- func(s *bState) {
 		result <- newProxyWriter(w, b, len(s.ewmaDecorators) != 0)
@@ -119,7 +119,7 @@ func (b *Bar) ProxyWriter(w io.Writer) io.WriteCloser {
 
 // ID returns id of the bar.
 func (b *Bar) ID() int {
-	result := make(chan int)
+	result := make(chan int, 1)
 	select {
 	case b.operateState <- func(s *bState) { result <- s.id }:
 		return <-result
@@ -130,7 +130,7 @@ func (b *Bar) ID() int {
 
 // Current returns bar's current value, in other words sum of all increments.
 func (b *Bar) Current() int64 {
-	result := make(chan int64)
+	result := make(chan int64, 1)
 	select {
 	case b.operateState <- func(s *bState) { result <- s.current }:
 		return <-result
@@ -346,7 +346,7 @@ func (b *Bar) Abort(drop bool) {
 
 // Aborted reports whether the bar is in aborted state.
 func (b *Bar) Aborted() bool {
-	result := make(chan bool)
+	result := make(chan bool, 1)
 	select {
 	case b.operateState <- func(s *bState) { result <- s.aborted }:
 		return <-result
@@ -357,7 +357,7 @@ func (b *Bar) Aborted() bool {
 
 // Completed reports whether the bar is in completed state.
 func (b *Bar) Completed() bool {
-	result := make(chan bool)
+	result := make(chan bool, 1)
 	select {
 	case b.operateState <- func(s *bState) { result <- s.completed() }:
 		return <-result
@@ -369,7 +369,7 @@ func (b *Bar) Completed() bool {
 // AbortedOrCompleted reports whether a bar is in aborted or completed state.
 // Faster version of `(*Bar).Aborted() || (*Bar).Completed()`.
 func (b *Bar) AbortedOrCompleted() bool {
-	result := make(chan bool)
+	result := make(chan bool, 1)
 	select {
 	case b.operateState <- func(s *bState) {
 		result <- s.aborted || s.completed()
@@ -443,7 +443,7 @@ func (b *Bar) render(tw int) {
 }
 
 func (b *Bar) wSyncTable() decorSyncTable {
-	result := make(chan decorSyncTable)
+	result := make(chan decorSyncTable, 1)
 	select {
 	case b.operateState <- func(s *bState) { result <- s.wSyncTable() }:
 		return <-result

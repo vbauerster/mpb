@@ -163,7 +163,7 @@ func (p *Progress) Add(total int64, filler BarFiller, options ...BarOption) (*Ba
 	} else if f, ok := filler.(BarFillerFunc); ok && f == nil {
 		filler = NopStyle().Build()
 	}
-	ch := make(chan *Bar)
+	ch := make(chan *Bar, 1)
 	select {
 	case p.operateState <- func(ps *pState) {
 		bs := ps.makeBarState(total, filler, options...)
@@ -219,7 +219,7 @@ func (p *Progress) Write(b []byte) (int, error) {
 		n   int
 		err error
 	}
-	ch := make(chan result)
+	ch := make(chan result, 1)
 	select {
 	case p.interceptIO <- func(w io.Writer) {
 		n, err := w.Write(b)
