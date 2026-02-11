@@ -47,6 +47,38 @@ func TestWithContext(t *testing.T) {
 	}
 }
 
+func TestShutdownWithOneHourRefreshRate(t *testing.T) {
+	shutdown := make(chan interface{})
+	handOverBarHeap := make(chan []*mpb.Bar, 1)
+	p := mpb.New(
+		mpb.WithOutput(io.Discard),
+		mpb.WithRefreshRate(time.Hour),
+		mpb.WithAutoRefresh(),
+		mpb.WithShutdownNotifier(shutdown),
+		mpb.WithHandOverBarHeap(handOverBarHeap),
+	)
+
+	b := p.AddBar(100)
+	b.IncrBy(100)
+
+	go p.Wait()
+
+	select {
+	case <-shutdown:
+		p.Wait()
+		select {
+		case bars := <-handOverBarHeap:
+			if l := len(bars); l != 1 {
+				t.Errorf("Expected len of bars: %d, got: %d", 1, l)
+			}
+		default:
+			t.Fatal("<-handOverBarHeap failure")
+		}
+	case <-time.After(timeout):
+		t.Fatalf("Progress didn't shutdown after %v", timeout)
+	}
+}
+
 func TestShutdownsWithErrFiller(t *testing.T) {
 	var debug bytes.Buffer
 	shutdown := make(chan interface{})
