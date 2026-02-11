@@ -308,30 +308,40 @@ func TestDecorStatisticsAvailableWidth(t *testing.T) {
 
 func TestBarQueueAfterBar(t *testing.T) {
 	shutdown := make(chan interface{})
+	handOverBarHeap := make(chan []*mpb.Bar, 1)
 	ctx, cancel := context.WithCancel(context.Background())
 	p := mpb.NewWithContext(ctx,
 		mpb.WithOutput(io.Discard),
 		mpb.WithAutoRefresh(),
 		mpb.WithShutdownNotifier(shutdown),
+		mpb.WithHandOverBarHeap(handOverBarHeap),
 	)
 	a := p.AddBar(100)
 	b := p.AddBar(100, mpb.BarQueueAfter(a))
-	identity := map[*mpb.Bar]string{
-		a: "a",
-		b: "b",
-	}
 
 	a.IncrBy(100)
 	a.Wait()
 	cancel()
 
-	bars := (<-shutdown).([]*mpb.Bar)
-	if l := len(bars); l != 1 {
-		t.Errorf("Expected len of bars: %d, got: %d", 1, l)
-	}
-
-	p.Wait()
-	if bars[0] != b {
-		t.Errorf("Expected bars[0] == b, got: %s", identity[bars[0]])
+	select {
+	case <-shutdown:
+		p.Wait()
+		select {
+		case bars := <-handOverBarHeap:
+			identity := map[*mpb.Bar]string{
+				a: "a",
+				b: "b",
+			}
+			if l := len(bars); l != 1 {
+				t.Errorf("Expected len of bars: %d, got: %d", 1, l)
+			}
+			if bars[0] != b {
+				t.Errorf("Expected bars[0] == b, got: %s", identity[bars[0]])
+			}
+		default:
+			t.Fatal("<-handOverBarHeap failure")
+		}
+	case <-time.After(timeout):
+		t.Fatalf("Progress didn't shutdown after %v", timeout)
 	}
 }
