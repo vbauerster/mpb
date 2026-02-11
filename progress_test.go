@@ -103,36 +103,38 @@ func TestShutdownsWithErrFiller(t *testing.T) {
 
 func TestShutdownAfterBarAbortWithDrop(t *testing.T) {
 	shutdown := make(chan interface{})
+	handOverBarHeap := make(chan []*mpb.Bar, 1)
 	p := mpb.New(
-		mpb.WithShutdownNotifier(shutdown),
 		mpb.WithOutput(io.Discard),
 		mpb.WithAutoRefresh(),
+		mpb.WithShutdownNotifier(shutdown),
+		mpb.WithHandOverBarHeap(handOverBarHeap),
 	)
 	b := p.AddBar(100)
 
-	var count int
 	for i := 0; !b.Aborted(); i++ {
-		if i >= 10 {
-			count++
+		if i > 0 {
 			b.Abort(true)
 		} else {
 			b.Increment()
 		}
 	}
 
-	p.Wait()
-
-	if count != 1 {
-		t.Errorf("Expected count: %d, got: %d", 1, count)
-	}
+	go p.Wait()
 
 	select {
-	case v := <-shutdown:
-		if l := len(v.([]*mpb.Bar)); l != 0 {
-			t.Errorf("Expected len of bars: %d, got: %d", 0, l)
+	case <-shutdown:
+		p.Wait()
+		select {
+		case bars := <-handOverBarHeap:
+			if l := len(bars); l != 0 {
+				t.Errorf("Expected len of bars: %d, got: %d", 0, l)
+			}
+		default:
+			t.Fatal("<-handOverBarHeap failure")
 		}
 	case <-time.After(timeout):
-		t.Errorf("Progress didn't shutdown after %v", timeout)
+		t.Fatalf("Progress didn't shutdown after %v", timeout)
 	}
 }
 
