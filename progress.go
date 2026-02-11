@@ -36,6 +36,7 @@ type pState struct {
 	hm          heapManager
 	renderReq   chan time.Time
 	idCount     int
+	shCount     int
 	popPriority int
 
 	// following are provided/overrode by user
@@ -288,15 +289,13 @@ func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 				}
 			}
 		case <-p.done:
-			if s.autoRefresh {
-				update := make(chan bool)
-				for i := 0; i == 0 || <-update; i++ {
-					if err := s.render(dw); err != nil {
-						_, _ = fmt.Fprintln(s.debugOut, err.Error())
-						break
-					}
-					s.hm.state(update)
+			// may enter the loop on last bar and frame.rmOnComplete
+			for s.autoRefresh && s.shCount > 0 {
+				if err := s.render(cw); err != nil {
+					_, _ = fmt.Fprintln(s.debugOut, err.Error())
+					return
 				}
+				s.shCount--
 			}
 			return
 		}
@@ -380,18 +379,21 @@ func (s *pState) flush(cw *cwriter.Writer, height int, iter <-chan *Bar) error {
 
 		switch frame.shutdown {
 		case 1:
-			b.cancel()
 			if qb, ok := s.queueBars[b]; ok {
 				delete(s.queueBars, b)
 				qb.priority = b.priority
 				s.hm.push(qb, true)
+				s.shCount--
 			} else if s.popCompleted && !frame.noPop {
 				b.priority = s.popPriority
 				s.popPriority++
 				s.hm.push(b, false)
+				s.shCount--
 			} else if !frame.rmOnComplete {
 				s.hm.push(b, false)
+				s.shCount--
 			}
+			b.cancel()
 		case 2:
 			if s.popCompleted && !frame.noPop {
 				popCount += len(frame.rows) - discarded
@@ -450,5 +452,6 @@ func (s *pState) makeBarState(total int64, filler BarFiller, options ...BarOptio
 	bs.buffers[2] = bytes.NewBuffer(make([]byte, 0, 128)) // append
 
 	s.idCount++
+	s.shCount++
 	return bs
 }

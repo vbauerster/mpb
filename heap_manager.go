@@ -16,7 +16,6 @@ const (
 	h_push
 	h_iter
 	h_fix
-	h_state
 )
 
 type heapRequest struct {
@@ -98,9 +97,6 @@ func (m heapManager) run(pwg *sync.WaitGroup, shutdown <-chan interface{}, handO
 			if !data.lazy {
 				heap.Fix(&bHeap, data.bar.index)
 			}
-		case h_state:
-			ch := req.data.(chan<- bool)
-			ch <- sync || prevLen != bHeap.Len()
 		}
 	}
 }
@@ -121,10 +117,6 @@ func (m heapManager) iter(req ...iterRequest) {
 func (m heapManager) fix(b *Bar, priority int, lazy bool) {
 	data := fixData{b, priority, lazy}
 	m <- heapRequest{cmd: h_fix, data: data}
-}
-
-func (m heapManager) state(ch chan<- bool) {
-	m <- heapRequest{cmd: h_state, data: ch}
 }
 
 func syncWidth(matrix map[int][]*decor.Sync, done <-chan interface{}) {
