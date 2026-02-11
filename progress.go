@@ -24,11 +24,11 @@ var ErrDone = fmt.Errorf("%T instance can't be reused after %[1]T.Wait()", (*Pro
 
 // Progress represents a container that renders one or more progress bars.
 type Progress struct {
-	pwg, bwg, uwg *sync.WaitGroup
-	operateState  chan func(*pState)
-	interceptIO   chan func(io.Writer)
-	done          <-chan struct{}
-	cancel        func()
+	pwg, bwg     *sync.WaitGroup
+	operateState chan func(*pState)
+	interceptIO  chan func(io.Writer)
+	done         <-chan struct{}
+	cancel       func()
 }
 
 // pState holds bars in its priorityQueue, it gets passed to (*Progress).serve monitor goroutine.
@@ -96,7 +96,6 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 	p := &Progress{
 		pwg:          new(sync.WaitGroup),
 		bwg:          new(sync.WaitGroup),
-		uwg:          s.uwg,
 		operateState: make(chan func(*pState)),
 		interceptIO:  make(chan func(io.Writer)),
 		cancel:       cancel,
@@ -235,10 +234,6 @@ func (p *Progress) Write(b []byte) (int, error) {
 // Wait waits for all bars to complete and finally shutdowns container. After
 // this method has been called, there is no way to reuse `*Progress` instance.
 func (p *Progress) Wait() {
-	// wait for user wg, if any
-	if p.uwg != nil {
-		p.uwg.Wait()
-	}
 	p.bwg.Wait()
 	p.Shutdown()
 }
@@ -253,6 +248,9 @@ func (p *Progress) Shutdown() {
 
 func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 	defer func() {
+		if s.uwg != nil {
+			s.uwg.Wait() // wait for user wg
+		}
 		p.bwg.Wait()
 		close(s.hm)
 		close(s.shutdownNotifier)
