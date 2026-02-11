@@ -41,9 +41,9 @@ func main() {
 			defer wg.Done()
 			rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 			max := 100 * time.Millisecond
-			for i := 0; bar.IsRunning(); i++ {
+			for i := 0; !bar.AbortedOrCompleted(); i++ {
 				if bar.ID() == 2 && i >= 42 {
-					go bar.Abort(false)
+					bar.Abort(false)
 				}
 				time.Sleep(time.Duration(rng.Intn(10)+1) * max / 10)
 				bar.Increment()
