@@ -527,21 +527,23 @@ func (b *Bar) done(renderReq chan<- time.Time, autoRefresh bool) {
 
 func (b *Bar) tryEarlyRefresh(renderReq chan<- time.Time) {
 	otherRunning := make(chan struct{})
-	b.container.traverseBars(func(bar *Bar) bool {
+	ok := b.container.iterateBars(func(bar *Bar) bool {
 		if b != bar && bar.isRunning() {
 			close(otherRunning)
 			return false // stop traverse
 		}
 		return true // continue traverse
 	})
-	select {
-	case <-otherRunning:
-	default:
-		for {
-			select {
-			case renderReq <- time.Now():
-			case <-b.ctx.Done():
-				return
+	if ok {
+		select {
+		case <-otherRunning:
+		default:
+			for {
+				select {
+				case renderReq <- time.Now():
+				case <-b.ctx.Done():
+					return
+				}
 			}
 		}
 	}
