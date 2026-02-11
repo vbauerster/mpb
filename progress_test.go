@@ -2,7 +2,6 @@ package mpb_test
 
 import (
 	"bytes"
-	"container/heap"
 	"context"
 	"errors"
 	"io"
@@ -215,12 +214,14 @@ func TestBarPristinePopOrder(t *testing.T) {
 func makeUpdateBarPriorityTest(refresh, lazy bool) func(*testing.T) {
 	return func(t *testing.T) {
 		shutdown := make(chan interface{})
+		handOverBarHeap := make(chan []*mpb.Bar, 1)
 		refreshCh := make(chan interface{})
 		ctx, cancel := context.WithCancel(context.Background())
 		p := mpb.NewWithContext(ctx,
 			mpb.WithOutput(io.Discard),
 			mpb.WithManualRefresh(refreshCh),
 			mpb.WithShutdownNotifier(shutdown),
+			mpb.WithHandOverBarHeap(handOverBarHeap),
 		)
 		a := p.AddBar(100, mpb.BarPriority(1), mpb.BarID(1))
 		b := p.AddBar(100, mpb.BarPriority(2), mpb.BarID(2))
@@ -236,21 +237,26 @@ func makeUpdateBarPriorityTest(refresh, lazy bool) func(*testing.T) {
 			checkOrder = []*mpb.Bar{c, b, a} // pristine order
 		}
 
-		go cancel()
+		cancel()
 
-		bars := (<-shutdown).([]*mpb.Bar)
-		if l := len(bars); l != 3 {
-			t.Fatalf("Expected len of bars: %d, got: %d", 3, l)
-		}
-
-		p.Wait()
-		pq := mpb.BarHeap(bars)
-
-		for _, b := range checkOrder {
-			// higher priority pops first
-			if bar := heap.Pop(&pq).(*mpb.Bar); bar.ID() != b.ID() {
-				t.Errorf("Expected bar id: %d, got bar id: %d", b.ID(), bar.ID())
+		select {
+		case <-shutdown:
+			p.Wait()
+			select {
+			case bars := <-handOverBarHeap:
+				if l := len(bars); l != 3 {
+					t.Fatalf("Expected len of bars: %d, got: %d", 3, l)
+				}
+				for i, b := range bars {
+					if bar := checkOrder[i]; bar.ID() != b.ID() {
+						t.Errorf("Expected bar id: %d, got bar id: %d", bar.ID(), b.ID())
+					}
+				}
+			default:
+				t.Fatal("<-handOverBarHeap failure")
 			}
+		case <-time.After(timeout):
+			t.Fatalf("Progress didn't shutdown after %v", timeout)
 		}
 	}
 }
