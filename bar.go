@@ -157,7 +157,7 @@ func (b *Bar) SetRefillCurrent() {
 
 // TraverseDecorators traverses available decorators and calls `cb`
 // on each unwrapped one.
-func (b *Bar) TraverseDecorators(cb func(decor.Decorator)) {
+func (b *Bar) TraverseDecorators(cb func(decor.Decorator)) (ok bool) {
 	select {
 	case b.operateState <- func(s *bState) {
 		for _, group := range s.decorGroups {
@@ -166,7 +166,9 @@ func (b *Bar) TraverseDecorators(cb func(decor.Decorator)) {
 			}
 		}
 	}:
+		return true
 	case <-b.ctx.Done():
+		return false
 	}
 }
 
