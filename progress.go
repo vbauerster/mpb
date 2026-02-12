@@ -17,7 +17,7 @@ import (
 )
 
 const defaultRefreshRate = 150 * time.Millisecond
-const defaultHmQueueLength = 128
+const defaultHmQueueLength = 64
 
 // ErrDone represents use after `(*Progress).Wait()` error.
 var ErrDone = fmt.Errorf("%T instance can't be reused after %[1]T.Wait()", (*Progress)(nil))

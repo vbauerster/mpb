@@ -33,7 +33,7 @@ func WithWidth(width int) ContainerOption {
 
 // WithQueueLen sets buffer size of heap manager channel. Ideally it must be
 // kept at MAX value, where MAX is number of bars to be rendered at the same
-// time. Default queue len is 128.
+// time. Default queue len is 64.
 func WithQueueLen(len int) ContainerOption {
 	return func(s *pState) {
 		s.hmQueueLen = len
