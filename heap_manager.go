@@ -42,7 +42,7 @@ type fixData struct {
 	lazy     bool
 }
 
-func (m heapManager) run(pwg *sync.WaitGroup, shutdown <-chan interface{}, handOverBarHeap chan []*Bar) {
+func (m heapManager) run(pwg *sync.WaitGroup, shutdown <-chan interface{}, handOverBarHeap chan<- []*Bar) {
 	var bHeap barHeap
 	var sync bool
 	var prevLen int

@@ -47,7 +47,7 @@ type pState struct {
 	delayRC          <-chan struct{}
 	manualRC         <-chan interface{}
 	shutdownNotifier chan interface{}
-	handOverBarHeap  chan []*Bar
+	handOverBarHeap  chan<- []*Bar
 	queueBars        map[*Bar]*Bar
 	output           io.Writer
 	debugOut         io.Writer
