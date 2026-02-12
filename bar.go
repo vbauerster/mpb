@@ -406,7 +406,7 @@ func (b *Bar) serve(bs *bState) {
 			op(bs)
 		case <-b.ctx.Done():
 			// bar can be aborted by canceling parent ctx without calling b.Abort
-			bs.aborted = !bs.completed()
+			bs.aborted = bs.aborted || !bs.completed()
 			return
 		}
 	}
