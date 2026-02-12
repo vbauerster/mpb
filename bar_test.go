@@ -345,3 +345,34 @@ func TestBarQueueAfterBar(t *testing.T) {
 		t.Fatalf("Progress didn't shutdown after %v", timeout)
 	}
 }
+
+func TestBarRemoveOnComplete(t *testing.T) {
+	shutdown := make(chan interface{})
+	handOverBarHeap := make(chan []*mpb.Bar, 1)
+	p := mpb.New(
+		mpb.WithOutput(io.Discard),
+		mpb.WithAutoRefresh(),
+		mpb.WithShutdownNotifier(shutdown),
+		mpb.WithHandOverBarHeap(handOverBarHeap),
+	)
+
+	b := p.AddBar(100, mpb.BarRemoveOnComplete())
+	b.IncrBy(100)
+
+	go p.Wait()
+
+	select {
+	case <-shutdown:
+		p.Wait()
+		select {
+		case bars := <-handOverBarHeap:
+			if l := len(bars); l != 0 {
+				t.Errorf("Expected len of bars: %d, got: %d", 0, l)
+			}
+		default:
+			t.Fatal("<-handOverBarHeap failure")
+		}
+	case <-time.After(timeout):
+		t.Fatalf("Progress didn't shutdown after %v", timeout)
+	}
+}
