@@ -22,8 +22,7 @@ func main() {
 
 	for i := 0; i < numBars; i++ {
 		task := fmt.Sprintf("Task#%02d:", i)
-		queue := make([]*mpb.Bar, 2)
-		queue[0] = p.AddBar(rand.Int63n(201)+100,
+		b1 := p.AddBar(rand.Int63n(101)+100,
 			mpb.PrependDecorators(
 				decor.Name(task, decor.WC{C: decor.DindentRight | decor.DextraSpace}),
 				decor.Name("downloading", decor.WCSyncSpaceR),
@@ -33,8 +32,11 @@ func main() {
 				decor.OnComplete(decor.Percentage(decor.WC{W: 5}), "done"),
 			),
 		)
-		queue[1] = p.AddBar(rand.Int63n(101)+100,
-			mpb.BarQueueAfter(queue[0]), // this bar is queued
+		go complete(b1)
+
+		// b2 is queued and will run after b1 is done replacing its place
+		b2 := p.AddBar(rand.Int63n(101)+100,
+			mpb.BarQueueAfter(b1),
 			mpb.BarFillerClearOnComplete(),
 			mpb.PrependDecorators(
 				decor.Name(task, decor.WC{C: decor.DindentRight | decor.DextraSpace}),
@@ -51,12 +53,7 @@ func main() {
 				decor.OnComplete(decor.Percentage(decor.WC{W: 5}), ""),
 			),
 		)
-
-		go func() {
-			for _, b := range queue {
-				complete(b)
-			}
-		}()
+		go complete(b2)
 	}
 
 	p.Wait()
