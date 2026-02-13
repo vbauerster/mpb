@@ -28,12 +28,12 @@ type Progress struct {
 	operateState chan func(*pState)
 	interceptIO  chan func(io.Writer)
 	done         <-chan struct{}
+	ctx          context.Context
 	cancel       func()
 }
 
 // pState holds bars in its priorityQueue, it gets passed to (*Progress).serve monitor goroutine.
 type pState struct {
-	ctx         context.Context
 	hm          heapManager
 	renderReq   chan time.Time
 	idCount     int
@@ -70,8 +70,8 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 		ctx = context.Background()
 	}
 	ctx, cancel := context.WithCancel(ctx)
+
 	s := &pState{
-		ctx:         ctx,
 		hmQueueLen:  defaultHmQueueLength,
 		renderReq:   make(chan time.Time),
 		popPriority: math.MinInt32,
@@ -98,6 +98,7 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 		bwg:          new(sync.WaitGroup),
 		operateState: make(chan func(*pState)),
 		interceptIO:  make(chan func(io.Writer)),
+		ctx:          ctx,
 		cancel:       cancel,
 	}
 
@@ -106,12 +107,12 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 		done := make(chan struct{})
 		p.done = done
 		s.autoRefresh = false
-		go s.manualRefreshListener(done)
+		go s.manualRefreshListener(ctx, done)
 	} else if cw.IsTerminal() || s.autoRefresh {
 		done := make(chan struct{})
 		p.done = done
 		s.autoRefresh = true
-		go s.autoRefreshListener(done)
+		go s.autoRefreshListener(ctx, done)
 	} else {
 		p.done = ctx.Done()
 		s.autoRefresh = false
@@ -166,7 +167,7 @@ func (p *Progress) Add(total int64, filler BarFiller, options ...BarOption) (*Ba
 	select {
 	case p.operateState <- func(ps *pState) {
 		bs := ps.makeBarState(total, filler, options...)
-		bar := newBar(ps.ctx, p, bs)
+		bar := newBar(p, bs)
 		if bs.waitBar != nil {
 			ps.queueBars[bs.waitBar] = bar
 		} else {
@@ -302,21 +303,21 @@ func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 	}
 }
 
-func (s *pState) autoRefreshListener(done chan struct{}) {
+func (s *pState) autoRefreshListener(ctx context.Context, done chan struct{}) {
 	ticker := time.NewTicker(s.refreshRate)
 	defer ticker.Stop()
 	for {
 		select {
 		case t := <-ticker.C:
 			s.renderReq <- t
-		case <-s.ctx.Done():
+		case <-ctx.Done():
 			close(done)
 			return
 		}
 	}
 }
 
-func (s *pState) manualRefreshListener(done chan struct{}) {
+func (s *pState) manualRefreshListener(ctx context.Context, done chan struct{}) {
 	for {
 		select {
 		case x := <-s.manualRC:
@@ -325,7 +326,7 @@ func (s *pState) manualRefreshListener(done chan struct{}) {
 			} else {
 				s.renderReq <- time.Now()
 			}
-		case <-s.ctx.Done():
+		case <-ctx.Done():
 			close(done)
 			return
 		}
