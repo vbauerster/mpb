@@ -167,7 +167,7 @@ func (p *Progress) Add(total int64, filler BarFiller, options ...BarOption) (*Ba
 	select {
 	case p.operateState <- func(ps *pState) {
 		bs := ps.makeBarState(total, filler, options...)
-		bar := newBar(p, bs)
+		bar := p.makeBar(bs)
 		if bs.waitBar != nil {
 			ps.queueBars[bs.waitBar] = bar
 		} else {
@@ -179,6 +179,24 @@ func (p *Progress) Add(total int64, filler BarFiller, options ...BarOption) (*Ba
 	case <-p.done:
 		return nil, ErrDone
 	}
+}
+
+func (p *Progress) makeBar(bs *bState) *Bar {
+	ctx, cancel := context.WithCancel(p.ctx)
+
+	bar := &Bar{
+		priority:     bs.priority,
+		frameCh:      make(chan *renderFrame, 1),
+		operateState: make(chan func(*bState)),
+		bsOk:         make(chan struct{}),
+		container:    p,
+		ctx:          ctx,
+		cancel:       cancel,
+	}
+
+	p.bwg.Add(1)
+	go bar.serve(bs)
+	return bar
 }
 
 // blocks until iteration is done

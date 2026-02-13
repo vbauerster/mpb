@@ -61,24 +61,6 @@ type renderFrame struct {
 	err          error
 }
 
-func newBar(container *Progress, bs *bState) *Bar {
-	ctx, cancel := context.WithCancel(container.ctx)
-
-	bar := &Bar{
-		priority:     bs.priority,
-		frameCh:      make(chan *renderFrame, 1),
-		operateState: make(chan func(*bState)),
-		bsOk:         make(chan struct{}),
-		container:    container,
-		ctx:          ctx,
-		cancel:       cancel,
-	}
-
-	container.bwg.Add(1)
-	go bar.serve(bs)
-	return bar
-}
-
 // ProxyReader wraps io.Reader with metrics required for progress
 // tracking. If `r` is 'unknown total/size' reader it's mandatory
 // to call `(*Bar).SetTotal(-1, true)` after the wrapper returns
