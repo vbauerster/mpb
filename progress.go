@@ -108,17 +108,18 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 	}
 
 	cw := cwriter.New(s.output)
-	if s.manualRC != nil {
+	switch {
+	case s.manualRC != nil:
 		done := make(chan struct{})
 		p.done = done
 		s.autoRefresh = false
 		go s.manualRefreshListener(ctx, done)
-	} else if cw.IsTerminal() || s.autoRefresh {
+	case s.autoRefresh || cw.IsTerminal():
 		done := make(chan struct{})
 		p.done = done
 		s.autoRefresh = true
 		go s.autoRefreshListener(ctx, done)
-	} else {
+	default:
 		p.done = ctx.Done()
 		s.autoRefresh = false
 	}
