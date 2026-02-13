@@ -32,6 +32,11 @@ type Progress struct {
 	cancel       func()
 }
 
+type queueBar struct {
+	state *bState
+	bar   *Bar
+}
+
 // pState holds bars in its priorityQueue, it gets passed to (*Progress).serve monitor goroutine.
 type pState struct {
 	hm          heapManager
@@ -48,7 +53,7 @@ type pState struct {
 	manualRC         <-chan interface{}
 	shutdownNotifier chan interface{}
 	handOverBarHeap  chan<- []*Bar
-	queueBars        map[*Bar]*Bar
+	queueBars        map[*Bar]*queueBar
 	output           io.Writer
 	debugOut         io.Writer
 	uwg              *sync.WaitGroup
@@ -76,7 +81,7 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 		renderReq:   make(chan time.Time),
 		popPriority: math.MinInt32,
 		refreshRate: defaultRefreshRate,
-		queueBars:   make(map[*Bar]*Bar),
+		queueBars:   make(map[*Bar]*queueBar),
 		output:      os.Stdout,
 		debugOut:    io.Discard,
 	}
@@ -169,8 +174,9 @@ func (p *Progress) Add(total int64, filler BarFiller, options ...BarOption) (*Ba
 		bs := ps.makeBarState(total, filler, options...)
 		bar := p.makeBar(bs)
 		if bs.waitBar != nil {
-			ps.queueBars[bs.waitBar] = bar
+			ps.queueBars[bs.waitBar] = &queueBar{bs, bar}
 		} else {
+			go bar.serve(bs)
 			ps.hm.push(bar, true)
 		}
 		ch <- bar
@@ -195,7 +201,6 @@ func (p *Progress) makeBar(bs *bState) *Bar {
 	}
 
 	p.bwg.Add(1)
-	go bar.serve(bs)
 	return bar
 }
 
@@ -394,8 +399,9 @@ func (s *pState) flush(cw *cwriter.Writer, height int, seq iter.Seq[*Bar]) error
 		case 1:
 			if qb, ok := s.queueBars[b]; ok {
 				delete(s.queueBars, b)
-				qb.priority = b.priority
-				s.hm.push(qb, true)
+				qb.bar.priority = b.priority
+				go qb.bar.serve(qb.state)
+				s.hm.push(qb.bar, true)
 				s.shCount--
 			} else if s.popCompleted && !frame.noPop {
 				b.priority = s.popPriority
