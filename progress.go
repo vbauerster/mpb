@@ -42,7 +42,6 @@ type pState struct {
 	hm          heapManager
 	renderReq   chan time.Time
 	idCount     int
-	shCount     int
 	popPriority int
 
 	// following are provided/overrode by user
@@ -59,6 +58,7 @@ type pState struct {
 	uwg              *sync.WaitGroup
 	popCompleted     bool
 	autoRefresh      bool
+	rmOnComplete     bool
 }
 
 // New creates new Progress container instance. It's not possible to
@@ -314,13 +314,11 @@ func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 				}
 			}
 		case <-p.done:
-			// may enter the loop on last bar and frame.rmOnComplete
-			for s.autoRefresh && s.shCount > 0 {
+			if s.autoRefresh && s.rmOnComplete {
 				if err := s.render(cw); err != nil {
 					_, _ = fmt.Fprintln(s.debugOut, err.Error())
 					return
 				}
-				s.shCount--
 			}
 			return
 		}
@@ -378,6 +376,8 @@ func (s *pState) flush(cw *cwriter.Writer, height int, seq iter.Seq[*Bar]) error
 	var total, popCount int
 	var rows [][]io.Reader
 
+	s.rmOnComplete = false
+
 	for b := range seq {
 		frame := <-b.frameCh
 		if frame.err != nil {
@@ -403,15 +403,16 @@ func (s *pState) flush(cw *cwriter.Writer, height int, seq iter.Seq[*Bar]) error
 				qb.bar.priority = b.priority
 				go qb.bar.serve(qb.state)
 				s.hm.push(qb.bar, true)
-				s.shCount--
-			} else if s.popCompleted && !frame.noPop {
-				b.priority = s.popPriority
-				s.popPriority++
-				s.hm.push(b, false)
-				s.shCount--
-			} else if !frame.rmOnComplete {
-				s.hm.push(b, false)
-				s.shCount--
+			} else {
+				switch {
+				case s.popCompleted && !frame.noPop:
+					b.priority = s.popPriority
+					s.popPriority++
+					fallthrough
+				case !frame.rmOnComplete:
+					s.hm.push(b, false)
+				}
+				s.rmOnComplete = s.rmOnComplete || frame.rmOnComplete
 			}
 			b.cancel()
 		case 2:
@@ -472,6 +473,5 @@ func (s *pState) makeBarState(total int64, filler BarFiller, options ...BarOptio
 	bs.buffers[2] = bytes.NewBuffer(make([]byte, 0, 128)) // append
 
 	s.idCount++
-	s.shCount++
 	return bs
 }
