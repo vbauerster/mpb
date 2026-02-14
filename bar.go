@@ -349,7 +349,7 @@ func (b *Bar) Completed() bool {
 }
 
 // AbortedOrCompleted reports whether a bar is in aborted or completed state.
-// Faster version of `(*Bar).Aborted() || (*Bar).Completed()`.
+// Faster and atomic version of `(*Bar).Aborted() || (*Bar).Completed()`.
 func (b *Bar) AbortedOrCompleted() bool {
 	result := make(chan bool, 1)
 	select {
