@@ -172,6 +172,7 @@ func (p *Progress) Add(total int64, filler BarFiller, options ...BarOption) (*Ba
 	ch := make(chan *Bar, 1)
 	select {
 	case p.operateState <- func(ps *pState) {
+		p.bwg.Add(1)
 		bs := ps.makeBarState(total, filler, options...)
 		bar := p.makeBar(bs)
 		if bs.waitBar != nil {
@@ -201,7 +202,6 @@ func (p *Progress) makeBar(bs *bState) *Bar {
 		cancel:       cancel,
 	}
 
-	p.bwg.Add(1)
 	return bar
 }
 
