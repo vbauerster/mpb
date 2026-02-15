@@ -174,7 +174,7 @@ func (p *Progress) Add(total int64, filler BarFiller, options ...BarOption) (*Ba
 	case p.operateState <- func(ps *pState) {
 		p.bwg.Add(1)
 		bs := ps.makeBarState(total, filler, options...)
-		bar := p.makeBar(bs)
+		bar := p.makeBar(bs.priority)
 		if bs.waitBar != nil {
 			ps.queueBars[bs.waitBar] = &queueBar{bs, bar}
 		} else {
@@ -189,11 +189,11 @@ func (p *Progress) Add(total int64, filler BarFiller, options ...BarOption) (*Ba
 	}
 }
 
-func (p *Progress) makeBar(bs *bState) *Bar {
+func (p *Progress) makeBar(priority int) *Bar {
 	ctx, cancel := context.WithCancel(p.ctx)
 
 	bar := &Bar{
-		priority:     bs.priority,
+		priority:     priority,
 		frameCh:      make(chan *renderFrame, 1),
 		operateState: make(chan func(*bState)),
 		bsOk:         make(chan struct{}),
