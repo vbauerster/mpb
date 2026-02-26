@@ -19,7 +19,7 @@ const (
 )
 
 func TestWithContext(t *testing.T) {
-	shutdown := make(chan interface{})
+	shutdown := make(chan any)
 	handOverBarHeap := make(chan []*mpb.Bar, 1)
 	ctx, cancel := context.WithCancel(context.Background())
 	p := mpb.NewWithContext(ctx,
@@ -48,7 +48,7 @@ func TestWithContext(t *testing.T) {
 }
 
 func TestShutdownWithOneHourRefreshRate(t *testing.T) {
-	shutdown := make(chan interface{})
+	shutdown := make(chan any)
 	handOverBarHeap := make(chan []*mpb.Bar, 1)
 	p := mpb.New(
 		mpb.WithOutput(io.Discard),
@@ -81,7 +81,7 @@ func TestShutdownWithOneHourRefreshRate(t *testing.T) {
 
 func TestShutdownsWithErrFiller(t *testing.T) {
 	var debug bytes.Buffer
-	shutdown := make(chan interface{})
+	shutdown := make(chan any)
 	handOverBarHeap := make(chan []*mpb.Bar, 1)
 	p := mpb.New(
 		mpb.WithOutput(io.Discard),
@@ -133,7 +133,7 @@ func TestShutdownsWithErrFiller(t *testing.T) {
 }
 
 func TestShutdownAfterBarAbortWithDrop(t *testing.T) {
-	shutdown := make(chan interface{})
+	shutdown := make(chan any)
 	handOverBarHeap := make(chan []*mpb.Bar, 1)
 	p := mpb.New(
 		mpb.WithOutput(io.Discard),
@@ -170,7 +170,7 @@ func TestShutdownAfterBarAbortWithDrop(t *testing.T) {
 }
 
 func TestShutdownAfterBarAbortWithNoDrop(t *testing.T) {
-	shutdown := make(chan interface{})
+	shutdown := make(chan any)
 	handOverBarHeap := make(chan []*mpb.Bar, 1)
 	p := mpb.New(
 		mpb.WithOutput(io.Discard),
@@ -207,7 +207,7 @@ func TestShutdownAfterBarAbortWithNoDrop(t *testing.T) {
 }
 
 func TestBarPristinePopOrder(t *testing.T) {
-	shutdown := make(chan interface{})
+	shutdown := make(chan any)
 	handOverBarHeap := make(chan []*mpb.Bar, 1)
 	ctx, cancel := context.WithCancel(context.Background())
 	p := mpb.NewWithContext(ctx,
@@ -245,9 +245,9 @@ func TestBarPristinePopOrder(t *testing.T) {
 
 func makeUpdateBarPriorityTest(refresh, lazy bool) func(*testing.T) {
 	return func(t *testing.T) {
-		shutdown := make(chan interface{})
+		shutdown := make(chan any)
 		handOverBarHeap := make(chan []*mpb.Bar, 1)
-		refreshCh := make(chan interface{})
+		refreshCh := make(chan any)
 		ctx, cancel := context.WithCancel(context.Background())
 		p := mpb.NewWithContext(ctx,
 			mpb.WithOutput(io.Discard),

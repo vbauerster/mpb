@@ -22,7 +22,7 @@ func main() {
 	})
 	defer timer.Stop()
 
-	for i := 0; i < numBars; i++ {
+	for i := range numBars {
 		msgCh := make(chan string, 1)
 		bar := p.AddBar(int64(total),
 			mpb.PrependDecorators(newTitleDecorator(fmt.Sprintf("Bar#%d:", i), msgCh, 16)),

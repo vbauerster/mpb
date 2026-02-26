@@ -20,7 +20,7 @@ func main() {
 
 	red, green := color.New(color.FgRed), color.New(color.FgGreen)
 
-	for i := 0; i < numBars; i++ {
+	for i := range numBars {
 		task := fmt.Sprintf("Task#%02d:", i)
 		b1 := p.AddBar(rand.Int63n(101)+100,
 			mpb.PrependDecorators(

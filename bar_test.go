@@ -268,7 +268,7 @@ func TestDecorStatisticsAvailableWidth(t *testing.T) {
 		return ""
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	refresh := make(chan interface{})
+	refresh := make(chan any)
 	p := mpb.NewWithContext(ctx,
 		mpb.WithWidth(100),
 		mpb.WithManualRefresh(refresh),
@@ -307,7 +307,7 @@ func TestDecorStatisticsAvailableWidth(t *testing.T) {
 }
 
 func TestBarQueueAfterBar(t *testing.T) {
-	shutdown := make(chan interface{})
+	shutdown := make(chan any)
 	handOverBarHeap := make(chan []*mpb.Bar, 1)
 	ctx, cancel := context.WithCancel(context.Background())
 	p := mpb.NewWithContext(ctx,
@@ -347,7 +347,7 @@ func TestBarQueueAfterBar(t *testing.T) {
 }
 
 func TestBarRemoveOnComplete(t *testing.T) {
-	shutdown := make(chan interface{})
+	shutdown := make(chan any)
 	handOverBarHeap := make(chan []*mpb.Bar, 1)
 	p := mpb.New(
 		mpb.WithOutput(io.Discard),

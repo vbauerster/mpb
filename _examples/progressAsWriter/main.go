@@ -15,7 +15,7 @@ func main() {
 	total, numBars := 100, 2
 	var bwg sync.WaitGroup
 	bwg.Add(numBars)
-	done, exit := make(chan interface{}), make(chan interface{})
+	done, exit := make(chan any), make(chan any)
 	p := mpb.New(
 		mpb.WithWidth(64),
 		mpb.WithShutdownNotifier(done),
@@ -44,7 +44,7 @@ func main() {
 
 	nopBar := p.MustAdd(0, nil)
 
-	for i := 0; i < numBars; i++ {
+	for i := range numBars {
 		name := fmt.Sprintf("Bar#%d:", i)
 		bar := p.AddBar(int64(total),
 			mpb.PrependDecorators(
@@ -62,7 +62,7 @@ func main() {
 			defer bwg.Done()
 			rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 			max := 100 * time.Millisecond
-			for i := 0; i < total; i++ {
+			for range total {
 				// start variable is solely for EWMA calculation
 				// EWMA's unit of measure is an iteration's duration
 				start := time.Now()

@@ -49,7 +49,7 @@ func WithRefreshRate(d time.Duration) ContainerOption {
 
 // WithManualRefresh disables internal auto refresh time.Ticker.
 // Refresh will occur upon receive value from provided ch.
-func WithManualRefresh(ch <-chan interface{}) ContainerOption {
+func WithManualRefresh(ch <-chan any) ContainerOption {
 	return func(s *pState) {
 		s.manualRC = ch
 	}
@@ -59,7 +59,7 @@ func WithManualRefresh(ch <-chan interface{}) ContainerOption {
 // soon as bar is added, with this option it's possible to delay
 // rendering process by keeping provided chan unclosed. In other words
 // rendering will start as soon as provided chan is closed.
-func WithRenderDelay(ch <-chan interface{}) ContainerOption {
+func WithRenderDelay(ch <-chan any) ContainerOption {
 	return func(s *pState) {
 		s.delayRC = ch
 	}
@@ -67,7 +67,7 @@ func WithRenderDelay(ch <-chan interface{}) ContainerOption {
 
 // WithShutdownNotifier closes provided channel on shutdown event,
 // i.e. after `(*Progress) Wait()` or `(*Progress) Shutdown()` call.
-func WithShutdownNotifier(ch chan interface{}) ContainerOption {
+func WithShutdownNotifier(ch chan any) ContainerOption {
 	return func(s *pState) {
 		s.shutdownNotifier = ch
 	}

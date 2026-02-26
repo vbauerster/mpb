@@ -30,7 +30,7 @@ func main() {
 		return mpb.BarStyle().Lbound("╢").Filler("▌").Tip("▌").Padding("░").Rbound("╟")
 	}
 
-	for i := 0; i < numBars; i++ {
+	for i := range numBars {
 		name := fmt.Sprintf("Bar#%d:", i)
 		bar := p.New(int64(total),
 			condFillerBuilder(i != 0),
@@ -51,7 +51,7 @@ func main() {
 			defer wg.Done()
 			rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 			max := 100 * time.Millisecond
-			for i := 0; i < total; i++ {
+			for range total {
 				// start variable is solely for EWMA calculation
 				// EWMA's unit of measure is an iteration's duration
 				start := time.Now()

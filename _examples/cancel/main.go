@@ -22,7 +22,7 @@ func main() {
 	numBars := 3
 	wg.Add(numBars)
 
-	for i := 0; i < numBars; i++ {
+	for i := range numBars {
 		name := fmt.Sprintf("Bar#%02d: ", i)
 		bar := p.AddBar(int64(total),
 			mpb.PrependDecorators(

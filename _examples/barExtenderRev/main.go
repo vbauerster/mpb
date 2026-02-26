@@ -27,7 +27,7 @@ func main() {
 	var filler mpb.BarFiller
 	tasks := make([]*task, numTasks)
 
-	for i := 0; i < numTasks; i++ {
+	for i := range numTasks {
 		task := &task{
 			id:    uint32(i),
 			total: rand.Int63n(666) + 100,
@@ -41,7 +41,7 @@ func main() {
 
 	p := mpb.New()
 
-	for i := 0; i < numTasks; i++ {
+	for i := range numTasks {
 		bar := p.AddBar(tasks[i].total,
 			mpb.BarExtender(filler, true), // all bars share same extender filler
 			mpb.BarFuncOptional(func() mpb.BarOption {

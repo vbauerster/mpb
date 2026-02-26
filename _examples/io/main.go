@@ -15,7 +15,7 @@ func main() {
 	r, w := io.Pipe()
 
 	go func() {
-		for i := 0; i < 1024; i++ {
+		for range 1024 {
 			_, _ = io.Copy(w, io.LimitReader(rand.Reader, 64*1024))
 			time.Sleep(time.Second / 10)
 		}

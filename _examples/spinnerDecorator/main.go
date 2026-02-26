@@ -17,7 +17,7 @@ func main() {
 	total, numBars := 100, 3
 	wg.Add(numBars)
 
-	for i := 0; i < numBars; i++ {
+	for i := range numBars {
 		name := fmt.Sprintf("Bar#%d:", i)
 		bar := p.AddBar(int64(total),
 			mpb.PrependDecorators(
@@ -38,7 +38,7 @@ func main() {
 			defer wg.Done()
 			rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 			max := 100 * time.Millisecond
-			for i := 0; i < total; i++ {
+			for range total {
 				time.Sleep(time.Duration(rng.Intn(10)+1) * max / 10)
 				bar.Increment()
 			}

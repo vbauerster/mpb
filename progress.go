@@ -48,9 +48,9 @@ type pState struct {
 	hmQueueLen       int
 	reqWidth         int
 	refreshRate      time.Duration
-	delayRC          <-chan interface{}
-	manualRC         <-chan interface{}
-	shutdownNotifier chan interface{}
+	delayRC          <-chan any
+	manualRC         <-chan any
+	shutdownNotifier chan any
 	handOverBarHeap  chan<- []*Bar
 	queueBars        map[*Bar]*queueBar
 	output           io.Writer
@@ -93,7 +93,7 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 	}
 
 	if s.shutdownNotifier == nil {
-		s.shutdownNotifier = make(chan interface{})
+		s.shutdownNotifier = make(chan any)
 	}
 
 	s.hm = make(heapManager, s.hmQueueLen)

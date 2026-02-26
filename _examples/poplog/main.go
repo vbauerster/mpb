@@ -13,7 +13,7 @@ func main() {
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 	p := mpb.New(mpb.PopCompletedMode())
 	total, numBars := 100, 4
-	for i := 0; i < numBars; i++ {
+	for i := range numBars {
 		name := fmt.Sprintf("Bar#%d:", i)
 		bar := p.AddBar(int64(total),
 			mpb.BarFillerOnComplete(fmt.Sprintf("%s has been completed", name)),
@@ -29,7 +29,7 @@ func main() {
 		)
 		// simulating some work
 		max := 100 * time.Millisecond
-		for i := 0; i < total; i++ {
+		for range total {
 			// start variable is solely for EWMA calculation
 			// EWMA's unit of measure is an iteration's duration
 			start := time.Now()

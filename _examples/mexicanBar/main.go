@@ -37,7 +37,7 @@ func main() {
 	)
 	// simulating some work
 	max := 100 * time.Millisecond
-	for i := 0; i < total; i++ {
+	for range total {
 		time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
 		bar.Increment()
 	}

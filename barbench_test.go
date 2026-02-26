@@ -67,7 +67,7 @@ func bench(b *testing.B, builder mpb.BarFillerBuilder, autoRefresh bool, n int) 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		var bars []*mpb.Bar
-		for j := 0; j < n; j++ {
+		for j := range n {
 			bars = append(bars, p.New(total, builder))
 			switch j {
 			case n - 1:
@@ -83,7 +83,7 @@ func bench(b *testing.B, builder mpb.BarFillerBuilder, autoRefresh bool, n int) 
 }
 
 func complete(bar *mpb.Bar) {
-	for i := 0; i < total; i++ {
+	for range total {
 		bar.Increment()
 	}
 }

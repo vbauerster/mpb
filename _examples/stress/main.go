@@ -36,7 +36,7 @@ func main() {
 	)
 	wg.Add(totalBars)
 
-	for i := 0; i < totalBars; i++ {
+	for i := range totalBars {
 		name := fmt.Sprintf("Bar#%02d: ", i)
 		total := rand.Intn(320) + 10
 		bar := p.AddBar(int64(total),
