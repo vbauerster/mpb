@@ -29,8 +29,7 @@ type proxyWriterTo struct {
 }
 
 func (x proxyWriterTo) WriteTo(w io.Writer) (int64, error) {
-	n, err := x.wt.WriteTo(proxyWriteCloser{w, x.bar})
-	return n, err
+	return x.wt.WriteTo(proxyWriteCloser{w, x.bar})
 }
 
 type ewmaProxyReadCloser struct {
@@ -58,8 +57,7 @@ type ewmaProxyWriterTo struct {
 }
 
 func (x ewmaProxyWriterTo) WriteTo(w io.Writer) (int64, error) {
-	n, err := x.wt.WriteTo(ewmaProxyWriteCloser{w, x.bar})
-	return n, err
+	return x.wt.WriteTo(ewmaProxyWriteCloser{w, x.bar})
 }
 
 func newProxyReader(r io.Reader, b *Bar, hasEwma bool) io.ReadCloser {

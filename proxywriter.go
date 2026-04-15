@@ -29,8 +29,7 @@ type proxyReaderFrom struct {
 }
 
 func (x proxyReaderFrom) ReadFrom(r io.Reader) (int64, error) {
-	n, err := x.rf.ReadFrom(proxyReadCloser{r, x.bar})
-	return n, err
+	return x.rf.ReadFrom(proxyReadCloser{r, x.bar})
 }
 
 type ewmaProxyWriteCloser struct {
@@ -58,8 +57,7 @@ type ewmaProxyReaderFrom struct {
 }
 
 func (x ewmaProxyReaderFrom) ReadFrom(r io.Reader) (int64, error) {
-	n, err := x.rf.ReadFrom(ewmaProxyReadCloser{r, x.bar})
-	return n, err
+	return x.rf.ReadFrom(ewmaProxyReadCloser{r, x.bar})
 }
 
 func newProxyWriter(w io.Writer, b *Bar, hasEwma bool) io.WriteCloser {
