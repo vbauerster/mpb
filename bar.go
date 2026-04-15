@@ -3,6 +3,7 @@ package mpb
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io"
 	"math"
 	"strings"
@@ -71,7 +72,7 @@ type renderFrame struct {
 // io.Copy(dst, pr) returns.
 func (b *Bar) ProxyReader(r io.Reader) (pr io.ReadCloser) {
 	if r == nil {
-		panic("expected non nil io.Reader")
+		panic(errors.New("expected non nil io.Reader"))
 	}
 	result := make(chan bool, 1)
 	select {
@@ -92,7 +93,7 @@ func (b *Bar) ProxyReader(r io.Reader) (pr io.ReadCloser) {
 // io.Copy(pw, src) returns.
 func (b *Bar) ProxyWriter(w io.Writer) (pw io.WriteCloser) {
 	if w == nil {
-		panic("expected non nil io.Writer")
+		panic(errors.New("expected non nil io.Writer"))
 	}
 	result := make(chan bool, 1)
 	select {
