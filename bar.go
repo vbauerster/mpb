@@ -73,12 +73,10 @@ func (b *Bar) ProxyReader(r io.Reader) (pr io.ReadCloser) {
 	if r == nil {
 		panic("expected non nil io.Reader")
 	}
-	result := make(chan io.ReadCloser, 1)
+	result := make(chan bool, 1)
 	select {
-	case b.operateState <- func(s *bState) {
-		result <- newProxyReader(r, b, len(s.ewmaDecorators) != 0)
-	}:
-		return <-result
+	case b.operateState <- func(s *bState) { result <- len(s.ewmaDecorators) != 0 }:
+		return newProxyReader(r, b, <-result)
 	case <-b.ctx.Done():
 		return nil
 	}
@@ -96,12 +94,10 @@ func (b *Bar) ProxyWriter(w io.Writer) (pw io.WriteCloser) {
 	if w == nil {
 		panic("expected non nil io.Writer")
 	}
-	result := make(chan io.WriteCloser, 1)
+	result := make(chan bool, 1)
 	select {
-	case b.operateState <- func(s *bState) {
-		result <- newProxyWriter(w, b, len(s.ewmaDecorators) != 0)
-	}:
-		return <-result
+	case b.operateState <- func(s *bState) { result <- len(s.ewmaDecorators) != 0 }:
+		return newProxyWriter(w, b, <-result)
 	case <-b.ctx.Done():
 		return nil
 	}
