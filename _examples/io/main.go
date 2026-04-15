@@ -9,23 +9,25 @@ import (
 	"github.com/vbauerster/mpb/v8/decor"
 )
 
+const size = 32
+
 func main() {
-	var total int64 = 64 * 1024 * 1024
+	var total int64 = size * 1024 * 1024
 
 	r, w := io.Pipe()
 
 	go func() {
 		for range 1024 {
-			_, _ = io.Copy(w, io.LimitReader(rand.Reader, 64*1024))
+			_, err := io.Copy(w, io.LimitReader(rand.Reader, size*1024))
+			if err != nil {
+				panic(err)
+			}
 			time.Sleep(time.Second / 10)
 		}
 		_ = w.Close()
 	}()
 
-	p := mpb.New(
-		mpb.WithWidth(60),
-		mpb.WithRefreshRate(180*time.Millisecond),
-	)
+	p := mpb.New(mpb.WithWidth(60))
 
 	bar := p.New(total,
 		mpb.BarStyle().Rbound("|"),
@@ -46,7 +48,10 @@ func main() {
 	}()
 
 	// copy from proxyReader, ignoring errors
-	_, _ = io.Copy(io.Discard, proxyReader)
+	_, err := io.Copy(io.Discard, proxyReader)
+	if err != nil {
+		panic(err)
+	}
 
 	p.Wait()
 }
