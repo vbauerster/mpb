@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/vbauerster/mpb/v8"
+	"github.com/vbauerster/mpb/v8/decor"
 )
 
 const content = `Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do
@@ -31,6 +32,30 @@ func (r *testReader) Read(p []byte) (n int, err error) {
 func TestProxyReader(t *testing.T) {
 	p := mpb.New(mpb.WithOutput(io.Discard))
 	bar := p.New(int64(len(content)), mpb.NopStyle())
+
+	var buf bytes.Buffer
+	tr := &testReader{strings.NewReader(content), false}
+	_, err := io.Copy(&buf, bar.ProxyReader(tr))
+	if err != nil {
+		t.Errorf("io.Copy: %s\n", err.Error())
+	}
+
+	if !tr.called {
+		t.Error("Read not called")
+	}
+
+	if got := buf.String(); got != content {
+		t.Errorf("Expected content: %s, got: %s\n", content, got)
+	}
+	p.Wait()
+}
+
+func TestEwmaProxyReader(t *testing.T) {
+	p := mpb.New(mpb.WithOutput(io.Discard))
+	bar := p.New(int64(len(content)),
+		mpb.NopStyle(),
+		mpb.AppendDecorators(decor.EwmaETA(decor.ET_STYLE_GO, 30)),
+	)
 
 	var buf bytes.Buffer
 	tr := &testReader{strings.NewReader(content), false}
@@ -76,6 +101,26 @@ func TestProxyReadCloser(t *testing.T) {
 	p.Wait()
 }
 
+func TestEwmaProxyReadCloser(t *testing.T) {
+	p := mpb.New(mpb.WithOutput(io.Discard))
+	bar := p.New(int64(len(content)),
+		mpb.NopStyle(),
+		mpb.AppendDecorators(decor.EwmaETA(decor.ET_STYLE_GO, 30)),
+	)
+
+	tr := &testReadCloser{strings.NewReader(content), false}
+	rc := bar.ProxyReader(tr)
+	_, err := io.Copy(io.Discard, rc)
+	if err != nil {
+		t.Errorf("io.Copy: %s\n", err.Error())
+	}
+	_ = rc.Close()
+	if !tr.called {
+		t.Error("Close not called")
+	}
+	p.Wait()
+}
+
 type testReaderWriterTo struct {
 	r      io.Reader
 	called bool
@@ -93,6 +138,30 @@ func (r *testReaderWriterTo) WriteTo(w io.Writer) (n int64, err error) {
 func TestProxyReaderWriterTo(t *testing.T) {
 	p := mpb.New(mpb.WithOutput(io.Discard))
 	bar := p.New(int64(len(content)), mpb.NopStyle())
+
+	var buf bytes.Buffer
+	tr := &testReaderWriterTo{strings.NewReader(content), false}
+	_, err := io.Copy(&buf, bar.ProxyReader(tr))
+	if err != nil {
+		t.Errorf("io.Copy: %s\n", err.Error())
+	}
+
+	if !tr.called {
+		t.Error("WriteTo not called")
+	}
+
+	if got := buf.String(); got != content {
+		t.Errorf("Expected content: %s, got: %s\n", content, got)
+	}
+	p.Wait()
+}
+
+func TestEwmaProxyReaderWriterTo(t *testing.T) {
+	p := mpb.New(mpb.WithOutput(io.Discard))
+	bar := p.New(int64(len(content)),
+		mpb.NopStyle(),
+		mpb.AppendDecorators(decor.EwmaETA(decor.ET_STYLE_GO, 30)),
+	)
 
 	var buf bytes.Buffer
 	tr := &testReaderWriterTo{strings.NewReader(content), false}
