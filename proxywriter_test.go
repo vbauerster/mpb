@@ -2,6 +2,7 @@ package mpb_test
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"strings"
 	"testing"
@@ -10,29 +11,25 @@ import (
 )
 
 type testWriter struct {
-	io.Writer
+	w      io.Writer
 	called bool
 }
 
 func (w *testWriter) Write(p []byte) (n int, err error) {
 	w.called = true
-	return w.Writer.Write(p)
+	return w.w.Write(p)
 }
 
 func TestProxyWriter(t *testing.T) {
 	p := mpb.New(mpb.WithOutput(io.Discard))
+	bar := p.New(int64(len(content)), mpb.NopStyle())
 
 	var buf bytes.Buffer
 	tw := &testWriter{&buf, false}
-
-	bar := p.New(int64(len(content)), mpb.NopStyle())
-
 	_, err := io.Copy(bar.ProxyWriter(tw), strings.NewReader(content))
 	if err != nil {
 		t.Errorf("io.Copy: %s\n", err.Error())
 	}
-
-	p.Wait()
 
 	if !tw.called {
 		t.Error("Read not called")
@@ -41,6 +38,7 @@ func TestProxyWriter(t *testing.T) {
 	if got := buf.String(); got != content {
 		t.Errorf("Expected content: %s, got: %s\n", content, got)
 	}
+	p.Wait()
 }
 
 type testWriteCloser struct {
@@ -55,24 +53,20 @@ func (w *testWriteCloser) Close() error {
 
 func TestProxyWriteCloser(t *testing.T) {
 	p := mpb.New(mpb.WithOutput(io.Discard))
+	bar := p.New(int64(len(content)), mpb.NopStyle())
 
 	var buf bytes.Buffer
 	tw := &testWriteCloser{&buf, false}
-
-	bar := p.New(int64(len(content)), mpb.NopStyle())
-
 	wc := bar.ProxyWriter(tw)
 	_, err := io.Copy(wc, strings.NewReader(content))
 	if err != nil {
 		t.Errorf("io.Copy: %s\n", err.Error())
 	}
 	_ = wc.Close()
-
-	p.Wait()
-
 	if !tw.called {
 		t.Error("Close not called")
 	}
+	p.Wait()
 }
 
 type testWriterReadFrom struct {
@@ -80,35 +74,34 @@ type testWriterReadFrom struct {
 	called bool
 }
 
+func (w *testWriterReadFrom) Write(p []byte) (n int, err error) {
+	return 0, errors.New("unexpected")
+}
+
 func (w *testWriterReadFrom) ReadFrom(r io.Reader) (n int64, err error) {
 	w.called = true
 	return w.Writer.(io.ReaderFrom).ReadFrom(r)
 }
 
-type dumbReader struct {
+type wrapReader struct {
 	r io.Reader
 }
 
-func (r dumbReader) Read(p []byte) (int, error) {
+func (r wrapReader) Read(p []byte) (int, error) {
 	return r.r.Read(p)
 }
 
 func TestProxyWriterReadFrom(t *testing.T) {
 	p := mpb.New(mpb.WithOutput(io.Discard))
+	bar := p.New(int64(len(content)), mpb.NopStyle())
 
 	var buf bytes.Buffer
 	tw := &testWriterReadFrom{&buf, false}
-
-	bar := p.New(int64(len(content)), mpb.NopStyle())
-
-	// To trigger ReadFrom, WriteTo needs to be hidden, hence a dumb wrapper
-	dr := dumbReader{strings.NewReader(content)}
-	_, err := io.Copy(bar.ProxyWriter(tw), dr)
+	// To trigger ReadFrom, WriteTo of strings.NewReader needs to be hidden
+	_, err := io.Copy(bar.ProxyWriter(tw), wrapReader{strings.NewReader(content)})
 	if err != nil {
 		t.Errorf("io.Copy: %s\n", err.Error())
 	}
-
-	p.Wait()
 
 	if !tw.called {
 		t.Error("ReadFrom not called")
@@ -117,4 +110,5 @@ func TestProxyWriterReadFrom(t *testing.T) {
 	if got := buf.String(); got != content {
 		t.Errorf("Expected content: %s, got: %s\n", content, got)
 	}
+	p.Wait()
 }
