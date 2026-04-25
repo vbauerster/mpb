@@ -137,7 +137,7 @@ func (p *Progress) AddBar(total int64, options ...BarOption) *Bar {
 
 // AddSpinner creates a bar with default spinner filler.
 func (p *Progress) AddSpinner(total int64, options ...BarOption) *Bar {
-	return p.New(total, SpinnerStyle(), options...)
+	return p.New(total, spinnerStyleComposer, options...)
 }
 
 // New creates a bar by calling `Build` method on provided `BarFillerBuilder`.
