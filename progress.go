@@ -132,7 +132,7 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 
 // AddBar creates a bar with default bar filler.
 func (p *Progress) AddBar(total int64, options ...BarOption) *Bar {
-	return p.New(total, BarStyle(), options...)
+	return p.New(total, barStyleComposer, options...)
 }
 
 // AddSpinner creates a bar with default spinner filler.
