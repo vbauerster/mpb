@@ -12,16 +12,14 @@ const (
 	iLbound = iota
 	iRefiller
 	iFiller
-	iTip
 	iPadding
 	iRbound
 	iLen
 )
 
-var defaultBarStyle = [iLen]string{"[", "+", "=", ">", "-", "]"}
 var barStyleComposer = BarStyleComposer{
-	style:     defaultBarStyle,
-	tipFrames: []string{defaultBarStyle[iTip]},
+	style:     [iLen]string{"[", "+", "=", "-", "]"},
+	tipFrames: []string{">"},
 }
 
 type component struct {
@@ -34,11 +32,11 @@ type barSection struct {
 	bytes []byte
 }
 
-type barSections [iLen]barSection
+type barSections [iLen + 1]barSection
 
 type barFiller struct {
 	components [iLen]component
-	metas      [iLen]func(string) string
+	metas      [iLen + 1]func(string) string
 	flushOp    func(barSections, io.Writer) error
 	tip        struct {
 		onComplete bool
@@ -51,7 +49,7 @@ type barFiller struct {
 // Call BarStyle to construct a new one.
 type BarStyleComposer struct {
 	style         [iLen]string
-	metas         [iLen]func(string) string
+	metas         [iLen + 1]func(string) string
 	tipFrames     []string
 	tipOnComplete bool
 	rev           bool
@@ -121,7 +119,7 @@ func (s BarStyleComposer) Tip(frames ...string) BarStyleComposer {
 }
 
 func (s BarStyleComposer) TipMeta(fn func(string) string) BarStyleComposer {
-	s.metas[iTip] = fn
+	s.metas[iLen] = fn
 	return s
 }
 
@@ -220,7 +218,7 @@ func (s *barFiller) Fill(w io.Writer, stat decor.Statistics) error {
 		{s.metas[iLbound], s.components[iLbound].bytes},
 		{s.metas[iRefiller], refilling},
 		{s.metas[iFiller], filling},
-		{s.metas[iTip], tip.bytes},
+		{s.metas[iLen], tip.bytes},
 		{s.metas[iPadding], padding},
 		{s.metas[iRbound], s.components[iRbound].bytes},
 	}, w)
