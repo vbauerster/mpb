@@ -133,6 +133,10 @@ func (s BarStyleComposer) Reverse() BarStyleComposer {
 	return s
 }
 
+func (s BarStyleComposer) ToBuilder() BarFillerBuilder {
+	return s
+}
+
 func (s BarStyleComposer) Build() BarFiller {
 	bf := &barFiller{metas: s.metas}
 	bf.components[iLbound] = component{

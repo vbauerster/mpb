@@ -57,6 +57,10 @@ func (s SpinnerStyleComposer) Meta(fn func(string) string) SpinnerStyleComposer 
 	return s
 }
 
+func (s SpinnerStyleComposer) ToBuilder() BarFillerBuilder {
+	return s
+}
+
 func (s SpinnerStyleComposer) Build() BarFiller {
 	sf := &spinnerFiller{frames: s.frames}
 	switch s.position {
