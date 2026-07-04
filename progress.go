@@ -59,6 +59,7 @@ type pState struct {
 	popCompleted     bool
 	autoRefresh      bool
 	rmOnComplete     bool
+	forceTTY         bool
 }
 
 // New creates new Progress container instance. It's not possible to
@@ -107,7 +108,7 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 		cancel:       cancel,
 	}
 
-	cw := cwriter.New(s.output)
+	cw := cwriter.New(s.output, s.forceTTY)
 	switch {
 	case s.manualRC != nil:
 		done := make(chan struct{})
@@ -284,7 +285,7 @@ func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 
 	var dw *cwriter.Writer
 	if s.delayRC != nil {
-		dw = cwriter.New(io.Discard)
+		dw = cwriter.New(io.Discard, false)
 	} else {
 		dw = cw
 	}

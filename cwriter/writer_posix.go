@@ -26,7 +26,7 @@ type Writer struct {
 func (w *Writer) Flush(lines int) error {
 	_, err := w.WriteTo(w.out)
 	// some terminals interpret 'cursor up 0' as 'cursor up 1'
-	if err == nil && lines > 0 {
+	if w.terminal && lines > 0 && err == nil {
 		err = w.ew.ansiCuuAndEd(w, lines)
 	}
 	return err

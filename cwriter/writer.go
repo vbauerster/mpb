@@ -18,7 +18,7 @@ const (
 var ErrNotTTY = errors.New("not a terminal")
 
 // New returns a new Writer with defaults.
-func New(out io.Writer) *Writer {
+func New(out io.Writer, forceTTY bool) *Writer {
 	w := &Writer{
 		Buffer: new(bytes.Buffer),
 		out:    out,
@@ -26,9 +26,14 @@ func New(out io.Writer) *Writer {
 			return -1, -1, ErrNotTTY
 		},
 	}
+	if forceTTY {
+		w.fd = int(os.Stdout.Fd())
+		w.terminal = true
+		w.termSize = GetSize
+	}
 	if f, ok := out.(*os.File); ok {
-		w.fd = int(f.Fd())
-		if IsTerminal(w.fd) {
+		if fd := int(f.Fd()); IsTerminal(fd) {
+			w.fd = fd
 			w.terminal = true
 			w.termSize = GetSize
 		}
