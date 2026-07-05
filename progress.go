@@ -18,6 +18,7 @@ import (
 
 const defaultRefreshRate = 150 * time.Millisecond
 const defaultHmQueueLength = 64
+const defaultWidth = 80
 
 // ErrDone represents use after `(*Progress).Wait()` error.
 var ErrDone = fmt.Errorf("%T instance can't be reused after %[1]T.Wait()", (*Progress)(nil))
@@ -108,7 +109,7 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 		cancel:       cancel,
 	}
 
-	cw := cwriter.New(s.output, s.forceTTY)
+	cw := cwriter.New(s.output, cmp.Or(s.reqWidth, defaultWidth), s.forceTTY)
 	switch {
 	case s.manualRC != nil:
 		done := make(chan struct{})
@@ -285,7 +286,7 @@ func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 
 	var dw *cwriter.Writer
 	if s.delayRC != nil {
-		dw = cwriter.New(io.Discard, false)
+		dw = cwriter.New(io.Discard, 0, false)
 	} else {
 		dw = cw
 	}
@@ -365,7 +366,7 @@ func (s *pState) render(cw *cwriter.Writer) (err error) {
 			return err
 		}
 	} else {
-		width = cmp.Or(s.reqWidth, 80)
+		width = cmp.Or(s.reqWidth, defaultWidth)
 		height = width
 	}
 

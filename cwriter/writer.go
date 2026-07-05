@@ -2,7 +2,6 @@ package cwriter
 
 import (
 	"bytes"
-	"errors"
 	"io"
 	"os"
 	"strconv"
@@ -14,22 +13,15 @@ const (
 	cuuAndEd = "A\x1b[J"
 )
 
-// ErrNotTTY not a TeleTYpewriter error.
-var ErrNotTTY = errors.New("not a terminal")
-
 // New returns a new Writer with defaults.
-func New(out io.Writer, forceTTY bool) *Writer {
+func New(out io.Writer, defaultWidth int, forceTTY bool) *Writer {
 	w := &Writer{
-		Buffer: new(bytes.Buffer),
-		out:    out,
+		Buffer:   new(bytes.Buffer),
+		out:      out,
+		terminal: forceTTY,
 		termSize: func(_ int) (int, int, error) {
-			return -1, -1, ErrNotTTY
+			return defaultWidth, defaultWidth, nil
 		},
-	}
-	if forceTTY {
-		w.fd = int(os.Stdout.Fd())
-		w.terminal = true
-		w.termSize = GetSize
 	}
 	if f, ok := out.(*os.File); ok {
 		if fd := int(f.Fd()); IsTerminal(fd) {
