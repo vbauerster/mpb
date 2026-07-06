@@ -20,7 +20,8 @@ func New(out io.Writer, defaultWidth int, forceTTY bool) *Writer {
 		out:      out,
 		forceTTY: forceTTY,
 		termSize: func(_ int) (int, int, error) {
-			return defaultWidth, defaultWidth, nil
+			height := defaultWidth*3/2 + 1
+			return defaultWidth, height, nil
 		},
 	}
 	if f, ok := out.(*os.File); ok {
