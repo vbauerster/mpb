@@ -356,18 +356,12 @@ func (s *pState) manualRefreshListener(ctx context.Context, done chan struct{}) 
 	}
 }
 
-func (s *pState) render(cw *cwriter.Writer) (err error) {
+func (s *pState) render(cw *cwriter.Writer) error {
 	s.hm.sync()
 
-	var width, height int
-	if cw.IsTerminal() {
-		width, height, err = cw.GetTermSize()
-		if err != nil {
-			return err
-		}
-	} else {
-		width = cmp.Or(s.reqWidth, defaultWidth)
-		height = width
+	width, height, err := cw.GetTermSize()
+	if err != nil {
+		return err
 	}
 
 	return s.flush(cw, height, s.hm.render(width))
