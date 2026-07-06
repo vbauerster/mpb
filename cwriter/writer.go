@@ -18,7 +18,7 @@ func New(out io.Writer, defaultWidth int, forceTTY bool) *Writer {
 	w := &Writer{
 		Buffer:   new(bytes.Buffer),
 		out:      out,
-		terminal: forceTTY,
+		forceTTY: forceTTY,
 		termSize: func(_ int) (int, int, error) {
 			return defaultWidth, defaultWidth, nil
 		},
@@ -35,7 +35,7 @@ func New(out io.Writer, defaultWidth int, forceTTY bool) *Writer {
 	return w
 }
 
-// IsTerminal tells whether underlying io.Writer is terminal.
+// IsTerminal tells whether underlying io.Writer is terminal aka TTY.
 func (w *Writer) IsTerminal() bool {
 	return w.terminal
 }

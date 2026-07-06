@@ -18,6 +18,7 @@ type Writer struct {
 	ew       escWriter
 	fd       int
 	terminal bool
+	forceTTY bool
 	termSize func(int) (int, int, error)
 }
 
@@ -25,11 +26,17 @@ type Writer struct {
 // It's caller's responsibility to pass correct number of lines.
 func (w *Writer) Flush(lines int) error {
 	_, err := w.WriteTo(w.out)
-	// some terminals interpret 'cursor up 0' as 'cursor up 1'
-	if w.terminal && lines > 0 && err == nil {
-		err = w.ew.ansiCuuAndEd(w, lines)
+	if err != nil {
+		return err
 	}
-	return err
+
+	// some terminals interpret 'cursor up 0' as 'cursor up 1'
+	// therefore explicit lines > 0 check
+	if (w.terminal || w.forceTTY) && lines > 0 {
+		return w.ew.ansiCuuAndEd(w, lines)
+	}
+
+	return nil
 }
 
 // GetSize returns the dimensions of the given terminal.

@@ -116,7 +116,7 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 		p.done = done
 		s.autoRefresh = false
 		go s.manualRefreshListener(ctx, done)
-	case s.autoRefresh || cw.IsTerminal():
+	case s.autoRefresh || s.forceTTY || cw.IsTerminal():
 		done := make(chan struct{})
 		p.done = done
 		s.autoRefresh = true
