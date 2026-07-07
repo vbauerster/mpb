@@ -4,6 +4,7 @@ package cwriter
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"unsafe"
 
@@ -71,24 +72,31 @@ func (w *Writer) clearLines() error {
 	}
 
 	// clear lines by writing space character n times starting at newPosition
+	var r1 uintptr
 	var written uint32
 	n := uint32(info.Size.X) * uint32(w.lines)
-	_, _, err = procFillConsoleOutputCharacter.Call(
+	r1, _, err = procFillConsoleOutputCharacter.Call(
 		uintptr(w.fd),
 		uintptr(' '),
 		uintptr(n),
 		*(*uintptr)(unsafe.Pointer(&newPosition)),
 		uintptr(unsafe.Pointer(&written)),
 	)
-	if written != n {
+	if r1 == 0 {
 		return err
+	}
+	if written != n {
+		return fmt.Errorf("FillConsoleOutputCharacterA: written != n (%d != %d)", written, n)
 	}
 
 	// move cursor to newPosition for the next write
-	_, _, _ = procSetConsoleCursorPosition.Call(
+	r1, _, err = procSetConsoleCursorPosition.Call(
 		uintptr(w.fd),
 		uintptr(uint32(uint16(newPosition.Y))<<16|uint32(uint16(newPosition.X))),
 	)
+	if r1 == 0 {
+		return err
+	}
 
 	return nil
 }
