@@ -30,9 +30,7 @@ func (w *Writer) Flush(lines int) error {
 		return err
 	}
 
-	// some terminals interpret 'cursor up 0' as 'cursor up 1'
-	// therefore explicit lines > 0 check
-	if (w.terminal || w.forceTTY) && lines > 0 {
+	if w.terminal || w.forceTTY {
 		return w.ew.ansiCuuAndEd(w, lines)
 	}
 

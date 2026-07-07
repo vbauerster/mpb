@@ -49,6 +49,11 @@ func (w *Writer) GetTermSize() (width, height int, err error) {
 type escWriter []byte
 
 func (b escWriter) ansiCuuAndEd(out io.Writer, n int) error {
+	// some terminals interpret 'cursor up 0' as 'cursor up 1'
+	// therefore ignore n <= 0 case
+	if n <= 0 {
+		return nil
+	}
 	b = strconv.AppendInt(b, int64(n), 10)
 	_, err := out.Write(append(b, []byte(cuuAndEd)...))
 	return err
