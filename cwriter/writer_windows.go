@@ -77,7 +77,7 @@ func (w *Writer) clearLines() error {
 	n := uint32(info.Size.X) * uint32(w.lines)
 	r1, _, err = procFillConsoleOutputCharacter.Call(
 		uintptr(w.fd),
-		uintptr(' '),
+		uintptr(byte(' ')),
 		uintptr(n),
 		*(*uintptr)(unsafe.Pointer(&newPosition)),
 		uintptr(unsafe.Pointer(&written)),
