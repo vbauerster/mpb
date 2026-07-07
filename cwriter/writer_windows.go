@@ -13,7 +13,7 @@ import (
 var (
 	kernel32                       = windows.NewLazySystemDLL("kernel32.dll")
 	procSetConsoleCursorPosition   = kernel32.NewProc("SetConsoleCursorPosition")
-	procFillConsoleOutputCharacter = kernel32.NewProc("FillConsoleOutputCharacterW")
+	procFillConsoleOutputCharacter = kernel32.NewProc("FillConsoleOutputCharacterA")
 )
 
 // Writer is a buffered terminal writer, which moves cursor N lines up
