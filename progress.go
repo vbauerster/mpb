@@ -2,7 +2,6 @@ package mpb
 
 import (
 	"bytes"
-	"cmp"
 	"context"
 	"fmt"
 	"io"
@@ -18,7 +17,6 @@ import (
 
 const defaultRefreshRate = 150 * time.Millisecond
 const defaultHmQueueLength = 64
-const defaultWidth = 80
 
 // ErrDone represents use after `(*Progress).Wait()` error.
 var ErrDone = fmt.Errorf("%T instance can't be reused after %[1]T.Wait()", (*Progress)(nil))
@@ -109,7 +107,7 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 		cancel:       cancel,
 	}
 
-	cw := cwriter.New(s.output, cmp.Or(s.reqWidth, defaultWidth), s.forceTTY)
+	cw := cwriter.New(s.output, s.reqWidth, s.forceTTY)
 	switch {
 	case s.manualRC != nil:
 		done := make(chan struct{})

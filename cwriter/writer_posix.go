@@ -17,9 +17,9 @@ type Writer struct {
 	out      io.Writer
 	ew       escWriter
 	fd       int
+	width    int
 	terminal bool
 	forceTTY bool
-	termSize func(int) (int, int, error)
 }
 
 // Flush flushes the underlying buffer.
@@ -41,7 +41,7 @@ func (w *Writer) Flush(lines int) error {
 func GetSize(fd int) (width, height int, err error) {
 	ws, err := unix.IoctlGetWinsize(fd, unix.TIOCGWINSZ)
 	if err != nil {
-		return -1, -1, err
+		return
 	}
 	return int(ws.Col), int(ws.Row), nil
 }

@@ -2,33 +2,32 @@ package cwriter
 
 import (
 	"bytes"
+	"cmp"
 	"io"
 	"os"
 	"strconv"
 )
 
-// https://github.com/dylanaraps/pure-sh-bible#cursor-movement
 const (
+	defaultWidth = 80
+
+	// https://github.com/dylanaraps/pure-sh-bible#cursor-movement
 	escOpen  = "\x1b["
 	cuuAndEd = "A\x1b[J"
 )
 
 // New returns a new Writer with defaults.
-func New(out io.Writer, defaultWidth int, forceTTY bool) *Writer {
+func New(out io.Writer, width int, forceTTY bool) *Writer {
 	w := &Writer{
 		Buffer:   new(bytes.Buffer),
 		out:      out,
+		width:    cmp.Or(width, defaultWidth),
 		forceTTY: forceTTY,
-		termSize: func(_ int) (int, int, error) {
-			height := defaultWidth*3/2 + 1
-			return defaultWidth, height, nil
-		},
 	}
 	if f, ok := out.(*os.File); ok {
 		if fd := int(f.Fd()); IsTerminal(fd) {
 			w.fd = fd
 			w.terminal = true
-			w.termSize = GetSize
 		}
 	}
 	bb := make([]byte, 16)
@@ -43,7 +42,11 @@ func (w *Writer) IsTerminal() bool {
 
 // GetTermSize returns WxH of underlying terminal.
 func (w *Writer) GetTermSize() (width, height int, err error) {
-	return w.termSize(w.fd)
+	if !w.terminal {
+		width, height = w.width, w.width*3/2+1
+		return
+	}
+	return GetSize(w.fd)
 }
 
 type escWriter []byte

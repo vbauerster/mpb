@@ -25,10 +25,10 @@ type Writer struct {
 	out      io.Writer
 	ew       escWriter
 	fd       int
+	width    int
 	lines    int
 	terminal bool
 	forceTTY bool
-	termSize func(int) (int, int, error)
 }
 
 // Flush flushes the underlying buffer.
@@ -108,7 +108,7 @@ func GetSize(fd int) (width, height int, err error) {
 	var info windows.ConsoleScreenBufferInfo
 	err = windows.GetConsoleScreenBufferInfo(windows.Handle(fd), &info)
 	if err != nil {
-		return 0, 0, err
+		return
 	}
 	// terminal.GetSize from crypto/ssh adds "+ 1" to both width and height:
 	// https://go.googlesource.com/crypto/+/refs/heads/release-branch.go1.14/ssh/terminal/util_windows.go#75
