@@ -72,6 +72,7 @@ func (w *Writer) clearLines() error {
 	}
 
 	// clear lines by writing space character n times starting at newPosition
+	// if we don't some artefacts of a previous write may retain
 	var r1 uintptr
 	var written uint32
 	n := uint32(info.Size.X) * uint32(w.lines)
