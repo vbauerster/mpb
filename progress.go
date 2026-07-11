@@ -2,7 +2,6 @@ package mpb
 
 import (
 	"bytes"
-	"cmp"
 	"context"
 	"fmt"
 	"io"
@@ -59,6 +58,7 @@ type pState struct {
 	popCompleted     bool
 	autoRefresh      bool
 	rmOnComplete     bool
+	forceTTY         bool
 }
 
 // New creates new Progress container instance. It's not possible to
@@ -107,14 +107,14 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 		cancel:       cancel,
 	}
 
-	cw := cwriter.New(s.output)
+	cw := cwriter.New(s.output, s.reqWidth, s.forceTTY)
 	switch {
 	case s.manualRC != nil:
 		done := make(chan struct{})
 		p.done = done
 		s.autoRefresh = false
 		go s.manualRefreshListener(ctx, done)
-	case s.autoRefresh || cw.IsTerminal():
+	case s.autoRefresh || s.forceTTY || cw.IsTerminal():
 		done := make(chan struct{})
 		p.done = done
 		s.autoRefresh = true
@@ -284,7 +284,7 @@ func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 
 	var dw *cwriter.Writer
 	if s.delayRC != nil {
-		dw = cwriter.New(io.Discard)
+		dw = cwriter.New(io.Discard, 0, false)
 	} else {
 		dw = cw
 	}
@@ -354,18 +354,12 @@ func (s *pState) manualRefreshListener(ctx context.Context, done chan struct{}) 
 	}
 }
 
-func (s *pState) render(cw *cwriter.Writer) (err error) {
+func (s *pState) render(cw *cwriter.Writer) error {
 	s.hm.sync()
 
-	var width, height int
-	if cw.IsTerminal() {
-		width, height, err = cw.GetTermSize()
-		if err != nil {
-			return err
-		}
-	} else {
-		width = cmp.Or(s.reqWidth, 80)
-		height = width
+	width, height, err := cw.GetTermSize()
+	if err != nil {
+		return err
 	}
 
 	return s.flush(cw, height, s.hm.render(width))

@@ -4,17 +4,17 @@ package cwriter
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
 )
 
-var kernel32 = windows.NewLazySystemDLL("kernel32.dll")
-
 var (
+	kernel32                       = windows.NewLazySystemDLL("kernel32.dll")
 	procSetConsoleCursorPosition   = kernel32.NewProc("SetConsoleCursorPosition")
-	procFillConsoleOutputCharacter = kernel32.NewProc("FillConsoleOutputCharacterW")
+	procFillConsoleOutputCharacter = kernel32.NewProc("FillConsoleOutputCharacterA")
 )
 
 // Writer is a buffered terminal writer, which moves cursor N lines up
@@ -24,59 +24,81 @@ type Writer struct {
 	*bytes.Buffer
 	out      io.Writer
 	ew       escWriter
-	lines    int
 	fd       int
+	width    int
+	lines    int
 	terminal bool
-	termSize func(int) (int, int, error)
+	forceTTY bool
 }
 
 // Flush flushes the underlying buffer.
 // It's caller's responsibility to pass correct number of lines.
 func (w *Writer) Flush(lines int) error {
-	if w.lines > 0 {
-		err := w.clearLines(w.lines)
+	if w.terminal {
+		err := w.clearLines()
 		if err != nil {
 			return err
 		}
 	}
-	w.lines = lines
+
 	_, err := w.WriteTo(w.out)
-	return err
-}
-
-func (w *Writer) clearLines(n int) error {
-	if !w.terminal {
-		// hope it's cygwin or similar
-		return w.ew.ansiCuuAndEd(w.out, n)
-	}
-
-	var info windows.ConsoleScreenBufferInfo
-	if err := windows.GetConsoleScreenBufferInfo(windows.Handle(w.fd), &info); err != nil {
+	if err != nil {
 		return err
 	}
 
-	info.CursorPosition.Y -= int16(n)
-	if info.CursorPosition.Y < 0 {
-		info.CursorPosition.Y = 0
+	if !w.terminal && w.forceTTY {
+		return w.ew.ansiCuuAndEd(w, lines)
 	}
-	_, _, _ = procSetConsoleCursorPosition.Call(
-		uintptr(w.fd),
-		uintptr(uint32(uint16(info.CursorPosition.Y))<<16|uint32(uint16(info.CursorPosition.X))),
-	)
 
-	// clear the lines
-	cursor := &windows.Coord{
-		X: info.Window.Left,
-		Y: info.CursorPosition.Y,
+	w.lines = lines
+	return nil
+}
+
+func (w *Writer) clearLines() error {
+	if w.lines <= 0 {
+		return nil
 	}
-	count := uint32(info.Size.X) * uint32(n)
-	_, _, _ = procFillConsoleOutputCharacter.Call(
+
+	var info windows.ConsoleScreenBufferInfo
+	err := windows.GetConsoleScreenBufferInfo(windows.Handle(w.fd), &info)
+	if err != nil {
+		return err
+	}
+
+	newPosition := info.CursorPosition
+	newPosition.Y -= int16(w.lines)
+	if newPosition.Y < 0 {
+		newPosition.Y = 0
+	}
+
+	// clear lines by writing space character n times starting at newPosition
+	// if we don't some artefacts of a previous write may retain
+	var r1 uintptr
+	var written uint32
+	n := uint32(info.Size.X) * uint32(w.lines)
+	r1, _, err = procFillConsoleOutputCharacter.Call(
 		uintptr(w.fd),
-		uintptr(' '),
-		uintptr(count),
-		*(*uintptr)(unsafe.Pointer(cursor)),
-		uintptr(unsafe.Pointer(new(uint32))),
+		uintptr(byte(' ')),
+		uintptr(n),
+		*(*uintptr)(unsafe.Pointer(&newPosition)),
+		uintptr(unsafe.Pointer(&written)),
 	)
+	if r1 == 0 {
+		return err
+	}
+	if written != n {
+		return fmt.Errorf("FillConsoleOutputCharacterA: written != n (%d != %d)", written, n)
+	}
+
+	// move cursor to newPosition for the next write
+	r1, _, err = procSetConsoleCursorPosition.Call(
+		uintptr(w.fd),
+		uintptr(uint32(uint16(newPosition.Y))<<16|uint32(uint16(newPosition.X))),
+	)
+	if r1 == 0 {
+		return err
+	}
+
 	return nil
 }
 
@@ -84,8 +106,9 @@ func (w *Writer) clearLines(n int) error {
 // These dimensions don't include any scrollback buffer height.
 func GetSize(fd int) (width, height int, err error) {
 	var info windows.ConsoleScreenBufferInfo
-	if err := windows.GetConsoleScreenBufferInfo(windows.Handle(fd), &info); err != nil {
-		return 0, 0, err
+	err = windows.GetConsoleScreenBufferInfo(windows.Handle(fd), &info)
+	if err != nil {
+		return
 	}
 	// terminal.GetSize from crypto/ssh adds "+ 1" to both width and height:
 	// https://go.googlesource.com/crypto/+/refs/heads/release-branch.go1.14/ssh/terminal/util_windows.go#75

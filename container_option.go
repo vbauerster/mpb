@@ -97,6 +97,21 @@ func WithAutoRefresh() ContainerOption {
 	}
 }
 
+// ForceAutoRefresh is an alias of WithAutoRefresh.
+func ForceAutoRefresh() ContainerOption {
+	return WithAutoRefresh()
+}
+
+// ForceTTY force treating output as tty.
+// This one implicitly enables WithAutoRefresh unless WithManualRefresh specified.
+// Can be handy if you need to wrap os.Stdout or os.Stderr for example like:
+// mpb.WithOutput(io.MultiWriter(os.Stdout, &someTestBuf)).
+func ForceTTY() ContainerOption {
+	return func(s *pState) {
+		s.forceTTY = true
+	}
+}
+
 // PopCompletedMode pop completed bars out of progress container.
 // In this mode completed bars get moved to the top and stop
 // participating in rendering cycle.

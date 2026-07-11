@@ -2,35 +2,32 @@ package cwriter
 
 import (
 	"bytes"
-	"errors"
+	"cmp"
 	"io"
 	"os"
 	"strconv"
 )
 
-// https://github.com/dylanaraps/pure-sh-bible#cursor-movement
 const (
+	defaultWidth = 80
+
+	// https://github.com/dylanaraps/pure-sh-bible#cursor-movement
 	escOpen  = "\x1b["
 	cuuAndEd = "A\x1b[J"
 )
 
-// ErrNotTTY not a TeleTYpewriter error.
-var ErrNotTTY = errors.New("not a terminal")
-
 // New returns a new Writer with defaults.
-func New(out io.Writer) *Writer {
+func New(out io.Writer, width int, forceTTY bool) *Writer {
 	w := &Writer{
-		Buffer: new(bytes.Buffer),
-		out:    out,
-		termSize: func(_ int) (int, int, error) {
-			return -1, -1, ErrNotTTY
-		},
+		Buffer:   new(bytes.Buffer),
+		out:      out,
+		width:    cmp.Or(width, defaultWidth),
+		forceTTY: forceTTY,
 	}
 	if f, ok := out.(*os.File); ok {
-		w.fd = int(f.Fd())
-		if IsTerminal(w.fd) {
+		if fd := int(f.Fd()); IsTerminal(fd) {
+			w.fd = fd
 			w.terminal = true
-			w.termSize = GetSize
 		}
 	}
 	bb := make([]byte, 16)
@@ -38,19 +35,28 @@ func New(out io.Writer) *Writer {
 	return w
 }
 
-// IsTerminal tells whether underlying io.Writer is terminal.
+// IsTerminal tells whether underlying io.Writer is terminal aka TTY.
 func (w *Writer) IsTerminal() bool {
 	return w.terminal
 }
 
 // GetTermSize returns WxH of underlying terminal.
 func (w *Writer) GetTermSize() (width, height int, err error) {
-	return w.termSize(w.fd)
+	if !w.terminal {
+		width, height = w.width, w.width*3/2+1
+		return
+	}
+	return GetSize(w.fd)
 }
 
 type escWriter []byte
 
 func (b escWriter) ansiCuuAndEd(out io.Writer, n int) error {
+	// some terminals interpret 'cursor up 0' as 'cursor up 1'
+	// therefore ignore n <= 0 case
+	if n <= 0 {
+		return nil
+	}
 	b = strconv.AppendInt(b, int64(n), 10)
 	_, err := out.Write(append(b, []byte(cuuAndEd)...))
 	return err

@@ -36,7 +36,7 @@ func BenchmarkWithAppend(b *testing.B) {
 }
 
 func BenchmarkWithCurrentImpl(b *testing.B) {
-	w := New(out)
+	w := New(out, 0, false)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = w.ew.ansiCuuAndEd(out, lines)
