@@ -66,9 +66,12 @@ func (w *Writer) clearLines() error {
 	}
 
 	newPosition := info.CursorPosition
-	newPosition.Y -= int16(w.lines)
-	if newPosition.Y < 0 {
-		newPosition.Y = 0
+
+	if y := int(newPosition.Y); w.lines > y {
+		w.lines = y
+	} else {
+		y -= w.lines
+		newPosition.Y = int16(y)
 	}
 
 	// clear lines by writing space character n times starting at newPosition
