@@ -257,8 +257,8 @@ func (p *Progress) Write(b []byte) (int, error) {
 	}
 }
 
-// Wait waits for all bars to complete and finally shutdowns container. After
-// this method has been called, there is no way to reuse `*Progress` instance.
+// Wait waits for all bars to complete and then shutdowns the container.
+// There is no way to reuse `*Progress` instance after this method has been called.
 func (p *Progress) Wait() {
 	p.bwg.Wait()
 	p.Shutdown()
