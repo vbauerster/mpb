@@ -16,6 +16,8 @@ import (
 
 // Bar represents a progress bar.
 type Bar struct {
+	ctx          context.Context
+	cancel       func()
 	index        int // used by heap
 	priority     int // used by heap
 	frameCh      chan *renderFrame
@@ -23,8 +25,6 @@ type Bar struct {
 	container    *Progress
 	bs           *bState
 	bsOk         chan struct{}
-	ctx          context.Context
-	cancel       func()
 }
 
 type decorSyncTable [2][]*decor.Sync

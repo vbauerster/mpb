@@ -23,12 +23,12 @@ var ErrDone = fmt.Errorf("%T instance can't be reused after %[1]T.Wait()", (*Pro
 
 // Progress represents a container that renders one or more progress bars.
 type Progress struct {
+	ctx          context.Context
+	cancel       func()
 	pwg, bwg     *sync.WaitGroup
 	operateState chan func(*pState)
 	interceptIO  chan func(io.Writer)
 	done         chan struct{}
-	ctx          context.Context
-	cancel       func()
 }
 
 type queueBar struct {
@@ -99,13 +99,13 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 	s.hm = make(heapManager, s.hmQueueLen)
 
 	p := &Progress{
+		ctx:          ctx,
+		cancel:       cancel,
 		pwg:          new(sync.WaitGroup),
 		bwg:          new(sync.WaitGroup),
 		operateState: make(chan func(*pState)),
 		interceptIO:  make(chan func(io.Writer)),
 		done:         make(chan struct{}),
-		ctx:          ctx,
-		cancel:       cancel,
 	}
 
 	var refreshStrategy func(*Progress, *pState)
@@ -191,17 +191,15 @@ func (p *Progress) Add(total int64, filler BarFiller, options ...BarOption) (*Ba
 func (p *Progress) makeBar(priority int) *Bar {
 	ctx, cancel := context.WithCancel(p.ctx)
 
-	bar := &Bar{
+	return &Bar{
+		ctx:          ctx,
+		cancel:       cancel,
 		priority:     priority,
 		frameCh:      make(chan *renderFrame, 1),
 		operateState: make(chan func(*bState)),
 		bsOk:         make(chan struct{}),
 		container:    p,
-		ctx:          ctx,
-		cancel:       cancel,
 	}
-
-	return bar
 }
 
 // blocks until iteration is done
