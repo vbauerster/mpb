@@ -6,7 +6,6 @@ import (
 	"errors"
 	"io"
 	"slices"
-	"strings"
 	"testing"
 	"time"
 
@@ -80,12 +79,10 @@ func TestShutdownWithOneHourRefreshRate(t *testing.T) {
 }
 
 func TestShutdownsWithErrFiller(t *testing.T) {
-	var debug bytes.Buffer
 	shutdown := make(chan any)
 	handOverBarHeap := make(chan []*mpb.Bar, 1)
 	p := mpb.New(
 		mpb.WithOutput(io.Discard),
-		mpb.WithDebugOutput(&debug),
 		mpb.WithAutoRefresh(),
 		mpb.WithShutdownNotifier(shutdown),
 		mpb.WithHandOverBarHeap(handOverBarHeap),
@@ -121,8 +118,8 @@ func TestShutdownsWithErrFiller(t *testing.T) {
 			if !slices.Contains(bars, bar) {
 				t.Errorf("Expected []*mpb.Bar to contain: %#v", bar)
 			}
-			if err := strings.TrimSpace(debug.String()); err != testError.Error() {
-				t.Errorf("Expected err: %q, got %q", testError.Error(), err)
+			if !errors.Is(p.Error, testError) {
+				t.Errorf("Expected err: %#v, got %#v", testError, p.Error)
 			}
 		default:
 			t.Fatal("<-handOverBarHeap failure")

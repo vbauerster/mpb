@@ -31,6 +31,9 @@ type Progress struct {
 	renderReq    chan time.Time
 	done         chan struct{}
 	autoRefresh  bool
+
+	// Render error if any, to be inspected after (*Progress).Wait call only.
+	Error error
 }
 
 type queueBar struct {
@@ -308,14 +311,17 @@ func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 					case <-p.renderReq:
 					case <-p.done:
 						_, _ = fmt.Fprintln(s.debugOut, err.Error())
+						p.Error = err
 						return
 					}
 				}
 			}
 		case <-p.done:
 			if p.autoRefresh && s.rmOnComplete {
-				if err := s.render(cw); err != nil {
+				err := s.render(cw)
+				if err != nil {
 					_, _ = fmt.Fprintln(s.debugOut, err.Error())
+					p.Error = err
 				}
 			}
 			return
