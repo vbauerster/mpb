@@ -26,7 +26,7 @@ type Progress struct {
 	pwg, bwg     *sync.WaitGroup
 	operateState chan func(*pState)
 	interceptIO  chan func(io.Writer)
-	done         <-chan struct{}
+	done         chan struct{}
 	ctx          context.Context
 	cancel       func()
 }
@@ -103,30 +103,29 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 		bwg:          new(sync.WaitGroup),
 		operateState: make(chan func(*pState)),
 		interceptIO:  make(chan func(io.Writer)),
+		done:         make(chan struct{}),
 		ctx:          ctx,
 		cancel:       cancel,
 	}
 
+	var refreshStrategy func(*Progress, *pState)
 	cw := cwriter.New(s.output, s.reqWidth, s.forceTTY)
 	switch {
 	case s.manualRC != nil:
-		done := make(chan struct{})
-		p.done = done
 		s.autoRefresh = false
-		go s.manualRefreshListener(ctx, done)
+		refreshStrategy = (*Progress).manualRefreshListener
 	case s.autoRefresh || s.forceTTY || cw.IsTerminal():
-		done := make(chan struct{})
-		p.done = done
 		s.autoRefresh = true
-		go s.autoRefreshListener(ctx, done)
+		refreshStrategy = (*Progress).autoRefreshListener
 	default:
-		p.done = ctx.Done()
 		s.autoRefresh = false
+		refreshStrategy = (*Progress).nopRefreshListener
 	}
 
-	p.pwg.Add(2)
+	p.pwg.Add(3)
 	go s.hm.run(p.pwg, s.shutdownNotifier, s.handOverBarHeap)
 	go p.serve(s, cw)
+	go refreshStrategy(p, s)
 	return p
 }
 
@@ -302,8 +301,9 @@ func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 			err := s.render(dw)
 			if err != nil {
 				p.cancel()
-				// (*pState).(autoRefreshListener|manualRefreshListener) may block
-				// if not depleting s.renderReq
+				// refreshStrategy goroutine is sending to p.renderReq unbuffered chan
+				// without any select therefore p.renderReq must be depleted here
+				// otherwise refreshStrategy goroutine may block and leak.
 				for {
 					select {
 					case <-s.renderReq:
@@ -324,21 +324,23 @@ func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 	}
 }
 
-func (s *pState) autoRefreshListener(ctx context.Context, done chan struct{}) {
+func (p *Progress) autoRefreshListener(s *pState) {
+	defer p.pwg.Done()
 	ticker := time.NewTicker(s.refreshRate)
 	defer ticker.Stop()
 	for {
 		select {
 		case t := <-ticker.C:
 			s.renderReq <- t
-		case <-ctx.Done():
-			close(done)
+		case <-p.ctx.Done():
+			close(p.done)
 			return
 		}
 	}
 }
 
-func (s *pState) manualRefreshListener(ctx context.Context, done chan struct{}) {
+func (p *Progress) manualRefreshListener(s *pState) {
+	defer p.pwg.Done()
 	for {
 		select {
 		case x := <-s.manualRC:
@@ -347,11 +349,17 @@ func (s *pState) manualRefreshListener(ctx context.Context, done chan struct{}) 
 			} else {
 				s.renderReq <- time.Now()
 			}
-		case <-ctx.Done():
-			close(done)
+		case <-p.ctx.Done():
+			close(p.done)
 			return
 		}
 	}
+}
+
+func (p *Progress) nopRefreshListener(_ *pState) {
+	defer p.pwg.Done()
+	<-p.ctx.Done()
+	close(p.done)
 }
 
 func (s *pState) render(cw *cwriter.Writer) error {
