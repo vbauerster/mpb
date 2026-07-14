@@ -23,6 +23,9 @@ var ErrDone = fmt.Errorf("%T instance can't be reused after %[1]T.Wait()", (*Pro
 
 // Progress represents a container that renders one or more progress bars.
 type Progress struct {
+	// Render error if any, to be inspected after (*Progress).Wait call only.
+	Error error
+
 	ctx          context.Context
 	cancel       func()
 	pwg, bwg     *sync.WaitGroup
@@ -31,9 +34,6 @@ type Progress struct {
 	renderReq    chan time.Time
 	done         chan struct{}
 	autoRefresh  bool
-
-	// Render error if any, to be inspected after (*Progress).Wait call only.
-	Error error
 }
 
 type queueBar struct {
@@ -81,8 +81,8 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 	ctx, cancel := context.WithCancel(ctx)
 
 	s := &pState{
-		hmQueueLen:  defaultHmQueueLength,
 		popPriority: math.MinInt32,
+		hmQueueLen:  defaultHmQueueLength,
 		refreshRate: defaultRefreshRate,
 		queueBars:   make(map[*Bar]*queueBar),
 		output:      os.Stdout,
