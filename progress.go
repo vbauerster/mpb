@@ -28,7 +28,9 @@ type Progress struct {
 	pwg, bwg     *sync.WaitGroup
 	operateState chan func(*pState)
 	interceptIO  chan func(io.Writer)
+	renderReq    chan time.Time
 	done         chan struct{}
+	autoRefresh  bool
 }
 
 type queueBar struct {
@@ -39,7 +41,6 @@ type queueBar struct {
 // pState holds bars in its priorityQueue, it gets passed to (*Progress).serve monitor goroutine.
 type pState struct {
 	hm          heapManager
-	renderReq   chan time.Time
 	idCount     int
 	popPriority int
 
@@ -78,7 +79,6 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 
 	s := &pState{
 		hmQueueLen:  defaultHmQueueLength,
-		renderReq:   make(chan time.Time),
 		popPriority: math.MinInt32,
 		refreshRate: defaultRefreshRate,
 		queueBars:   make(map[*Bar]*queueBar),
@@ -105,6 +105,7 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 		bwg:          new(sync.WaitGroup),
 		operateState: make(chan func(*pState)),
 		interceptIO:  make(chan func(io.Writer)),
+		renderReq:    make(chan time.Time),
 		done:         make(chan struct{}),
 	}
 
@@ -112,13 +113,13 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 	cw := cwriter.New(s.output, s.reqWidth, s.forceTTY)
 	switch {
 	case s.manualRC != nil:
-		s.autoRefresh = false
+		p.autoRefresh = false
 		refreshStrategy = (*Progress).manualRefreshListener
 	case s.autoRefresh || s.forceTTY || cw.IsTerminal():
-		s.autoRefresh = true
+		p.autoRefresh = true
 		refreshStrategy = (*Progress).autoRefreshListener
 	default:
-		s.autoRefresh = false
+		p.autoRefresh = false
 		refreshStrategy = (*Progress).nopRefreshListener
 	}
 
@@ -295,7 +296,7 @@ func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 			op(s)
 		case fn := <-p.interceptIO:
 			fn(cw)
-		case <-s.renderReq:
+		case <-p.renderReq:
 			err := s.render(dw)
 			if err != nil {
 				p.cancel()
@@ -304,7 +305,7 @@ func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 				// otherwise refreshStrategy goroutine may block and leak.
 				for {
 					select {
-					case <-s.renderReq:
+					case <-p.renderReq:
 					case <-p.done:
 						_, _ = fmt.Fprintln(s.debugOut, err.Error())
 						return
@@ -312,7 +313,7 @@ func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 				}
 			}
 		case <-p.done:
-			if s.autoRefresh && s.rmOnComplete {
+			if p.autoRefresh && s.rmOnComplete {
 				if err := s.render(cw); err != nil {
 					_, _ = fmt.Fprintln(s.debugOut, err.Error())
 				}
@@ -329,7 +330,7 @@ func (p *Progress) autoRefreshListener(s *pState) {
 	for {
 		select {
 		case t := <-ticker.C:
-			s.renderReq <- t
+			p.renderReq <- t
 		case <-p.ctx.Done():
 			close(p.done)
 			return
@@ -343,9 +344,9 @@ func (p *Progress) manualRefreshListener(s *pState) {
 		select {
 		case x := <-s.manualRC:
 			if t, ok := x.(time.Time); ok {
-				s.renderReq <- t
+				p.renderReq <- t
 			} else {
-				s.renderReq <- time.Now()
+				p.renderReq <- time.Now()
 			}
 		case <-p.ctx.Done():
 			close(p.done)
@@ -444,9 +445,7 @@ func (s *pState) makeBarState(total int64, filler BarFiller, options ...BarOptio
 		reqWidth:        s.reqWidth,
 		total:           total,
 		filler:          filler,
-		renderReq:       s.renderReq,
 		triggerComplete: total > 0,
-		autoRefresh:     s.autoRefresh,
 	}
 
 	bs.extender = func(_ decor.Statistics, rows ...io.Reader) ([]io.Reader, error) {
