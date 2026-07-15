@@ -207,7 +207,7 @@ func (p *Progress) makeBar(priority int) *Bar {
 }
 
 // blocks until iteration is done
-func (p *Progress) iterateBars(yield func(*Bar) bool) (ok bool) {
+func (p *Progress) iterateBars(yield func(*Bar) bool) error {
 	seqCh := make(chan iter.Seq[*Bar], 1)
 	select {
 	case p.operateState <- func(s *pState) { s.hm.iter(seqCh) }:
@@ -216,9 +216,9 @@ func (p *Progress) iterateBars(yield func(*Bar) bool) (ok bool) {
 				break
 			}
 		}
-		return true
+		return nil
 	case <-p.done:
-		return false
+		return ErrDone
 	}
 }
 

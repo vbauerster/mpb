@@ -514,14 +514,14 @@ func (b *Bar) done() {
 
 func (b *Bar) tryEarlyRefresh() {
 	otherRunning := make(chan struct{})
-	ok := b.container.iterateBars(func(bar *Bar) bool {
+	yield := func(bar *Bar) bool {
 		if b != bar && bar.isRunning() {
 			close(otherRunning)
 			return false // stop traverse
 		}
 		return true // continue traverse
-	})
-	if ok {
+	}
+	if err := b.container.iterateBars(yield); err == nil {
 		select {
 		case <-otherRunning:
 		default:
