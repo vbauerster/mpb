@@ -39,6 +39,7 @@ func (w *Writer) Flush(lines int) error {
 		if err != nil {
 			return err
 		}
+		w.lines = lines // save lines for the next clearLines
 	}
 
 	_, err := w.WriteTo(w.out)
@@ -50,7 +51,6 @@ func (w *Writer) Flush(lines int) error {
 		return w.ew.ansiCuuAndEd(w, lines)
 	}
 
-	w.lines = lines
 	return nil
 }
 
