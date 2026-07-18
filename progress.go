@@ -108,7 +108,6 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 		bwg:          new(sync.WaitGroup),
 		operateState: make(chan func(*pState)),
 		interceptIO:  make(chan func(io.Writer)),
-		renderReq:    make(chan time.Time),
 		done:         make(chan struct{}),
 	}
 
@@ -116,13 +115,13 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 	cw := cwriter.New(s.output, s.reqWidth, s.forceTTY)
 	switch {
 	case s.manualRC != nil:
-		p.autoRefresh = false
+		p.renderReq = make(chan time.Time)
 		refreshStrategy = (*Progress).manualRefreshListener
 	case s.autoRefresh || s.forceTTY || cw.IsTerminal():
 		p.autoRefresh = true
+		p.renderReq = make(chan time.Time)
 		refreshStrategy = (*Progress).autoRefreshListener
 	default:
-		p.autoRefresh = false
 		refreshStrategy = (*Progress).nopRefreshListener
 	}
 
