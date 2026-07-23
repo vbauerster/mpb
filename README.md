@@ -15,6 +15,12 @@
 - **Predefined Decorators**: Elapsed time, [ewma](https://github.com/VividCortex/ewma) based ETA, Percentage, Bytes counter
 - **Decorator's width sync**: Synchronized decorator's width among multiple bars
 
+## Console writer (`cwriter`)
+
+`cwriter.New` requires `(out io.Writer, width int, forceTTY bool)` since v8.13.
+Pass `0` for width to use the default (80). See package docs for a migration
+snippet from the previous single-argument form.
+
 ## Usage
 
 #### [Rendering single bar](_examples/singleBar/main.go)
