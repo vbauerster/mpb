@@ -2,6 +2,7 @@ package mpb
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"fmt"
 	"io"
@@ -84,8 +85,6 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 
 	s := &pState{
 		popPriority: math.MinInt32,
-		hmQueueLen:  defaultHmQueueLength,
-		refreshRate: defaultRefreshRate,
 		queueBars:   make(map[*Bar]*queueBar),
 		output:      os.Stdout,
 		debugOut:    io.Discard,
@@ -104,8 +103,6 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 	if s.cwriter == nil {
 		s.cwriter = cwriter.New(s.output, s.reqWidth, s.forceTTY)
 	}
-
-	s.hm = make(heapManager, s.hmQueueLen)
 
 	p := &Progress{
 		ctx:          ctx,
@@ -131,6 +128,7 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 	}
 
 	p.pwg.Add(3)
+	s.hm = make(heapManager, cmp.Or(s.hmQueueLen, defaultHmQueueLength))
 	go s.hm.run(p.pwg, s.shutdownNotifier, s.handOverBarHeap)
 	go p.serve(s)
 	go refreshStrategy(p, s)
@@ -334,7 +332,7 @@ func (p *Progress) serve(s *pState) {
 
 func (p *Progress) autoRefreshListener(s *pState) {
 	defer p.pwg.Done()
-	ticker := time.NewTicker(s.refreshRate)
+	ticker := time.NewTicker(cmp.Or(s.refreshRate, defaultRefreshRate))
 	defer ticker.Stop()
 	for {
 		select {
