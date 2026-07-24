@@ -121,7 +121,7 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 	case s.manualRC != nil:
 		p.renderReq = make(chan time.Time)
 		refreshStrategy = (*Progress).manualRefreshListener
-	case s.autoRefresh || s.forceTTY || s.cwriter.IsTerminal():
+	case s.autoRefresh || s.cwriter.IsTerminal():
 		p.autoRefresh = true
 		p.renderReq = make(chan time.Time)
 		refreshStrategy = (*Progress).autoRefreshListener
