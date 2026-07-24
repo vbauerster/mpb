@@ -62,7 +62,7 @@ type pState struct {
 	cwriter          ConsoleWriter
 	popCompleted     bool
 	autoRefresh      bool
-	rmOnComplete     bool
+	hasUnrendered    bool
 	forceTTY         bool
 }
 
@@ -301,6 +301,7 @@ func (p *Progress) serve(s *pState) {
 		case fn := <-p.interceptIO:
 			fn(s.cwriter)
 		case <-p.renderReq:
+			s.hasUnrendered = false
 			err := s.render()
 			if err != nil {
 				p.cancel()
@@ -318,7 +319,7 @@ func (p *Progress) serve(s *pState) {
 				}
 			}
 		case <-p.done:
-			if p.autoRefresh && s.rmOnComplete {
+			if p.autoRefresh && s.hasUnrendered {
 				err := s.render()
 				if err != nil {
 					_, _ = fmt.Fprintln(s.debugOut, err.Error())
@@ -381,8 +382,6 @@ func (s *pState) render() (err error) {
 		width, height = s.cwriter.GetSafeSize()
 	}
 
-	s.rmOnComplete = false
-
 	var total, popCount int
 	var rows [][]io.Reader
 
@@ -420,7 +419,7 @@ func (s *pState) render() (err error) {
 				case !frame.rmOnComplete:
 					s.hm.push(b, false)
 				}
-				s.rmOnComplete = s.rmOnComplete || frame.rmOnComplete
+				s.hasUnrendered = s.hasUnrendered || frame.rmOnComplete
 			}
 			b.cancel()
 		case 2:
