@@ -16,7 +16,9 @@ const (
 	cuuAndEd = "A\x1b[J"
 )
 
-// New returns a new Writer with defaults.
+// New constructs a new Writer which abstracts writing multi
+// lines to a fixed position within a terminal. If terminal
+// probe fails provided width will be used as a sane default.
 func New(out io.Writer, width int, forceTTY bool) *Writer {
 	w := &Writer{
 		Buffer:   new(bytes.Buffer),
