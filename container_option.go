@@ -89,6 +89,16 @@ func WithDebugOutput(w io.Writer) ContainerOption {
 	}
 }
 
+// WithConsoleWriter overrides default implementation of ConsoleWriter interface.
+// This option makes following options ineffective:
+// - WithOutput
+// - ForceTTY
+func WithConsoleWriter(cw ConsoleWriter) ContainerOption {
+	return func(s *pState) {
+		s.cwriter = cw
+	}
+}
+
 // WithAutoRefresh force auto refresh regardless of what output is set to.
 // Applicable only if not WithManualRefresh set.
 func WithAutoRefresh() ContainerOption {

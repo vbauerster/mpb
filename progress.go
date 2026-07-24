@@ -48,6 +48,7 @@ type pState struct {
 	popPriority int
 
 	// following are provided/overrode by user
+	uwg              *sync.WaitGroup
 	hmQueueLen       int
 	reqWidth         int
 	refreshRate      time.Duration
@@ -58,7 +59,7 @@ type pState struct {
 	queueBars        map[*Bar]*queueBar
 	output           io.Writer
 	debugOut         io.Writer
-	uwg              *sync.WaitGroup
+	cwriter          ConsoleWriter
 	popCompleted     bool
 	autoRefresh      bool
 	rmOnComplete     bool
@@ -99,6 +100,10 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 		s.shutdownNotifier = make(chan any)
 	}
 
+	if s.cwriter == nil {
+		s.cwriter = cwriter.New(s.output, s.reqWidth, s.forceTTY)
+	}
+
 	s.hm = make(heapManager, s.hmQueueLen)
 
 	p := &Progress{
@@ -112,12 +117,11 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 	}
 
 	var refreshStrategy func(*Progress, *pState)
-	cw := cwriter.New(s.output, s.reqWidth, s.forceTTY)
 	switch {
 	case s.manualRC != nil:
 		p.renderReq = make(chan time.Time)
 		refreshStrategy = (*Progress).manualRefreshListener
-	case s.autoRefresh || s.forceTTY || cw.IsTerminal():
+	case s.autoRefresh || s.forceTTY || s.cwriter.IsTerminal():
 		p.autoRefresh = true
 		p.renderReq = make(chan time.Time)
 		refreshStrategy = (*Progress).autoRefreshListener
@@ -127,7 +131,7 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 
 	p.pwg.Add(3)
 	go s.hm.run(p.pwg, s.shutdownNotifier, s.handOverBarHeap)
-	go p.serve(s, cw)
+	go p.serve(s)
 	go refreshStrategy(p, s)
 	return p
 }
@@ -271,7 +275,7 @@ func (p *Progress) Shutdown() {
 	p.pwg.Wait()
 }
 
-func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
+func (p *Progress) serve(s *pState) {
 	defer func() {
 		if s.uwg != nil {
 			s.uwg.Wait() // wait for user wg
@@ -282,24 +286,22 @@ func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 		p.pwg.Done()
 	}()
 
-	var dw *cwriter.Writer
+	var cw ConsoleWriter
 	if s.delayRC != nil {
-		dw = cwriter.New(io.Discard, 0, false)
-	} else {
-		dw = cw
+		cw, s.cwriter = s.cwriter, cwriter.New(io.Discard, 0, false)
 	}
 
 	for {
 		select {
 		case <-s.delayRC:
-			dw = cw
+			s.cwriter = cw
 			s.delayRC = nil
 		case op := <-p.operateState:
 			op(s)
 		case fn := <-p.interceptIO:
-			fn(cw)
+			fn(s.cwriter)
 		case <-p.renderReq:
-			err := s.render(dw)
+			err := s.render()
 			if err != nil {
 				p.cancel()
 				// refreshStrategy goroutine is sending to p.renderReq unbuffered chan
@@ -317,7 +319,7 @@ func (p *Progress) serve(s *pState, cw *cwriter.Writer) {
 			}
 		case <-p.done:
 			if p.autoRefresh && s.rmOnComplete {
-				err := s.render(cw)
+				err := s.render()
 				if err != nil {
 					_, _ = fmt.Fprintln(s.debugOut, err.Error())
 					p.Error = err
@@ -366,24 +368,25 @@ func (p *Progress) nopRefreshListener(_ *pState) {
 	close(p.done)
 }
 
-func (s *pState) render(cw *cwriter.Writer) error {
+func (s *pState) render() (err error) {
 	s.hm.sync()
 
-	width, height, err := cw.GetTermSize()
-	if err != nil {
-		return err
+	var width, height int
+	if s.cwriter.IsTerminal() {
+		width, height, err = s.cwriter.GetTermSize()
+		if err != nil {
+			return err
+		}
+	} else {
+		width, height = s.cwriter.GetSafeSize()
 	}
-
-	return s.flush(cw, height, s.hm.render(width))
-}
-
-func (s *pState) flush(cw *cwriter.Writer, height int, seq iter.Seq[*Bar]) error {
-	var total, popCount int
-	var rows [][]io.Reader
 
 	s.rmOnComplete = false
 
-	for b := range seq {
+	var total, popCount int
+	var rows [][]io.Reader
+
+	for b := range s.hm.render(width) {
 		frame := <-b.frameCh
 		if frame.err != nil {
 			b.cancel()
@@ -433,14 +436,14 @@ func (s *pState) flush(cw *cwriter.Writer, height int, seq iter.Seq[*Bar]) error
 
 	for i := len(rows) - 1; i >= 0; i-- {
 		for _, r := range rows[i] {
-			_, err := cw.ReadFrom(r)
+			_, err := s.cwriter.ReadFrom(r)
 			if err != nil {
 				return err
 			}
 		}
 	}
 
-	return cw.Flush(total - popCount)
+	return s.cwriter.Flush(total - popCount)
 }
 
 func (s *pState) makeBarState(total int64, filler BarFiller, options ...BarOption) *bState {

@@ -42,12 +42,15 @@ func (w *Writer) IsTerminal() bool {
 	return w.terminal
 }
 
-// GetTermSize returns WxH of underlying terminal.
+// GetSafeSize returns sane default width and height.
+// Should be called only if (*Writer).IsTerminal returns false.
+func (w *Writer) GetSafeSize() (width, height int) {
+	return w.width, w.width*3/2 + 1
+}
+
+// GetTermSize returns width and height of underlying terminal.
+// Should be called only if (*Writer).IsTerminal returns true.
 func (w *Writer) GetTermSize() (width, height int, err error) {
-	if !w.terminal {
-		width, height = w.width, w.width*3/2+1
-		return
-	}
 	return GetSize(w.fd)
 }
 
