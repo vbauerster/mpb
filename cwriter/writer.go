@@ -20,17 +20,17 @@ const (
 // lines to a fixed position within a terminal. If terminal
 // probe fails provided width will be used as a sane default.
 func New(out io.Writer, width int, forceTTY bool) *Writer {
+	bb := make([]byte, 16)
 	w := &Writer{
 		Buffer:   new(bytes.Buffer),
 		out:      out,
+		ew:       escWriter(bb[:copy(bb, []byte(escOpen))]),
 		width:    cmp.Or(width, defaultWidth),
 		forceTTY: forceTTY,
 	}
 	if f, ok := out.(*os.File); ok {
 		w.SetTermFd(int(f.Fd()))
 	}
-	bb := make([]byte, 16)
-	w.ew = escWriter(bb[:copy(bb, []byte(escOpen))])
 	return w
 }
 
