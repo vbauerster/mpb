@@ -8,6 +8,7 @@ import (
 	"iter"
 	"math"
 	"os"
+	"slices"
 	"sync"
 	"time"
 
@@ -393,11 +394,11 @@ func (s *pState) render() (err error) {
 			return frame.err // b.frameCh is buffered it's ok to return here
 		}
 		var discarded int
-		for i := len(frame.rows) - 1; i >= 0; i-- {
+		for _, row := range slices.Backward(frame.rows) {
 			if total < height {
 				total++
 			} else {
-				_, _ = io.Copy(io.Discard, frame.rows[i]) // Found IsInBounds
+				_, _ = io.Copy(io.Discard, row)
 				discarded++
 			}
 		}
@@ -433,8 +434,8 @@ func (s *pState) render() (err error) {
 		}
 	}
 
-	for i := len(rows) - 1; i >= 0; i-- {
-		for _, r := range rows[i] {
+	for _, row := range slices.Backward(rows) {
+		for _, r := range row {
 			_, err := s.cwriter.ReadFrom(r)
 			if err != nil {
 				return err
