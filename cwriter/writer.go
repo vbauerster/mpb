@@ -27,14 +27,30 @@ func New(out io.Writer, width int, forceTTY bool) *Writer {
 		forceTTY: forceTTY,
 	}
 	if f, ok := out.(*os.File); ok {
-		if fd := int(f.Fd()); IsTerminal(fd) {
-			w.fd = fd
-			w.terminal = true
-		}
+		w.SetTermFd(int(f.Fd()))
 	}
 	bb := make([]byte, 16)
 	w.ew = escWriter(bb[:copy(bb, []byte(escOpen))])
 	return w
+}
+
+// SetTermFd sets fd if only it stands for an actual terminal handle.
+// If it is indeed a terminal handle then next (*Writer).IsTerminal
+// call will return true and (*Writer).GetTermSize is safe to call.
+// Use case: preserve terminal behaviour while constructing *Writer
+// with io.Writer wrapper.
+//
+//	cw := New(io.MultiWriter(os.Stdout, &someTestBuf), 0, false)
+//	cw.IsTerminal() // returns false
+//	cw.SetTermFd(int(os.Stdout.Fd()))
+//	cw.IsTerminal() // returns true
+func (w *Writer) SetTermFd(fd int) {
+	if IsTerminal(fd) {
+		w.fd = fd
+		w.terminal = true
+	} else {
+		w.terminal = false
+	}
 }
 
 // IsTerminal tells whether underlying io.Writer is terminal aka TTY.
