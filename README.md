@@ -17,9 +17,16 @@
 
 ## Console writer (`cwriter`)
 
-`cwriter.New` requires `(out io.Writer, width int, forceTTY bool)` since v8.13.
-Pass `0` for width to use the default (80). See package docs for a migration
-snippet from the previous single-argument form.
+Since v8.13, `cwriter.New` takes `(out io.Writer, width int, forceTTY bool)`.
+To preserve the previous single-argument behavior, use:
+
+```go
+cw := cwriter.New(out, 0, false)
+```
+
+Width `0` falls back to the default (80) when the writer is not a TTY.
+`GetSize` is called internally only when the terminal probe succeeds —
+you do not need to call it yourself.
 
 ## Usage
 
