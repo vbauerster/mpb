@@ -19,6 +19,7 @@ import (
 
 const defaultRefreshRate = 150 * time.Millisecond
 const defaultHmQueueLength = 64
+const defaultWidth = 80
 
 // ErrDone represents use after `(*Progress).Wait()` error.
 var ErrDone = fmt.Errorf("%T instance can't be reused after %[1]T.Wait()", (*Progress)(nil))
@@ -378,7 +379,8 @@ func (s *pState) render() (err error) {
 			return err
 		}
 	} else {
-		width, height = s.cwriter.GetSafeSize()
+		width = cmp.Or(s.reqWidth, defaultWidth)
+		height = width*3/2 + 1
 	}
 
 	var total, popCount int

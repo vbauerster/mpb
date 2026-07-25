@@ -10,7 +10,6 @@ type ConsoleWriter interface {
 	io.Writer
 	io.ReaderFrom
 	IsTerminal() bool
-	GetSafeSize() (width, height int)
 	GetTermSize() (width, height int, err error)
 	Flush(lines int) error
 }
