@@ -64,8 +64,8 @@ type pState struct {
 	cwriter          ConsoleWriter
 	popCompleted     bool
 	autoRefresh      bool
-	hasUnrendered    bool
 	forceTTY         bool
+	hasUnrendered    bool
 }
 
 // New creates new Progress container instance. It's not possible to
