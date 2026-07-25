@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/vbauerster/mpb/v8/cwriter"
+	"github.com/vbauerster/cupwriter"
 	"github.com/vbauerster/mpb/v8/decor"
 )
 
@@ -102,7 +102,7 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 	}
 
 	if s.cwriter == nil {
-		s.cwriter = cwriter.New(s.output, s.reqWidth, s.forceTTY)
+		s.cwriter = cupwriter.New(s.output, s.forceTTY)
 	}
 
 	p := &Progress{
@@ -288,7 +288,7 @@ func (p *Progress) serve(s *pState) {
 
 	var cw ConsoleWriter
 	if s.delayRC != nil {
-		cw, s.cwriter = s.cwriter, cwriter.New(io.Discard, 0, false)
+		cw, s.cwriter = s.cwriter, cupwriter.New(io.Discard, false)
 	}
 
 	for {
