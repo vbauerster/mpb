@@ -1,6 +1,6 @@
 module github.com/vbauerster/mpb/_examples/stress
 
-go 1.25.0
+go 1.26.5
 
 require (
 	github.com/pkg/profile v1.7.0
@@ -13,6 +13,7 @@ require (
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
 	github.com/felixge/fgprof v0.9.5 // indirect
 	github.com/google/pprof v0.0.0-20260709232956-b9395ee17fa0 // indirect
-	github.com/mattn/go-runewidth v0.0.24 // indirect
+	github.com/mattn/go-runewidth v0.0.27 // indirect
+	github.com/vbauerster/cupwriter v0.0.1 // indirect
 	golang.org/x/sys v0.47.0 // indirect
 )
