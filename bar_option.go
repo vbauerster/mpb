@@ -55,7 +55,7 @@ func BarWidth(width int) BarOption {
 // When argument bar completes or aborts queued bar replaces its place.
 func BarQueueAfter(bar *Bar) BarOption {
 	return func(s *bState) {
-		s.waitBar = bar
+		s.waitFor = bar
 	}
 }
 

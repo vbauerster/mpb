@@ -44,7 +44,7 @@ type bState struct {
 	ewmaDecorators  []decor.EwmaDecorator
 	filler          BarFiller
 	extender        extenderFunc
-	waitBar         *Bar // key for (*pState).queueBars
+	waitFor         *Bar // key for (*pState).queueBars
 	trimSpace       bool
 	aborted         bool
 	triggerComplete bool

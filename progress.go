@@ -181,8 +181,8 @@ func (p *Progress) Add(total int64, filler BarFiller, options ...BarOption) (*Ba
 		p.bwg.Add(1)
 		bs := ps.makeBarState(total, filler, options...)
 		bar := p.makeBar(bs.priority)
-		if bs.waitBar != nil {
-			ps.queueBars[bs.waitBar] = &queueBar{bs, bar}
+		if bs.waitFor != nil {
+			ps.queueBars[bs.waitFor] = &queueBar{bs, bar}
 		} else {
 			if p.autoRefresh {
 				ps.hm.push(bar, true)
