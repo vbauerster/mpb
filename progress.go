@@ -220,7 +220,7 @@ func (p *Progress) iterateBars(yield func(*Bar) bool) error {
 	}
 }
 
-// runQueuetBar must be called on p.autoRefresh == false only
+// runQueuetBar must be called on p.refreshEnabled = false only
 func (p *Progress) runQueuetBar(b *Bar) {
 	select {
 	case p.operateState <- func(s *pState) {
