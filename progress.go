@@ -414,6 +414,7 @@ func (s *pState) render() (err error) {
 
 		switch frame.shutdown {
 		case 1:
+			b.cancel()
 			if qb, ok := s.queueBars[b]; ok {
 				delete(s.queueBars, b)
 				qb.bar.priority = b.priority
@@ -430,7 +431,6 @@ func (s *pState) render() (err error) {
 				}
 				s.hasUnrendered = s.hasUnrendered || frame.rmOnComplete
 			}
-			b.cancel()
 		case 2:
 			if s.popCompleted && !frame.noPop {
 				popCount += len(frame.rows) - discarded
