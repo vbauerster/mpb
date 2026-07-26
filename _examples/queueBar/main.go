@@ -16,7 +16,9 @@ const numBars = 4
 
 func main() {
 	cw := cupwriter.New(color.Output, false)
-	cw.SetTermFd(int(os.Stdout.Fd()))
+	if !cw.IsTerminal() {
+		cw.SetTermFd(int(os.Stdout.Fd()))
+	}
 	// to support color in Windows following both options are required
 	p := mpb.New(
 		mpb.WithConsoleWriter(cw),
