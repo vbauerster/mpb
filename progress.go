@@ -178,7 +178,6 @@ func (p *Progress) Add(total int64, filler BarFiller, options ...BarOption) (*Ba
 	ch := make(chan *Bar, 1)
 	select {
 	case p.operateState <- func(s *pState) {
-		p.bwg.Add(1)
 		bs := s.makeBarState(total, filler, options...)
 		bar := p.makeBar(bs.priority)
 		s.runOrQueue(bs, bar, p.autoRefresh)
@@ -192,7 +191,7 @@ func (p *Progress) Add(total int64, filler BarFiller, options ...BarOption) (*Ba
 
 func (p *Progress) makeBar(priority int) *Bar {
 	ctx, cancel := context.WithCancel(p.ctx)
-
+	p.bwg.Add(1)
 	return &Bar{
 		ctx:          ctx,
 		cancel:       cancel,
