@@ -29,14 +29,14 @@ type Progress struct {
 	// Render error if any, to be inspected after (*Progress).Wait call only.
 	Error error
 
-	ctx          context.Context
-	cancel       func()
-	pwg, bwg     *sync.WaitGroup
-	operateState chan func(*pState)
-	interceptIO  chan func(io.Writer)
-	renderReq    chan time.Time
-	done         chan struct{}
-	autoRefresh  bool
+	ctx            context.Context
+	cancel         func()
+	pwg, bwg       *sync.WaitGroup
+	operateState   chan func(*pState)
+	interceptIO    chan func(io.Writer)
+	renderReq      chan time.Time
+	done           chan struct{}
+	refreshEnabled bool
 }
 
 type queueBar struct {
@@ -118,10 +118,11 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 	var refreshStrategy func(*Progress, *pState)
 	switch {
 	case s.manualRC != nil:
+		p.refreshEnabled = true
 		p.renderReq = make(chan time.Time)
 		refreshStrategy = (*Progress).manualRefreshListener
 	case s.autoRefresh || s.cwriter.IsTerminal():
-		p.autoRefresh = true
+		p.refreshEnabled = true
 		p.renderReq = make(chan time.Time)
 		refreshStrategy = (*Progress).autoRefreshListener
 	default:
@@ -180,7 +181,7 @@ func (p *Progress) Add(total int64, filler BarFiller, options ...BarOption) (*Ba
 	case p.operateState <- func(s *pState) {
 		bs := s.makeBarState(total, filler, options...)
 		bar := p.makeBar(bs.priority)
-		s.runOrQueue(bs, bar, p.autoRefresh)
+		s.runOrQueue(bs, bar, p.refreshEnabled)
 		ch <- bar
 	}:
 		return <-ch, nil
@@ -326,7 +327,7 @@ func (p *Progress) serve(s *pState) {
 				}
 			}
 		case <-p.done:
-			if p.autoRefresh && s.hasUnrendered {
+			if p.refreshEnabled && s.hasUnrendered {
 				err := s.render()
 				if err != nil {
 					_, _ = fmt.Fprintln(s.debugOut, err.Error())
@@ -453,9 +454,9 @@ func (s *pState) render() (err error) {
 	return s.cwriter.Flush(total - popCount)
 }
 
-func (s *pState) runOrQueue(bs *bState, bar *Bar, autoRefresh bool) {
+func (s *pState) runOrQueue(bs *bState, bar *Bar, refreshEnabled bool) {
 	if bs.waitFor == nil {
-		if autoRefresh {
+		if refreshEnabled {
 			s.hm.push(bar, true)
 		}
 		go bar.serve(bs)
@@ -464,7 +465,7 @@ func (s *pState) runOrQueue(bs *bState, bar *Bar, autoRefresh bool) {
 	select {
 	case <-bs.waitFor.ctx.Done():
 		bs.waitFor = nil
-		s.runOrQueue(bs, bar, autoRefresh)
+		s.runOrQueue(bs, bar, refreshEnabled)
 	default:
 		s.queueBars[bs.waitFor] = &queueBar{bs, bar}
 	}
