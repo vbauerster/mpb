@@ -177,18 +177,11 @@ func (p *Progress) Add(total int64, filler BarFiller, options ...BarOption) (*Ba
 	}
 	ch := make(chan *Bar, 1)
 	select {
-	case p.operateState <- func(ps *pState) {
+	case p.operateState <- func(s *pState) {
 		p.bwg.Add(1)
-		bs := ps.makeBarState(total, filler, options...)
+		bs := s.makeBarState(total, filler, options...)
 		bar := p.makeBar(bs.priority)
-		if bs.waitFor != nil {
-			ps.queueBars[bs.waitFor] = &queueBar{bs, bar}
-		} else {
-			if p.autoRefresh {
-				ps.hm.push(bar, true)
-			}
-			go bar.serve(bs)
-		}
+		s.runOrQueue(bs, bar, p.autoRefresh)
 		ch <- bar
 	}:
 		return <-ch, nil
@@ -459,6 +452,23 @@ func (s *pState) render() (err error) {
 	}
 
 	return s.cwriter.Flush(total - popCount)
+}
+
+func (s *pState) runOrQueue(bs *bState, bar *Bar, autoRefresh bool) {
+	if bs.waitFor == nil {
+		if autoRefresh {
+			s.hm.push(bar, true)
+		}
+		go bar.serve(bs)
+		return
+	}
+	select {
+	case <-bs.waitFor.ctx.Done():
+		bs.waitFor = nil
+		s.runOrQueue(bs, bar, autoRefresh)
+	default:
+		s.queueBars[bs.waitFor] = &queueBar{bs, bar}
+	}
 }
 
 func (s *pState) makeBarState(total int64, filler BarFiller, options ...BarOption) *bState {
