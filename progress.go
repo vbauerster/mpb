@@ -415,22 +415,7 @@ func (s *pState) render() (err error) {
 		switch frame.shutdown {
 		case 1:
 			b.cancel()
-			if qb, ok := s.queueBars[b]; ok {
-				delete(s.queueBars, b)
-				qb.bar.priority = b.priority
-				s.hm.push(qb.bar, true)
-				go qb.bar.serve(qb.state)
-			} else {
-				switch {
-				case s.popCompleted && !frame.noPop:
-					b.priority = s.popPriority
-					s.popPriority++
-					fallthrough
-				case !frame.rmOnComplete:
-					s.hm.push(b, false)
-				}
-				s.hasUnrendered = s.hasUnrendered || frame.rmOnComplete
-			}
+			s.onShutdown(b, frame)
 		case 2:
 			if s.popCompleted && !frame.noPop {
 				popCount += len(frame.rows) - discarded
@@ -452,6 +437,26 @@ func (s *pState) render() (err error) {
 	}
 
 	return s.cwriter.Flush(total - popCount)
+}
+
+func (s *pState) onShutdown(b *Bar, frame *renderFrame) {
+	if qb, ok := s.queueBars[b]; ok {
+		delete(s.queueBars, b)
+		qb.bar.priority = b.priority
+		s.hm.push(qb.bar, true)
+		go qb.bar.serve(qb.state)
+		return
+	}
+	if s.popCompleted && !frame.noPop {
+		b.priority = s.popPriority
+		s.popPriority++
+		frame.rmOnComplete = false
+	}
+	if !frame.rmOnComplete {
+		s.hm.push(b, false)
+	} else {
+		s.hasUnrendered = true
+	}
 }
 
 func (s *pState) runOrQueue(bs *bState, bar *Bar, refreshEnabled bool) {
