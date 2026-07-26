@@ -509,6 +509,7 @@ func (b *Bar) done() {
 		go b.tryEarlyRefresh()
 	} else {
 		b.cancel()
+		go b.container.runQueuetBar(b)
 	}
 }
 

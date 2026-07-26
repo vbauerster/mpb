@@ -225,6 +225,19 @@ func (p *Progress) iterateBars(yield func(*Bar) bool) error {
 	}
 }
 
+// runQueuetBar must be called on p.autoRefresh == false only
+func (p *Progress) runQueuetBar(b *Bar) {
+	select {
+	case p.operateState <- func(s *pState) {
+		if qb, ok := s.queueBars[b]; ok {
+			delete(s.queueBars, b)
+			go qb.bar.serve(qb.state)
+		}
+	}:
+	case <-p.done:
+	}
+}
+
 // UpdateBarPriority either immediately or lazy.
 // With lazy flag order is updated after the next refresh cycle.
 // If you don't care about laziness just use `(*Bar).SetPriority(int)`.
