@@ -184,8 +184,10 @@ func (p *Progress) Add(total int64, filler BarFiller, options ...BarOption) (*Ba
 		if bs.waitBar != nil {
 			ps.queueBars[bs.waitBar] = &queueBar{bs, bar}
 		} else {
+			if p.autoRefresh {
+				ps.hm.push(bar, true)
+			}
 			go bar.serve(bs)
-			ps.hm.push(bar, true)
 		}
 		ch <- bar
 	}:
@@ -422,8 +424,8 @@ func (s *pState) render() (err error) {
 			if qb, ok := s.queueBars[b]; ok {
 				delete(s.queueBars, b)
 				qb.bar.priority = b.priority
-				go qb.bar.serve(qb.state)
 				s.hm.push(qb.bar, true)
+				go qb.bar.serve(qb.state)
 			} else {
 				switch {
 				case s.popCompleted && !frame.noPop:
