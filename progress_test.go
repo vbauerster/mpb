@@ -25,6 +25,7 @@ func TestWithContext(t *testing.T) {
 		mpb.WithOutput(io.Discard),
 		mpb.WithShutdownNotifier(shutdown),
 		mpb.WithHandOverBarHeap(handOverBarHeap),
+		mpb.WithAutoRefresh(),
 	)
 	_ = p.AddBar(0) // never complete bar
 
@@ -208,9 +209,10 @@ func TestBarPristinePopOrder(t *testing.T) {
 	handOverBarHeap := make(chan []*mpb.Bar, 1)
 	ctx, cancel := context.WithCancel(context.Background())
 	p := mpb.NewWithContext(ctx,
-		mpb.WithOutput(io.Discard), // auto refresh is disabled
+		mpb.WithOutput(io.Discard),
 		mpb.WithShutdownNotifier(shutdown),
 		mpb.WithHandOverBarHeap(handOverBarHeap),
+		mpb.WithAutoRefresh(),
 	)
 	a := p.AddBar(100, mpb.BarPriority(1), mpb.BarID(1))
 	b := p.AddBar(100, mpb.BarPriority(2), mpb.BarID(2))
