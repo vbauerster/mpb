@@ -12,8 +12,9 @@ import (
 	"github.com/vbauerster/mpb/v8/decor"
 )
 
+const numBars = 4
+
 func main() {
-	numBars := 4
 	cw := cupwriter.New(color.Output, false)
 	cw.SetTermFd(int(os.Stdout.Fd()))
 	// to support color in Windows following both options are required
