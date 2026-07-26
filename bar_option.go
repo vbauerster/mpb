@@ -59,8 +59,9 @@ func BarQueueAfter(bar *Bar) BarOption {
 	}
 }
 
-// BarRemoveOnComplete removes both bar's filler and its decorators
-// on complete event.
+// BarRemoveOnComplete removes both bar's filler and its decorators on
+// complete event. This one is ineffective if PopCompletedMode ContainerOption
+// is enabled.
 func BarRemoveOnComplete() BarOption {
 	return func(s *bState) {
 		s.rmOnComplete = true
