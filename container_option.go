@@ -16,6 +16,13 @@ type ContainerOption func(*pState)
 // *sync.WaitGroup is provided, you can safely call just p.Wait()
 // without calling Wait() on provided *sync.WaitGroup. Makes sense
 // when there are more than one bar to render.
+//
+// If a goroutine exits early (for example on error) before the bar
+// reaches its total, call (*Bar).Abort on that bar so p.Wait()
+// does not wait indefinitely for the bar to reach its total. The
+// provided *sync.WaitGroup must still be balanced: call wg.Add(1)
+// before starting each goroutine and defer wg.Done() inside it, even
+// on the error path.
 func WithWaitGroup(wg *sync.WaitGroup) ContainerOption {
 	return func(s *pState) {
 		s.uwg = wg
