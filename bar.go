@@ -521,11 +521,11 @@ func (b *Bar) done() {
 func (b *Bar) tryEarlyRefresh() {
 	otherRunning := make(chan struct{})
 	yield := func(bar *Bar) bool {
-		if b != bar && !bar.AbortedOrCompleted() {
-			close(otherRunning)
-			return false // stop traverse
+		if b == bar || bar.AbortedOrCompleted() {
+			return true // continue traverse
 		}
-		return true // continue traverse
+		close(otherRunning)
+		return false // stop traverse
 	}
 	if err := b.container.iterateBars(yield); err == nil {
 		select {
