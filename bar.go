@@ -523,21 +523,16 @@ func (b *Bar) done() {
 func (b *Bar) tryEarlyRefresh() {
 	otherRunning := make(chan struct{})
 	yield := func(bar *Bar) bool {
-		if b == bar {
-			return true // continue traverse
-		}
-		select {
-		case <-bar.ctx.Done():
-			return true // continue traverse
-		default:
+		if b != bar && bar.isRunning() {
 			close(otherRunning)
 			return false // stop traverse
 		}
+		return true // continue traverse
 	}
 	if err := b.container.iterateBars(yield); err == nil {
 		select {
 		case <-otherRunning:
-		default: // b is the last bar running
+		default:
 			for {
 				select {
 				case b.container.renderReq <- time.Now():
@@ -546,6 +541,15 @@ func (b *Bar) tryEarlyRefresh() {
 				}
 			}
 		}
+	}
+}
+
+func (b *Bar) isRunning() bool {
+	select {
+	case <-b.ctx.Done():
+		return false
+	default:
+		return true
 	}
 }
 
