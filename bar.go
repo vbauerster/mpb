@@ -382,10 +382,10 @@ func (b *Bar) serve(bs *bState) {
 		}
 	}
 	defer func() {
-		decoratorsOnShutdown(bs.decorGroups[0])
-		decoratorsOnShutdown(bs.decorGroups[1])
 		b.bs = bs
 		close(b.bsOk)
+		decoratorsOnShutdown(bs.decorGroups[0])
+		decoratorsOnShutdown(bs.decorGroups[1])
 		b.container.bwg.Done()
 	}()
 	for {
