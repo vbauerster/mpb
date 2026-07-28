@@ -108,7 +108,8 @@ func (b *Bar) ID() int {
 	select {
 	case b.operateState <- func(s *bState) { result <- s.id }:
 		return <-result
-	case <-b.bsOk:
+	case <-b.ctx.Done():
+		b.Wait()
 		return b.bs.id
 	}
 }
@@ -119,7 +120,8 @@ func (b *Bar) Current() int64 {
 	select {
 	case b.operateState <- func(s *bState) { result <- s.current }:
 		return <-result
-	case <-b.bsOk:
+	case <-b.ctx.Done():
+		b.Wait()
 		return b.bs.current
 	}
 }
@@ -335,7 +337,8 @@ func (b *Bar) Aborted() bool {
 	select {
 	case b.operateState <- func(s *bState) { result <- s.aborted }:
 		return <-result
-	case <-b.bsOk:
+	case <-b.ctx.Done():
+		b.Wait()
 		return b.bs.aborted
 	}
 }
@@ -346,7 +349,8 @@ func (b *Bar) Completed() bool {
 	select {
 	case b.operateState <- func(s *bState) { result <- s.completed() }:
 		return <-result
-	case <-b.bsOk:
+	case <-b.ctx.Done():
+		b.Wait()
 		return b.bs.completed()
 	}
 }
@@ -360,7 +364,8 @@ func (b *Bar) AbortedOrCompleted() bool {
 		result <- s.aborted || s.completed()
 	}:
 		return <-result
-	case <-b.bsOk:
+	case <-b.ctx.Done():
+		b.Wait()
 		return b.bs.aborted || b.bs.completed()
 	}
 }
@@ -422,7 +427,8 @@ func (b *Bar) render(tw int) {
 	}
 	select {
 	case b.operateState <- fn:
-	case <-b.bsOk:
+	case <-b.ctx.Done():
+		b.Wait()
 		fn(b.bs)
 	}
 }
@@ -432,7 +438,8 @@ func (b *Bar) wSyncTable() decorSyncTable {
 	select {
 	case b.operateState <- func(s *bState) { result <- s.wSyncTable() }:
 		return <-result
-	case <-b.bsOk:
+	case <-b.ctx.Done():
+		b.Wait()
 		return b.bs.wSyncTable()
 	}
 }
