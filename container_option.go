@@ -55,7 +55,9 @@ func WithRefreshRate(d time.Duration) ContainerOption {
 }
 
 // WithManualRefresh disables internal auto refresh time.Ticker.
-// Refresh will occur upon receive value from provided ch.
+// Refresh will occur on value receive from provided ch, yet last bar
+// will still trigger final refresh cycle on its completion or abortion,
+// similar to last person switches tv off analogy here.
 func WithManualRefresh(ch <-chan any) ContainerOption {
 	return func(s *pState) {
 		s.manualRC = ch
