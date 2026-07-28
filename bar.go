@@ -360,9 +360,7 @@ func (b *Bar) Completed() bool {
 func (b *Bar) AbortedOrCompleted() bool {
 	result := make(chan bool, 1)
 	select {
-	case b.operateState <- func(s *bState) {
-		result <- s.aborted || s.completed()
-	}:
+	case b.operateState <- func(s *bState) { result <- s.aborted || s.completed() }:
 		return <-result
 	case <-b.ctx.Done():
 		b.Wait()
