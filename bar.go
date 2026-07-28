@@ -523,7 +523,7 @@ func (b *Bar) done() {
 func (b *Bar) tryEarlyRefresh() {
 	otherRunning := make(chan struct{})
 	yield := func(bar *Bar) bool {
-		if b != bar && bar.isRunning() {
+		if b != bar && !bar.AbortedOrCompleted() {
 			close(otherRunning)
 			return false // stop traverse
 		}
@@ -533,6 +533,7 @@ func (b *Bar) tryEarlyRefresh() {
 		select {
 		case <-otherRunning:
 		default:
+			// b is the last bar leaving so it should switch tv off
 			for {
 				select {
 				case b.container.renderReq <- time.Now():
@@ -541,15 +542,6 @@ func (b *Bar) tryEarlyRefresh() {
 				}
 			}
 		}
-	}
-}
-
-func (b *Bar) isRunning() bool {
-	select {
-	case <-b.ctx.Done():
-		return false
-	default:
-		return true
 	}
 }
 
