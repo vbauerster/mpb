@@ -29,10 +29,7 @@ func TestWithContextCancel(t *testing.T) {
 	)
 
 	_ = p.AddBar(0) // never complete bar
-	go func() {
-		cancel()
-		p.Wait()
-	}()
+	cancel()
 
 test:
 	for {
@@ -260,10 +257,7 @@ func TestBarPristinePopOrder(t *testing.T) {
 	c := p.AddBar(100, mpb.BarPriority(3), mpb.BarID(3))
 	pristineOrder := []*mpb.Bar{c, b, a}
 
-	go func() {
-		cancel()
-		p.Wait()
-	}()
+	cancel()
 
 test:
 	for {
