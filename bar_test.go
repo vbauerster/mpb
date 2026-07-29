@@ -250,9 +250,10 @@ func TestBarStyle(t *testing.T) {
 		string(runes[2]),
 		string(runes[4]),
 	)
-	got := string(bytes.Split(buf.Bytes(), []byte("\n"))[0])
 
-	if !strings.Contains(got, wantBar) {
+	if got, _, found := strings.Cut(buf.String(), "\n"); !found {
+		t.Fatal("Expected buf to contain some '[=..]\\n'")
+	} else if !strings.Contains(got, wantBar) {
 		t.Errorf("Want bar: %q:%d, got bar: %q:%d", wantBar, utf8.RuneCountInString(wantBar), got, utf8.RuneCountInString(got))
 	}
 }
