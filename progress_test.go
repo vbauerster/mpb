@@ -321,14 +321,14 @@ func TestAddAfterDone(t *testing.T) {
 func makeUpdateBarPriorityTest(refresh, lazy bool) func(*testing.T) {
 	return func(t *testing.T) {
 		var received []*mpb.Bar
-		shutdown, handOverBarCh := make(chan any), make(chan *mpb.Bar, 1)
+		shutdown, depleteHeap := make(chan any), make(chan *mpb.Bar, 1)
 		refreshCh := make(chan any)
 		ctx, cancel := context.WithCancel(context.Background())
 		p := mpb.NewWithContext(ctx,
 			mpb.WithOutput(io.Discard),
 			mpb.WithManualRefresh(refreshCh),
 			mpb.WithShutdownNotifier(shutdown),
-			mpb.WithDepleteHeap(handOverBarCh),
+			mpb.WithDepleteHeap(depleteHeap),
 		)
 		a := p.AddBar(100, mpb.BarPriority(1), mpb.BarID(1))
 		b := p.AddBar(100, mpb.BarPriority(2), mpb.BarID(2))
@@ -349,7 +349,7 @@ func makeUpdateBarPriorityTest(refresh, lazy bool) func(*testing.T) {
 	test:
 		for {
 			select {
-			case b, ok := <-handOverBarCh:
+			case b, ok := <-depleteHeap:
 				if !ok {
 					break test
 				}
