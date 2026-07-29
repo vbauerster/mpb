@@ -313,7 +313,7 @@ func TestBarQueueAfterBar(t *testing.T) {
 	p := mpb.NewWithContext(ctx,
 		mpb.WithOutput(io.Discard),
 		mpb.WithShutdownNotifier(shutdown),
-		mpb.WithHandOverBarHeap(depleteHeap),
+		mpb.WithDepleteHeap(depleteHeap),
 		mpb.WithAutoRefresh(),
 	)
 	a := p.AddBar(100)
@@ -355,7 +355,7 @@ func TestBarRemoveOnComplete(t *testing.T) {
 	p := mpb.New(
 		mpb.WithOutput(io.Discard),
 		mpb.WithShutdownNotifier(shutdown),
-		mpb.WithHandOverBarHeap(depleteHeap),
+		mpb.WithDepleteHeap(depleteHeap),
 		mpb.WithAutoRefresh(),
 	)
 

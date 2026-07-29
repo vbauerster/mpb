@@ -24,7 +24,7 @@ func TestWithContextCancel(t *testing.T) {
 	p := mpb.NewWithContext(ctx,
 		mpb.WithOutput(io.Discard),
 		mpb.WithShutdownNotifier(shutdown),
-		mpb.WithHandOverBarHeap(depleteHeap),
+		mpb.WithDepleteHeap(depleteHeap),
 		mpb.WithAutoRefresh(),
 	)
 
@@ -161,7 +161,7 @@ func TestShutdownAfterBarAbortWithDrop(t *testing.T) {
 	p := mpb.New(
 		mpb.WithOutput(io.Discard),
 		mpb.WithShutdownNotifier(shutdown),
-		mpb.WithHandOverBarHeap(depleteHeap),
+		mpb.WithDepleteHeap(depleteHeap),
 		mpb.WithAutoRefresh(),
 	)
 
@@ -206,7 +206,7 @@ func TestShutdownAfterBarAbortWithNoDrop(t *testing.T) {
 	p := mpb.New(
 		mpb.WithOutput(io.Discard),
 		mpb.WithShutdownNotifier(shutdown),
-		mpb.WithHandOverBarHeap(depleteHeap),
+		mpb.WithDepleteHeap(depleteHeap),
 		mpb.WithAutoRefresh(),
 	)
 
@@ -252,7 +252,7 @@ func TestBarPristinePopOrder(t *testing.T) {
 	p := mpb.NewWithContext(ctx,
 		mpb.WithOutput(io.Discard),
 		mpb.WithShutdownNotifier(shutdown),
-		mpb.WithHandOverBarHeap(depleteHeap),
+		mpb.WithDepleteHeap(depleteHeap),
 		mpb.WithAutoRefresh(),
 	)
 	a := p.AddBar(100, mpb.BarPriority(1), mpb.BarID(1))
@@ -328,7 +328,7 @@ func makeUpdateBarPriorityTest(refresh, lazy bool) func(*testing.T) {
 			mpb.WithOutput(io.Discard),
 			mpb.WithManualRefresh(refreshCh),
 			mpb.WithShutdownNotifier(shutdown),
-			mpb.WithHandOverBarHeap(handOverBarCh),
+			mpb.WithDepleteHeap(handOverBarCh),
 		)
 		a := p.AddBar(100, mpb.BarPriority(1), mpb.BarID(1))
 		b := p.AddBar(100, mpb.BarPriority(2), mpb.BarID(2))
