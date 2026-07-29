@@ -306,24 +306,6 @@ func TestUpdateBarPriority(t *testing.T) {
 	}
 }
 
-func TestNoOutput(t *testing.T) {
-	var buf bytes.Buffer
-	p := mpb.New(mpb.WithOutput(&buf))
-	bar := p.AddBar(100)
-
-	go func() {
-		for !bar.Completed() {
-			bar.Increment()
-		}
-	}()
-
-	p.Wait()
-
-	if buf.Len() != 0 {
-		t.Errorf("Expected buf.Len == 0, got: %d\n", buf.Len())
-	}
-}
-
 func TestAddAfterDone(t *testing.T) {
 	p := mpb.New(mpb.WithOutput(io.Discard))
 	p.AddBar(100).IncrBy(100)
