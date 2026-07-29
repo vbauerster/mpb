@@ -85,17 +85,33 @@ func TestShutdownWithOneHourRefreshRate(t *testing.T) {
 	}
 }
 
+func TestShutdownWithManualRefreshNeverFires(t *testing.T) {
+	var buf bytes.Buffer
+	width, shutdown := 30, make(chan any)
+	p := mpb.New(
+		mpb.WithManualRefresh(make(chan any)),
+		mpb.WithShutdownNotifier(shutdown),
+		mpb.WithOutput(&buf),
+		mpb.WithWidth(width),
+	)
+
+	go func(b *mpb.Bar) {
+		b.IncrBy(100)
 		p.Wait()
-		select {
-		case bars := <-handOverBarHeap:
-			if l := len(bars); l != 1 {
-				t.Errorf("Expected len of bars: %d, got: %d", 1, l)
+	}(p.AddBar(100))
+
+	select {
+	case <-shutdown:
+		bar := " [" + strings.Repeat("=", width-4) + "] "
+		if got, _, found := strings.Cut(buf.String(), "\n"); found {
+			if got != bar {
+				t.Errorf("want %q, got %q", bar, got)
 			}
-		default:
-			t.Fatal("<-handOverBarHeap failure")
+		} else {
+			t.Fatal("Expected buf to contain some ' [=..] \\n'")
 		}
 	case <-time.After(timeout):
-		t.Fatalf("Progress didn't shutdown after %v", timeout)
+		t.Fatalf("Test timeout %v", timeout)
 	}
 }
 
