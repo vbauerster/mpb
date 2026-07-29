@@ -156,39 +156,47 @@ func TestShutdownWithErrFiller(t *testing.T) {
 }
 
 func TestShutdownAfterBarAbortWithDrop(t *testing.T) {
-	shutdown := make(chan any)
-	handOverBarHeap := make(chan []*mpb.Bar, 1)
+	var barCount int
+	shutdown, depleteHeap := make(chan any), make(chan *mpb.Bar, 1)
 	p := mpb.New(
 		mpb.WithOutput(io.Discard),
-		mpb.WithAutoRefresh(),
 		mpb.WithShutdownNotifier(shutdown),
-		mpb.WithHandOverBarHeap(handOverBarHeap),
+		mpb.WithHandOverBarHeap(depleteHeap),
+		mpb.WithAutoRefresh(),
 	)
-	b := p.AddBar(100)
 
-	for i := 0; !b.Aborted(); i++ {
-		if i > 0 {
-			b.Abort(true)
-		} else {
-			b.Increment()
+	bar := p.AddBar(100)
+	go func() {
+		for i := 0; !bar.AbortedOrCompleted(); i++ {
+			if i > 11 {
+				bar.Abort(true)
+			} else {
+				bar.Increment()
+				time.Sleep(10 * time.Millisecond)
+			}
+		}
+		p.Wait()
+	}()
+
+test:
+	for {
+		select {
+		case _, ok := <-depleteHeap:
+			if !ok {
+				break test
+			}
+			barCount++
+		case <-shutdown:
+			shutdown = nil
+		case <-time.After(timeout):
+			t.Fatalf("Test timeout %v", timeout)
 		}
 	}
-
-	go p.Wait()
-
-	select {
-	case <-shutdown:
-		p.Wait()
-		select {
-		case bars := <-handOverBarHeap:
-			if l := len(bars); l != 0 {
-				t.Errorf("Expected len of bars: %d, got: %d", 0, l)
-			}
-		default:
-			t.Fatal("<-handOverBarHeap failure")
-		}
-	case <-time.After(timeout):
-		t.Fatalf("Progress didn't shutdown after %v", timeout)
+	if barCount != 0 {
+		t.Errorf("Expected to receive 0 bars, got: %d", barCount)
+	}
+	if !bar.Aborted() {
+		t.Error("Expected aborted bar")
 	}
 }
 
