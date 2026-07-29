@@ -58,7 +58,7 @@ type pState struct {
 	delayRC          <-chan any
 	manualRC         <-chan any
 	shutdownNotifier chan any
-	handOverBarHeap  chan<- []*Bar
+	depleteHeap      chan<- *Bar
 	queueBars        map[*Bar]*queueBar
 	output           io.Writer
 	debugOut         io.Writer
@@ -130,7 +130,7 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 
 	p.pwg.Add(3)
 	s.hm = make(heapManager, cmp.Or(s.hmQueueLen, defaultHmQueueLength))
-	go s.hm.run(p.pwg, s.shutdownNotifier, s.handOverBarHeap)
+	go s.hm.run(p.pwg, s.shutdownNotifier, s.depleteHeap)
 	go p.serve(s)
 	go refreshStrategy(p, s)
 	return p
