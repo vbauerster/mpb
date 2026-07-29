@@ -148,7 +148,7 @@ func TestShutdownWithErrFiller(t *testing.T) {
 	select {
 	case <-shutdown:
 		if !bar.Aborted() {
-			t.Error("Expected aborted bar")
+			t.Error("Expected bar to be aborted")
 		}
 		if !errors.Is(p.Error, testError) {
 			t.Errorf("Expected err: %#v, got %#v", testError, p.Error)
@@ -199,7 +199,7 @@ test:
 		t.Errorf("Expected to receive 0 bars, got: %d", barCount)
 	}
 	if !bar.Aborted() {
-		t.Error("Expected aborted bar")
+		t.Error("Expected bar to be aborted")
 	}
 }
 
@@ -244,7 +244,7 @@ test:
 		t.Errorf("Expected to receive 1 bar, got: %d", barCount)
 	}
 	if !bar.Aborted() {
-		t.Error("Expected aborted bar")
+		t.Error("Expected bar to be aborted")
 	}
 }
 
