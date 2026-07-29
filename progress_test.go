@@ -246,13 +246,13 @@ test:
 }
 
 func TestBarPristinePopOrder(t *testing.T) {
-	shutdown := make(chan any)
-	handOverBarHeap := make(chan []*mpb.Bar, 1)
+	var received []*mpb.Bar
+	shutdown, depleteHeap := make(chan any), make(chan *mpb.Bar, 1)
 	ctx, cancel := context.WithCancel(context.Background())
 	p := mpb.NewWithContext(ctx,
 		mpb.WithOutput(io.Discard),
 		mpb.WithShutdownNotifier(shutdown),
-		mpb.WithHandOverBarHeap(handOverBarHeap),
+		mpb.WithHandOverBarHeap(depleteHeap),
 		mpb.WithAutoRefresh(),
 	)
 	a := p.AddBar(100, mpb.BarPriority(1), mpb.BarID(1))
@@ -260,26 +260,32 @@ func TestBarPristinePopOrder(t *testing.T) {
 	c := p.AddBar(100, mpb.BarPriority(3), mpb.BarID(3))
 	pristineOrder := []*mpb.Bar{c, b, a}
 
-	cancel()
-
-	select {
-	case <-shutdown:
+	go func() {
+		cancel()
 		p.Wait()
+	}()
+
+test:
+	for {
 		select {
-		case bars := <-handOverBarHeap:
-			if len(bars) != len(pristineOrder) {
-				t.Fatalf("Expected len of bars: %d, got: %d", len(pristineOrder), len(bars))
+		case b, ok := <-depleteHeap:
+			if !ok {
+				break test
 			}
-			for i, b := range bars {
-				if bar := pristineOrder[i]; bar.ID() != b.ID() {
-					t.Errorf("Expected bar id: %d, got bar id: %d", bar.ID(), b.ID())
-				}
-			}
-		default:
-			t.Fatal("<-handOverBarHeap failure")
+			received = append(received, b)
+		case <-shutdown:
+			shutdown = nil
+		case <-time.After(timeout):
+			t.Fatalf("Test timeout %v", timeout)
 		}
-	case <-time.After(timeout):
-		t.Fatalf("Progress didn't shutdown after %v", timeout)
+	}
+	if len(received) != len(pristineOrder) {
+		t.Fatalf("Expected to receive %d bars, got: %d", len(pristineOrder), len(received))
+	}
+	for i, b := range received {
+		if bar := pristineOrder[i]; bar.ID() != b.ID() {
+			t.Errorf("Expected bar id: %d, got bar id: %d", bar.ID(), b.ID())
+		}
 	}
 }
 
