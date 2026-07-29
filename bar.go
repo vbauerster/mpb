@@ -509,14 +509,14 @@ func (s *bState) wSyncTable() (table decorSyncTable) {
 }
 
 func (b *Bar) done() {
-	if !b.container.renderOff {
+	if b.container.renderOff {
+		b.cancel(nil)
+		go b.container.runQueuetBar(b)
+	} else {
 		// Technically this call isn't required, but if refresh rate is set to
 		// one hour for example and bar completes within a few minutes p.Wait()
 		// will wait for one hour. This call helps to avoid unnecessary waiting.
 		go b.tryEarlyRefresh()
-	} else {
-		b.cancel(nil)
-		go b.container.runQueuetBar(b)
 	}
 }
 
