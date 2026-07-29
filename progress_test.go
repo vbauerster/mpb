@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"strings"
 	"slices"
 	"testing"
 	"time"
@@ -54,23 +55,36 @@ test:
 }
 
 func TestShutdownWithOneHourRefreshRate(t *testing.T) {
-	shutdown := make(chan any)
-	handOverBarHeap := make(chan []*mpb.Bar, 1)
+	var buf bytes.Buffer
+	width, shutdown := 30, make(chan any)
 	p := mpb.New(
-		mpb.WithOutput(io.Discard),
 		mpb.WithRefreshRate(time.Hour),
-		mpb.WithAutoRefresh(),
 		mpb.WithShutdownNotifier(shutdown),
-		mpb.WithHandOverBarHeap(handOverBarHeap),
+		mpb.WithOutput(&buf),
+		mpb.WithWidth(width),
+		mpb.WithAutoRefresh(),
 	)
 
-	b := p.AddBar(100)
-	b.IncrBy(100)
-
-	go p.Wait()
+	go func(b *mpb.Bar) {
+		b.IncrBy(100)
+		p.Wait()
+	}(p.AddBar(100))
 
 	select {
 	case <-shutdown:
+		bar := " [" + strings.Repeat("=", width-4) + "] "
+		if got, _, found := strings.Cut(buf.String(), "\n"); found {
+			if got != bar {
+				t.Errorf("want %q, got %q", bar, got)
+			}
+		} else {
+			t.Fatal("Expected buf to contain some ' [=..] \\n'")
+		}
+	case <-time.After(timeout):
+		t.Fatalf("Test timeout %v", timeout)
+	}
+}
+
 		p.Wait()
 		select {
 		case bars := <-handOverBarHeap:
