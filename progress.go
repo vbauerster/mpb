@@ -30,7 +30,7 @@ type Progress struct {
 	Error error
 
 	ctx          context.Context
-	cancel       func()
+	cancel       context.CancelCauseFunc
 	pwg, bwg     *sync.WaitGroup
 	operateState chan func(*pState)
 	interceptIO  chan func(io.Writer)
@@ -82,7 +82,7 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	ctx, cancel := context.WithCancel(ctx)
+	ctx, cancel := context.WithCancelCause(ctx)
 
 	s := &pState{
 		popPriority: math.MinInt32,
@@ -190,7 +190,7 @@ func (p *Progress) Add(total int64, filler BarFiller, options ...BarOption) (*Ba
 }
 
 func (p *Progress) makeBar(priority int) *Bar {
-	ctx, cancel := context.WithCancel(p.ctx)
+	ctx, cancel := context.WithCancelCause(p.ctx)
 	p.bwg.Add(1)
 	return &Bar{
 		ctx:          ctx,
@@ -278,7 +278,7 @@ func (p *Progress) Wait() {
 // instance. Normally this method shouldn't be called unless you know what you
 // are doing. Proper way to shutdown is to call `(*Progress).Wait()` instead.
 func (p *Progress) Shutdown() {
-	p.cancel()
+	p.cancel(nil)
 	p.pwg.Wait()
 }
 
@@ -311,7 +311,7 @@ func (p *Progress) serve(s *pState) {
 			s.hasUnrendered = false
 			err := s.render()
 			if err != nil {
-				p.cancel()
+				p.cancel(err)
 				// refreshStrategy goroutine is sending to p.renderReq unbuffered chan
 				// without any select therefore p.renderReq must be depleted here
 				// otherwise refreshStrategy goroutine may block and leak.
@@ -396,7 +396,7 @@ func (s *pState) render() (err error) {
 	for b := range s.hm.render(width) {
 		frame := <-b.frameCh
 		if frame.err != nil {
-			b.cancel()
+			b.cancel(frame.err)
 			s.hm.push(b, false)
 			return frame.err // b.frameCh is buffered it's ok to return here
 		}
@@ -413,7 +413,7 @@ func (s *pState) render() (err error) {
 
 		switch frame.shutdown {
 		case 1:
-			b.cancel()
+			b.cancel(nil)
 			s.onShutdown(b, frame)
 		case 2:
 			if s.popCompleted && !frame.noPop {

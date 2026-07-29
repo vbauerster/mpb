@@ -17,7 +17,7 @@ import (
 // Bar represents a progress bar.
 type Bar struct {
 	ctx          context.Context
-	cancel       func()
+	cancel       context.CancelCauseFunc
 	index        int // used by heap
 	priority     int // used by heap
 	frameCh      chan *renderFrame
@@ -393,8 +393,10 @@ func (b *Bar) serve(bs *bState) {
 		case op := <-b.operateState:
 			op(bs)
 		case <-b.ctx.Done():
-			// bar can be aborted by canceling parent ctx without calling b.Abort
-			bs.aborted = bs.aborted || !bs.completed()
+			if bs.aborted {
+				return
+			}
+			bs.aborted = !bs.completed() || context.Cause(b.ctx) != nil
 			return
 		}
 	}
@@ -513,7 +515,7 @@ func (b *Bar) done() {
 		// will wait for one hour. This call helps to avoid unnecessary waiting.
 		go b.tryEarlyRefresh()
 	} else {
-		b.cancel()
+		b.cancel(nil)
 		go b.container.runQueuetBar(b)
 	}
 }
