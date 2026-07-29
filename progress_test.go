@@ -17,33 +17,39 @@ const (
 	timeout = 300 * time.Millisecond
 )
 
-func TestWithContext(t *testing.T) {
-	shutdown := make(chan any)
-	handOverBarHeap := make(chan []*mpb.Bar, 1)
+func TestWithContextCancel(t *testing.T) {
+	var barCount int
+	shutdown, depleteHeap := make(chan any), make(chan *mpb.Bar, 1)
 	ctx, cancel := context.WithCancel(context.Background())
 	p := mpb.NewWithContext(ctx,
 		mpb.WithOutput(io.Discard),
 		mpb.WithShutdownNotifier(shutdown),
-		mpb.WithHandOverBarHeap(handOverBarHeap),
+		mpb.WithHandOverBarHeap(depleteHeap),
 		mpb.WithAutoRefresh(),
 	)
+
 	_ = p.AddBar(0) // never complete bar
-
-	cancel()
-
-	select {
-	case <-shutdown:
+	go func() {
+		cancel()
 		p.Wait()
+	}()
+
+test:
+	for {
 		select {
-		case bars := <-handOverBarHeap:
-			if l := len(bars); l != 1 {
-				t.Errorf("Expected len of bars: %d, got: %d", 1, l)
+		case _, ok := <-depleteHeap:
+			if !ok {
+				break test
 			}
-		default:
-			t.Fatal("<-handOverBarHeap failure")
+			barCount++
+		case <-shutdown:
+			shutdown = nil
+		case <-time.After(timeout):
+			t.Fatalf("Test timeout %v", timeout)
 		}
-	case <-time.After(timeout):
-		t.Fatalf("Progress didn't shutdown after %v", timeout)
+	}
+	if barCount != 1 {
+		t.Errorf("Expected to receive 1 bar, got: %d", barCount)
 	}
 }
 
