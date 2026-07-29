@@ -326,9 +326,7 @@ func TestNoOutput(t *testing.T) {
 
 func TestAddAfterDone(t *testing.T) {
 	p := mpb.New(mpb.WithOutput(io.Discard))
-	bar := p.AddBar(100)
-	bar.IncrBy(100)
-
+	p.AddBar(100).IncrBy(100)
 	p.Wait()
 
 	_, err := p.Add(100, nil)
