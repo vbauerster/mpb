@@ -190,9 +190,9 @@ func TestBarSetRefill(t *testing.T) {
 		strings.Repeat("=", total-till-1),
 	)
 
-	got := string(bytes.Split(buf.Bytes(), []byte("\n"))[0])
-
-	if !strings.Contains(got, wantBar) {
+	if got, _, found := strings.Cut(buf.String(), "\n"); !found {
+		t.Fatal("Expected buf to contain some '[=..]\\n'")
+	} else if !strings.Contains(got, wantBar) {
 		t.Errorf("Want bar: %q, got bar: %q", wantBar, got)
 	}
 }
