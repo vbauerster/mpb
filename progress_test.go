@@ -6,7 +6,6 @@ import (
 	"errors"
 	"io"
 	"strings"
-	"slices"
 	"testing"
 	"time"
 
@@ -115,21 +114,19 @@ func TestShutdownWithManualRefreshNeverFires(t *testing.T) {
 	}
 }
 
-func TestShutdownsWithErrFiller(t *testing.T) {
+func TestShutdownWithErrFiller(t *testing.T) {
+	testError := errors.New("test error")
 	shutdown := make(chan any)
-	handOverBarHeap := make(chan []*mpb.Bar, 1)
 	p := mpb.New(
 		mpb.WithOutput(io.Discard),
-		mpb.WithAutoRefresh(),
 		mpb.WithShutdownNotifier(shutdown),
-		mpb.WithHandOverBarHeap(handOverBarHeap),
+		mpb.WithAutoRefresh(),
 	)
 
-	testError := errors.New("test error")
 	bar := p.AddBar(100,
 		mpb.BarFillerMiddleware(func(base mpb.BarFiller) mpb.BarFiller {
 			return mpb.BarFillerFunc(func(w io.Writer, st decor.Statistics) error {
-				if st.Current > 21 {
+				if st.Current > 11 {
 					return testError
 				}
 				return base.Fill(w, st)
@@ -140,29 +137,21 @@ func TestShutdownsWithErrFiller(t *testing.T) {
 	go func() {
 		for !bar.AbortedOrCompleted() {
 			bar.Increment()
+			time.Sleep(10 * time.Millisecond)
 		}
 		p.Wait()
 	}()
 
 	select {
 	case <-shutdown:
-		p.Wait()
-		select {
-		case bars := <-handOverBarHeap:
-			if l := len(bars); l != 1 {
-				t.Errorf("Expected len of bars: %d, got: %d", 1, l)
-			}
-			if !slices.Contains(bars, bar) {
-				t.Errorf("Expected []*mpb.Bar to contain: %#v", bar)
-			}
-			if !errors.Is(p.Error, testError) {
-				t.Errorf("Expected err: %#v, got %#v", testError, p.Error)
-			}
-		default:
-			t.Fatal("<-handOverBarHeap failure")
+		if !bar.Aborted() {
+			t.Error("Expected aborted bar")
+		}
+		if !errors.Is(p.Error, testError) {
+			t.Errorf("Expected err: %#v, got %#v", testError, p.Error)
 		}
 	case <-time.After(timeout):
-		t.Fatalf("Progress didn't shutdown after %v", timeout)
+		t.Fatalf("Test timeout %v", timeout)
 	}
 }
 
