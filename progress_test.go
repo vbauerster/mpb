@@ -28,7 +28,7 @@ func TestWithContextCancel(t *testing.T) {
 		mpb.WithAutoRefresh(),
 	)
 
-	_ = p.AddBar(0) // never complete bar
+	b := p.AddBar(0) // never complete bar
 	cancel()
 
 test:
@@ -47,6 +47,12 @@ test:
 	}
 	if barCount != 1 {
 		t.Errorf("Expected to receive 1 bar, got: %d", barCount)
+	}
+	if b.Completed() {
+		t.Error("Expected bar not to be completed")
+	}
+	if !b.Aborted() {
+		t.Error("Expected bar to be aborted")
 	}
 }
 
