@@ -20,13 +20,13 @@ func TestBarCompleted(t *testing.T) {
 	bar := p.AddBar(int64(total))
 
 	if bar.Completed() {
-		t.Error("expected bar not to complete")
+		t.Error("expected bar not to be completed")
 	}
 
 	bar.IncrBy(total)
 
 	if !bar.Completed() {
-		t.Error("expected bar to complete")
+		t.Error("expected bar to be completed")
 	}
 
 	p.Wait()
@@ -56,12 +56,12 @@ func TestBarSetTotal(t *testing.T) {
 
 	bar.SetTotal(0, false)
 	if bar.Completed() {
-		t.Error("expected bar not to complete")
+		t.Error("expected bar not to be completed")
 	}
 
 	bar.SetTotal(0, true)
 	if !bar.Completed() {
-		t.Error("expected bar to complete")
+		t.Error("expected bar to be completed")
 	}
 
 	p.Wait()
@@ -72,7 +72,7 @@ func TestBarEnableTriggerCompleteZeroBar(t *testing.T) {
 	bar := p.AddBar(0) // never complete bar
 
 	if bar.Completed() {
-		t.Error("expected bar not to complete")
+		t.Error("expected bar not to be completed")
 	}
 
 	// Calling bar.SetTotal(0, true) has same effect
@@ -80,7 +80,7 @@ func TestBarEnableTriggerCompleteZeroBar(t *testing.T) {
 	bar.EnableTriggerComplete()
 
 	if !bar.Completed() {
-		t.Error("expected bar to complete")
+		t.Error("expected bar to be completed")
 	}
 
 	p.Wait()
@@ -100,14 +100,14 @@ func TestBarEnableTriggerCompleteAndIncrementBefore(t *testing.T) {
 	} {
 		f()
 		if bar.Completed() {
-			t.Error("expected bar not to complete")
+			t.Error("expected bar not to be completed")
 		}
 	}
 
 	bar.EnableTriggerComplete()
 
 	if !bar.Completed() {
-		t.Error("expected bar to complete")
+		t.Error("expected bar to be completed")
 	}
 
 	if current := bar.Current(); current != targetTotal {
@@ -132,14 +132,14 @@ func TestBarEnableTriggerCompleteAndIncrementAfter(t *testing.T) {
 	} {
 		f()
 		if bar.Completed() {
-			t.Error("expected bar not to complete")
+			t.Error("expected bar not to be completed")
 		}
 	}
 
 	bar.IncrBy(20)
 
 	if !bar.Completed() {
-		t.Error("expected bar to complete")
+		t.Error("expected bar to be completed")
 	}
 
 	if current := bar.Current(); current != targetTotal {
@@ -155,8 +155,7 @@ func TestBarID(t *testing.T) {
 	wantID := 11
 	bar := p.AddBar(int64(total), mpb.BarID(wantID))
 
-	gotID := bar.ID()
-	if gotID != wantID {
+	if gotID := bar.ID(); gotID != wantID {
 		t.Errorf("Expected bar id: %d, got %d", wantID, gotID)
 	}
 
@@ -206,7 +205,6 @@ func TestBarHas100PercentWithBarRemoveOnComplete(t *testing.T) {
 	)
 
 	total := 50
-
 	bar := p.AddBar(int64(total),
 		mpb.BarRemoveOnComplete(),
 		mpb.AppendDecorators(decor.Percentage()),
