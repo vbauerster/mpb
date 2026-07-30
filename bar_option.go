@@ -3,6 +3,7 @@ package mpb
 import (
 	"bytes"
 	"io"
+	"slices"
 
 	"github.com/vbauerster/mpb/v8/decor"
 )
@@ -12,27 +13,29 @@ type BarOption func(*bState)
 
 // PrependDecorators let you inject decorators to the bar's left side.
 func PrependDecorators(decorators ...decor.Decorator) BarOption {
-	var group []decor.Decorator
-	for _, decorator := range decorators {
-		if decorator != nil {
-			group = append(group, decorator)
+	i := 0
+	for _, d := range decorators {
+		if d != nil {
+			decorators[i] = d
+			i++
 		}
 	}
 	return func(s *bState) {
-		s.decorGroups[0] = group
+		s.decorGroups[0] = slices.Clip(decorators[:i])
 	}
 }
 
 // AppendDecorators let you inject decorators to the bar's right side.
 func AppendDecorators(decorators ...decor.Decorator) BarOption {
-	var group []decor.Decorator
-	for _, decorator := range decorators {
-		if decorator != nil {
-			group = append(group, decorator)
+	i := 0
+	for _, d := range decorators {
+		if d != nil {
+			decorators[i] = d
+			i++
 		}
 	}
 	return func(s *bState) {
-		s.decorGroups[1] = group
+		s.decorGroups[1] = slices.Clip(decorators[:i])
 	}
 }
 
