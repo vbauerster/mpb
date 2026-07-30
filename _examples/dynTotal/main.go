@@ -18,21 +18,23 @@ func main() {
 		mpb.AppendDecorators(decor.Percentage()),
 	)
 
+	var written int64
 	maxSleep := 100 * time.Millisecond
 	read := makeStream(200)
 	for {
 		n, err := read()
 		if err == io.EOF {
-			// triggering complete event now
-			bar.SetTotal(-1, true)
 			break
 		}
-		// increment methods won't trigger complete event because bar was constructed with total = 0
-		bar.IncrBy(n)
+		written += int64(n)
 		// following call is not required, it's called to show some progress instead of an empty bar
-		bar.SetTotal(bar.Current()+2048, false)
+		bar.SetTotal(written+1024, false)
+		// increment method won't trigger completion because bar was constructed with total = 0
+		bar.IncrBy(n)
 		time.Sleep(time.Duration(rand.Intn(10)+1) * maxSleep / 10)
 	}
+
+	bar.SetTotal(written, true)
 
 	p.Wait()
 }
