@@ -411,7 +411,7 @@ func (s *pState) render() (err error) {
 		}
 		rows = append(rows, frame.rows)
 
-		switch frame.shutdown {
+		switch b.shutdown {
 		case 1:
 			b.cancel(nil)
 			s.onShutdown(b, frame)

@@ -21,6 +21,7 @@ type Bar struct {
 	cancel       context.CancelCauseFunc
 	index        int // used by heap
 	priority     int // used by heap
+	shutdown     int
 	frameCh      chan *renderFrame
 	operateState chan func(*bState)
 	container    *Progress
@@ -36,7 +37,6 @@ type bState struct {
 	id             int
 	priority       int
 	reqWidth       int
-	shutdown       int
 	total0         int64
 	total1         int64
 	current        int64
@@ -54,11 +54,10 @@ type bState struct {
 }
 
 type renderFrame struct {
+	err          error
 	rows         []io.Reader
-	shutdown     int
 	rmOnComplete bool
 	noPop        bool
-	err          error
 }
 
 // ProxyReader wraps io.Reader with metrics required for progress tracking.
@@ -406,11 +405,10 @@ func (b *Bar) render(tw int) {
 		}
 		frame.rows, frame.err = s.extender(stat, r)
 		if s.aborted || s.completed() {
-			frame.shutdown = s.shutdown
 			frame.rmOnComplete = s.rmOnComplete
 			frame.noPop = s.noPop
 			// post increment makes sure OnComplete decorators are rendered
-			s.shutdown++
+			b.shutdown++
 		}
 		b.frameCh <- frame
 	}
