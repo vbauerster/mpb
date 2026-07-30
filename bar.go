@@ -2,6 +2,7 @@ package mpb
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"errors"
 	"io"
@@ -32,24 +33,24 @@ type extenderFunc func(decor.Statistics, ...io.Reader) ([]io.Reader, error)
 
 // bState is actual bar's state.
 type bState struct {
-	id              int
-	priority        int
-	reqWidth        int
-	shutdown        int
-	total           int64
-	current         int64
-	refill          int64
-	buffers         [3]*bytes.Buffer
-	decorGroups     [2][]decor.Decorator
-	ewmaDecorators  []decor.EwmaDecorator
-	filler          BarFiller
-	extender        extenderFunc
-	waitFor         *Bar // key for (*pState).queueBars
-	trimSpace       bool
-	aborted         bool
-	triggerComplete bool
-	rmOnComplete    bool
-	noPop           bool
+	id             int
+	priority       int
+	reqWidth       int
+	shutdown       int
+	total0         int64
+	total1         int64
+	current        int64
+	refill         int64
+	buffers        [3]*bytes.Buffer
+	decorGroups    [2][]decor.Decorator
+	ewmaDecorators []decor.EwmaDecorator
+	filler         BarFiller
+	extender       extenderFunc
+	waitFor        *Bar // key for (*pState).queueBars
+	trimSpace      bool
+	rmOnComplete   bool
+	aborted        bool
+	noPop          bool
 }
 
 type renderFrame struct {
@@ -159,18 +160,14 @@ func (b *Bar) TraverseDecorators(cb func(decor.Decorator)) (ok bool) {
 	}
 }
 
-// EnableTriggerComplete enables triggering complete event. It's effective
-// only for bars which were constructed with `total <= 0`. If `current >= total`
-// at the moment of call, complete event is triggered right away.
+// EnableTriggerComplete enables triggering complete event for bar
+// which was constructed with `total <= 0`. Completion is triggered
+// right away on `current == total` state at the moment of call.
 func (b *Bar) EnableTriggerComplete() {
 	select {
 	case b.operateState <- func(s *bState) {
-		if s.triggerComplete {
-			return
-		}
-		s.triggerComplete = true
-		if s.current >= s.total {
-			s.current = s.total
+		s.total0 = max(cmp.Or(s.total1, s.total0), 0)
+		if s.completed() {
 			b.done()
 		}
 	}:
@@ -178,26 +175,23 @@ func (b *Bar) EnableTriggerComplete() {
 	}
 }
 
-// SetTotal sets total to an arbitrary value. It's effective only for bar
-// which was constructed with `total <= 0`. Setting total to negative value
-// is equivalent to `(*Bar).SetTotal((*Bar).Current(), bool)` but faster.
-// If `complete` is true complete event is triggered right away.
-// Calling `(*Bar).EnableTriggerComplete` makes this one no operational.
-func (b *Bar) SetTotal(total int64, complete bool) {
+// SetTotal sets total to an arbitrary value. If `total` is negative value
+// it's equivalent to `(*Bar).SetTotal((*Bar).Current(), bool)` but faster.
+// Completion is triggered right away on `forceComplete == true` even in
+// `total == 0` case.
+func (b *Bar) SetTotal(total int64, forceComplete bool) {
 	select {
 	case b.operateState <- func(s *bState) {
-		if s.triggerComplete {
-			return
-		}
 		if total < 0 {
-			s.total = s.current
+			s.total1 = s.current
 		} else {
-			s.total = total
+			s.total1 = total
 		}
-		if complete {
-			s.current = s.total
-			s.triggerComplete = true
-			b.done()
+		if forceComplete {
+			s.total0, s.current = s.total1, s.total1
+			if s.completed() {
+				b.done()
+			}
 		}
 	}:
 	case <-b.ctx.Done():
@@ -212,8 +206,7 @@ func (b *Bar) SetCurrent(current int64) {
 	select {
 	case b.operateState <- func(s *bState) {
 		s.current = current
-		if s.triggerComplete && s.current >= s.total {
-			s.current = s.total
+		if s.completed() {
 			b.done()
 		}
 	}:
@@ -236,8 +229,7 @@ func (b *Bar) IncrInt64(n int64) {
 	select {
 	case b.operateState <- func(s *bState) {
 		s.current += n
-		if s.triggerComplete && s.current >= s.total {
-			s.current = s.total
+		if s.completed() {
 			b.done()
 		}
 	}:
@@ -264,8 +256,7 @@ func (b *Bar) EwmaIncrInt64(n int64, iterDur time.Duration) {
 			d.EwmaUpdate(n, iterDur)
 		}
 		s.current += n
-		if s.triggerComplete && s.current >= s.total {
-			s.current = s.total
+		if s.completed() {
 			b.done()
 		}
 	}:
@@ -286,8 +277,7 @@ func (b *Bar) EwmaSetCurrent(current int64, iterDur time.Duration) {
 			d.EwmaUpdate(n, iterDur)
 		}
 		s.current = current
-		if s.triggerComplete && s.current >= s.total {
-			s.current = s.total
+		if s.completed() {
 			b.done()
 		}
 	}:
@@ -324,7 +314,6 @@ func (b *Bar) Abort(drop bool) {
 		}
 		s.aborted = true
 		s.rmOnComplete = drop
-		s.triggerComplete = true
 		b.done()
 	}:
 	case <-b.ctx.Done():
@@ -546,7 +535,7 @@ func (b *Bar) tryEarlyRefresh() {
 }
 
 func (s *bState) completed() bool {
-	return s.triggerComplete && s.current == s.total
+	return s.total0 >= 0 && s.current >= s.total0
 }
 
 func (s *bState) newStatistics(tw int) decor.Statistics {
@@ -554,7 +543,7 @@ func (s *bState) newStatistics(tw int) decor.Statistics {
 		AvailableWidth: tw,
 		RequestedWidth: s.reqWidth,
 		ID:             s.id,
-		Total:          s.total,
+		Total:          max(cmp.Or(s.total1, s.total0), 0),
 		Current:        s.current,
 		Refill:         s.refill,
 		Completed:      s.completed(),

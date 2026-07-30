@@ -477,12 +477,11 @@ func (s *pState) runOrQueue(bs *bState, bar *Bar, renderOff bool) {
 
 func (s *pState) makeBarState(total int64, filler BarFiller, options ...BarOption) *bState {
 	bs := &bState{
-		id:              s.idCount,
-		priority:        s.idCount,
-		reqWidth:        s.reqWidth,
-		total:           total,
-		filler:          filler,
-		triggerComplete: total > 0,
+		id:       s.idCount,
+		priority: s.idCount,
+		reqWidth: s.reqWidth,
+		total0:   cmp.Or(total, -1),
+		filler:   filler,
 	}
 
 	bs.extender = func(_ decor.Statistics, rows ...io.Reader) ([]io.Reader, error) {
