@@ -484,10 +484,6 @@ func (s *pState) makeBarState(total int64, filler BarFiller, options ...BarOptio
 		filler:   filler,
 	}
 
-	bs.extender = func(_ decor.Statistics, rows ...io.Reader) ([]io.Reader, error) {
-		return rows, nil
-	}
-
 	for _, opt := range options {
 		if opt != nil {
 			opt(bs)

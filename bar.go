@@ -30,7 +30,7 @@ type Bar struct {
 }
 
 type decorSyncTable [2][]*decor.Sync
-type extenderFunc func(decor.Statistics, ...io.Reader) ([]io.Reader, error)
+type extenderFunc func(decor.Statistics, io.Reader) ([]io.Reader, error)
 
 // bState is actual bar's state.
 type bState struct {
@@ -403,7 +403,11 @@ func (b *Bar) render(tw int) {
 			b.frameCh <- frame
 			return
 		}
-		frame.rows, frame.err = s.extender(stat, r)
+		if s.extender != nil {
+			frame.rows, frame.err = s.extender(stat, r)
+		} else {
+			frame.rows = append(frame.rows, r)
+		}
 		if s.aborted || s.completed() {
 			frame.rmOnComplete = s.rmOnComplete
 			frame.noPop = s.noPop
