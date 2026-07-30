@@ -92,7 +92,7 @@ func TestBarEnableTriggerCompleteAndIncrementBefore(t *testing.T) {
 
 	targetTotal := int64(80)
 
-	for _, f := range []func(){
+	for i, f := range []func(){
 		func() { bar.SetTotal(40, false) },
 		func() { bar.IncrBy(60) },
 		func() { bar.SetTotal(targetTotal, false) },
@@ -100,7 +100,7 @@ func TestBarEnableTriggerCompleteAndIncrementBefore(t *testing.T) {
 	} {
 		f()
 		if bar.Completed() {
-			t.Error("expected bar not to be completed")
+			t.Error(i, "expected bar not to be completed")
 		}
 	}
 
@@ -123,16 +123,15 @@ func TestBarEnableTriggerCompleteAndIncrementAfter(t *testing.T) {
 
 	targetTotal := int64(80)
 
-	for _, f := range []func(){
+	for i, f := range []func(){
 		func() { bar.SetTotal(40, false) },
 		func() { bar.IncrBy(60) },
 		func() { bar.SetTotal(targetTotal, false) },
-		func() { bar.EnableTriggerComplete() }, // disables any next SetTotal
-		func() { bar.SetTotal(100, true) },     // nop
+		func() { bar.EnableTriggerComplete() }, // further inc still required to complete
 	} {
 		f()
 		if bar.Completed() {
-			t.Error("expected bar not to be completed")
+			t.Error(i, "expected bar not to be completed")
 		}
 	}
 
