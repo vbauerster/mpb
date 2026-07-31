@@ -376,6 +376,10 @@ func (b *Bar) serve(bs *bState) {
 		decoratorsOnShutdown(bs.decorGroups[1])
 		b.container.bwg.Done()
 	}()
+	if bs.waitFor != nil {
+		<-bs.waitFor.ctx.Done()
+		bs.waitFor = nil
+	}
 	for {
 		select {
 		case op := <-b.operateState:
@@ -502,7 +506,6 @@ func (s *bState) wSyncTable() (table decorSyncTable) {
 func (b *Bar) done() {
 	if b.container.renderOff {
 		b.cancel(nil)
-		go b.container.runQueuetBar(b)
 	} else {
 		// Technically this call isn't required, but if refresh rate is set to
 		// one hour for example and bar completes within a few minutes p.Wait()

@@ -40,11 +40,6 @@ type Progress struct {
 	renderOff    bool
 }
 
-type queueBar struct {
-	state *bState
-	bar   *Bar
-}
-
 // pState holds bars in its priorityQueue, it gets passed to (*Progress).serve monitor goroutine.
 type pState struct {
 	hm          heapManager
@@ -60,7 +55,7 @@ type pState struct {
 	manualRC         <-chan any
 	shutdownNotifier chan any
 	depleteHeap      chan<- *Bar
-	queueBars        map[*Bar]*queueBar
+	queueBars        map[*Bar]*Bar
 	output           io.Writer
 	debugOut         io.Writer
 	cwriter          ConsoleWriter
@@ -87,7 +82,7 @@ func NewWithContext(ctx context.Context, options ...ContainerOption) *Progress {
 
 	s := &pState{
 		popPriority: math.MinInt32,
-		queueBars:   make(map[*Bar]*queueBar),
+		queueBars:   make(map[*Bar]*Bar),
 		output:      os.Stdout,
 		debugOut:    io.Discard,
 	}
@@ -181,7 +176,13 @@ func (p *Progress) Add(total int64, filler BarFiller, options ...BarOption) (*Ba
 	case p.operateState <- func(s *pState) {
 		bs := s.makeBarState(total, filler, options...)
 		bar := p.makeBar(bs.priority)
-		s.runOrQueue(bs, bar, p.renderOff)
+		if isQueue(bs) {
+			s.queueBars[bs.waitFor] = bar
+		} else {
+			s.hm.push(bar, true)
+		}
+		p.bwg.Add(1)
+		go bar.serve(bs)
 		ch <- bar
 	}:
 		return <-ch, nil
@@ -192,7 +193,6 @@ func (p *Progress) Add(total int64, filler BarFiller, options ...BarOption) (*Ba
 
 func (p *Progress) makeBar(priority int) *Bar {
 	ctx, cancel := context.WithCancelCause(p.ctx)
-	p.bwg.Add(1)
 	return &Bar{
 		ctx:          ctx,
 		cancel:       cancel,
@@ -217,19 +217,6 @@ func (p *Progress) iterateBars(yield func(*Bar) bool) error {
 		return nil
 	case <-p.done:
 		return ErrDone
-	}
-}
-
-// runQueuetBar must be called on p.refreshEnabled = false only
-func (p *Progress) runQueuetBar(b *Bar) {
-	select {
-	case p.operateState <- func(s *pState) {
-		if qb, ok := s.queueBars[b]; ok {
-			delete(s.queueBars, b)
-			go qb.bar.serve(qb.state)
-		}
-	}:
-	case <-p.done:
 	}
 }
 
@@ -440,11 +427,10 @@ func (s *pState) render() (err error) {
 }
 
 func (s *pState) onShutdown(b *Bar, frame *renderFrame) {
-	if qb, ok := s.queueBars[b]; ok {
+	if q, ok := s.queueBars[b]; ok {
 		delete(s.queueBars, b)
-		qb.bar.priority = b.priority
-		s.hm.push(qb.bar, true)
-		go qb.bar.serve(qb.state)
+		q.priority = b.priority
+		s.hm.push(q, true)
 		return
 	}
 	if s.popCompleted && !frame.noPop {
@@ -456,23 +442,6 @@ func (s *pState) onShutdown(b *Bar, frame *renderFrame) {
 		s.hm.push(b, false)
 	} else {
 		s.hasUnrendered = true
-	}
-}
-
-func (s *pState) runOrQueue(bs *bState, bar *Bar, renderOff bool) {
-	if bs.waitFor == nil {
-		if !renderOff {
-			s.hm.push(bar, true)
-		}
-		go bar.serve(bs)
-		return
-	}
-	select {
-	case <-bs.waitFor.ctx.Done():
-		bs.waitFor = nil
-		s.runOrQueue(bs, bar, renderOff)
-	default:
-		s.queueBars[bs.waitFor] = &queueBar{bs, bar}
 	}
 }
 
@@ -505,4 +474,17 @@ func (s *pState) makeBarState(total int64, filler BarFiller, options ...BarOptio
 
 	s.idCount++
 	return bs
+}
+
+func isQueue(bs *bState) bool {
+	if bs.waitFor == nil {
+		return false
+	}
+	select {
+	case <-bs.waitFor.ctx.Done():
+		bs.waitFor = nil
+		return false
+	default:
+		return true
+	}
 }
