@@ -416,9 +416,12 @@ func (s *pState) render() (err error) {
 
 	for _, row := range slices.Backward(rows) {
 		for _, r := range row {
-			_, err := s.cwriter.ReadFrom(r)
+			n, err := s.cwriter.ReadFrom(r)
 			if err != nil {
 				return err
+			}
+			if n == 0 {
+				total--
 			}
 		}
 	}
