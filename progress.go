@@ -31,7 +31,8 @@ type Progress struct {
 
 	ctx          context.Context
 	cancel       context.CancelCauseFunc
-	pwg, bwg     *sync.WaitGroup
+	pwg          *sync.WaitGroup
+	bwg          *sync.WaitGroup
 	operateState chan func(*pState)
 	interceptIO  chan func(io.Writer)
 	renderReq    chan time.Time

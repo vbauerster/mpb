@@ -54,8 +54,8 @@ type bState struct {
 }
 
 type renderFrame struct {
-	err          error
 	rows         []io.Reader
+	err          error
 	rmOnComplete bool
 	noPop        bool
 }
