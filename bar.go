@@ -609,6 +609,7 @@ func makeRowExtender(top bool, fillers ...BarFiller) rowExtender {
 		for i, p := range producers {
 			if p == nil {
 				producers[i] = base
+				break
 			}
 		}
 		return slices.Values(producers)
