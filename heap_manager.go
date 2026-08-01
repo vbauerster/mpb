@@ -152,6 +152,7 @@ func syncWidth(matrix map[int][]*decor.Sync, done <-chan any) {
 
 func maxWidthDistributor(column []*decor.Sync, done <-chan any) {
 	var maxWidth int
+loop:
 	for _, s := range column {
 		select {
 		case w := <-s.Tx:
@@ -159,7 +160,7 @@ func maxWidthDistributor(column []*decor.Sync, done <-chan any) {
 				maxWidth = w
 			}
 		case <-done:
-			return
+			break loop
 		}
 	}
 	for _, s := range column {
