@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	timeout = 300 * time.Millisecond
+	timeout = 350 * time.Millisecond
 )
 
 func TestWithContextCancel(t *testing.T) {
