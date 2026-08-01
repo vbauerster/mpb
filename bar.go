@@ -440,7 +440,7 @@ func (b *Bar) wSyncTable() decorSyncTable {
 
 // draw is actual bar's rowProducer.
 // It needs copy of decor.Statistics because it modifies stat.AvailableWidth.
-// Each decorator gets decor.Statistics with updated AvailableWidth.
+// Each decorator gets its own copy of decor.Statistics with updated AvailableWidth.
 func (s *bState) draw(stat decor.Statistics) (row io.Reader, err error) {
 	defer func() {
 		if err != nil {
