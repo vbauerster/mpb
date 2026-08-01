@@ -145,16 +145,9 @@ func (p *Progress) AddSpinner(total int64, options ...BarOption) *Bar {
 // New creates a bar by calling `Build` method on provided `BarFillerBuilder`.
 func (p *Progress) New(total int64, builder BarFillerBuilder, options ...BarOption) *Bar {
 	if builder == nil {
-		return p.MustAdd(total, nil, options...)
+		builder = NopStyle()
 	}
-	return p.MustAdd(total, builder.Build(), options...)
-}
-
-// MustAdd creates a bar which renders itself by provided BarFiller.
-// If `total <= 0` triggering complete event by increment methods is
-// disabled. Panics if called after `(*Progress).Wait()`.
-func (p *Progress) MustAdd(total int64, filler BarFiller, options ...BarOption) *Bar {
-	bar, err := p.Add(total, filler, options...)
+	bar, err := p.Add(total, builder.Build(), options...)
 	if err != nil {
 		panic(err)
 	}
