@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"math/rand"
 	"time"
@@ -15,7 +16,7 @@ func main() {
 	total := 100
 	bar := p.New(int64(total),
 		mpb.NopStyle(), // make main bar style nop, so there are just decorators
-		mpb.BarExtender(extended(mpb.BarStyle().Build()), false), // extend with normal bar on the next line
+		mpb.BarBottomExtender(nlMiddleware(mpb.BarStyle().Build())), // extend with normal bar on the next line
 		mpb.PrependDecorators(
 			decor.Name("Percentage: "),
 			decor.NewPercentage("%d"),
@@ -30,20 +31,20 @@ func main() {
 	// simulating some work
 	max := 100 * time.Millisecond
 	for range total {
-		time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
 		bar.Increment()
+		time.Sleep(time.Duration(rand.Intn(10)+1) * max / 10)
 	}
 	// wait for our bar to complete and flush
 	p.Wait()
 }
 
-func extended(base mpb.BarFiller) mpb.BarFiller {
+func nlMiddleware(base mpb.BarFiller) mpb.BarFiller {
 	return mpb.BarFillerFunc(func(w io.Writer, st decor.Statistics) error {
 		err := base.Fill(w, st)
 		if err != nil {
 			return err
 		}
-		_, err = io.WriteString(w, "\n")
+		_, err = fmt.Fprintln(w)
 		return err
 	})
 }

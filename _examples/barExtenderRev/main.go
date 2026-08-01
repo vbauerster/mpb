@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"math/rand"
+	"slices"
 	"sync/atomic"
 	"time"
 
@@ -11,8 +12,9 @@ import (
 	"github.com/vbauerster/mpb/v8/decor"
 )
 
-var curTask uint32
-var doneTasks uint32
+const numTasks = 4
+
+var curTask, doneTasks atomic.Uint32
 
 type task struct {
 	id    uint32
@@ -21,11 +23,9 @@ type task struct {
 }
 
 func main() {
-	numTasks := 4
 
 	var total int64
-	var filler mpb.BarFiller
-	tasks := make([]*task, numTasks)
+	var tasks []*task
 
 	for i := range numTasks {
 		task := &task{
@@ -33,17 +33,16 @@ func main() {
 			total: rand.Int63n(666) + 100,
 		}
 		total += task.total
-		filler = middleware(filler, task.id)
-		tasks[i] = task
+		tasks = append(tasks, task)
 	}
-
-	filler = newLineMiddleware(filler)
 
 	p := mpb.New()
 
+	fillers := toBarFillers(tasks)
+
 	for i := range numTasks {
 		bar := p.AddBar(tasks[i].total,
-			mpb.BarExtender(filler, true), // all bars share same extender filler
+			mpb.BarTopExtender(fillers...),
 			mpb.BarFuncOptional(func() mpb.BarOption {
 				return mpb.BarQueueAfter(tasks[i-1].bar)
 			}, i != 0),
@@ -57,10 +56,10 @@ func main() {
 		tasks[i].bar = bar
 	}
 
-	tb := p.AddBar(0,
+	tb := p.AddBar(numTasks,
 		mpb.PrependDecorators(
 			decor.Any(func(st decor.Statistics) string {
-				return fmt.Sprintf("TOTAL(%d/%d)", atomic.LoadUint32(&doneTasks), len(tasks))
+				return fmt.Sprintf("TOTAL(%d/%d)", doneTasks.Load(), len(tasks))
 			}, decor.WCSyncWidthR),
 		),
 		mpb.AppendDecorators(
@@ -68,70 +67,50 @@ func main() {
 		),
 	)
 
-	tb.SetTotal(total, false)
-
+	max := 100 * time.Millisecond
 	for _, t := range tasks {
-		atomic.StoreUint32(&curTask, t.id)
-		complete(t.bar, tb)
-		atomic.AddUint32(&doneTasks, 1)
+		curTask.Store(t.id)
+		for !t.bar.Completed() {
+			n := rand.Int63n(10) + 1
+			t.bar.IncrInt64(n)
+			time.Sleep(time.Duration(n) * max / 10)
+		}
+		doneTasks.Add(1)
+		tb.IncrBy(1)
+		t.bar.Wait()
 	}
-
-	tb.EnableTriggerComplete()
 
 	p.Wait()
 }
 
-func middleware(base mpb.BarFiller, id uint32) mpb.BarFiller {
-	var done bool
-	fn := func(w io.Writer, st decor.Statistics) error {
-		if !done {
-			if atomic.LoadUint32(&curTask) != id {
-				_, err := fmt.Fprintf(w, "   Taksk %02d\n", id)
-				return err
-			}
-			if !st.Completed {
-				_, err := fmt.Fprintf(w, "=> Taksk %02d\n", id)
-				return err
-			}
-			done = true
-		}
-		_, err := fmt.Fprintf(w, "   Taksk %02d: Done!\n", id)
-		return err
-	}
-	if base == nil {
-		return mpb.BarFillerFunc(fn)
-	}
-	return mpb.BarFillerFunc(func(w io.Writer, st decor.Statistics) error {
-		err := fn(w, st)
-		if err != nil {
-			return err
-		}
-		return base.Fill(w, st)
+func toBarFillers(tasks []*task) []mpb.BarFiller {
+	var fillers []mpb.BarFiller
+	filler := mpb.BarFillerFunc(func(w io.Writer, st decor.Statistics) (err error) {
+		_, err = fmt.Fprintln(w)
+		return
 	})
-}
-
-func newLineMiddleware(base mpb.BarFiller) mpb.BarFiller {
-	return mpb.BarFillerFunc(func(w io.Writer, st decor.Statistics) error {
-		_, err := fmt.Fprintln(w)
-		if err != nil {
-			return err
+	fillers = append(fillers, filler)
+	for _, task := range slices.Backward(tasks) {
+		if task == nil {
+			continue
 		}
-		return base.Fill(w, st)
-	})
-}
-
-func complete(bar, totalBar *mpb.Bar) {
-	max := 100 * time.Millisecond
-	for !bar.Completed() {
-		n := rand.Int63n(10) + 1
-		incrementBars(n, bar, totalBar)
-		time.Sleep(time.Duration(n) * max / 10)
+		var done bool
+		filler = mpb.BarFillerFunc(func(w io.Writer, st decor.Statistics) (err error) {
+			if !done {
+				if task.id != curTask.Load() {
+					_, err = fmt.Fprintf(w, "   Taksk %02d\n", task.id)
+					return
+				}
+				if !st.Completed {
+					_, err = fmt.Fprintf(w, "=> Taksk %02d\n", task.id)
+					return
+				}
+				done = true
+			}
+			_, err = fmt.Fprintf(w, "   Taksk %02d: Done!\n", task.id)
+			return
+		})
+		fillers = append(fillers, filler)
 	}
-	bar.Wait()
-}
-
-func incrementBars(n int64, bb ...*mpb.Bar) {
-	for _, b := range bb {
-		b.IncrInt64(n)
-	}
+	return fillers
 }

@@ -27,7 +27,7 @@ func main() {
 			return err
 		}
 		bar := p.AddBar(int64(total),
-			mpb.BarExtender(mpb.BarFillerFunc(efn), false),
+			mpb.BarBottomExtender(mpb.BarFillerFunc(efn)),
 			mpb.PrependDecorators(
 				// simple name decorator
 				decor.Name(name),

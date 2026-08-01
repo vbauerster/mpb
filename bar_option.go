@@ -1,7 +1,6 @@
 package mpb
 
 import (
-	"bytes"
 	"io"
 	"slices"
 
@@ -127,43 +126,32 @@ func BarPriority(priority int) BarOption {
 	}
 }
 
-// BarExtender extends bar with arbitrary lines. Provided BarFiller will be
-// called at each render/flush cycle. Any lines written to the underlying
-// io.Writer will extend the bar either in above (rev = true) or below
-// (rev = false) direction.
+// BarExtender is deprecated use BarTopExtender or BarBottomExtender instead.
 func BarExtender(filler BarFiller, rev bool) BarOption {
-	if filler == nil {
-		return nil
-	}
-	if f, ok := filler.(BarFillerFunc); ok && f == nil {
-		return nil
-	}
-	fn := makeExtenderFunc(filler, rev)
 	return func(s *bState) {
-		s.extender = fn
+		s.extender = makeRowExtender(rev, filler)
 	}
 }
 
-func makeExtenderFunc(filler BarFiller, rev bool) extenderFunc {
-	buf := new(bytes.Buffer)
-	return func(stat decor.Statistics, r io.Reader) (rows []io.Reader, err error) {
-		defer buf.Reset()
-		err = filler.Fill(buf, stat)
-		if err != nil {
-			return nil, err
-		}
-		rows = append(rows, r)
-		for {
-			line, err := buf.ReadBytes('\n')
-			if err != nil {
-				break // break on EOF ignoring any line not ending with '\n'
-			}
-			rows = append(rows, bytes.NewReader(line))
-		}
-		if rev {
-			slices.Reverse(rows)
-		}
-		return rows, nil
+// BarTopExtender extends a bar with arbitrary lines above.
+// Each BarFiller represent one line so it should write '\n' no more than once.
+// For example if there is need to extend a bar by 2 lines, provide 2 fillers
+// and so on. If BarFiller writes more than one line then whole output is going
+// to be corrupted.
+func BarTopExtender(fillers ...BarFiller) BarOption {
+	return func(s *bState) {
+		s.extender = makeRowExtender(true, fillers...)
+	}
+}
+
+// BarBottomExtender extends a bar with arbitrary lines below.
+// Each BarFiller represent one line so it should write '\n' no more than once.
+// For example if there is need to extend a bar by 2 lines, provide 2 fillers
+// and so on. If BarFiller writes more than one line then whole output is going
+// to be corrupted.
+func BarBottomExtender(fillers ...BarFiller) BarOption {
+	return func(s *bState) {
+		s.extender = makeRowExtender(false, fillers...)
 	}
 }
 

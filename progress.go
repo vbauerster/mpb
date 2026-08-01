@@ -457,6 +457,10 @@ func (s *pState) makeBarState(total int64, filler BarFiller, options ...BarOptio
 		filler:   filler,
 	}
 
+	bs.extender = func(base rowProducer) iter.Seq[rowProducer] {
+		return slices.Values([]rowProducer{base})
+	}
+
 	for _, opt := range options {
 		if opt != nil {
 			opt(bs)

@@ -6,7 +6,9 @@ import (
 	"context"
 	"errors"
 	"io"
+	"iter"
 	"math"
+	"slices"
 	"strings"
 	"time"
 
@@ -30,7 +32,8 @@ type Bar struct {
 }
 
 type decorSyncTable [2][]*decor.Sync
-type extenderFunc func(decor.Statistics, io.Reader) ([]io.Reader, error)
+type rowProducer func(decor.Statistics) (io.Reader, error)
+type rowExtender func(rowProducer) iter.Seq[rowProducer]
 
 // bState is actual bar's state.
 type bState struct {
@@ -45,7 +48,7 @@ type bState struct {
 	decorGroups    [2][]decor.Decorator
 	ewmaDecorators []decor.EwmaDecorator
 	filler         BarFiller
-	extender       extenderFunc
+	extender       rowExtender
 	waitFor        *Bar // key for (*pState).queueBars
 	trimSpace      bool
 	rmOnComplete   bool
@@ -398,18 +401,14 @@ func (b *Bar) render(tw int) {
 	fn := func(s *bState) {
 		frame := new(renderFrame)
 		stat := s.newStatistics(tw)
-		r, err := s.draw(stat)
-		if err != nil {
-			for _, buf := range s.buffers {
-				buf.Reset()
+		for p := range s.extender(s.draw) {
+			r, err := p(stat)
+			if err != nil && frame.err == nil {
+				frame.err = err
+				// need to iterate all rowProducer to avoid deadlocks
+				// because bar's rowProducer can be either first or last
+				continue
 			}
-			frame.err = err
-			b.frameCh <- frame
-			return
-		}
-		if s.extender != nil {
-			frame.rows, frame.err = s.extender(stat, r)
-		} else {
 			frame.rows = append(frame.rows, r)
 		}
 		if s.aborted || s.completed() {
@@ -439,7 +438,17 @@ func (b *Bar) wSyncTable() decorSyncTable {
 	}
 }
 
+// draw is actual bar's rowProducer.
+// It needs copy of decor.Statistics because it modifies stat.AvailableWidth.
+// Each decorator gets decor.Statistics with updated AvailableWidth.
 func (s *bState) draw(stat decor.Statistics) (row io.Reader, err error) {
+	defer func() {
+		if err != nil {
+			for _, buf := range s.buffers {
+				buf.Reset()
+			}
+		}
+	}()
 	decorFiller := func(buf *bytes.Buffer, group []decor.Decorator) (err error) {
 		for i, d := range group {
 			// need to call Decor in any case because of width synchronization
@@ -567,4 +576,41 @@ func unwrap(d decor.Decorator) decor.Decorator {
 		return unwrap(d.Unwrap())
 	}
 	return d
+}
+
+// makeRowExtender converts fillers to rowExtender.
+// Each BarFiller suppose to write one line only but this is not enforced.
+// If BarFiller writes more than one line then whole output is going
+// to be corrupted.
+func makeRowExtender(top bool, fillers ...BarFiller) rowExtender {
+	var producers []rowProducer
+	producers = append(producers, nil) // holding space for base producer
+	for _, filler := range fillers {
+		if filler == nil {
+			continue
+		}
+		if f, ok := filler.(BarFillerFunc); ok && f == nil {
+			continue
+		}
+		buf := new(bytes.Buffer)
+		producers = append(producers, func(stat decor.Statistics) (io.Reader, error) {
+			err := filler.Fill(buf, stat)
+			if err != nil {
+				buf.Reset()
+				return nil, err
+			}
+			return buf, nil
+		})
+	}
+	if top {
+		slices.Reverse(producers)
+	}
+	return func(base rowProducer) iter.Seq[rowProducer] {
+		for i, p := range producers {
+			if p == nil {
+				producers[i] = base
+			}
+		}
+		return slices.Values(producers)
+	}
 }
