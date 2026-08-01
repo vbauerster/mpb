@@ -385,7 +385,6 @@ func (s *pState) render() (err error) {
 		frame := <-b.frameCh
 		if frame.err != nil {
 			b.cancel(frame.err)
-			s.hm.push(b, false)
 			return frame.err // b.frameCh is buffered it's ok to return here
 		}
 		var discarded int
