@@ -137,7 +137,7 @@ func BarExtender(filler BarFiller, top bool) BarOption {
 // Each BarFiller represent one line so it should write '\n' no more than once.
 // For example if there is need to extend a bar by 2 lines, provide 2 fillers
 // and so on. If BarFiller writes more than one line then whole output is going
-// to be corrupted.
+// to be corrupted. This option cannot be used together with BarBtmExtender.
 func BarTopExtender(fillers ...BarFiller) BarOption {
 	return func(s *bState) {
 		s.extender = makeRowExtender(true, fillers...)
@@ -148,7 +148,7 @@ func BarTopExtender(fillers ...BarFiller) BarOption {
 // Each BarFiller represent one line so it should write '\n' no more than once.
 // For example if there is need to extend a bar by 2 lines, provide 2 fillers
 // and so on. If BarFiller writes more than one line then whole output is going
-// to be corrupted.
+// to be corrupted. This option cannot be used together with BarTopExtender.
 func BarBtmExtender(fillers ...BarFiller) BarOption {
 	return func(s *bState) {
 		s.extender = makeRowExtender(false, fillers...)
