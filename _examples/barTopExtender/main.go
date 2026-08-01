@@ -94,18 +94,18 @@ func toBarFillers(tasks []*task) []mpb.BarFiller {
 		}
 		var done bool
 		filler = mpb.BarFillerFunc(func(w io.Writer, st decor.Statistics) (err error) {
-			if !done {
-				if task.id != curTask.Load() {
-					_, err = fmt.Fprintf(w, "   Taksk %02d\n", task.id)
-					return
-				}
+			if task.id == curTask.Load() {
 				if !st.Completed {
 					_, err = fmt.Fprintf(w, "=> Taksk %02d\n", task.id)
 					return
 				}
 				done = true
 			}
-			_, err = fmt.Fprintf(w, "   Taksk %02d: Done!\n", task.id)
+			if done {
+				_, err = fmt.Fprintf(w, "   Taksk %02d: Done!\n", task.id)
+				return
+			}
+			_, err = fmt.Fprintf(w, "   Taksk %02d\n", task.id)
 			return
 		})
 		fillers = append(fillers, filler)
