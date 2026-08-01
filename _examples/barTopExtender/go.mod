@@ -1,4 +1,4 @@
-module github.com/vbauerster/mpb/_examples/barExtenderRev
+module github.com/vbauerster/mpb/_examples/barTopExtender
 
 go 1.25.0
 
