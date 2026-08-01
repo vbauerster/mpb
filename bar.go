@@ -605,13 +605,17 @@ func makeRowExtender(top bool, fillers ...BarFiller) rowExtender {
 	if top {
 		slices.Reverse(producers)
 	}
+	// this one is going to be called on each (*Bar).render
 	return func(base rowProducer) iter.Seq[rowProducer] {
-		for i, p := range producers {
-			if p == nil {
-				producers[i] = base
-				break
+		return func(yield func(rowProducer) bool) {
+			for _, p := range producers {
+				if p == nil {
+					p = base
+				}
+				if !yield(p) {
+					break
+				}
 			}
 		}
-		return slices.Values(producers)
 	}
 }
