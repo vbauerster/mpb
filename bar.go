@@ -439,7 +439,7 @@ func (b *Bar) wSyncTable() decorSyncTable {
 	}
 }
 
-func (s *bState) draw(stat decor.Statistics) (io.Reader, error) {
+func (s *bState) draw(stat decor.Statistics) (row io.Reader, err error) {
 	decorFiller := func(buf *bytes.Buffer, group []decor.Decorator) (err error) {
 		for i, d := range group {
 			// need to call Decor in any case because of width synchronization
@@ -460,24 +460,30 @@ func (s *bState) draw(stat decor.Statistics) (io.Reader, error) {
 	}
 
 	for i, buf := range s.buffers[1:] {
-		err := decorFiller(buf, s.decorGroups[i])
+		err = decorFiller(buf, s.decorGroups[i])
 		if err != nil {
-			return nil, err
+			return
 		}
 	}
 
 	if s.trimSpace || stat.AvailableWidth < 2 {
-		err := s.filler.Fill(s.buffers[0], stat)
+		err = s.filler.Fill(s.buffers[0], stat)
+		if err != nil {
+			return
+		}
 		return io.MultiReader(
 			s.buffers[1],
 			s.buffers[0],
 			s.buffers[2],
 			strings.NewReader("\n"),
-		), err
+		), nil
 	}
 
 	stat.AvailableWidth -= 2
-	err := s.filler.Fill(s.buffers[0], stat)
+	err = s.filler.Fill(s.buffers[0], stat)
+	if err != nil {
+		return
+	}
 	return io.MultiReader(
 		s.buffers[1],
 		strings.NewReader(" "),
@@ -485,7 +491,7 @@ func (s *bState) draw(stat decor.Statistics) (io.Reader, error) {
 		strings.NewReader(" "),
 		s.buffers[2],
 		strings.NewReader("\n"),
-	), err
+	), nil
 }
 
 func (s *bState) wSyncTable() (table decorSyncTable) {
