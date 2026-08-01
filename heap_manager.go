@@ -3,7 +3,6 @@ package mpb
 import (
 	"container/heap"
 	"iter"
-	"slices"
 	"sync"
 
 	"github.com/vbauerster/mpb/v8/decor"
@@ -87,11 +86,16 @@ func (m heapManager) run(pwg *sync.WaitGroup, shutdown <-chan any, depleteHeap c
 			for _, b := range bHeap {
 				go b.render(data.width)
 			}
-			ordered := make([]*Bar, 0, bHeap.Len())
-			for bHeap.Len() != 0 {
-				ordered = append(ordered, heap.Pop(&bHeap).(*Bar))
+			done := make(chan struct{})
+			data.seqCh <- func(yield func(*Bar) bool) {
+				defer close(done)
+				for bHeap.Len() != 0 {
+					if !yield(heap.Pop(&bHeap).(*Bar)) {
+						break
+					}
+				}
 			}
-			data.seqCh <- slices.Values(ordered)
+			<-done
 		case h_iter:
 			seqCh := req.data.(chan<- iter.Seq[*Bar])
 			done := make(chan struct{})
@@ -123,7 +127,13 @@ func (m heapManager) sync() {
 
 func (m heapManager) push(b *Bar, sync bool) {
 	data := pushData{b, sync}
-	m <- heapRequest{cmd: h_push, data: data}
+	select {
+	case m <- heapRequest{cmd: h_push, data: data}:
+	default:
+		b.container.bwg.Go(func() {
+			m <- heapRequest{cmd: h_push, data: data}
+		})
+	}
 }
 
 func (m heapManager) render(width int) iter.Seq[*Bar] {
