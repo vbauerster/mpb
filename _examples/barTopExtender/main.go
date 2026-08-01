@@ -24,7 +24,6 @@ type task struct {
 
 func main() {
 
-	var total int64
 	var tasks []*task
 
 	for i := range numTasks {
@@ -32,7 +31,6 @@ func main() {
 			id:    uint32(i),
 			total: rand.Int63n(666) + 100,
 		}
-		total += task.total
 		tasks = append(tasks, task)
 	}
 
