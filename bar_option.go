@@ -127,9 +127,9 @@ func BarPriority(priority int) BarOption {
 }
 
 // BarExtender is deprecated use BarTopExtender or BarBottomExtender instead.
-func BarExtender(filler BarFiller, rev bool) BarOption {
+func BarExtender(filler BarFiller, top bool) BarOption {
 	return func(s *bState) {
-		s.extender = makeRowExtender(rev, filler)
+		s.extender = makeRowExtender(top, filler)
 	}
 }
 
