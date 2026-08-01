@@ -142,7 +142,12 @@ func (p *Progress) AddSpinner(total int64, options ...BarOption) *Bar {
 	return p.New(total, spinnerStyleComposer, options...)
 }
 
-// New creates a bar with custom bar filler from provided BarFillerBuilder.
+// New creates a bar from provided BarFillerBuilder interface.
+// Default implementations are:
+//
+//	BarStyle()
+//	SpinnerStyle()
+//	NopStyle()
 func (p *Progress) New(total int64, builder BarFillerBuilder, options ...BarOption) *Bar {
 	if builder == nil {
 		builder = NopStyle()
@@ -155,9 +160,8 @@ func (p *Progress) New(total int64, builder BarFillerBuilder, options ...BarOpti
 }
 
 // Add creates a bar which renders itself by provided BarFiller.
-// If `total <= 0` triggering complete event by increment methods
-// is disabled. If called after `(*Progress).Wait()` then
-// `(nil, ErrDone)` is returned.
+// If `total <= 0` triggering complete event by increment methods is disabled.
+// If called after `(*Progress).Wait()` then `(nil, ErrDone)` is returned.
 func (p *Progress) Add(total int64, filler BarFiller, options ...BarOption) (*Bar, error) {
 	if filler == nil {
 		filler = NopStyle().Build()
