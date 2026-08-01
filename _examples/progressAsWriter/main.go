@@ -42,7 +42,7 @@ func main() {
 		}
 	}()
 
-	nopBar := p.MustAdd(0, nil)
+	nopBar := p.New(0, nil)
 
 	for i := range numBars {
 		name := fmt.Sprintf("Bar#%d:", i)

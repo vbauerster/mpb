@@ -16,7 +16,7 @@ func main() {
 	total := 100
 	bar := p.New(int64(total),
 		mpb.NopStyle(), // make main bar style nop, so there are just decorators
-		mpb.BarBottomExtender(nlMiddleware(mpb.BarStyle().Build())), // extend with normal bar on the next line
+		mpb.BarBtmExtender(nlMiddleware(mpb.BarStyle().Build())), // extend with normal bar on the next line
 		mpb.PrependDecorators(
 			decor.Name("Percentage: "),
 			decor.NewPercentage("%d"),
