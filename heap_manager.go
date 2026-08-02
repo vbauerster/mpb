@@ -3,7 +3,6 @@ package mpb
 import (
 	"container/heap"
 	"errors"
-	"fmt"
 	"iter"
 	"sync"
 
@@ -101,9 +100,6 @@ func (m heapManager) run(pwg *sync.WaitGroup, shutdown <-chan any, depleteHeap c
 				pushQ = append(pushQ, req)
 			}
 			for _, req := range pushQ {
-				if req.cmd != h_push {
-					panic(fmt.Errorf("expected heapCmd %d, got %d", h_push, req.cmd))
-				}
 				data := req.data.(pushData)
 				heap.Push(&bHeap, data.bar)
 				sync = sync || data.sync
