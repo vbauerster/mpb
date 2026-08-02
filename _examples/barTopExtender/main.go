@@ -83,17 +83,17 @@ func main() {
 
 func toBarFillers(tasks []*task) []mpb.BarFiller {
 	var fillers []mpb.BarFiller
-	filler := mpb.BarFillerFunc(func(w io.Writer, st decor.Statistics) (err error) {
+	filler := func(w io.Writer, st decor.Statistics) (err error) {
 		_, err = fmt.Fprintln(w)
 		return
-	})
-	fillers = append(fillers, filler)
+	}
+	fillers = append(fillers, mpb.BarFillerFunc(filler))
 	for _, task := range slices.Backward(tasks) {
 		if task == nil {
 			continue
 		}
 		var done bool
-		filler = mpb.BarFillerFunc(func(w io.Writer, st decor.Statistics) (err error) {
+		filler = func(w io.Writer, st decor.Statistics) (err error) {
 			if task.id == curTask.Load() {
 				if !st.Completed {
 					_, err = fmt.Fprintf(w, "=> Taksk %02d\n", task.id)
@@ -107,8 +107,8 @@ func toBarFillers(tasks []*task) []mpb.BarFiller {
 			}
 			_, err = fmt.Fprintf(w, "   Taksk %02d\n", task.id)
 			return
-		})
-		fillers = append(fillers, filler)
+		}
+		fillers = append(fillers, mpb.BarFillerFunc(filler))
 	}
 	return fillers
 }
