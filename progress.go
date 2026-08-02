@@ -173,7 +173,7 @@ func (p *Progress) Add(total int64, filler BarFiller, options ...BarOption) (*Ba
 	case p.operateState <- func(s *pState) {
 		bs := s.makeBarState(total, filler, options...)
 		bar := p.makeBar(bs.priority)
-		if isQueue(bs) {
+		if bs.isQueue() {
 			s.queueBars[bs.waitFor] = bar
 		} else {
 			s.hm.push(bar, true, nil)
@@ -473,17 +473,4 @@ func (s *pState) makeBarState(total int64, filler BarFiller, options ...BarOptio
 
 	s.idCount++
 	return bs
-}
-
-func isQueue(bs *bState) bool {
-	if bs.waitFor == nil {
-		return false
-	}
-	select {
-	case <-bs.waitFor.ctx.Done():
-		bs.waitFor = nil
-		return false
-	default:
-		return true
-	}
 }

@@ -459,6 +459,42 @@ func (b *Bar) wSyncTable() decorSyncTable {
 	}
 }
 
+func (b *Bar) done() {
+	if b.container.renderOff {
+		b.cancel(nil)
+	} else {
+		// Technically this call isn't required, but if refresh rate is set to
+		// one hour for example and bar completes within a few minutes p.Wait()
+		// will wait for one hour. This call helps to avoid unnecessary waiting.
+		go b.tryEarlyRefresh()
+	}
+}
+
+func (b *Bar) tryEarlyRefresh() {
+	otherRunning := make(chan struct{})
+	yield := func(bar *Bar) bool {
+		if b == bar || bar.AbortedOrCompleted() {
+			return true // continue traverse
+		}
+		close(otherRunning)
+		return false // stop traverse
+	}
+	if err := b.container.iterateBars(yield); err == nil {
+		select {
+		case <-otherRunning:
+		default:
+			// b is the last bar leaving so it should switch tv off
+			for {
+				select {
+				case b.container.renderReq <- time.Now():
+				case <-b.ctx.Done():
+					return
+				}
+			}
+		}
+	}
+}
+
 // draw is actual bar's rowProducer.
 // It needs copy of decor.Statistics because it modifies stat.AvailableWidth.
 // Each decorator gets its own copy of decor.Statistics with updated AvailableWidth.
@@ -539,39 +575,16 @@ func (s *bState) wSyncTable() (table decorSyncTable) {
 	return table
 }
 
-func (b *Bar) done() {
-	if b.container.renderOff {
-		b.cancel(nil)
-	} else {
-		// Technically this call isn't required, but if refresh rate is set to
-		// one hour for example and bar completes within a few minutes p.Wait()
-		// will wait for one hour. This call helps to avoid unnecessary waiting.
-		go b.tryEarlyRefresh()
+func (s *bState) isQueue() bool {
+	if s.waitFor == nil {
+		return false
 	}
-}
-
-func (b *Bar) tryEarlyRefresh() {
-	otherRunning := make(chan struct{})
-	yield := func(bar *Bar) bool {
-		if b == bar || bar.AbortedOrCompleted() {
-			return true // continue traverse
-		}
-		close(otherRunning)
-		return false // stop traverse
-	}
-	if err := b.container.iterateBars(yield); err == nil {
-		select {
-		case <-otherRunning:
-		default:
-			// b is the last bar leaving so it should switch tv off
-			for {
-				select {
-				case b.container.renderReq <- time.Now():
-				case <-b.ctx.Done():
-					return
-				}
-			}
-		}
+	select {
+	case <-s.waitFor.ctx.Done():
+		s.waitFor = nil
+		return false
+	default:
+		return true
 	}
 }
 
