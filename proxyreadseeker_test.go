@@ -53,7 +53,7 @@ func TestProxyReadSeekerSeekRewind(t *testing.T) {
 
 	// Read half
 	half := total / 2
-	io.CopyN(io.Discard, rs, half)
+	_, _ = io.CopyN(io.Discard, rs, half)
 	if bar.Current() != half {
 		t.Errorf("after half read: bar.Current() = %d, want %d", bar.Current(), half)
 	}
@@ -71,7 +71,7 @@ func TestProxyReadSeekerSeekRewind(t *testing.T) {
 	}
 
 	// Read everything again
-	io.Copy(io.Discard, rs)
+	_, _ = io.Copy(io.Discard, rs)
 	if bar.Current() != total {
 		t.Errorf("after full re-read: bar.Current() = %d, want %d", bar.Current(), total)
 	}
@@ -108,7 +108,7 @@ func TestProxyReadSeekerClose(t *testing.T) {
 	rs := bar.ProxyReadSeeker(rc)
 
 	// Read everything so the bar completes naturally
-	io.Copy(io.Discard, rs)
+	_, _ = io.Copy(io.Discard, rs)
 
 	if err := rs.Close(); err != nil {
 		t.Fatalf("close error: %v", err)
@@ -139,7 +139,7 @@ func TestProxyReadSeekerDataIntegrity(t *testing.T) {
 	rs := bar.ProxyReadSeeker(strings.NewReader(content))
 
 	var buf bytes.Buffer
-	io.Copy(&buf, rs)
+	_, _ = io.Copy(&buf, rs)
 
 	if buf.String() != content {
 		t.Error("proxied content does not match original")
