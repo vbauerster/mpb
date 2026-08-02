@@ -2,6 +2,8 @@ package mpb
 
 import (
 	"container/heap"
+	"errors"
+	"fmt"
 	"iter"
 	"sync"
 
@@ -31,8 +33,9 @@ type pushData struct {
 }
 
 type renderData struct {
-	width int
-	seqCh chan<- iter.Seq[*Bar]
+	width   int
+	seqCh   chan<- iter.Seq[*Bar]
+	offload <-chan heapRequest
 }
 
 type fixData struct {
@@ -82,20 +85,29 @@ func (m heapManager) run(pwg *sync.WaitGroup, shutdown <-chan any, depleteHeap c
 			heap.Push(&bHeap, data.bar)
 			sync = sync || data.sync
 		case h_render:
+			var pushQ []heapRequest
 			data := req.data.(renderData)
 			for _, b := range bHeap {
 				go b.render(data.width)
 			}
-			done := make(chan struct{})
 			data.seqCh <- func(yield func(*Bar) bool) {
-				defer close(done)
 				for bHeap.Len() != 0 {
 					if !yield(heap.Pop(&bHeap).(*Bar)) {
 						break
 					}
 				}
 			}
-			<-done
+			for req := range data.offload {
+				pushQ = append(pushQ, req)
+			}
+			for _, req := range pushQ {
+				if req.cmd != h_push {
+					panic(fmt.Errorf("expected heapCmd %d, got %d", h_push, req.cmd))
+				}
+				data := req.data.(pushData)
+				heap.Push(&bHeap, data.bar)
+				sync = sync || data.sync
+			}
 		case h_iter:
 			seqCh := req.data.(chan<- iter.Seq[*Bar])
 			done := make(chan struct{})
@@ -125,22 +137,33 @@ func (m heapManager) sync() {
 	m <- heapRequest{cmd: h_sync}
 }
 
-func (m heapManager) push(b *Bar, sync bool) {
-	data := pushData{b, sync}
+func (m heapManager) push(bar *Bar, sync bool, offload chan<- heapRequest) {
+	req := heapRequest{cmd: h_push, data: pushData{
+		bar:  bar,
+		sync: sync,
+	}}
 	select {
-	case m <- heapRequest{cmd: h_push, data: data}:
+	case m <- req:
 	default:
-		b.container.bwg.Go(func() {
-			m <- heapRequest{cmd: h_push, data: data}
-		})
+		if offload != nil {
+			offload <- req
+		} else {
+			bar.container.bwg.Go(func() {
+				m <- req
+			})
+		}
 	}
 }
 
-func (m heapManager) render(width int) iter.Seq[*Bar] {
+func (m heapManager) render(width int, offload <-chan heapRequest) iter.Seq[*Bar] {
+	if offload == nil {
+		panic(errors.New("expected non nil offload chan heapRequest"))
+	}
 	seqCh := make(chan iter.Seq[*Bar], 1)
 	m <- heapRequest{cmd: h_render, data: renderData{
-		width: width,
-		seqCh: seqCh,
+		width:   width,
+		seqCh:   seqCh,
+		offload: offload,
 	}}
 	return <-seqCh
 }

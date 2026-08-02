@@ -176,7 +176,7 @@ func (p *Progress) Add(total int64, filler BarFiller, options ...BarOption) (*Ba
 		if isQueue(bs) {
 			s.queueBars[bs.waitFor] = bar
 		} else {
-			s.hm.push(bar, true)
+			s.hm.push(bar, true, nil)
 		}
 		p.bwg.Add(1)
 		go bar.serve(bs)
@@ -375,10 +375,12 @@ func (s *pState) render() (err error) {
 		height = width*3/2 + 1
 	}
 
+	offload := make(chan heapRequest)
+	defer close(offload)
 	var total, popCount int
 	var rows [][]io.Reader
 
-	for b := range s.hm.render(width) {
+	for b := range s.hm.render(width, offload) {
 		frame := <-b.frameCh
 		if frame.err != nil {
 			b.cancel(frame.err)
@@ -398,7 +400,7 @@ func (s *pState) render() (err error) {
 		switch b.shutdown {
 		case 1:
 			b.cancel(nil)
-			s.onShutdown(b, frame)
+			s.onShutdown(b, frame, offload)
 		case 2:
 			if s.popCompleted && !frame.noPop {
 				popCount += len(frame.rows) - discarded
@@ -406,7 +408,7 @@ func (s *pState) render() (err error) {
 			}
 			fallthrough
 		default:
-			s.hm.push(b, false)
+			s.hm.push(b, false, offload)
 		}
 	}
 
@@ -425,11 +427,11 @@ func (s *pState) render() (err error) {
 	return s.cwriter.Flush(total - popCount)
 }
 
-func (s *pState) onShutdown(b *Bar, frame *renderFrame) {
+func (s *pState) onShutdown(b *Bar, frame *renderFrame, offload chan<- heapRequest) {
 	if q, ok := s.queueBars[b]; ok {
 		delete(s.queueBars, b)
 		q.priority = b.priority
-		s.hm.push(q, true)
+		s.hm.push(q, true, offload)
 		return
 	}
 	if s.popCompleted && !frame.noPop {
@@ -438,7 +440,7 @@ func (s *pState) onShutdown(b *Bar, frame *renderFrame) {
 		frame.rmOnComplete = false
 	}
 	if !frame.rmOnComplete {
-		s.hm.push(b, false)
+		s.hm.push(b, false, offload)
 	} else {
 		s.hasUnrendered = true
 	}
