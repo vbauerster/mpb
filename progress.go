@@ -400,16 +400,29 @@ func (s *pState) render() (err error) {
 		switch b.shutdown {
 		case 1:
 			b.cancel(nil)
-			s.onShutdown(b, frame, offload)
+			if q, ok := s.queueBars[b]; ok {
+				delete(s.queueBars, b)
+				q.priority = b.priority
+				s.hm.push(q, true, offload)
+				continue
+			}
+			if s.popCompleted && !frame.noPop {
+				b.priority = s.popPriority
+				s.popPriority++
+				frame.rmOnComplete = false
+			}
+			if frame.rmOnComplete {
+				s.hasUnrendered = true
+				continue
+			}
 		case 2:
 			if s.popCompleted && !frame.noPop {
 				popCount += len(frame.rows) - discarded
 				continue
 			}
-			fallthrough
-		default:
-			s.hm.push(b, false, offload)
 		}
+
+		s.hm.push(b, false, offload)
 	}
 
 	for _, row := range slices.Backward(rows) {
@@ -425,25 +438,6 @@ func (s *pState) render() (err error) {
 	}
 
 	return s.cwriter.Flush(total - popCount)
-}
-
-func (s *pState) onShutdown(b *Bar, frame *renderFrame, offload chan<- heapRequest) {
-	if q, ok := s.queueBars[b]; ok {
-		delete(s.queueBars, b)
-		q.priority = b.priority
-		s.hm.push(q, true, offload)
-		return
-	}
-	if s.popCompleted && !frame.noPop {
-		b.priority = s.popPriority
-		s.popPriority++
-		frame.rmOnComplete = false
-	}
-	if !frame.rmOnComplete {
-		s.hm.push(b, false, offload)
-	} else {
-		s.hasUnrendered = true
-	}
 }
 
 func (s *pState) makeBarState(total int64, filler BarFiller, options ...BarOption) *bState {
