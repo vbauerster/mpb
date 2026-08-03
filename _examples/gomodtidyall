@@ -1,9 +1,10 @@
-#!/bin/sh
+#!/usr/bin/env bash
+
 set -e
 
-for d in *; do
-    [ ! -d "$d" ] && continue
-    pushd "$d" >/dev/null 2>&1
+for d in ./*; do
+    [[ ! -d "$d" ]] && continue
+    pushd "$d" &>/dev/null
     go mod tidy
-    popd >/dev/null 2>&1
+    popd &>/dev/null
 done
