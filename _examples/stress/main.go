@@ -13,9 +13,7 @@ import (
 	"github.com/vbauerster/mpb/v8/decor"
 )
 
-const (
-	totalBars = 42
-)
+const totalBars = 42
 
 var proftype = flag.String("prof", "", "profile type (cpu, mem)")
 

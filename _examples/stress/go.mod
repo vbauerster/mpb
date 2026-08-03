@@ -12,7 +12,7 @@ require (
 	github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d // indirect
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
 	github.com/felixge/fgprof v0.9.5 // indirect
-	github.com/google/pprof v0.0.0-20260709232956-b9395ee17fa0 // indirect
+	github.com/google/pprof v0.0.0-20260802141513-ef3492d7dac3 // indirect
 	github.com/mattn/go-runewidth v0.0.27 // indirect
 	github.com/vbauerster/cupwriter v0.0.4 // indirect
 	golang.org/x/sys v0.47.0 // indirect
