@@ -19,16 +19,17 @@ import (
 
 // Bar represents a progress bar.
 type Bar struct {
-	ctx          context.Context
-	cancel       context.CancelCauseFunc
-	index        int // used by heap
-	priority     int // used by heap
-	shutdown     int
-	frameCh      chan *renderFrame
-	operateState chan func(*bState)
-	container    *Progress
-	bs           *bState
-	bsOk         chan struct{}
+	ctx            context.Context
+	cancel         context.CancelCauseFunc
+	index          int // used by heap
+	priority       int // used by heap
+	shutdown       int
+	frameCh        chan *renderFrame
+	operateState   chan func(*bState)
+	container      *Progress
+	bs             *bState
+	bsOk           chan struct{}
+	ewmaDecorators []decor.EwmaDecorator
 }
 
 type decorSyncTable [2][]*decor.Sync
@@ -37,23 +38,22 @@ type rowExtender func(rowProducer) iter.Seq[rowProducer]
 
 // bState is actual bar's state.
 type bState struct {
-	id             int
-	priority       int
-	reqWidth       int
-	total0         int64
-	total1         int64
-	current        int64
-	refill         int64
-	buffers        [3]*bytes.Buffer
-	decorGroups    [2][]decor.Decorator
-	ewmaDecorators []decor.EwmaDecorator
-	filler         BarFiller
-	extender       rowExtender
-	waitFor        *Bar // key for (*pState).queueBars
-	trimSpace      bool
-	rmOnComplete   bool
-	aborted        bool
-	noPop          bool
+	waitFor      *Bar // key for (*pState).queueBars
+	id           int
+	priority     int
+	reqWidth     int
+	total0       int64
+	total1       int64
+	current      int64
+	refill       int64
+	extender     rowExtender
+	filler       BarFiller
+	buffers      [3]*bytes.Buffer
+	decorGroups  [2][]decor.Decorator
+	trimSpace    bool
+	rmOnComplete bool
+	aborted      bool
+	noPop        bool
 }
 
 type renderFrame struct {
@@ -75,12 +75,11 @@ func (b *Bar) ProxyReader(r io.Reader) (pr io.ReadCloser) {
 	if r == nil {
 		panic(errors.New("expected non nil io.Reader"))
 	}
-	result := make(chan bool, 1)
 	select {
-	case b.operateState <- func(s *bState) { result <- len(s.ewmaDecorators) != 0 }:
-		return newProxyReader(r, b, <-result)
 	case <-b.ctx.Done():
 		return nil
+	default:
+		return newProxyReader(r, b)
 	}
 }
 
@@ -96,12 +95,11 @@ func (b *Bar) ProxyReadSeeker(rs io.ReadSeeker) io.ReadSeekCloser {
 	if rs == nil {
 		panic(errors.New("expected non nil io.ReadSeeker"))
 	}
-	result := make(chan bool, 1)
 	select {
-	case b.operateState <- func(s *bState) { result <- len(s.ewmaDecorators) != 0 }:
-		return newProxyReadSeeker(rs, b, <-result)
 	case <-b.ctx.Done():
 		return nil
+	default:
+		return newProxyReadSeeker(rs, b)
 	}
 }
 
@@ -117,12 +115,11 @@ func (b *Bar) ProxyWriter(w io.Writer) (pw io.WriteCloser) {
 	if w == nil {
 		panic(errors.New("expected non nil io.Writer"))
 	}
-	result := make(chan bool, 1)
 	select {
-	case b.operateState <- func(s *bState) { result <- len(s.ewmaDecorators) != 0 }:
-		return newProxyWriter(w, b, <-result)
 	case <-b.ctx.Done():
 		return nil
+	default:
+		return newProxyWriter(w, b)
 	}
 }
 
@@ -275,12 +272,12 @@ func (b *Bar) EwmaIncrBy(n int, iterDur time.Duration) {
 func (b *Bar) EwmaIncrInt64(n int64, iterDur time.Duration) {
 	select {
 	case b.operateState <- func(s *bState) {
-		for _, d := range s.ewmaDecorators {
-			d.EwmaUpdate(n, iterDur)
-		}
 		s.current += n
 		if s.completed() {
 			b.done()
+		}
+		for _, d := range b.ewmaDecorators {
+			d.EwmaUpdate(n, iterDur)
 		}
 	}:
 	case <-b.ctx.Done():
@@ -296,12 +293,12 @@ func (b *Bar) EwmaSetCurrent(current int64, iterDur time.Duration) {
 	select {
 	case b.operateState <- func(s *bState) {
 		n := current - s.current
-		for _, d := range s.ewmaDecorators {
-			d.EwmaUpdate(n, iterDur)
-		}
-		s.current = current
+		s.current += n
 		if s.completed() {
 			b.done()
+		}
+		for _, d := range b.ewmaDecorators {
+			d.EwmaUpdate(n, iterDur)
 		}
 	}:
 	case <-b.ctx.Done():

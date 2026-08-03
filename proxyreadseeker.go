@@ -58,8 +58,8 @@ func (x ewmaProxyReadSeeker) Close() error {
 	return nil
 }
 
-func newProxyReadSeeker(rs io.ReadSeeker, b *Bar, hasEwma bool) io.ReadSeekCloser {
-	if hasEwma {
+func newProxyReadSeeker(rs io.ReadSeeker, b *Bar) io.ReadSeekCloser {
+	if len(b.ewmaDecorators) != 0 {
 		return ewmaProxyReadSeeker{rs, b}
 	}
 	return proxyReadSeeker{rs, b}

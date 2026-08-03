@@ -172,7 +172,7 @@ func (p *Progress) Add(total int64, filler BarFiller, options ...BarOption) (*Ba
 	select {
 	case p.operateState <- func(s *pState) {
 		bs := s.makeBarState(total, filler, options...)
-		bar := p.makeBar(bs.priority)
+		bar := p.makeBar(bs)
 		if bs.isQueue() {
 			s.queueBars[bs.waitFor] = bar
 		} else {
@@ -194,17 +194,25 @@ func (p *Progress) Add(total int64, filler BarFiller, options ...BarOption) (*Ba
 	}
 }
 
-func (p *Progress) makeBar(priority int) *Bar {
+func (p *Progress) makeBar(bs *bState) *Bar {
 	ctx, cancel := context.WithCancelCause(p.ctx)
-	return &Bar{
+	bar := &Bar{
 		ctx:          ctx,
 		cancel:       cancel,
-		priority:     priority,
+		priority:     bs.priority,
 		frameCh:      make(chan *renderFrame, 1),
 		operateState: make(chan func(*bState)),
 		bsOk:         make(chan struct{}),
 		container:    p,
 	}
+	for _, group := range bs.decorGroups {
+		for _, d := range group {
+			if d, ok := unwrap(d).(decor.EwmaDecorator); ok {
+				bar.ewmaDecorators = append(bar.ewmaDecorators, d)
+			}
+		}
+	}
+	return bar
 }
 
 // blocks until iteration is done
@@ -462,14 +470,6 @@ func (s *pState) makeBarState(total int64, filler BarFiller, options ...BarOptio
 	for _, opt := range options {
 		if opt != nil {
 			opt(bs)
-		}
-	}
-
-	for _, group := range bs.decorGroups {
-		for _, d := range group {
-			if d, ok := unwrap(d).(decor.EwmaDecorator); ok {
-				bs.ewmaDecorators = append(bs.ewmaDecorators, d)
-			}
 		}
 	}
 
