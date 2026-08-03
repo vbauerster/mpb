@@ -5,7 +5,7 @@ go 1.25.0
 require (
 	github.com/fatih/color v1.19.0
 	github.com/vbauerster/cupwriter v0.0.4
-	github.com/vbauerster/mpb/v8 v8.15.0
+	github.com/vbauerster/mpb/v8 v8.15.1
 )
 
 require (
