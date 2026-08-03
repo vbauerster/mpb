@@ -175,7 +175,7 @@ func (p *Progress) Add(total int64, filler BarFiller, options ...BarOption) (*Ba
 		bar := p.makeBar(bs)
 		if bs.isQueue() {
 			s.queueBars[bs.waitFor] = bar
-		} else {
+		} else if !p.noRender {
 			s.hm.push(bar, true, nil)
 		}
 		p.bwg.Go(func() {
