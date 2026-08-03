@@ -398,7 +398,6 @@ func (b *Bar) serve(bs *bState) {
 		close(b.bsOk)
 		decoratorsOnShutdown(bs.decorGroups[0])
 		decoratorsOnShutdown(bs.decorGroups[1])
-		b.container.bwg.Done()
 	}()
 	if bs.waitFor != nil {
 		<-bs.waitFor.ctx.Done()

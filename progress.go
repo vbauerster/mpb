@@ -178,8 +178,9 @@ func (p *Progress) Add(total int64, filler BarFiller, options ...BarOption) (*Ba
 		} else {
 			s.hm.push(bar, true, nil)
 		}
-		p.bwg.Add(1)
-		go bar.serve(bs)
+		p.bwg.Go(func() {
+			bar.serve(bs)
+		})
 		ch <- bar
 	}:
 		return <-ch, nil
