@@ -12,7 +12,9 @@ import (
 func main() {
 	p := mpb.New(mpb.WithWidth(64))
 
-	// new bar with 'trigger complete event' disabled, because total is zero
+	// Start with total = 0 because we don't know the final size yet.
+	// A bar created with total = 0 will NOT auto-complete when current
+	// reaches total, so we must call SetTotal(final, true) at the end.
 	bar := p.AddBar(0,
 		mpb.PrependDecorators(decor.Counters(decor.SizeB1024(0), "% .1f / % .1f")),
 		mpb.AppendDecorators(decor.Percentage()),
@@ -27,13 +29,18 @@ func main() {
 			break
 		}
 		written += int64(n)
-		// following call is not required, it's called to show some progress instead of an empty bar
+		// SetTotal(written+1024, false) does two things:
+		//   1. Updates the denominator so Percentage() and Counters show
+		//      meaningful progress instead of "0 / 0".
+		//   2. The `false` argument means "do NOT trigger completion" —
+		//      we're still streaming and this is just a running estimate.
 		bar.SetTotal(written+1024, false)
-		// increment method won't trigger completion because bar was constructed with total = 0
 		bar.IncrBy(n)
 		time.Sleep(time.Duration(rand.Intn(10)+1) * maxSleep / 10)
 	}
 
+	// Now that we know the exact total, set it with `true` to trigger
+	// the completion event and let p.Wait() return.
 	bar.SetTotal(written, true)
 
 	p.Wait()
