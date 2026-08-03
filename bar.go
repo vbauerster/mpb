@@ -386,18 +386,9 @@ func (b *Bar) Wait() {
 }
 
 func (b *Bar) serve(bs *bState) {
-	decoratorsOnShutdown := func(group []decor.Decorator) {
-		for _, d := range group {
-			if d, ok := unwrap(d).(decor.ShutdownListener); ok {
-				d.OnShutdown()
-			}
-		}
-	}
 	defer func() {
 		b.bs = bs
 		close(b.bsOk)
-		decoratorsOnShutdown(bs.decorGroups[0])
-		decoratorsOnShutdown(bs.decorGroups[1])
 	}()
 	if bs.waitFor != nil {
 		<-bs.waitFor.ctx.Done()
@@ -601,6 +592,14 @@ func (s *bState) newStatistics(tw int) decor.Statistics {
 		Refill:         s.refill,
 		Completed:      s.completed(),
 		Aborted:        s.aborted,
+	}
+}
+
+func decoratorOnShutdown(group []decor.Decorator) {
+	for _, d := range group {
+		if d, ok := unwrap(d).(decor.ShutdownListener); ok {
+			d.OnShutdown()
+		}
 	}
 }
 

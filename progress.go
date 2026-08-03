@@ -180,6 +180,11 @@ func (p *Progress) Add(total int64, filler BarFiller, options ...BarOption) (*Ba
 		}
 		p.bwg.Go(func() {
 			bar.serve(bs)
+			for _, group := range bs.decorGroups {
+				p.bwg.Go(func() {
+					decoratorOnShutdown(group)
+				})
+			}
 		})
 		ch <- bar
 	}:
