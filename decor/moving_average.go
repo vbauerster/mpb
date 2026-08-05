@@ -42,6 +42,9 @@ func NewThreadSafeMovingAverage(average ewma.MovingAverage) ewma.MovingAverage {
 	if tsma, ok := average.(*threadSafeMovingAverage); ok {
 		return tsma
 	}
+	if average == nil {
+		average = NewMedian()
+	}
 	return &threadSafeMovingAverage{MovingAverage: average}
 }
 

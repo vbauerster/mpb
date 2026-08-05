@@ -38,13 +38,7 @@ func EwmaETA(style TimeStyle, age float64, wcc ...WC) Decorator {
 
 // EwmaNormalizedETA same as EwmaETA but with TimeNormalizer option.
 func EwmaNormalizedETA(style TimeStyle, age float64, normalizer TimeNormalizer, wcc ...WC) Decorator {
-	var average ewma.MovingAverage
-	if age == 0 {
-		average = ewma.NewMovingAverage()
-	} else {
-		average = ewma.NewMovingAverage(age)
-	}
-	return MovingAverageETA(style, average, normalizer, wcc...)
+	return MovingAverageETA(style, ewma.NewMovingAverage(age), normalizer, wcc...)
 }
 
 // MovingAverageETA decorator relies on MovingAverage implementation to calculate its average.
@@ -57,13 +51,10 @@ func EwmaNormalizedETA(style TimeStyle, age float64, normalizer TimeNormalizer, 
 //
 //	`wcc` optional WC config
 func MovingAverageETA(style TimeStyle, average ewma.MovingAverage, normalizer TimeNormalizer, wcc ...WC) Decorator {
-	if average == nil {
-		average = NewMedian()
-	}
 	d := &movingAverageETA{
 		WC:         initWC(wcc...),
 		producer:   chooseTimeProducer(style),
-		average:    average,
+		average:    NewThreadSafeMovingAverage(average),
 		normalizer: normalizer,
 	}
 	return d

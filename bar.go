@@ -276,10 +276,10 @@ func (b *Bar) EwmaIncrInt64(n int64, iterDur time.Duration) {
 		if s.completed() {
 			b.done()
 		}
+	}:
 		for _, d := range b.ewmaDecorators {
 			d.EwmaUpdate(n, iterDur)
 		}
-	}:
 	case <-b.ctx.Done():
 	}
 }
@@ -290,6 +290,7 @@ func (b *Bar) EwmaSetCurrent(current int64, iterDur time.Duration) {
 	if current < 0 {
 		return
 	}
+	ch := make(chan int64, 1)
 	select {
 	case b.operateState <- func(s *bState) {
 		n := current - s.current
@@ -297,10 +298,12 @@ func (b *Bar) EwmaSetCurrent(current int64, iterDur time.Duration) {
 		if s.completed() {
 			b.done()
 		}
+		ch <- n
+	}:
+		n := <-ch
 		for _, d := range b.ewmaDecorators {
 			d.EwmaUpdate(n, iterDur)
 		}
-	}:
 	case <-b.ctx.Done():
 	}
 }

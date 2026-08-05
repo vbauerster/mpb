@@ -40,13 +40,7 @@ func (s *speedFormatter) Format(st fmt.State, verb rune) {
 // For this decorator to work correctly you have to measure each iteration's
 // duration and pass it to one of the (*Bar).EwmaIncr... family methods.
 func EwmaSpeed(unit any, format string, age float64, wcc ...WC) Decorator {
-	var average ewma.MovingAverage
-	if age == 0 {
-		average = ewma.NewMovingAverage()
-	} else {
-		average = ewma.NewMovingAverage(age)
-	}
-	return MovingAverageSpeed(unit, format, average, wcc...)
+	return MovingAverageSpeed(unit, format, NewThreadSafeMovingAverage(ewma.NewMovingAverage(age)), wcc...)
 }
 
 // MovingAverageSpeed decorator relies on MovingAverage implementation
@@ -70,7 +64,7 @@ func MovingAverageSpeed(unit any, format string, average ewma.MovingAverage, wcc
 	d := &movingAverageSpeed{
 		WC:       initWC(wcc...),
 		producer: chooseSpeedProducer(unit, format),
-		average:  average,
+		average:  NewThreadSafeMovingAverage(average),
 	}
 	return d
 }
