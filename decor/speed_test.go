@@ -9,7 +9,7 @@ func TestAverageSpeedSizeB1024(t *testing.T) {
 	cases := []struct {
 		name     string
 		fmt      string
-		unit     interface{}
+		unit     any
 		current  int64
 		elapsed  time.Duration
 		expected string
@@ -145,7 +145,7 @@ func TestAverageSpeedSizeB1000(t *testing.T) {
 	cases := []struct {
 		name     string
 		fmt      string
-		unit     interface{}
+		unit     any
 		current  int64
 		elapsed  time.Duration
 		expected string
