@@ -85,10 +85,10 @@ func (d *movingAverageETA) EwmaUpdate(n int64, dur time.Duration) {
 	durPerItem := float64(d.zDur+dur) / float64(n)
 	if math.IsInf(durPerItem, 0) || math.IsNaN(durPerItem) {
 		d.zDur += dur
-		return
+	} else {
+		d.zDur = 0
+		d.average.Add(durPerItem)
 	}
-	d.zDur = 0
-	d.average.Add(durPerItem)
 }
 
 // AverageETA decorator. It's wrapper of NewAverageETA.

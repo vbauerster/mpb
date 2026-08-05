@@ -95,10 +95,10 @@ func (d *movingAverageSpeed) EwmaUpdate(n int64, dur time.Duration) {
 	durPerByte := float64(d.zDur+dur) / float64(n)
 	if math.IsInf(durPerByte, 0) || math.IsNaN(durPerByte) {
 		d.zDur += dur
-		return
+	} else {
+		d.zDur = 0
+		d.average.Add(durPerByte)
 	}
-	d.zDur = 0
-	d.average.Add(durPerByte)
 }
 
 // AverageSpeed decorator with dynamic unit measure adjustment. It's
