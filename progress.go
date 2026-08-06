@@ -205,6 +205,9 @@ func (p *Progress) makeBar(bs *bState) *Bar {
 		bsOk:         make(chan struct{}),
 		container:    p,
 	}
+	if p.noRenderMode {
+		return bar
+	}
 	for _, group := range bs.decorGroups {
 		for _, d := range group {
 			if d, ok := unwrap(d).(decor.EwmaDecorator); ok {
