@@ -450,7 +450,7 @@ func (b *Bar) wSyncTable() decorSyncTable {
 }
 
 func (b *Bar) done() {
-	if b.container.noRender {
+	if b.container.noRenderMode {
 		b.cancel(nil)
 	} else {
 		// Technically this call isn't required, but if refresh rate is set to
