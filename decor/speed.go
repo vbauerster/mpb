@@ -88,14 +88,10 @@ func (d *movingAverageSpeed) Decor(_ Statistics) (string, int) {
 }
 
 func (d *movingAverageSpeed) EwmaUpdate(n int64, dur time.Duration) {
-	if n <= 0 {
-		d.zDur += dur
-		return
-	}
 	durPerByte := float64(d.zDur+dur) / float64(n)
 	if math.IsInf(durPerByte, 0) || math.IsNaN(durPerByte) {
 		d.zDur += dur
-	} else {
+	} else if !math.Signbit(durPerByte) {
 		d.zDur = 0
 		d.average.Add(durPerByte)
 	}

@@ -78,14 +78,10 @@ func (d *movingAverageETA) Decor(s Statistics) (string, int) {
 }
 
 func (d *movingAverageETA) EwmaUpdate(n int64, dur time.Duration) {
-	if n <= 0 {
-		d.zDur += dur
-		return
-	}
 	durPerItem := float64(d.zDur+dur) / float64(n)
 	if math.IsInf(durPerItem, 0) || math.IsNaN(durPerItem) {
 		d.zDur += dur
-	} else {
+	} else if !math.Signbit(durPerItem) {
 		d.zDur = 0
 		d.average.Add(durPerItem)
 	}
