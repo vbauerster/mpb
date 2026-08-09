@@ -54,7 +54,7 @@ func main() {
 					),
 					toMetaFunc(green),
 				),
-				decor.OnComplete(decor.EwmaETA(decor.ET_STYLE_MMSS, 0, decor.WCSyncWidth), ""),
+				decor.OnComplete(decor.EwmaETA(decor.ET_STYLE_MMSS, 30, decor.WCSyncWidth), ""),
 			),
 			mpb.AppendDecorators(
 				decor.OnComplete(decor.Percentage(decor.WC{W: 5}), ""),
