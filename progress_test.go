@@ -313,8 +313,9 @@ func TestAddAfterDone(t *testing.T) {
 
 	_, err := p.Add(100, nil)
 
-	if !errors.Is(err, mpb.ErrDone) {
-		t.Errorf("Expected %q, got: %q\n", mpb.ErrDone, err)
+	var expectedErr mpb.ErrDone[*mpb.Progress]
+	if !errors.Is(err, expectedErr) {
+		t.Errorf("Expected %T, got: %T\n", expectedErr, err)
 	}
 }
 

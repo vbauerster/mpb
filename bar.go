@@ -166,21 +166,37 @@ func (b *Bar) SetRefillCurrent() {
 	b.SetRefill(math.MaxInt64)
 }
 
-// TraverseDecorators traverses available decorators and calls `cb`
-// on each unwrapped one.
-func (b *Bar) TraverseDecorators(cb func(decor.Decorator)) (ok bool) {
+// TraverseDecorators traverses decorators as long as yield func returns true.
+// Yield receives int as decorator group: 0=prepend and 1=append; and decorator
+// itself. If decorator implements decor.Wrapper it's going to be unwrapped
+// before calling yield. Returns ErrDone[*Bar] if called after (*Bar).Wait.
+func (b *Bar) TraverseDecorators(yield func(int, decor.Decorator) bool) error {
 	select {
 	case b.operateState <- func(s *bState) {
-		for _, group := range s.decorGroups {
+		for i, group := range s.decorGroups {
 			for _, d := range group {
-				cb(unwrap(d))
+				if !yield(i, unwrap(d)) {
+					return
+				}
 			}
 		}
 	}:
-		return true
+		return nil
 	case <-b.ctx.Done():
-		return false
+		return ErrDone[*Bar]{nil}
 	}
+}
+
+// DecoratorAverageAdjust adjusts decorators implementing decor.AverageDecorator
+// interface. Call if there is need to set start time after decorators have been
+// constructed. Returns ErrDone[*Bar] if called after (*Bar).Wait.
+func (b *Bar) DecoratorAverageAdjust(start time.Time) error {
+	return b.TraverseDecorators(func(_ int, d decor.Decorator) bool {
+		if d, ok := d.(decor.AverageDecorator); ok {
+			d.AverageAdjust(start)
+		}
+		return true // continue traverse
+	})
 }
 
 // EnableTriggerComplete enables triggering complete event for bar
@@ -311,16 +327,6 @@ func (b *Bar) EwmaSetCurrent(current int64, iterDur time.Duration) {
 	}
 }
 
-// DecoratorAverageAdjust adjusts decorators implementing decor.AverageDecorator interface.
-// Call if there is need to set start time after decorators have been constructed.
-func (b *Bar) DecoratorAverageAdjust(start time.Time) {
-	b.TraverseDecorators(func(d decor.Decorator) {
-		if d, ok := d.(decor.AverageDecorator); ok {
-			d.AverageAdjust(start)
-		}
-	})
-}
-
 // SetPriority changes bar's order among multiple bars. Zero is highest
 // priority, i.e. bar will be on top. If you don't need to set priority
 // dynamically, better use BarPriority option.
@@ -330,8 +336,7 @@ func (b *Bar) SetPriority(priority int) {
 
 // Abort interrupts bar's running goroutine. Abort won't be engaged
 // if bar is already in complete state. If drop is true bar will be
-// removed as well. To make sure that bar has been removed call
-// `(*Bar).Wait()` method.
+// removed as well.
 func (b *Bar) Abort(drop bool) {
 	select {
 	case b.operateState <- func(s *bState) {
