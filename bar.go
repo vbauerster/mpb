@@ -152,6 +152,9 @@ func (b *Bar) Current() int64 {
 // indicate refill event. Refill event may be referred to some retry
 // operation for example.
 func (b *Bar) SetRefill(amount int64) {
+	if amount < 0 {
+		return
+	}
 	select {
 	case b.operateState <- func(s *bState) { s.refill = min(amount, s.current) }:
 	case <-b.ctx.Done():
