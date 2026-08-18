@@ -580,7 +580,8 @@ func (s *bState) wSyncTable() (table decorSyncTable) {
 				row = append(row, s)
 			}
 		}
-		table[i], start = row[start:], len(row)
+		table[i] = slices.Clip(row[start:])
+		start = len(row)
 	}
 	return table
 }
