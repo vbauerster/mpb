@@ -166,37 +166,49 @@ func (b *Bar) SetRefillCurrent() {
 	b.SetRefill(math.MaxInt64)
 }
 
-// TraverseDecorators traverses decorators as long as yield func returns true.
-// Yield receives int as decorator group: 0=prepend and 1=append; and decorator
-// itself. If decorator implements decor.Wrapper it's going to be unwrapped
-// before calling yield. Returns ErrDone[*Bar] if called after (*Bar).Wait.
-func (b *Bar) TraverseDecorators(yield func(int, decor.Decorator) bool) error {
+// TraverseDecorators returns a single-use iterator over [int, decor.Decor]
+// the underlying bar contains. int represents decorator's group not an order:
+// 0=prepend and 1=append. If bar is done i.e. called after (*Bar).Wait method
+// then (nil, ErrDone[*Bar]) is returned. Bar's serve/render loop is blocked
+// until iteration is done. Attempt to use an iterator more than once will
+// lead to a panic.
+func (b *Bar) TraverseDecorators() (iter.Seq2[int, decor.Decorator], error) {
+	res := make(chan iter.Seq2[int, decor.Decorator], 1)
 	select {
 	case b.operateState <- func(s *bState) {
-		for i, group := range s.decorGroups {
-			for _, d := range group {
-				if !yield(i, unwrap(d)) {
-					return
+		done := make(chan struct{})
+		res <- func(yield func(int, decor.Decorator) bool) {
+			defer close(done)
+			for i, group := range s.decorGroups {
+				for _, d := range group {
+					if !yield(i, d) {
+						return
+					}
 				}
 			}
 		}
+		<-done
 	}:
-		return nil
+		return <-res, nil
 	case <-b.ctx.Done():
-		return ErrDone[*Bar]{nil}
+		return nil, ErrDone[*Bar]{nil}
 	}
 }
 
 // DecoratorAverageAdjust adjusts decorators implementing decor.AverageDecorator
 // interface. Call if there is need to set start time after decorators have been
-// constructed. Returns ErrDone[*Bar] if called after (*Bar).Wait.
+// constructed. Returns ErrDone[*Bar] if called after (*Bar).Wait method.
 func (b *Bar) DecoratorAverageAdjust(start time.Time) error {
-	return b.TraverseDecorators(func(_ int, d decor.Decorator) bool {
-		if d, ok := d.(decor.AverageDecorator); ok {
+	it, err := b.TraverseDecorators()
+	if err != nil {
+		return err
+	}
+	for _, d := range it {
+		if d, ok := unwrap(d).(decor.AverageDecorator); ok {
 			d.AverageAdjust(start)
 		}
-		return true // continue traverse
-	})
+	}
+	return nil
 }
 
 // EnableTriggerComplete enables triggering complete event for bar
