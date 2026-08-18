@@ -665,7 +665,7 @@ func makeRowExtender(top bool, fillers ...BarFiller) rowExtender {
 					p = base
 				}
 				if !yield(p) {
-					break
+					return
 				}
 			}
 		}
