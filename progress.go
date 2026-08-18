@@ -469,14 +469,14 @@ func (s *pState) makeBarState(total int64, filler BarFiller, options ...BarOptio
 		filler:   filler,
 	}
 
-	bs.extender = func(base rowProducer) iter.Seq[rowProducer] {
-		return slices.Values([]rowProducer{base})
-	}
-
 	for _, opt := range options {
 		if opt != nil {
 			opt(bs)
 		}
+	}
+
+	if bs.rowProducers == nil {
+		bs.rowProducers = slices.Values([]rowProducer{bs.draw})
 	}
 
 	bs.buffers[0] = bytes.NewBuffer(make([]byte, 0, 256)) // filler

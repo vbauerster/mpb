@@ -34,7 +34,6 @@ type Bar struct {
 
 type decorSyncTable [2][]*decor.Sync
 type rowProducer func(decor.Statistics) (io.Reader, error)
-type rowExtender func(rowProducer) iter.Seq[rowProducer]
 
 // bState is actual bar's state.
 type bState struct {
@@ -46,7 +45,7 @@ type bState struct {
 	total1       int64
 	current      int64
 	refill       int64
-	extender     rowExtender
+	rowProducers iter.Seq[rowProducer]
 	filler       BarFiller
 	buffers      [3]*bytes.Buffer
 	decorGroups  [2][]decor.Decorator
@@ -432,7 +431,7 @@ func (b *Bar) render(tw int) {
 	fn := func(s *bState) {
 		frame := new(renderFrame)
 		stat := s.newStatistics(tw)
-		for p := range s.extender(s.draw) {
+		for p := range s.rowProducers {
 			r, err := p(stat)
 			if err != nil && frame.err == nil {
 				frame.err = err
@@ -631,13 +630,12 @@ func unwrap(d decor.Decorator) decor.Decorator {
 	return d
 }
 
-// makeRowExtender converts fillers to rowExtender.
-// Each BarFiller suppose to write one line only but this is not enforced.
-// If BarFiller writes more than one line then whole output is going
-// to be corrupted.
-func makeRowExtender(top bool, fillers ...BarFiller) rowExtender {
-	var producers []rowProducer
-	producers = append(producers, nil) // holding space for base producer
+// makeRowProducers converts fillers to iter.Seq[rowProducer].
+// Each BarFiller suppose to write one line only but it is not enforced.
+// If BarFiller writes more than one line then whole output is going to be
+// corrupted.
+func makeRowProducers(base rowProducer, top bool, fillers ...BarFiller) iter.Seq[rowProducer] {
+	producers := []rowProducer{base}
 	for _, filler := range fillers {
 		if filler == nil {
 			continue
@@ -658,16 +656,11 @@ func makeRowExtender(top bool, fillers ...BarFiller) rowExtender {
 	if top {
 		slices.Reverse(producers)
 	}
-	// this one is going to be called on each (*Bar).render
-	return func(base rowProducer) iter.Seq[rowProducer] {
-		return func(yield func(rowProducer) bool) {
-			for _, p := range producers {
-				if p == nil {
-					p = base
-				}
-				if !yield(p) {
-					return
-				}
+	// this one is going to be iterated on each (*Bar).render
+	return func(yield func(rowProducer) bool) {
+		for _, p := range producers {
+			if !yield(p) {
+				return
 			}
 		}
 	}
