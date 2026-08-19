@@ -648,6 +648,7 @@ func makeRowProducers(base rowProducer, top bool, fillers ...BarFiller) iter.Seq
 	if top {
 		slices.Reverse(producers)
 	}
+	producers = slices.Clip(producers)
 	// this one is going to be iterated on each (*Bar).render
 	return func(yield func(rowProducer) bool) {
 		for _, p := range producers {
