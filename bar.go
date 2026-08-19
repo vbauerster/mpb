@@ -63,62 +63,54 @@ type renderFrame struct {
 }
 
 // ProxyReader wraps io.Reader with metrics required for progress tracking.
-// Panics if `r` is nil. If `r` is io.ReadCloser then calling Close on `pr`
-// will close underlying `r`s io.ReadCloser. If underlying *Bar instance is
-// already completed or aborted then value of `pr` is nil. If underlying
-// *Bar instance was initialized with total <= 0 then it's necessary to call
-// `(*Bar).SetTotal(-1, true)` after copy operation completes. Most of the
-// time it means that there is a need to call `(*Bar).SetTotal(-1, true)` after
-// io.Copy(dst, pr) returns.
-func (b *Bar) ProxyReader(r io.Reader) (pr io.ReadCloser) {
+// Panics if `r` is nil. If `r` is io.ReadCloser then calling Close on the
+// returned value will close the underlying reader. If *Bar instance is already
+// completed or aborted then (nil, ErrDone[*Bar]) is returned.
+func (b *Bar) ProxyReader(r io.Reader) (io.ReadCloser, error) {
 	if r == nil {
 		panic(errors.New("expected non nil io.Reader"))
 	}
 	select {
 	case <-b.ctx.Done():
-		return nil
+		return nil, ErrDone[*Bar]{nil}
 	default:
-		return newProxyReader(r, b)
+		return newProxyReader(r, b), nil
 	}
 }
 
 // ProxyReadSeeker wraps io.ReadSeeker with metrics required for progress
 // tracking. It is the ReadSeeker counterpart of ProxyReader, intended for
 // use cases such as S3 multipart uploads where the AWS SDK requires an
-// io.ReadSeeker. Seek calls reset the bar's current value to the new
-// absolute offset so the bar stays in sync after retries or rewinds.
-// Panics if `rs` is nil. If `rs` is io.ReadCloser then calling Close on
-// the returned value will close the underlying reader. If underlying *Bar
-// instance is already completed or aborted then nil is returned.
-func (b *Bar) ProxyReadSeeker(rs io.ReadSeeker) io.ReadSeekCloser {
+// io.ReadSeeker. Seek calls reset the bar's current value to the new absolute
+// offset so the bar stays in sync after retries or rewinds. Panics if `rs` is
+// nil. If `rs` is io.ReadCloser then calling Close on the returned value will
+// close the underlying reader. If *Bar instance is already completed or aborted
+// then (nil, ErrDone[*Bar]) is returned.
+func (b *Bar) ProxyReadSeeker(rs io.ReadSeeker) (io.ReadSeekCloser, error) {
 	if rs == nil {
 		panic(errors.New("expected non nil io.ReadSeeker"))
 	}
 	select {
 	case <-b.ctx.Done():
-		return nil
+		return nil, ErrDone[*Bar]{nil}
 	default:
-		return newProxyReadSeeker(rs, b)
+		return newProxyReadSeeker(rs, b), nil
 	}
 }
 
 // ProxyWriter wraps io.Writer with metrics required for progress tracking.
-// Panics if `w` is nil. If `w` is io.WriteCloser then calling Close on `pw`
-// will close underlying `w`s io.WriteCloser. If underlying *Bar instance is
-// already completed or aborted then value of `pw` is nil. If underlying
-// *Bar instance was initialized with total <= 0 then it's necessary to call
-// `(*Bar).SetTotal(-1, true)` after copy operation completes. Most of the
-// time it means that there is need to call `(*Bar).SetTotal(-1, true)` after
-// io.Copy(pw, src) returns.
-func (b *Bar) ProxyWriter(w io.Writer) (pw io.WriteCloser) {
+// Panics if `w` is nil. If `w` is io.WriteCloser then calling Close on the
+// returned value will close the underlying writer. If *Bar instance is already
+// completed or aborted then (nil, ErrDone[*Bar]) is returned.
+func (b *Bar) ProxyWriter(w io.Writer) (io.WriteCloser, error) {
 	if w == nil {
 		panic(errors.New("expected non nil io.Writer"))
 	}
 	select {
 	case <-b.ctx.Done():
-		return nil
+		return nil, ErrDone[*Bar]{nil}
 	default:
-		return newProxyWriter(w, b)
+		return newProxyWriter(w, b), nil
 	}
 }
 

@@ -17,9 +17,9 @@ func TestProxyReadSeeker(t *testing.T) {
 		mpb.AppendDecorators(decor.Percentage()),
 	)
 
-	rs := bar.ProxyReadSeeker(strings.NewReader(content))
-	if rs == nil {
-		t.Fatal("expected non-nil io.ReadSeekCloser")
+	rs, err := bar.ProxyReadSeeker(strings.NewReader(content))
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	buf := make([]byte, 32)
@@ -49,7 +49,10 @@ func TestProxyReadSeekerSeekRewind(t *testing.T) {
 	total := int64(len(content))
 	bar := p.AddBar(total)
 
-	rs := bar.ProxyReadSeeker(strings.NewReader(content))
+	rs, err := bar.ProxyReadSeeker(strings.NewReader(content))
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Read half
 	half := total / 2
@@ -83,7 +86,10 @@ func TestProxyReadSeekerSeekEnd(t *testing.T) {
 	total := int64(len(content))
 	bar := p.AddBar(total)
 
-	rs := bar.ProxyReadSeeker(strings.NewReader(content))
+	rs, err := bar.ProxyReadSeeker(strings.NewReader(content))
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	pos, err := rs.Seek(0, io.SeekEnd)
 	if err != nil {
@@ -105,7 +111,10 @@ func TestProxyReadSeekerClose(t *testing.T) {
 	bar := p.AddBar(total)
 
 	rc := &readSeekNopCloser{ReadSeeker: strings.NewReader(content)}
-	rs := bar.ProxyReadSeeker(rc)
+	rs, err := bar.ProxyReadSeeker(rc)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Read everything so the bar completes naturally
 	_, _ = io.Copy(io.Discard, rs)
@@ -136,7 +145,10 @@ func TestProxyReadSeekerDataIntegrity(t *testing.T) {
 	total := int64(len(content))
 	bar := p.AddBar(total)
 
-	rs := bar.ProxyReadSeeker(strings.NewReader(content))
+	rs, err := bar.ProxyReadSeeker(strings.NewReader(content))
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	var buf bytes.Buffer
 	_, _ = io.Copy(&buf, rs)

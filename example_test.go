@@ -65,7 +65,10 @@ func ExampleBar_ProxyReader() {
 	)
 
 	// create proxy reader
-	proxyReader := bar.ProxyReader(reader)
+	proxyReader, err := bar.ProxyReader(reader)
+	if err != nil {
+		panic(err)
+	}
 	defer func() {
 		_ = proxyReader.Close()
 	}()

@@ -35,9 +35,13 @@ func TestProxyReader(t *testing.T) {
 
 	var buf bytes.Buffer
 	tr := &testReader{strings.NewReader(content), false}
-	_, err := io.Copy(&buf, bar.ProxyReader(tr))
+	pr, err := bar.ProxyReader(tr)
 	if err != nil {
-		t.Errorf("io.Copy: %s\n", err.Error())
+		t.Fatal(err)
+	}
+	_, err = io.Copy(&buf, pr)
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	if !tr.called {
@@ -59,9 +63,13 @@ func TestEwmaProxyReader(t *testing.T) {
 
 	var buf bytes.Buffer
 	tr := &testReader{strings.NewReader(content), false}
-	_, err := io.Copy(&buf, bar.ProxyReader(tr))
+	pr, err := bar.ProxyReader(tr)
 	if err != nil {
-		t.Errorf("io.Copy: %s\n", err.Error())
+		t.Fatal(err)
+	}
+	_, err = io.Copy(&buf, pr)
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	if !tr.called {
@@ -89,12 +97,15 @@ func TestProxyReadCloser(t *testing.T) {
 	bar := p.New(int64(len(content)), mpb.NopStyle())
 
 	tr := &testReadCloser{strings.NewReader(content), false}
-	rc := bar.ProxyReader(tr)
-	_, err := io.Copy(io.Discard, rc)
+	pr, err := bar.ProxyReader(tr)
 	if err != nil {
-		t.Errorf("io.Copy: %s\n", err.Error())
+		t.Fatal(err)
 	}
-	_ = rc.Close()
+	_, err = io.Copy(io.Discard, pr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = pr.Close()
 	if !tr.called {
 		t.Error("Close not called")
 	}
@@ -109,12 +120,15 @@ func TestEwmaProxyReadCloser(t *testing.T) {
 	)
 
 	tr := &testReadCloser{strings.NewReader(content), false}
-	rc := bar.ProxyReader(tr)
-	_, err := io.Copy(io.Discard, rc)
+	pr, err := bar.ProxyReader(tr)
 	if err != nil {
-		t.Errorf("io.Copy: %s\n", err.Error())
+		t.Fatal(err)
 	}
-	_ = rc.Close()
+	_, err = io.Copy(io.Discard, pr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = pr.Close()
 	if !tr.called {
 		t.Error("Close not called")
 	}
@@ -141,9 +155,13 @@ func TestProxyReaderWriterTo(t *testing.T) {
 
 	var buf bytes.Buffer
 	tr := &testReaderWriterTo{strings.NewReader(content), false}
-	_, err := io.Copy(&buf, bar.ProxyReader(tr))
+	pr, err := bar.ProxyReader(tr)
 	if err != nil {
-		t.Errorf("io.Copy: %s\n", err.Error())
+		t.Fatal(err)
+	}
+	_, err = io.Copy(&buf, pr)
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	if !tr.called {
@@ -165,9 +183,13 @@ func TestEwmaProxyReaderWriterTo(t *testing.T) {
 
 	var buf bytes.Buffer
 	tr := &testReaderWriterTo{strings.NewReader(content), false}
-	_, err := io.Copy(&buf, bar.ProxyReader(tr))
+	pr, err := bar.ProxyReader(tr)
 	if err != nil {
-		t.Errorf("io.Copy: %s\n", err.Error())
+		t.Fatal(err)
+	}
+	_, err = io.Copy(&buf, pr)
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	if !tr.called {

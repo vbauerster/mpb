@@ -27,9 +27,13 @@ func TestProxyWriter(t *testing.T) {
 
 	var buf bytes.Buffer
 	tw := &testWriter{&buf, false}
-	_, err := io.Copy(bar.ProxyWriter(tw), strings.NewReader(content))
+	pw, err := bar.ProxyWriter(tw)
 	if err != nil {
-		t.Errorf("io.Copy: %s\n", err.Error())
+		t.Fatal(err)
+	}
+	_, err = io.Copy(pw, strings.NewReader(content))
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	if !tw.called {
@@ -51,9 +55,13 @@ func TestEwmaProxyWriter(t *testing.T) {
 
 	var buf bytes.Buffer
 	tw := &testWriter{&buf, false}
-	_, err := io.Copy(bar.ProxyWriter(tw), strings.NewReader(content))
+	pw, err := bar.ProxyWriter(tw)
 	if err != nil {
-		t.Errorf("io.Copy: %s\n", err.Error())
+		t.Fatal(err)
+	}
+	_, err = io.Copy(pw, strings.NewReader(content))
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	if !tw.called {
@@ -82,12 +90,15 @@ func TestProxyWriteCloser(t *testing.T) {
 
 	var buf bytes.Buffer
 	tw := &testWriteCloser{&buf, false}
-	wc := bar.ProxyWriter(tw)
-	_, err := io.Copy(wc, strings.NewReader(content))
+	pw, err := bar.ProxyWriter(tw)
 	if err != nil {
-		t.Errorf("io.Copy: %s\n", err.Error())
+		t.Fatal(err)
 	}
-	_ = wc.Close()
+	_, err = io.Copy(pw, strings.NewReader(content))
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = pw.Close()
 	if !tw.called {
 		t.Error("Close not called")
 	}
@@ -103,12 +114,15 @@ func TestEwmaProxyWriteCloser(t *testing.T) {
 
 	var buf bytes.Buffer
 	tw := &testWriteCloser{&buf, false}
-	wc := bar.ProxyWriter(tw)
-	_, err := io.Copy(wc, strings.NewReader(content))
+	pw, err := bar.ProxyWriter(tw)
 	if err != nil {
-		t.Errorf("io.Copy: %s\n", err.Error())
+		t.Fatal(err)
 	}
-	_ = wc.Close()
+	_, err = io.Copy(pw, strings.NewReader(content))
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = pw.Close()
 	if !tw.called {
 		t.Error("Close not called")
 	}
@@ -143,10 +157,14 @@ func TestProxyWriterReadFrom(t *testing.T) {
 
 	var buf bytes.Buffer
 	tw := &testWriterReadFrom{&buf, false}
-	// To trigger ReadFrom, WriteTo of strings.NewReader needs to be hidden
-	_, err := io.Copy(bar.ProxyWriter(tw), wrapReader{strings.NewReader(content)})
+	pw, err := bar.ProxyWriter(tw)
 	if err != nil {
-		t.Errorf("io.Copy: %s\n", err.Error())
+		t.Fatal(err)
+	}
+	// To trigger ReadFrom, WriteTo of strings.NewReader needs to be hidden
+	_, err = io.Copy(pw, wrapReader{strings.NewReader(content)})
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	if !tw.called {
@@ -168,10 +186,14 @@ func TestEwmaProxyWriterReadFrom(t *testing.T) {
 
 	var buf bytes.Buffer
 	tw := &testWriterReadFrom{&buf, false}
-	// To trigger ReadFrom, WriteTo of strings.NewReader needs to be hidden
-	_, err := io.Copy(bar.ProxyWriter(tw), wrapReader{strings.NewReader(content)})
+	pw, err := bar.ProxyWriter(tw)
 	if err != nil {
-		t.Errorf("io.Copy: %s\n", err.Error())
+		t.Fatal(err)
+	}
+	// To trigger ReadFrom, WriteTo of strings.NewReader needs to be hidden
+	_, err = io.Copy(pw, wrapReader{strings.NewReader(content)})
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	if !tw.called {
