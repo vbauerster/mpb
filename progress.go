@@ -219,6 +219,7 @@ func (p *Progress) makeBar(bs *bState) *Bar {
 			}
 		}
 	}
+	bar.ewmaDecorators = slices.Clip(bar.ewmaDecorators)
 	return bar
 }
 
