@@ -136,8 +136,9 @@ func TestProxyReadSeekerNilPanics(t *testing.T) {
 		if r := recover(); r == nil {
 			t.Error("expected panic on nil ReadSeeker")
 		}
+		p.Shutdown()
 	}()
-	bar.ProxyReadSeeker(nil)
+	_, _ = bar.ProxyReadSeeker(nil)
 }
 
 func TestProxyReadSeekerDataIntegrity(t *testing.T) {
