@@ -413,7 +413,7 @@ func (b *Bar) serve(bs *bState) {
 			if bs.aborted {
 				return
 			}
-			bs.aborted = !bs.completed() || context.Cause(b.ctx) != nil
+			bs.aborted = !bs.completed() || !errors.Is(context.Cause(b.ctx), context.Canceled)
 			return
 		}
 	}
