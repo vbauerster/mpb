@@ -94,7 +94,7 @@ func (b *Bar) ProxyReadSeeker(rs io.ReadSeeker) (io.ReadSeekCloser, error) {
 	case <-b.ctx.Done():
 		return nil, ErrDone[*Bar]{nil}
 	default:
-		return newProxyReadSeeker(rs, b), nil
+		return newProxyReadSeeker(b, rs), nil
 	}
 }
 
