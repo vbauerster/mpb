@@ -53,6 +53,7 @@ func (x ewmaProxyReadWriterTo) Read(p []byte) (int, error) {
 	return n, err
 }
 
+//nolint:staticcheck // QF1008
 func (x ewmaProxyReadWriterTo) WriteTo(w io.Writer) (int64, error) {
 	return copyBuffer(x.bar, w, x.readCloser.Reader, nil)
 }
