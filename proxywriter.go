@@ -54,7 +54,7 @@ func (x ewmaProxyWriteReaderFrom) Write(p []byte) (int, error) {
 }
 
 func (x ewmaProxyWriteReaderFrom) ReadFrom(r io.Reader) (int64, error) {
-	return copyBuffer(x.bar, x.writeCloser, r, nil)
+	return copyBuffer(x.bar, x.writeCloser.Writer, r, nil)
 }
 
 func newProxyWriter(b *Bar, w io.Writer) io.WriteCloser {
