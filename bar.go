@@ -74,7 +74,7 @@ func (b *Bar) ProxyReader(r io.Reader) (io.ReadCloser, error) {
 	case <-b.ctx.Done():
 		return nil, ErrDone[*Bar]{nil}
 	default:
-		return newProxyReader(r, b), nil
+		return newProxyReader(b, r), nil
 	}
 }
 
@@ -110,7 +110,7 @@ func (b *Bar) ProxyWriter(w io.Writer) (io.WriteCloser, error) {
 	case <-b.ctx.Done():
 		return nil, ErrDone[*Bar]{nil}
 	default:
-		return newProxyWriter(w, b), nil
+		return newProxyWriter(b, w), nil
 	}
 }
 
