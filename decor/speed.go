@@ -39,6 +39,10 @@ func (s *speedFormatter) Format(st fmt.State, verb rune) {
 // EwmaSpeed exponential-weighted-moving-average based speed decorator.
 // For this decorator to work correctly you have to measure each iteration's
 // duration and pass it to one of the (*Bar).EwmaIncr... family methods.
+//
+// ProxyReader and ProxyWriter report each wrapped I/O operation as an iteration,
+// so delays between calls are excluded. Use [AverageSpeed] when throughput
+// should include idle time over the bar's complete lifetime.
 func EwmaSpeed(unit any, format string, age float64, wcc ...WC) Decorator {
 	return MovingAverageSpeed(unit, format, NewThreadSafeMovingAverage(ewma.NewMovingAverage(age)), wcc...)
 }
