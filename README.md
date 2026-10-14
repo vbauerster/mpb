@@ -115,3 +115,4 @@ func main() {
 #### [io example](_examples/io/main.go)
 
 ![io](_svg/hIpTa3A5rQz65ssiVuRJu87X6.svg)
+// WASM compatibility fix
